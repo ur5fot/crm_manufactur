@@ -42,91 +42,9 @@ const employeeFields = [
   "notes"
 ];
 
-// Options будут загружены из dictionaries.csv через API
-
-const fieldGroups = [
-  {
-    title: "Личные данные",
-    fields: [
-      { key: "employee_id", label: "ID сотрудника", readOnly: true },
-      { key: "last_name", label: "Фамилия" },
-      { key: "first_name", label: "Имя" },
-      { key: "middle_name", label: "Отчество" },
-      { key: "gender", label: "Пол", type: "select", optionsKey: "gender" },
-      {
-        key: "employment_status",
-        label: "Статус",
-        type: "select",
-        optionsKey: "employment_status"
-      },
-      { key: "additional_status", label: "Доп. статус" }
-    ]
-  },
-  {
-    title: "Должность и работа",
-    fields: [
-      { key: "department", label: "Подразделение" },
-      { key: "position", label: "Должность" },
-      { key: "grade", label: "Разряд (словами)" },
-      { key: "specialty", label: "Специальность" },
-      { key: "work_state", label: "Рабочее состояние" },
-      { key: "work_type", label: "Тип работы", type: "select", optionsKey: "work_type" },
-      { key: "fit_status", label: "Пригодность", type: "select", optionsKey: "fit_status" },
-      { key: "order_ref", label: "Приказ" }
-    ]
-  },
-  {
-    title: "Локация",
-    fields: [
-      { key: "location", label: "Местонахождение" },
-      { key: "workplace_location", label: "Место работы" },
-      { key: "residence_place", label: "Место проживания" },
-      { key: "registration_place", label: "Место регистрации" }
-    ]
-  },
-  {
-    title: "Оплата",
-    fields: [
-      { key: "salary_grid", label: "Зарплатная сетка" },
-      { key: "salary_amount", label: "Оклад", type: "number" },
-      { key: "bank_name", label: "Банк" },
-      { key: "bank_card_number", label: "Номер карты" },
-      { key: "bank_iban", label: "IBAN" },
-      { key: "tax_id", label: "ИНН" }
-    ]
-  },
-  {
-    title: "Контакты и образование",
-    fields: [
-      { key: "phone", label: "Телефон", type: "tel" },
-      { key: "phone_note", label: "Примечание к телефону" },
-      { key: "email", label: "Эл. почта", type: "email" },
-      { key: "education", label: "Образование" }
-    ]
-  },
-  {
-    title: "Документы",
-    fields: [
-      { key: "driver_license_file", label: "Водительское удостоверение (файл)" },
-      { key: "id_certificate_file", label: "Удостоверение личности (файл)" },
-      { key: "foreign_passport_number", label: "Номер загранпаспорта" },
-      {
-        key: "foreign_passport_issue_date",
-        label: "Дата выдачи загранпаспорта",
-        type: "date"
-      },
-      { key: "foreign_passport_file", label: "Загранпаспорт (файл)" },
-      { key: "criminal_record_file", label: "Справка о несудимости (файл)" }
-    ]
-  },
-  {
-    title: "Прочее",
-    fields: [
-      { key: "blood_group", label: "Группа крови", type: "select", optionsKey: "blood_group" },
-      { key: "notes", label: "Примечание", type: "textarea" }
-    ]
-  }
-];
+// Динамическая схема полей, загружается из fields_schema.csv
+const fieldGroups = ref([]);
+const allFieldsSchema = ref([]);
 
 const documentFields = [
   { key: "driver_license_file", label: "Водительское удостоверение (PDF)" },
@@ -151,30 +69,110 @@ const importFile = ref(null);
 const importResult = ref(null);
 const importing = ref(false);
 const dictionaries = ref({});
+const viewMode = ref("cards"); // "cards", "table", or "logs"
+const editingCells = reactive({}); // { employeeId_fieldName: value }
+const columnFilters = reactive({}); // { fieldName: selectedValue }
+const logs = ref([]);
+const logsSearchTerm = ref("");
+
+// Маппинг технических названий полей на человекопонятные
+const fieldLabels = {
+  employee_id: "ID сотрудника",
+  last_name: "Фамилия",
+  first_name: "Имя",
+  middle_name: "Отчество",
+  employment_status: "Статус работы",
+  additional_status: "Дополнительный статус",
+  location: "Местонахождение",
+  department: "Подразделение",
+  position: "Должность",
+  grade: "Разряд",
+  salary_grid: "Зарплатная сетка",
+  salary_amount: "Оклад",
+  specialty: "Специальность",
+  work_state: "Рабочее состояние",
+  work_type: "Тип работы",
+  gender: "Пол",
+  fit_status: "Пригодность",
+  order_ref: "Приказ",
+  bank_name: "Банк",
+  bank_card_number: "Номер карты",
+  bank_iban: "IBAN",
+  tax_id: "ИНН",
+  email: "Эл. почта",
+  blood_group: "Группа крови",
+  workplace_location: "Место работы",
+  residence_place: "Место проживания",
+  registration_place: "Место регистрации",
+  driver_license_file: "Водительское удостоверение",
+  id_certificate_file: "Удостоверение личности",
+  foreign_passport_number: "Номер загранпаспорта",
+  foreign_passport_issue_date: "Дата выдачи загранпаспорта",
+  foreign_passport_file: "Загранпаспорт",
+  criminal_record_file: "Справка о несудимости",
+  phone: "Телефон",
+  phone_note: "Примечание к телефону",
+  education: "Образование",
+  notes: "Примечание"
+};
 
 const form = reactive(emptyEmployee());
 const documentFiles = reactive(
   Object.fromEntries(documentFields.map((doc) => [doc.key, null]))
 );
 
-// Computed свойства для опций из справочников
-const genderOptions = computed(() => dictionaries.value.gender || []);
-const employmentStatusOptions = computed(() => dictionaries.value.employment_status || []);
-const workTypeOptions = computed(() => dictionaries.value.work_type || []);
-const fitStatusOptions = computed(() => dictionaries.value.fit_status || []);
-const bloodGroupOptions = computed(() => dictionaries.value.blood_group || []);
+// Dictionaries теперь формируются динамически из fields_schema.csv
 
 const filteredEmployees = computed(() => {
   const query = searchTerm.value.trim().toLowerCase();
-  if (!query) {
-    return employees.value;
+  let result = employees.value;
+
+  // Текстовый поиск
+  if (query) {
+    result = result.filter((employee) => {
+      const haystack = [
+        displayName(employee),
+        employee.department,
+        employee.position,
+        employee.employee_id
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(query);
+    });
   }
-  return employees.value.filter((employee) => {
+
+  // Фильтры столбцов (только для режима таблицы)
+  if (viewMode.value === "table") {
+    Object.keys(columnFilters).forEach((fieldName) => {
+      const filterValues = columnFilters[fieldName];
+      if (filterValues && filterValues.length > 0) {
+        result = result.filter((employee) => filterValues.includes(employee[fieldName]));
+      }
+    });
+  }
+
+  return result;
+});
+
+const isNew = computed(() => !form.employee_id);
+
+const filteredLogs = computed(() => {
+  const query = logsSearchTerm.value.trim().toLowerCase();
+  if (!query) {
+    return logs.value;
+  }
+  return logs.value.filter((log) => {
     const haystack = [
-      displayName(employee),
-      employee.department,
-      employee.position,
-      employee.employee_id
+      log.action,
+      log.employee_id,
+      log.employee_name,
+      log.field_name,
+      log.old_value,
+      log.new_value,
+      log.details,
+      log.timestamp
     ]
       .filter(Boolean)
       .join(" ")
@@ -182,8 +180,6 @@ const filteredEmployees = computed(() => {
     return haystack.includes(query);
   });
 });
-
-const isNew = computed(() => !form.employee_id);
 
 function emptyEmployee() {
   const base = {};
@@ -364,17 +360,170 @@ async function uploadDocument(doc) {
   }
 }
 
-async function loadDictionaries() {
+async function loadLogs() {
+  loading.value = true;
+  errorMessage.value = "";
   try {
-    const data = await api.getDictionaries();
-    dictionaries.value = data.dictionaries || {};
+    const data = await api.getLogs();
+    logs.value = data.logs || [];
   } catch (error) {
-    console.error("Failed to load dictionaries:", error);
+    errorMessage.value = error.message;
+  } finally {
+    loading.value = false;
   }
 }
 
+async function loadFieldsSchema() {
+  try {
+    const data = await api.getFieldsSchema();
+
+    // Формируем группы полей для карточек
+    const groups = data.groups || {};
+    fieldGroups.value = Object.keys(groups).map(groupName => ({
+      title: groupName,
+      fields: groups[groupName].map(field => ({
+        key: field.key,
+        label: field.label,
+        type: field.type,
+        optionsKey: field.type === 'select' ? field.key : undefined,
+        readOnly: field.key === 'employee_id'
+      }))
+    }));
+
+    // Формируем колонки для сводной таблицы
+    summaryColumns.value = (data.tableFields || []).map(field => ({
+      key: field.key,
+      label: field.label,
+      editable: field.editableInTable,
+      type: field.type,
+      optionsKey: field.type === 'select' ? field.key : undefined
+    }));
+
+    // Сохраняем все поля для использования
+    allFieldsSchema.value = data.allFields || [];
+
+    // Формируем dictionaries из options
+    const dict = {};
+    allFieldsSchema.value.forEach(field => {
+      if (field.type === 'select' && field.options && field.options.length > 0) {
+        dict[field.key] = field.options.map(opt => ({
+          value: opt,
+          label: opt
+        }));
+      }
+    });
+    dictionaries.value = dict;
+
+  } catch (error) {
+    console.error("Failed to load fields schema:", error);
+  }
+}
+
+// Сводная таблица - динамически загружается из fields_schema.csv
+const summaryColumns = ref([]);
+
+function startEditCell(employeeId, fieldName, currentValue) {
+  const key = `${employeeId}_${fieldName}`;
+  editingCells[key] = currentValue || "";
+}
+
+function cancelEditCell(employeeId, fieldName) {
+  const key = `${employeeId}_${fieldName}`;
+  delete editingCells[key];
+}
+
+function isEditingCell(employeeId, fieldName) {
+  const key = `${employeeId}_${fieldName}`;
+  return key in editingCells;
+}
+
+function getEditValue(employeeId, fieldName) {
+  const key = `${employeeId}_${fieldName}`;
+  return editingCells[key];
+}
+
+async function saveCell(employee, fieldName) {
+  const key = `${employee.employee_id}_${fieldName}`;
+  const newValue = editingCells[key];
+
+  if (newValue === undefined) return;
+
+  errorMessage.value = "";
+  try {
+    const updatedEmployee = { ...employee, [fieldName]: newValue };
+    await api.updateEmployee(employee.employee_id, updatedEmployee);
+
+    // Обновляем локальные данные
+    const index = employees.value.findIndex(e => e.employee_id === employee.employee_id);
+    if (index !== -1) {
+      employees.value[index][fieldName] = newValue;
+    }
+
+    delete editingCells[key];
+  } catch (error) {
+    errorMessage.value = error.message;
+  }
+}
+
+function openEmployeeCard(employeeId) {
+  viewMode.value = "cards";
+  selectEmployee(employeeId);
+}
+
+function toggleFilter(fieldName, value) {
+  if (!columnFilters[fieldName]) {
+    columnFilters[fieldName] = [];
+  }
+
+  const index = columnFilters[fieldName].indexOf(value);
+  if (index === -1) {
+    columnFilters[fieldName].push(value);
+  } else {
+    columnFilters[fieldName].splice(index, 1);
+  }
+
+  // Удаляем пустые массивы
+  if (columnFilters[fieldName].length === 0) {
+    delete columnFilters[fieldName];
+  }
+}
+
+function isFilterChecked(fieldName, value) {
+  return columnFilters[fieldName]?.includes(value) || false;
+}
+
+function clearAllFilters() {
+  Object.keys(columnFilters).forEach(key => {
+    delete columnFilters[key];
+  });
+}
+
+function getActiveFiltersCount() {
+  return Object.keys(columnFilters).reduce((count, key) => {
+    return count + (columnFilters[key]?.length || 0);
+  }, 0);
+}
+
+function getFieldLabel(fieldName) {
+  if (!fieldName) return "";
+  const label = fieldLabels[fieldName] || fieldName;
+  return `${label} (${fieldName})`;
+}
+
+function getDetailLabel(detail) {
+  if (!detail) return "";
+  // Заменяем "Изменено поле: field_name" на "Изменено поле: Название (field_name)"
+  const match = detail.match(/Изменено поле: (\w+)/);
+  if (match) {
+    const fieldName = match[1];
+    const label = fieldLabels[fieldName] || fieldName;
+    return `Изменено поле: ${label} (${fieldName})`;
+  }
+  return detail;
+}
+
 onMounted(async () => {
-  await loadDictionaries();
+  await loadFieldsSchema();
   await loadEmployees();
 });
 </script>
@@ -388,16 +537,41 @@ onMounted(async () => {
           <div class="brand-sub">Vue + Node, локальные CSV файлы</div>
         </div>
         <div class="top-actions">
+          <button
+            class="secondary"
+            :class="{ active: viewMode === 'cards' }"
+            type="button"
+            @click="viewMode = 'cards'"
+          >
+            Карточки
+          </button>
+          <button
+            class="secondary"
+            :class="{ active: viewMode === 'table' }"
+            type="button"
+            @click="viewMode = 'table'"
+          >
+            Сводная таблица
+          </button>
+          <button
+            class="secondary"
+            :class="{ active: viewMode === 'logs' }"
+            type="button"
+            @click="viewMode = 'logs'; loadLogs()"
+          >
+            Логи
+          </button>
           <button class="secondary" type="button" @click="loadEmployees">
             Обновить
           </button>
-          <button class="primary" type="button" @click="startNew">
+          <button class="primary" type="button" @click="startNew" v-if="viewMode === 'cards'">
             Новый сотрудник
           </button>
         </div>
       </header>
 
-      <div class="layout">
+      <!-- Режим карточек -->
+      <div v-if="viewMode === 'cards'" class="layout">
         <aside class="panel">
           <div class="panel-header">
             <div class="panel-title">Сотрудники</div>
@@ -620,6 +794,203 @@ onMounted(async () => {
             </div>
           </div>
         </section>
+      </div>
+
+      <!-- Режим сводной таблицы -->
+      <div v-else-if="viewMode === 'table'" class="layout-table">
+        <div class="panel table-panel">
+          <div class="panel-header">
+            <div class="panel-title">Сводная таблица сотрудников</div>
+            <div class="actions">
+              <button
+                v-if="getActiveFiltersCount() > 0"
+                class="secondary"
+                type="button"
+                @click="clearAllFilters"
+              >
+                Сбросить фильтры ({{ getActiveFiltersCount() }})
+              </button>
+              <div class="status-bar">
+                <span v-if="loading">Загрузка...</span>
+                <span v-else>{{ filteredEmployees.length }} записей</span>
+              </div>
+            </div>
+          </div>
+
+          <input
+            v-model="searchTerm"
+            class="search-input"
+            type="search"
+            placeholder="Поиск по ФИО, подразделению или ID"
+          />
+
+          <div v-if="errorMessage" class="alert">{{ errorMessage }}</div>
+
+          <div class="table-container">
+            <table class="summary-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th v-for="col in summaryColumns" :key="col.key">
+                    <div class="th-content">
+                      <div class="th-label">{{ col.label }}</div>
+                      <div v-if="col.type === 'select'" class="column-filter-checkboxes" @click.stop>
+                        <label
+                          v-for="option in dictionaries[col.optionsKey] || []"
+                          :key="option.value"
+                          class="filter-checkbox-label"
+                        >
+                          <input
+                            type="checkbox"
+                            :checked="isFilterChecked(col.key, option.value)"
+                            @change="toggleFilter(col.key, option.value)"
+                            class="filter-checkbox"
+                          />
+                          <span class="filter-checkbox-text">{{ option.label }}</span>
+                        </label>
+                      </div>
+                    </div>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="employee in filteredEmployees"
+                  :key="employee.employee_id"
+                  class="table-row"
+                  @click="openEmployeeCard(employee.employee_id)"
+                >
+                  <td class="id-cell">{{ employee.employee_id }}</td>
+                  <td
+                    v-for="col in summaryColumns"
+                    :key="col.key"
+                    class="editable-cell"
+                    @click.stop="startEditCell(employee.employee_id, col.key, employee[col.key])"
+                  >
+                    <!-- Режим редактирования -->
+                    <div v-if="isEditingCell(employee.employee_id, col.key)" class="edit-cell" @click.stop>
+                      <select
+                        v-if="col.type === 'select'"
+                        v-model="editingCells[`${employee.employee_id}_${col.key}`]"
+                        @keydown.enter="saveCell(employee, col.key)"
+                        @keydown.esc="cancelEditCell(employee.employee_id, col.key)"
+                        class="cell-input"
+                      >
+                        <option value="">--</option>
+                        <option
+                          v-for="option in dictionaries[col.optionsKey] || []"
+                          :key="option.value"
+                          :value="option.value"
+                        >
+                          {{ option.label }}
+                        </option>
+                      </select>
+                      <input
+                        v-else
+                        v-model="editingCells[`${employee.employee_id}_${col.key}`]"
+                        @keydown.enter="saveCell(employee, col.key)"
+                        @keydown.esc="cancelEditCell(employee.employee_id, col.key)"
+                        class="cell-input"
+                        type="text"
+                      />
+                      <div class="cell-actions">
+                        <button
+                          class="cell-btn save-btn"
+                          type="button"
+                          @click="saveCell(employee, col.key)"
+                          title="Сохранить (Enter)"
+                        >
+                          ✓
+                        </button>
+                        <button
+                          class="cell-btn cancel-btn"
+                          type="button"
+                          @click="cancelEditCell(employee.employee_id, col.key)"
+                          title="Отменить (Esc)"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+                    <!-- Режим просмотра -->
+                    <div v-else class="view-cell" :title="'Клик для редактирования'">
+                      {{ employee[col.key] || '—' }}
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Режим логов -->
+      <div v-else-if="viewMode === 'logs'" class="layout-table">
+        <div class="panel table-panel">
+          <div class="panel-header">
+            <div class="panel-title">Журнал изменений</div>
+            <div class="actions">
+              <button class="secondary" type="button" @click="loadLogs">
+                Обновить
+              </button>
+              <div class="status-bar">
+                <span v-if="loading">Загрузка...</span>
+                <span v-else>{{ filteredLogs.length }} записей</span>
+              </div>
+            </div>
+          </div>
+
+          <input
+            v-model="logsSearchTerm"
+            class="search-input"
+            type="search"
+            placeholder="Поиск по ФИО, действию, полю или значению"
+          />
+
+          <div v-if="errorMessage" class="alert">{{ errorMessage }}</div>
+
+          <div class="table-container">
+            <table class="summary-table logs-table">
+              <thead>
+                <tr>
+                  <th>Дата и время</th>
+                  <th>Действие</th>
+                  <th>ID</th>
+                  <th>Сотрудник</th>
+                  <th>Поле</th>
+                  <th>Старое значение</th>
+                  <th>Новое значение</th>
+                  <th>Детали</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="log in filteredLogs" :key="log.log_id">
+                  <td class="log-timestamp">
+                    {{ new Date(log.timestamp).toLocaleString('ru-RU') }}
+                  </td>
+                  <td>
+                    <span
+                      class="log-action"
+                      :class="{
+                        'action-create': log.action === 'CREATE',
+                        'action-update': log.action === 'UPDATE',
+                        'action-delete': log.action === 'DELETE'
+                      }"
+                    >
+                      {{ log.action }}
+                    </span>
+                  </td>
+                  <td class="id-cell">{{ log.employee_id }}</td>
+                  <td>{{ log.employee_name }}</td>
+                  <td>{{ getFieldLabel(log.field_name) }}</td>
+                  <td class="log-value">{{ log.old_value || '—' }}</td>
+                  <td class="log-value">{{ log.new_value || '—' }}</td>
+                  <td class="log-details">{{ getDetailLabel(log.details) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
   </div>

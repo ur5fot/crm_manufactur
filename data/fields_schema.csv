@@ -1,0 +1,38 @@
+﻿field_order;field_name;field_label;field_type;field_options;show_in_table;field_group;editable_in_table
+1;employee_id;ID сотрудника;text;;no;Личные данные;no
+2;last_name;Фамилия;text;;yes;Личные данные;yes
+3;first_name;Имя;text;;yes;Личные данные;yes
+4;middle_name;Отчество;text;;yes;Личные данные;yes
+5;employment_status;Статус работы;select;Работает|Уволен|Отпуск|Больничный;yes;Личные данные;yes
+6;additional_status;Дополнительный статус;text;;no;Личные данные;no
+7;location;Местонахождение;select;Симферополь|Керчь|Евпатория;yes;Локация;yes
+8;department;Подразделение;text;;no;Должность и работа;no
+9;position;Должность;text;;no;Должность и работа;no
+10;grade;Разряд;text;;no;Должность и работа;no
+11;salary_grid;Зарплатная сетка;text;;no;Оплата;no
+12;salary_amount;Оклад;number;;no;Оплата;no
+13;specialty;Специальность;text;;no;Должность и работа;no
+14;work_state;Рабочее состояние;text;;yes;Должность и работа;yes
+15;work_type;Тип работы;select;Полная ставка|Частичная занятость|Контракт|Временная работа;no;Должность и работа;no
+16;gender;Пол;select;Мужской|Женский;no;Личные данные;no
+17;fit_status;Пригодность;select;Годен|Не годен|Ограниченно годен;yes;Должность и работа;yes
+18;order_ref;Приказ;text;;no;Должность и работа;no
+19;bank_name;Банк;text;;no;Оплата;no
+20;bank_card_number;Номер карты;text;;no;Оплата;no
+21;bank_iban;IBAN;text;;no;Оплата;no
+22;tax_id;ИНН;text;;no;Оплата;no
+23;email;Эл. почта;email;;no;Контакты и образование;no
+24;blood_group;Группа крови;select;I (0)|II (A)|III (B)|IV (AB);no;Прочее;no
+25;workplace_location;Место работы;text;;yes;Локация;yes
+26;residence_place;Место проживания;text;;no;Локация;no
+27;registration_place;Место регистрации;text;;no;Локация;no
+28;driver_license_file;Водительское удостоверение;file;;no;Документы;no
+29;id_certificate_file;Удостоверение личности;file;;no;Документы;no
+30;foreign_passport_number;Номер загранпаспорта;text;;no;Документы;no
+31;foreign_passport_issue_date;Дата выдачи загранпаспорта;date;;no;Документы;no
+32;foreign_passport_file;Загранпаспорт;file;;no;Документы;no
+33;criminal_record_file;Справка о несудимости;file;;no;Документы;no
+34;phone;Телефон;tel;;no;Контакты и образование;no
+35;phone_note;Примечание к телефону;text;;no;Контакты и образование;no
+36;education;Образование;text;;no;Контакты и образование;no
+37;notes;Примечание;textarea;;yes;Прочее;yes

@@ -12,6 +12,9 @@ import {
   loadDictionaries,
   loadEmployees,
   saveEmployees,
+  loadLogs,
+  addLog,
+  loadFieldsSchema,
   ROOT_DIR
 } from "./store.js";
 import { mergeRow, normalizeRows } from "./csv.js";
@@ -94,6 +97,58 @@ app.get("/api/dictionaries", async (_req, res) => {
   });
 
   res.json({ dictionaries: grouped });
+});
+
+app.get("/api/fields-schema", async (_req, res) => {
+  const schema = await loadFieldsSchema();
+
+  // Группируем поля по группам
+  const groups = {};
+  const tableFields = [];
+  const allFields = [];
+
+  schema.forEach((field) => {
+    const fieldData = {
+      order: parseInt(field.field_order, 10),
+      key: field.field_name,
+      label: field.field_label,
+      type: field.field_type,
+      options: field.field_options ? field.field_options.split('|') : [],
+      group: field.field_group,
+      showInTable: field.show_in_table === 'yes',
+      editableInTable: field.editable_in_table === 'yes'
+    };
+
+    allFields.push(fieldData);
+
+    // Группировка для карточек
+    if (!groups[field.field_group]) {
+      groups[field.field_group] = [];
+    }
+    groups[field.field_group].push(fieldData);
+
+    // Поля для сводной таблицы
+    if (field.show_in_table === 'yes') {
+      tableFields.push(fieldData);
+    }
+  });
+
+  res.json({
+    groups,
+    tableFields,
+    allFields
+  });
+});
+
+app.get("/api/logs", async (req, res) => {
+  const logs = await loadLogs();
+  // Сортировка по убыванию (новые сначала)
+  logs.sort((a, b) => {
+    const dateA = new Date(a.timestamp);
+    const dateB = new Date(b.timestamp);
+    return dateB - dateA;
+  });
+  res.json({ logs });
 });
 
 app.post("/api/open-data-folder", async (req, res) => {
@@ -222,6 +277,12 @@ app.post("/api/employees", async (req, res) => {
   employees.push(baseEmployee);
   await saveEmployees(employees);
 
+  // Логирование создания
+  const employeeName = [baseEmployee.last_name, baseEmployee.first_name, baseEmployee.middle_name]
+    .filter(Boolean)
+    .join(" ");
+  await addLog("CREATE", employeeId, employeeName, "", "", "", "Создан новый сотрудник");
+
   res.status(201).json({ employee_id: employeeId });
 });
 
@@ -243,11 +304,38 @@ app.put("/api/employees/:id", async (req, res) => {
 
   await saveEmployees(employees);
 
+  // Логирование изменений
+  const employeeName = [next.last_name, next.first_name, next.middle_name]
+    .filter(Boolean)
+    .join(" ");
+
+  // Находим измененные поля
+  const changedFields = [];
+  EMPLOYEE_COLUMNS.forEach((field) => {
+    if (field !== "employee_id" && current[field] !== next[field]) {
+      changedFields.push(field);
+    }
+  });
+
+  // Логируем каждое изменение
+  for (const field of changedFields) {
+    await addLog(
+      "UPDATE",
+      req.params.id,
+      employeeName,
+      field,
+      current[field] || "",
+      next[field] || "",
+      `Изменено поле: ${field}`
+    );
+  }
+
   res.json({ employee: next });
 });
 
 app.delete("/api/employees/:id", async (req, res) => {
   const employees = await loadEmployees();
+  const deletedEmployee = employees.find((item) => item.employee_id === req.params.id);
   const nextEmployees = employees.filter((item) => item.employee_id !== req.params.id);
 
   if (nextEmployees.length === employees.length) {
@@ -256,6 +344,14 @@ app.delete("/api/employees/:id", async (req, res) => {
   }
 
   await saveEmployees(nextEmployees);
+
+  // Логирование удаления
+  if (deletedEmployee) {
+    const employeeName = [deletedEmployee.last_name, deletedEmployee.first_name, deletedEmployee.middle_name]
+      .filter(Boolean)
+      .join(" ");
+    await addLog("DELETE", req.params.id, employeeName, "", "", "", "Сотрудник удален");
+  }
 
   res.status(204).end();
 });

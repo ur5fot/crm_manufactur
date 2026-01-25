@@ -53,5 +53,11 @@ export const api = {
   },
   getDictionaries() {
     return request("/dictionaries");
+  },
+  getLogs() {
+    return request("/logs");
+  },
+  getFieldsSchema() {
+    return request("/fields-schema");
   }
 };

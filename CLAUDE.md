@@ -59,7 +59,9 @@ npm run preview
 
 **CSV-based database** instead of traditional RDBMS:
 - `data/employees.csv` - main employee records (37 columns) - single denormalized table
-- `data/dictionaries.csv` - reference data for selects (gender, blood groups, employment status, etc.)
+- `data/fields_schema.csv` - **meta-schema defining all fields, their types, labels, options, and UI configuration**
+- `data/logs.csv` - audit log of all CRUD operations
+- `data/dictionaries.csv` - (legacy, kept for compatibility) reference data
 - `files/employee_[ID]/` - uploaded PDF documents
 
 **CSV Format:**
@@ -81,11 +83,13 @@ npm run preview
 - `GET /api/employees` - List all employees (returns array of employee objects)
 - `GET /api/employees/:id` - Get employee details (returns single employee object)
 - `POST /api/employees` - Create employee (accepts employee object, auto-generates numeric ID if not provided)
-- `PUT /api/employees/:id` - Update employee (accepts employee object)
-- `DELETE /api/employees/:id` - Delete employee and associated files
+- `PUT /api/employees/:id` - Update employee (accepts employee object, logs changes automatically)
+- `DELETE /api/employees/:id` - Delete employee and associated files (logs deletion)
 - `POST /api/employees/:id/files` - Upload PDF documents (multer)
 - `POST /api/employees/import` - Bulk import from CSV file
-- `GET /api/dictionaries` - Get all reference data grouped by type
+- `GET /api/fields-schema` - **Get dynamic UI schema** (field types, labels, options, groups, table configuration)
+- `GET /api/dictionaries` - Get all reference data grouped by type (legacy)
+- `GET /api/logs` - Get audit log sorted by timestamp descending
 - `POST /api/open-data-folder` - Open data folder in OS file explorer
 
 **Important patterns:**
@@ -107,7 +111,9 @@ npm run preview
 - Pure Vue 3 reactivity (no Vuex/Pinia)
 - All state in App.vue component
 - Form data mirrors employee object structure
-- Dictionaries loaded on mount via `/api/dictionaries` and used for dropdown selects
+- **Dynamic UI generation**: Fields schema loaded on mount via `/api/fields-schema`
+- Form groups, table columns, and filters generated from schema
+- Three view modes: Cards (detail), Table (summary with inline editing), Logs (audit trail)
 
 **Vite proxy configuration** ([vite.config.js](client/vite.config.js)):
 - `/api`, `/files`, `/data` proxied to `http://localhost:3000`
@@ -157,37 +163,69 @@ Defined in [server/src/schema.js](server/src/schema.js):
 36. `education` - Education
 37. `notes` - Notes
 
-### Dictionaries (5 columns)
+### Fields Schema (8 columns) - **Primary UI Configuration**
 
-Reference data for dropdown lists in [data/dictionaries.csv](data/dictionaries.csv):
+**Dynamic UI system** controlled by [data/fields_schema.csv](data/fields_schema.csv):
 
-- dictionary_id, dictionary_type, value, label, order_index
+This file defines the entire UI structure - **edit this file to change form layout, table columns, field types, and dropdown options**.
 
-**Available dictionary types:**
-- `gender` - Мужской, Женский
-- `blood_group` - I (0), II (A), III (B), IV (AB)
-- `employment_status` - Работает, Уволен, Отпуск, Больничный
-- `work_type` - Полная ставка, Частичная занятость, Контракт, Временная работа
-- `fit_status` - Годен, Не годен, Ограниченно годен
+**Columns:**
+- `field_order` - Sequential order (1-37)
+- `field_name` - Technical field name (matches employees.csv column)
+- `field_label` - Display label in Russian
+- `field_type` - Input type: `text`, `select`, `textarea`, `number`, `email`, `tel`, `date`, `file`
+- `field_options` - For select fields: pipe-separated values (e.g., `Работает|Уволен|Отпуск`)
+- `show_in_table` - Show in summary table: `yes` or `no`
+- `field_group` - Group name for employee card sections
+- `editable_in_table` - Allow inline editing in table: `yes` or `no`
 
-**API response format:**
-```json
-{
-  "dictionaries": {
-    "gender": [
-      {"value": "Мужской", "label": "Мужской"},
-      {"value": "Женский", "label": "Женский"}
-    ],
-    ...
-  }
-}
+**Example rows:**
+```csv
+5;employment_status;Статус работы;select;Работает|Уволен|Отпуск|Больничный;yes;Личные данные;yes
+7;location;Местонахождение;select;Симферополь|Керчь|Евпатория;yes;Локация;yes
 ```
 
-**Usage in forms:**
-- Employee form fields with `type: "select"` and `optionsKey` property use dictionaries
-- Fields: `gender`, `employment_status`, `work_type`, `fit_status`, `blood_group`
-- Dropdown options populated from `dictionaries[field.optionsKey]`
-- To add new select values, edit [data/dictionaries.csv](data/dictionaries.csv) and reload page
+**How it works:**
+1. Backend reads fields_schema.csv on startup
+2. `GET /api/fields-schema` returns structured data (groups, tableFields, allFields)
+3. Frontend dynamically generates:
+   - Employee card form sections grouped by `field_group`
+   - Summary table columns where `show_in_table=yes`
+   - Filters with checkboxes for select fields in table
+   - Dictionaries from `field_options`
+
+**To modify UI:**
+1. Edit [data/fields_schema.csv](data/fields_schema.csv)
+2. Reload page - changes apply immediately
+3. No code changes required!
+
+### Dictionaries (5 columns) - **Legacy, Replaced by fields_schema.csv**
+
+Reference data file [data/dictionaries.csv](data/dictionaries.csv) is kept for backward compatibility but **not used by the application**.
+
+All dropdown options are now defined directly in `fields_schema.csv` via the `field_options` column.
+
+### Audit Logs (9 columns)
+
+Automatic change tracking in [data/logs.csv](data/logs.csv):
+
+**Columns:**
+- `log_id` - Sequential log entry ID
+- `timestamp` - ISO 8601 timestamp
+- `action` - Operation type: `CREATE`, `UPDATE`, `DELETE`
+- `employee_id` - Employee ID
+- `employee_name` - Full name at time of change
+- `field_name` - Changed field (for UPDATE)
+- `old_value` - Previous value (for UPDATE)
+- `new_value` - New value (for UPDATE)
+- `details` - Human-readable description
+
+**Features:**
+- All CRUD operations automatically logged
+- Field-level change tracking for updates
+- Searchable logs view in UI
+- Sorted by timestamp descending (newest first)
+- Human-readable field labels: "Пригодность (fit_status)"
 
 ## CSV Import
 
@@ -202,7 +240,7 @@ Template: `data/employees_import_sample.csv`
 - `employee_id` optional: if empty, auto-generated (sequential numeric); if exists, row skipped
 - Dates in `YYYY-MM-DD` format
 - Imports all employee fields including personal data, employment, contact (phone, phone_note), education, documents, etc.
-- Dictionary values (gender, employment_status, work_type, etc.) must match values from dictionaries.csv
+- Dictionary values (gender, employment_status, work_type, etc.) must match values from fields_schema.csv `field_options` column
 
 ## Key Technical Decisions
 
@@ -211,14 +249,26 @@ Template: `data/employees_import_sample.csv`
 3. **Why monolithic App.vue?** Small project scope, component splitting not necessary
 4. **Why single denormalized table?** Simplicity - one phone and one education field per employee is sufficient for most use cases
 5. **Why relative file paths?** Makes data folder portable across systems
+6. **Why fields_schema.csv?** Single source of truth for UI configuration - no hardcoded forms, complete flexibility
+7. **Why multiple filter checkboxes?** Better UX than single-select dropdowns for filtering data
 
 ## Modifying Data Model
 
-When adding new employee fields:
-1. Add column to `EMPLOYEE_COLUMNS` in [server/src/schema.js](server/src/schema.js)
-2. Add to CSV header row in `data/employees.csv`
-3. Add form input in [client/src/App.vue](client/src/App.vue)
-4. Row normalization handles missing columns automatically
+**Adding or changing fields is now extremely simple:**
+
+1. Edit [data/fields_schema.csv](data/fields_schema.csv):
+   - Add new row or modify existing row
+   - Set field type, label, options, group, table visibility
+2. Add column to `EMPLOYEE_COLUMNS` in [server/src/schema.js](server/src/schema.js)
+3. Add to CSV header row in `data/employees.csv`
+4. Reload page - UI updates automatically!
+
+**No code changes needed for:**
+- Changing field labels
+- Adding/removing dropdown options
+- Showing/hiding fields in summary table
+- Enabling/disabling inline editing
+- Reorganizing form groups
 
 When adding new document types:
 1. Add column to `EMPLOYEE_COLUMNS`

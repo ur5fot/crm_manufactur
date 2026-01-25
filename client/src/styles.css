@@ -400,6 +400,294 @@ button:hover:not(:disabled) {
   }
 }
 
+/* Сводная таблица */
+.layout-table {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.table-panel {
+  width: 100%;
+  max-width: 100%;
+}
+
+.table-container {
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: 70vh;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: #fff;
+}
+
+.summary-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.summary-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: rgba(255, 253, 247, 0.98);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.summary-table th {
+  padding: 12px 10px;
+  text-align: left;
+  font-weight: 600;
+  border-bottom: 2px solid var(--line);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.th-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.th-label {
+  white-space: nowrap;
+}
+
+.column-filter {
+  padding: 4px 6px;
+  font-size: 11px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--ink);
+  text-transform: none;
+  letter-spacing: normal;
+  cursor: pointer;
+  font-weight: normal;
+  min-width: 100px;
+}
+
+.column-filter:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.1);
+}
+
+.column-filter-checkboxes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px 0;
+}
+
+.filter-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  padding: 3px 0;
+  font-size: 11px;
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: normal;
+  color: var(--ink);
+  transition: background-color 0.15s ease;
+  border-radius: 4px;
+  padding: 3px 6px;
+}
+
+.filter-checkbox-label:hover {
+  background-color: rgba(15, 118, 110, 0.08);
+}
+
+.filter-checkbox {
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+  accent-color: var(--accent);
+  flex-shrink: 0;
+}
+
+.filter-checkbox-text {
+  user-select: none;
+  white-space: nowrap;
+}
+
+.summary-table td {
+  padding: 0;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+
+.summary-table tbody tr {
+  transition: background-color 0.15s ease;
+  cursor: pointer;
+}
+
+.summary-table tbody tr:hover {
+  background-color: rgba(15, 118, 110, 0.08);
+}
+
+.id-cell {
+  padding: 10px;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.editable-cell {
+  position: relative;
+}
+
+.view-cell {
+  padding: 10px;
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  transition: background-color 0.15s ease;
+  cursor: pointer;
+}
+
+.editable-cell:hover .view-cell {
+  background-color: rgba(15, 118, 110, 0.06);
+}
+
+.edit-cell {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: #fff;
+  align-items: center;
+}
+
+.cell-input {
+  flex: 1;
+  min-width: 120px;
+  padding: 6px 8px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  background: #fff;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.1);
+}
+
+.cell-input:focus {
+  border-color: var(--accent-strong);
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.15);
+}
+
+.cell-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.cell-btn {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: #fff;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.15s ease;
+}
+
+.cell-btn:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.save-btn {
+  color: #059669;
+  border-color: #059669;
+}
+
+.save-btn:hover {
+  background: #059669;
+  color: #fff;
+}
+
+.cancel-btn {
+  color: #dc2626;
+  border-color: #dc2626;
+}
+
+.cancel-btn:hover {
+  background: #dc2626;
+  color: #fff;
+}
+
+/* Активная кнопка режима просмотра */
+button.secondary.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+/* Таблица логов */
+.logs-table tbody tr {
+  cursor: default;
+}
+
+.logs-table tbody tr:hover {
+  background-color: rgba(15, 118, 110, 0.04);
+}
+
+.log-timestamp {
+  padding: 10px;
+  white-space: nowrap;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.log-action {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.action-create {
+  background: rgba(16, 185, 129, 0.15);
+  color: #065f46;
+}
+
+.action-update {
+  background: rgba(59, 130, 246, 0.15);
+  color: #1e40af;
+}
+
+.action-delete {
+  background: rgba(239, 68, 68, 0.15);
+  color: #991b1b;
+}
+
+.log-value {
+  padding: 10px;
+  font-size: 13px;
+  max-width: 200px;
+  word-wrap: break-word;
+}
+
+.log-details {
+  padding: 10px;
+  font-size: 13px;
+  color: var(--muted);
+  font-style: italic;
+}
+
 @media (max-width: 720px) {
   .app {
     padding: 20px;
@@ -412,5 +700,13 @@ button:hover:not(:disabled) {
   .topbar {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .table-container {
+    max-height: 60vh;
+  }
+
+  .cell-input {
+    min-width: 100px;
   }
 }

@@ -7,10 +7,11 @@ Local CRM system that stores data in CSV files and PDF documents. CSV files can 
 ## Features
 
 - **CSV-based storage** - no database required, edit data directly in Excel
+- **Dynamic UI** - entire form and table structure controlled by `fields_schema.csv`
 - **Sequential numeric IDs** - simple employee IDs (1, 2, 3...)
 - **File management** - upload and store PDF documents per employee
-- **Single table design** - all employee data including phone and education in one table
-- **Dictionary-driven forms** - dropdown values managed via CSV file
+- **Summary table** - 9 columns with inline editing and multi-select filters
+- **Automatic audit logging** - all changes tracked in `logs.csv` with field-level details
 - **CSV import** - bulk import employees from CSV files
 - **UTF-8 with BOM** - proper Cyrillic support in Excel
 
@@ -27,7 +28,9 @@ Local CRM system that stores data in CSV files and PDF documents. CSV files can 
 crm_manufactur/
 ├── data/
 │   ├── employees.csv              # Core employee data (37 fields)
-│   └── dictionaries.csv           # Reference data for dropdowns
+│   ├── fields_schema.csv          # Meta-schema: field types, labels, options, UI config
+│   ├── logs.csv                   # Audit log of all changes
+│   └── dictionaries.csv           # (legacy, kept for compatibility)
 ├── files/
 │   └── employee_[ID]/             # Uploaded PDF documents
 ├── server/                        # Express.js backend
@@ -113,9 +116,31 @@ Open `http://localhost:5173` in your browser.
   36. `education` - Education
   37. `notes` - Notes
 
-- **dictionaries.csv** - Reference data for dropdown selects:
-  - dictionary_id, dictionary_type, value, label, order_index
-  - Types: gender, blood_group, employment_status, work_type, fit_status
+- **fields_schema.csv** - **Meta-schema for UI control** (8 columns):
+  - `field_order` - Sequential number (1-37)
+  - `field_name` - Technical field name
+  - `field_label` - Display label (in Russian)
+  - `field_type` - Input type: `text`, `select`, `textarea`, `number`, `email`, `tel`, `date`, `file`
+  - `field_options` - Options for select (pipe-separated), e.g.: `Working|Fired|On leave`
+  - `show_in_table` - Show in summary table: `yes` / `no`
+  - `field_group` - Group name for employee card
+  - `editable_in_table` - Allow inline editing: `yes` / `no`
+  - **To change UI, simply edit this file and reload the page!**
+
+- **logs.csv** - Audit log of all changes (9 columns):
+  - `log_id` - Log entry ID
+  - `timestamp` - Timestamp (ISO 8601)
+  - `action` - Operation type: `CREATE`, `UPDATE`, `DELETE`
+  - `employee_id` - Employee ID
+  - `employee_name` - Full name at time of change
+  - `field_name` - Changed field (for UPDATE)
+  - `old_value` - Old value
+  - `new_value` - New value
+  - `details` - Change description
+
+- **dictionaries.csv** - (legacy, replaced by `fields_schema.csv`):
+  - Kept for backward compatibility but not used
+  - All dropdown options now in `fields_schema.csv` → `field_options`
 
 ## Features in Detail
 
