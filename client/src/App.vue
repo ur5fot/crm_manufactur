@@ -1,0 +1,626 @@
+<script setup>
+import { computed, onMounted, reactive, ref } from "vue";
+import { api } from "./api";
+
+const employeeFields = [
+  "employee_id",
+  "last_name",
+  "first_name",
+  "middle_name",
+  "employment_status",
+  "additional_status",
+  "location",
+  "department",
+  "position",
+  "grade",
+  "salary_grid",
+  "salary_amount",
+  "specialty",
+  "work_state",
+  "work_type",
+  "gender",
+  "fit_status",
+  "order_ref",
+  "bank_name",
+  "bank_card_number",
+  "bank_iban",
+  "tax_id",
+  "email",
+  "blood_group",
+  "workplace_location",
+  "residence_place",
+  "registration_place",
+  "driver_license_file",
+  "id_certificate_file",
+  "foreign_passport_number",
+  "foreign_passport_issue_date",
+  "foreign_passport_file",
+  "criminal_record_file",
+  "phone",
+  "phone_note",
+  "education",
+  "notes"
+];
+
+// Options будут загружены из dictionaries.csv через API
+
+const fieldGroups = [
+  {
+    title: "Личные данные",
+    fields: [
+      { key: "employee_id", label: "ID сотрудника", readOnly: true },
+      { key: "last_name", label: "Фамилия" },
+      { key: "first_name", label: "Имя" },
+      { key: "middle_name", label: "Отчество" },
+      { key: "gender", label: "Пол", type: "select", optionsKey: "gender" },
+      {
+        key: "employment_status",
+        label: "Статус",
+        type: "select",
+        optionsKey: "employment_status"
+      },
+      { key: "additional_status", label: "Доп. статус" }
+    ]
+  },
+  {
+    title: "Должность и работа",
+    fields: [
+      { key: "department", label: "Подразделение" },
+      { key: "position", label: "Должность" },
+      { key: "grade", label: "Разряд (словами)" },
+      { key: "specialty", label: "Специальность" },
+      { key: "work_state", label: "Рабочее состояние" },
+      { key: "work_type", label: "Тип работы", type: "select", optionsKey: "work_type" },
+      { key: "fit_status", label: "Пригодность", type: "select", optionsKey: "fit_status" },
+      { key: "order_ref", label: "Приказ" }
+    ]
+  },
+  {
+    title: "Локация",
+    fields: [
+      { key: "location", label: "Местонахождение" },
+      { key: "workplace_location", label: "Место работы" },
+      { key: "residence_place", label: "Место проживания" },
+      { key: "registration_place", label: "Место регистрации" }
+    ]
+  },
+  {
+    title: "Оплата",
+    fields: [
+      { key: "salary_grid", label: "Зарплатная сетка" },
+      { key: "salary_amount", label: "Оклад", type: "number" },
+      { key: "bank_name", label: "Банк" },
+      { key: "bank_card_number", label: "Номер карты" },
+      { key: "bank_iban", label: "IBAN" },
+      { key: "tax_id", label: "ИНН" }
+    ]
+  },
+  {
+    title: "Контакты и образование",
+    fields: [
+      { key: "phone", label: "Телефон", type: "tel" },
+      { key: "phone_note", label: "Примечание к телефону" },
+      { key: "email", label: "Эл. почта", type: "email" },
+      { key: "education", label: "Образование" }
+    ]
+  },
+  {
+    title: "Документы",
+    fields: [
+      { key: "driver_license_file", label: "Водительское удостоверение (файл)" },
+      { key: "id_certificate_file", label: "Удостоверение личности (файл)" },
+      { key: "foreign_passport_number", label: "Номер загранпаспорта" },
+      {
+        key: "foreign_passport_issue_date",
+        label: "Дата выдачи загранпаспорта",
+        type: "date"
+      },
+      { key: "foreign_passport_file", label: "Загранпаспорт (файл)" },
+      { key: "criminal_record_file", label: "Справка о несудимости (файл)" }
+    ]
+  },
+  {
+    title: "Прочее",
+    fields: [
+      { key: "blood_group", label: "Группа крови", type: "select", optionsKey: "blood_group" },
+      { key: "notes", label: "Примечание", type: "textarea" }
+    ]
+  }
+];
+
+const documentFields = [
+  { key: "driver_license_file", label: "Водительское удостоверение (PDF)" },
+  { key: "id_certificate_file", label: "Удостоверение личности (PDF)" },
+  { key: "foreign_passport_file", label: "Загранпаспорт (PDF)" },
+  { key: "criminal_record_file", label: "Справка о несудимости (PDF)" }
+ ];
+
+const csvLinks = [
+  { label: "Сотрудники (employees.csv)", path: "/data/employees.csv" },
+  { label: "Справочники (dictionaries.csv)", path: "/data/dictionaries.csv" }
+];
+
+const employees = ref([]);
+const selectedId = ref("");
+const searchTerm = ref("");
+const loading = ref(false);
+const saving = ref(false);
+const errorMessage = ref("");
+const openingDataFolder = ref(false);
+const importFile = ref(null);
+const importResult = ref(null);
+const importing = ref(false);
+const dictionaries = ref({});
+
+const form = reactive(emptyEmployee());
+const documentFiles = reactive(
+  Object.fromEntries(documentFields.map((doc) => [doc.key, null]))
+);
+
+// Computed свойства для опций из справочников
+const genderOptions = computed(() => dictionaries.value.gender || []);
+const employmentStatusOptions = computed(() => dictionaries.value.employment_status || []);
+const workTypeOptions = computed(() => dictionaries.value.work_type || []);
+const fitStatusOptions = computed(() => dictionaries.value.fit_status || []);
+const bloodGroupOptions = computed(() => dictionaries.value.blood_group || []);
+
+const filteredEmployees = computed(() => {
+  const query = searchTerm.value.trim().toLowerCase();
+  if (!query) {
+    return employees.value;
+  }
+  return employees.value.filter((employee) => {
+    const haystack = [
+      displayName(employee),
+      employee.department,
+      employee.position,
+      employee.employee_id
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+    return haystack.includes(query);
+  });
+});
+
+const isNew = computed(() => !form.employee_id);
+
+function emptyEmployee() {
+  const base = {};
+  for (const field of employeeFields) {
+    base[field] = "";
+  }
+  return base;
+}
+
+function resetForm() {
+  Object.assign(form, emptyEmployee());
+  for (const key of Object.keys(documentFiles)) {
+    documentFiles[key] = null;
+  }
+}
+
+function displayName(employee) {
+  const parts = [employee.last_name, employee.first_name, employee.middle_name].filter(Boolean);
+  return parts.length ? parts.join(" ") : "Без имени";
+}
+
+function fileUrl(path) {
+  if (!path) {
+    return "";
+  }
+  if (path.startsWith("files/")) {
+    return `/${path}`;
+  }
+  return path;
+}
+
+async function openDataFolder() {
+  openingDataFolder.value = true;
+  errorMessage.value = "";
+  try {
+    await api.openDataFolder();
+  } catch (error) {
+    errorMessage.value = error.message;
+  } finally {
+    openingDataFolder.value = false;
+  }
+}
+
+function onImportFileChange(event) {
+  importFile.value = event.target.files?.[0] || null;
+  importResult.value = null;
+}
+
+function resetImport() {
+  importFile.value = null;
+  importResult.value = null;
+}
+
+async function importEmployees() {
+  if (!importFile.value) {
+    return;
+  }
+  importing.value = true;
+  errorMessage.value = "";
+  try {
+    const formData = new FormData();
+    formData.append("file", importFile.value);
+    const result = await api.importEmployees(formData);
+    importResult.value = {
+      added: result?.added ?? 0,
+      skipped: result?.skipped ?? 0,
+      errors: result?.errors || []
+    };
+    await loadEmployees();
+  } catch (error) {
+    errorMessage.value = error.message;
+  } finally {
+    importing.value = false;
+  }
+}
+
+async function loadEmployees() {
+  loading.value = true;
+  errorMessage.value = "";
+  try {
+    const data = await api.getEmployees();
+    employees.value = data.employees || [];
+  } catch (error) {
+    errorMessage.value = error.message;
+  } finally {
+    loading.value = false;
+  }
+}
+
+async function selectEmployee(id) {
+  if (!id) {
+    return;
+  }
+  selectedId.value = id;
+  errorMessage.value = "";
+  try {
+    const data = await api.getEmployee(id);
+    Object.assign(form, emptyEmployee(), data.employee || {});
+    for (const key of Object.keys(documentFiles)) {
+      documentFiles[key] = null;
+    }
+  } catch (error) {
+    errorMessage.value = error.message;
+  }
+}
+
+function startNew() {
+  selectedId.value = "";
+  resetForm();
+}
+
+async function saveEmployee() {
+  saving.value = true;
+  errorMessage.value = "";
+  try {
+    const payload = { ...form };
+
+    if (isNew.value) {
+      const response = await api.createEmployee(payload);
+      await loadEmployees();
+      if (response?.employee_id) {
+        await selectEmployee(response.employee_id);
+      } else {
+        startNew();
+      }
+    } else {
+      await api.updateEmployee(form.employee_id, payload);
+      await loadEmployees();
+      await selectEmployee(form.employee_id);
+    }
+  } catch (error) {
+    errorMessage.value = error.message;
+  } finally {
+    saving.value = false;
+  }
+}
+
+async function deleteEmployee() {
+  if (!form.employee_id) {
+    return;
+  }
+  const confirmed = window.confirm("Удалить сотрудника и все связанные записи?");
+  if (!confirmed) {
+    return;
+  }
+  saving.value = true;
+  errorMessage.value = "";
+  try {
+    await api.deleteEmployee(form.employee_id);
+    await loadEmployees();
+    startNew();
+  } catch (error) {
+    errorMessage.value = error.message;
+  } finally {
+    saving.value = false;
+  }
+}
+
+function onDocumentFileChange(key, event) {
+  const file = event.target.files?.[0] || null;
+  documentFiles[key] = file;
+}
+
+async function uploadDocument(doc) {
+  if (!form.employee_id || !documentFiles[doc.key]) {
+    return;
+  }
+  errorMessage.value = "";
+  try {
+    const formData = new FormData();
+    formData.append("file", documentFiles[doc.key]);
+    formData.append("file_field", doc.key);
+    const response = await api.uploadEmployeeFile(form.employee_id, formData);
+    form[doc.key] = response?.path || form[doc.key];
+    documentFiles[doc.key] = null;
+  } catch (error) {
+    errorMessage.value = error.message;
+  }
+}
+
+async function loadDictionaries() {
+  try {
+    const data = await api.getDictionaries();
+    dictionaries.value = data.dictionaries || {};
+  } catch (error) {
+    console.error("Failed to load dictionaries:", error);
+  }
+}
+
+onMounted(async () => {
+  await loadDictionaries();
+  await loadEmployees();
+});
+</script>
+
+<template>
+  <div class="app">
+    <div class="page">
+      <header class="topbar">
+        <div class="brand">
+          <div class="brand-title">CRM на CSV</div>
+          <div class="brand-sub">Vue + Node, локальные CSV файлы</div>
+        </div>
+        <div class="top-actions">
+          <button class="secondary" type="button" @click="loadEmployees">
+            Обновить
+          </button>
+          <button class="primary" type="button" @click="startNew">
+            Новый сотрудник
+          </button>
+        </div>
+      </header>
+
+      <div class="layout">
+        <aside class="panel">
+          <div class="panel-header">
+            <div class="panel-title">Сотрудники</div>
+            <div class="status-bar">
+              <span v-if="loading">Загрузка...</span>
+              <span v-else>{{ employees.length }} всего</span>
+            </div>
+          </div>
+          <input
+            v-model="searchTerm"
+            class="search-input"
+            type="search"
+            placeholder="Поиск по ФИО, подразделению или ID"
+          />
+          <div class="employee-list">
+            <div
+              v-for="(employee, index) in filteredEmployees"
+              :key="employee.employee_id"
+              class="employee-card"
+              :class="{ active: employee.employee_id === selectedId }"
+              :style="{ animationDelay: `${index * 0.04}s` }"
+              @click="selectEmployee(employee.employee_id)"
+            >
+              <div class="employee-name">{{ displayName(employee) }}</div>
+              <div class="employee-meta">
+                {{ employee.position || "Без должности" }}
+                <span v-if="employee.department"> · {{ employee.department }}</span>
+              </div>
+              <div class="employee-tags">
+                <span class="tag">{{ employee.employment_status || "без статуса" }}</span>
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        <section class="panel">
+          <div class="panel-header">
+            <div class="panel-title">
+              {{ isNew ? "Новый сотрудник" : "Карточка сотрудника" }}
+            </div>
+            <div class="actions">
+              <button class="secondary" type="button" @click="startNew">
+                Очистить форму
+              </button>
+              <button
+                class="primary"
+                type="button"
+                :disabled="saving"
+                @click="saveEmployee"
+              >
+                {{ saving ? "Сохранение..." : "Сохранить" }}
+              </button>
+              <button
+                v-if="!isNew"
+                class="danger"
+                type="button"
+                :disabled="saving"
+                @click="deleteEmployee"
+              >
+                Удалить
+              </button>
+            </div>
+          </div>
+
+          <div v-if="errorMessage" class="alert">{{ errorMessage }}</div>
+
+          <div class="detail-grid">
+            <div v-for="group in fieldGroups" :key="group.title" class="section">
+              <div class="section-title">{{ group.title }}</div>
+              <div class="form-grid">
+                <div v-for="field in group.fields" :key="field.key" class="field">
+                  <label :for="field.key">{{ field.label }}</label>
+                  <select
+                    v-if="field.type === 'select'"
+                    :id="field.key"
+                    v-model="form[field.key]"
+                  >
+                    <option value="">--</option>
+                    <option
+                      v-for="option in dictionaries[field.optionsKey] || []"
+                      :key="option.value"
+                      :value="option.value"
+                    >
+                      {{ option.label }}
+                    </option>
+                  </select>
+                  <textarea
+                    v-else-if="field.type === 'textarea'"
+                    :id="field.key"
+                    v-model="form[field.key]"
+                  ></textarea>
+                  <input
+                    v-else
+                    :id="field.key"
+                    :type="field.type || 'text'"
+                    v-model="form[field.key]"
+                    :readonly="field.readOnly"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div class="section">
+              <div class="section-title">Быстрая загрузка PDF</div>
+              <div class="table-list">
+                <div v-for="doc in documentFields" :key="doc.key" class="file-row">
+                  <div>
+                    <div class="employee-name">{{ doc.label }}</div>
+                    <div class="file-link" v-if="form[doc.key]">
+                      <a :href="fileUrl(form[doc.key])" target="_blank">
+                        {{ form[doc.key] }}
+                      </a>
+                    </div>
+                    <div v-else class="inline-note">Файл не прикреплен.</div>
+                  </div>
+                  <input
+                    type="file"
+                    accept="application/pdf"
+                    @change="onDocumentFileChange(doc.key, $event)"
+                  />
+                  <button
+                    class="secondary"
+                    type="button"
+                    :disabled="isNew || !documentFiles[doc.key]"
+                    @click="uploadDocument(doc)"
+                  >
+                    Загрузить
+                  </button>
+                </div>
+              </div>
+              <div class="inline-note" v-if="isNew">
+                Сначала сохраните сотрудника, затем загрузите файлы.
+              </div>
+            </div>
+
+            <div class="section">
+              <div class="panel-header">
+                <div class="section-title">CSV файлы</div>
+                <button
+                  class="secondary"
+                  type="button"
+                  :disabled="openingDataFolder"
+                  @click="openDataFolder"
+                >
+                  {{ openingDataFolder ? "Открываем..." : "Открыть папку data" }}
+                </button>
+              </div>
+              <div class="table-list">
+                <div v-for="link in csvLinks" :key="link.path" class="file-row">
+                  <div>
+                    <div class="employee-name">{{ link.label }}</div>
+                    <div class="inline-note">Откроется в браузере, можно сохранить для Excel.</div>
+                  </div>
+                  <a class="file-link" :href="link.path" target="_blank" rel="noopener">
+                    Открыть
+                  </a>
+                  <a class="file-link" :href="link.path" download>
+                    Скачать
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            <div class="section">
+              <div class="panel-header">
+                <div class="section-title">Импорт новых сотрудников</div>
+                <a class="file-link" href="/data/employees_import_sample.csv" download>
+                  Скачать шаблон
+                </a>
+              </div>
+              <div class="field">
+                <label>CSV файл</label>
+                <input type="file" accept=".csv,text/csv" @change="onImportFileChange" />
+              </div>
+              <div class="actions">
+                <button
+                  class="primary"
+                  type="button"
+                  :disabled="!importFile || importing"
+                  @click="importEmployees"
+                >
+                  {{ importing ? "Импортируем..." : "Импортировать" }}
+                </button>
+                <button
+                  class="secondary"
+                  type="button"
+                  :disabled="!importFile && !importResult"
+                  @click="resetImport"
+                >
+                  Очистить
+                </button>
+              </div>
+              <div class="inline-note">
+                CSV: UTF-8, разделитель ;, заголовки как в employees.csv. Фамилия или имя
+                обязательны.
+              </div>
+              <div v-if="importFile" class="inline-note">Файл: {{ importFile.name }}</div>
+              <div v-if="importResult" class="status-bar">
+                Добавлено: {{ importResult.added }} · Пропущено: {{ importResult.skipped }}
+              </div>
+              <div
+                v-if="importResult && importResult.errors && importResult.errors.length"
+                class="inline-note"
+              >
+                Ошибки (первые {{ importResult.errors.length }}):
+              </div>
+              <div
+                v-if="importResult && importResult.errors && importResult.errors.length"
+                class="table-list"
+              >
+                <div
+                  v-for="error in importResult.errors"
+                  :key="`${error.row}-${error.reason}`"
+                  class="error-row"
+                >
+                  <div class="employee-name">Строка {{ error.row }}</div>
+                  <div class="inline-note">{{ error.reason }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+</template>

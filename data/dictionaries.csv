@@ -1,0 +1,21 @@
+﻿dictionary_id;dictionary_type;value;label;order_index
+1;gender;Мужской;Мужской;1
+2;gender;Женский;Женский;2
+3;blood_group;I (0);I (0);1
+4;blood_group;II (A);II (A);2
+5;blood_group;III (B);III (B);3
+6;blood_group;IV (AB);IV (AB);4
+7;contact_type;personal;Личный телефон;1
+8;contact_type;relative;Телефон родственника;2
+9;contact_type;emergency;Экстренный контакт;3
+10;employment_status;Работает;Работает;1
+11;employment_status;Уволен;Уволен;2
+12;employment_status;Отпуск;Отпуск;3
+13;employment_status;Больничный;Больничный;4
+14;work_type;Полная ставка;Полная ставка;1
+15;work_type;Частичная занятость;Частичная занятость;2
+16;work_type;Контракт;Контракт;3
+17;work_type;Временная работа;Временная работа;4
+18;fit_status;Годен;Годен;1
+19;fit_status;Не годен;Не годен;2
+20;fit_status;Ограниченно годен;Ограниченно годен;3
