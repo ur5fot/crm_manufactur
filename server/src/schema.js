@@ -45,14 +45,6 @@ export const DOCUMENT_FIELDS = [
   "criminal_record_file"
 ];
 
-export const DICTIONARY_COLUMNS = [
-  "dictionary_id",
-  "dictionary_type",
-  "value",
-  "label",
-  "order_index"
-];
-
 export const FIELD_SCHEMA_COLUMNS = [
   "field_order",
   "field_name",

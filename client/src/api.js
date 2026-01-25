@@ -51,9 +51,6 @@ export const api = {
       body: formData
     });
   },
-  getDictionaries() {
-    return request("/dictionaries");
-  },
   getLogs() {
     return request("/logs");
   },

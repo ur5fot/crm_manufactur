@@ -9,7 +9,6 @@ import {
   ensureDataDirs,
   DATA_DIR,
   FILES_DIR,
-  loadDictionaries,
   loadEmployees,
   saveEmployees,
   loadLogs,
@@ -79,24 +78,6 @@ function normalizeEmployeeInput(payload) {
 
 app.get("/api/health", (req, res) => {
   res.json({ ok: true });
-});
-
-app.get("/api/dictionaries", async (_req, res) => {
-  const dictionaries = await loadDictionaries();
-  const grouped = {};
-
-  dictionaries.forEach((item) => {
-    const type = item.dictionary_type;
-    if (!grouped[type]) {
-      grouped[type] = [];
-    }
-    grouped[type].push({
-      value: item.value,
-      label: item.label
-    });
-  });
-
-  res.json({ dictionaries: grouped });
 });
 
 app.get("/api/fields-schema", async (_req, res) => {
