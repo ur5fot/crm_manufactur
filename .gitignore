@@ -6,3 +6,5 @@ server/node_modules/
 files/*
 !files/.gitkeep
 .DS_Store
+data/employees.csv
+data/logs.csv
