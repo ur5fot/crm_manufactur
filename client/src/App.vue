@@ -414,18 +414,20 @@ async function loadFieldsSchema() {
   try {
     const data = await api.getFieldsSchema();
 
-    // Формируем группы полей для карточек
+    // Формируем группы полей для карточек (исключаем группу "Документы" - для нее отдельная таблица)
     const groups = data.groups || {};
-    fieldGroups.value = Object.keys(groups).map(groupName => ({
-      title: groupName,
-      fields: groups[groupName].map(field => ({
-        key: field.key,
-        label: field.label,
-        type: field.type,
-        optionsKey: field.type === 'select' ? field.key : undefined,
-        readOnly: field.key === 'employee_id'
-      }))
-    }));
+    fieldGroups.value = Object.keys(groups)
+      .filter(groupName => groupName !== 'Документы')
+      .map(groupName => ({
+        title: groupName,
+        fields: groups[groupName].map(field => ({
+          key: field.key,
+          label: field.label,
+          type: field.type,
+          optionsKey: field.type === 'select' ? field.key : undefined,
+          readOnly: field.key === 'employee_id'
+        }))
+      }));
 
     // Формируем колонки для сводной таблицы
     summaryColumns.value = (data.tableFields || []).map(field => ({
