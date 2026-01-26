@@ -42,8 +42,14 @@ crm_manufactur/
 
 ### Using the startup script
 
+Start both servers:
 ```bash
 ./run.sh
+```
+
+Stop both servers:
+```bash
+./stop.sh
 ```
 
 ### Manual startup
@@ -164,13 +170,17 @@ The summary table provides powerful filtering and editing capabilities:
 
 ### File Uploads
 
-Use the "Quick PDF upload" section in the UI to attach PDFs. File paths are automatically written to the corresponding columns in `employees.csv`.
+**Dynamic document types:** All fields with type `file` in `fields_schema.csv` automatically become available for upload in the Documents section.
 
-Supported document types:
-- Driver's license
-- ID certificate
-- Foreign passport
-- Criminal record certificate
+**Features:**
+- Upload PDF documents per employee
+- Files saved with proper names based on field type (e.g., `driver_license_file.pdf`, `id_certificate_file.pdf`)
+- "Open Folder" button in Documents section opens employee's folder in OS file explorer
+- File paths automatically written to corresponding columns in `employees.csv`
+- Temporary file handling ensures correct naming even when form data is delayed
+
+**Adding new document types:**
+Simply add a new row to `fields_schema.csv` with `field_type=file` - no code changes needed!
 
 ### CSV Import
 
@@ -211,8 +221,11 @@ All dropdown values in forms are managed via `data/dictionaries.csv`:
 - `PUT /api/employees/:id` - Update employee (accepts single employee object)
 - `DELETE /api/employees/:id` - Delete employee
 - `POST /api/employees/:id/files` - Upload PDF document
+- `DELETE /api/employees/:id/files/:fieldName` - Delete employee document
+- `POST /api/employees/:id/open-folder` - Open employee's document folder in OS file explorer
 - `POST /api/employees/import` - Bulk import from CSV
 - `GET /api/dictionaries` - Get all reference data
+- `GET /api/fields-schema` - Get dynamic UI schema (field types, labels, options)
 - `POST /api/open-data-folder` - Open data folder in OS file explorer
 
 ## Development

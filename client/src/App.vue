@@ -195,14 +195,28 @@ const filteredLogs = computed(() => {
 
 function emptyEmployee() {
   const base = {};
-  for (const field of employeeFields) {
-    base[field] = "";
+  // Используем динамический список полей из schema
+  if (allFieldsSchema.value.length > 0) {
+    for (const field of allFieldsSchema.value) {
+      base[field.key] = "";
+    }
+  } else {
+    // Fallback на статический список если schema еще не загружена
+    for (const field of employeeFields) {
+      base[field] = "";
+    }
   }
   return base;
 }
 
 function resetForm() {
+  // Полностью очищаем все свойства формы
+  for (const key of Object.keys(form)) {
+    delete form[key];
+  }
+  // Заполняем пустыми значениями
   Object.assign(form, emptyEmployee());
+  // Очищаем файлы
   for (const key of Object.keys(documentFiles)) {
     documentFiles[key] = null;
   }
@@ -334,7 +348,13 @@ async function saveEmployee() {
 
     const payload = { ...form };
 
+    // Очищаем пустые поля документов при создании нового сотрудника
     if (isNew.value) {
+      documentFields.value.forEach(doc => {
+        if (!payload[doc.key] || payload[doc.key].trim() === "") {
+          delete payload[doc.key];
+        }
+      });
       const response = await api.createEmployee(payload);
       await loadEmployees();
       if (response?.employee_id) {

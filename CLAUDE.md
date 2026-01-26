@@ -28,6 +28,14 @@ Local CRM system for managing employee data using CSV files as the database and 
 
 This script automatically installs dependencies if needed and starts both services in parallel.
 
+### Stop the application
+
+```bash
+./stop.sh
+```
+
+This script stops both frontend and backend servers by killing processes on ports 3000, 5173, and 5174.
+
 Or manually:
 
 ```bash
@@ -86,7 +94,9 @@ npm run preview
 - `POST /api/employees` - Create employee (accepts employee object, auto-generates numeric ID if not provided)
 - `PUT /api/employees/:id` - Update employee (accepts employee object, logs changes automatically)
 - `DELETE /api/employees/:id` - Delete employee and associated files (logs deletion)
-- `POST /api/employees/:id/files` - Upload PDF documents (multer)
+- `POST /api/employees/:id/files` - Upload PDF documents (multer with temporary filename, then renamed based on file_field)
+- `DELETE /api/employees/:id/files/:fieldName` - Delete employee document
+- `POST /api/employees/:id/open-folder` - Open employee's document folder in OS file explorer
 - `POST /api/employees/import` - Bulk import from CSV file
 - `GET /api/fields-schema` - **Get dynamic UI schema** (field types, labels, options, groups, table configuration)
 - `GET /api/dictionaries` - Get all reference data grouped by type (legacy)
@@ -99,7 +109,11 @@ npm run preview
 - IDs are sequential numeric strings (e.g., "1", "2", "3")
 - Auto-incremented IDs calculated by finding max existing ID + 1
 - Deleting an employee removes associated file directory
-- File uploads use multer with 10MB limit for PDFs
+- File uploads use multer with 10MB limit for PDFs:
+  - Files initially saved with temporary names (`temp_{timestamp}.pdf`)
+  - After upload completes, renamed based on `file_field` parameter (e.g., `driver_license_file.pdf`)
+  - This ensures correct naming even though multer processes files before body fields are available
+  - Document fields dynamically loaded from `fields_schema.csv` at server startup
 
 ### Frontend Architecture ([client/src/](client/src/))
 
@@ -123,6 +137,13 @@ npm run preview
 - **Empty value filter** - Special "(Пусто)" checkbox to filter rows with empty values
 - **ID column** - Center-aligned with title attribute for accessibility
 - **Filter state** - Reactive columnFilters object with `__EMPTY__` sentinel value for empty checks
+
+**Documents Section UI:**
+- **Dynamic document fields** - All fields with `field_type=file` from fields_schema automatically displayed
+- **Open Folder button** - Opens employee's document folder (`files/employee_{id}/`) in OS file explorer
+- **File upload** - Select file, then upload (saves with proper field-based naming)
+- **File actions** - Open document in browser, delete document
+- **Empty form reset** - Creating new employee clears all document fields to prevent copying file links
 
 **Vite proxy configuration** ([vite.config.js](client/vite.config.js)):
 - `/api`, `/files`, `/data` proxied to `http://localhost:3000`
@@ -267,10 +288,11 @@ Template: `data/employees_import_sample.csv`
 
 1. Edit [data/fields_schema.csv](data/fields_schema.csv):
    - Add new row or modify existing row
-   - Set field type, label, options, group, table visibility
-2. Add column to `EMPLOYEE_COLUMNS` in [server/src/schema.js](server/src/schema.js)
-3. Add to CSV header row in `data/employees.csv`
-4. Reload page - UI updates automatically!
+   - Set field type, label, options, group, table visibility, field order
+2. Add to CSV header row in `data/employees.csv`
+3. Restart server and reload page - UI updates automatically!
+
+**Note:** Both `EMPLOYEE_COLUMNS` and `DOCUMENT_FIELDS` are now dynamically loaded from `fields_schema.csv` at server startup based on `field_order` and `field_type=file` respectively.
 
 **No code changes needed for:**
 - Changing field labels
@@ -280,9 +302,11 @@ Template: `data/employees_import_sample.csv`
 - Reorganizing form groups
 
 When adding new document types:
-1. Add column to `EMPLOYEE_COLUMNS`
-2. Add to `DOCUMENT_FIELDS` array
-3. Upload UI automatically detects fields ending in `_file`
+1. Add new row to [data/fields_schema.csv](data/fields_schema.csv) with `field_type=file`
+2. Add column to CSV header row in `data/employees.csv`
+3. Reload page - document field appears automatically in Documents section!
+
+**Note:** `DOCUMENT_FIELDS` is now dynamically loaded from `fields_schema.csv` at server startup - no code changes needed!
 
 When adding new dictionary types:
 1. Add entries to [data/dictionaries.csv](data/dictionaries.csv)
