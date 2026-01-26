@@ -42,6 +42,11 @@ export const api = {
       body: formData
     });
   },
+  deleteEmployeeFile(id, fieldName) {
+    return request(`/employees/${id}/files/${fieldName}`, {
+      method: "DELETE"
+    });
+  },
   openDataFolder() {
     return request("/open-data-folder", { method: "POST" });
   },

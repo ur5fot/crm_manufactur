@@ -410,6 +410,65 @@ app.post("/api/employees/:id/files", upload.single("file"), async (req, res) => 
   res.json({ path: relativePath });
 });
 
+app.delete("/api/employees/:id/files/:fieldName", async (req, res) => {
+  const { id, fieldName } = req.params;
+
+  // Проверка что поле является документом
+  if (!DOCUMENT_FIELDS.includes(fieldName)) {
+    res.status(400).json({ error: "Неверное поле документа" });
+    return;
+  }
+
+  const employees = await loadEmployees();
+  const index = employees.findIndex((item) => item.employee_id === id);
+
+  if (index === -1) {
+    res.status(404).json({ error: "Сотрудник не найден" });
+    return;
+  }
+
+  const employee = employees[index];
+  const filePath = employee[fieldName];
+
+  if (!filePath) {
+    res.status(404).json({ error: "Файл не найден" });
+    return;
+  }
+
+  // Удаляем физический файл
+  const fullPath = path.join(ROOT_DIR, filePath);
+  try {
+    await fs.promises.unlink(fullPath);
+  } catch (error) {
+    console.error("Failed to delete file:", error);
+    // Продолжаем даже если файл не удалось удалить
+  }
+
+  // Очищаем поле в CSV
+  const updated = mergeRow(EMPLOYEE_COLUMNS, employee, {
+    [fieldName]: ""
+  });
+  updated.employee_id = id;
+  employees[index] = updated;
+  await saveEmployees(employees);
+
+  // Логирование удаления
+  const employeeName = [employee.last_name, employee.first_name, employee.middle_name]
+    .filter(Boolean)
+    .join(" ");
+  await addLog(
+    "UPDATE",
+    id,
+    employeeName,
+    fieldName,
+    filePath,
+    "",
+    `Удален документ: ${fieldName}`
+  );
+
+  res.status(204).end();
+});
+
 app.listen(port, () => {
   console.log(`CRM server running on http://localhost:${port}`);
 });

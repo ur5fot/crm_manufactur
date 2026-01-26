@@ -46,12 +46,15 @@ const employeeFields = [
 const fieldGroups = ref([]);
 const allFieldsSchema = ref([]);
 
-const documentFields = [
-  { key: "driver_license_file", label: "Водительское удостоверение (PDF)" },
-  { key: "id_certificate_file", label: "Удостоверение личности (PDF)" },
-  { key: "foreign_passport_file", label: "Загранпаспорт (PDF)" },
-  { key: "criminal_record_file", label: "Справка о несудимости (PDF)" }
- ];
+// Динамический список документов из fields_schema
+const documentFields = computed(() => {
+  return allFieldsSchema.value
+    .filter(field => field.type === 'file')
+    .map(field => ({
+      key: field.key,
+      label: field.label
+    }));
+});
 
 const csvLinks = [
   { label: "Сотрудники (employees.csv)", path: "/data/employees.csv" },
@@ -117,9 +120,7 @@ const fieldLabels = {
 };
 
 const form = reactive(emptyEmployee());
-const documentFiles = reactive(
-  Object.fromEntries(documentFields.map((doc) => [doc.key, null]))
-);
+const documentFiles = reactive({});
 
 // Dictionaries теперь формируются динамически из fields_schema.csv
 
@@ -367,6 +368,30 @@ async function uploadDocument(doc) {
     const response = await api.uploadEmployeeFile(form.employee_id, formData);
     form[doc.key] = response?.path || form[doc.key];
     documentFiles[doc.key] = null;
+  } catch (error) {
+    errorMessage.value = error.message;
+  }
+}
+
+function openDocument(fieldKey) {
+  if (!form[fieldKey]) return;
+  const url = `${import.meta.env.VITE_API_URL || ""}/files/${form[fieldKey]}`;
+  window.open(url, "_blank");
+}
+
+async function deleteDocument(doc) {
+  if (!form.employee_id || !form[doc.key]) {
+    return;
+  }
+
+  const confirmed = window.confirm(`Удалить документ "${doc.label}"?`);
+  if (!confirmed) return;
+
+  errorMessage.value = "";
+  try {
+    await api.deleteEmployeeFile(form.employee_id, doc.key);
+    form[doc.key] = "";
+    await loadEmployees();
   } catch (error) {
     errorMessage.value = error.message;
   }
@@ -688,36 +713,73 @@ onMounted(async () => {
             </div>
 
             <div class="section">
-              <div class="section-title">Быстрая загрузка PDF</div>
-              <div class="table-list">
-                <div v-for="doc in documentFields" :key="doc.key" class="file-row">
-                  <div>
-                    <div class="employee-name">{{ doc.label }}</div>
-                    <div class="file-link" v-if="form[doc.key]">
-                      <a :href="fileUrl(form[doc.key])" target="_blank">
-                        {{ form[doc.key] }}
-                      </a>
-                    </div>
-                    <div v-else class="inline-note">Файл не прикреплен.</div>
-                  </div>
-                  <input
-                    type="file"
-                    accept="application/pdf"
-                    @change="onDocumentFileChange(doc.key, $event)"
-                  />
-                  <button
-                    class="secondary"
-                    type="button"
-                    :disabled="isNew || !documentFiles[doc.key]"
-                    @click="uploadDocument(doc)"
-                  >
-                    Загрузить
-                  </button>
-                </div>
+              <div class="section-title">Документы</div>
+              <div v-if="isNew" class="inline-note">
+                Сначала сохраните сотрудника, затем загрузите документы.
               </div>
-              <div class="inline-note" v-if="isNew">
-                Сначала сохраните сотрудника, затем загрузите файлы.
-              </div>
+              <table v-else class="documents-table">
+                <thead>
+                  <tr>
+                    <th>Документ</th>
+                    <th>Статус</th>
+                    <th>Действия</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="doc in documentFields" :key="doc.key">
+                    <td>{{ doc.label }}</td>
+                    <td>
+                      <span v-if="form[doc.key]" class="status-uploaded">✓ Загружен</span>
+                      <span v-else class="status-not-uploaded">✗ Не загружен</span>
+                    </td>
+                    <td>
+                      <div class="document-actions">
+                        <template v-if="form[doc.key]">
+                          <button
+                            class="secondary small"
+                            type="button"
+                            @click="openDocument(doc.key)"
+                            title="Открыть документ"
+                          >
+                            Открыть
+                          </button>
+                          <button
+                            class="danger small"
+                            type="button"
+                            @click="deleteDocument(doc)"
+                            title="Удалить документ"
+                          >
+                            Удалить
+                          </button>
+                        </template>
+                        <template v-else>
+                          <input
+                            type="file"
+                            :id="`file-${doc.key}`"
+                            accept="application/pdf"
+                            @change="onDocumentFileChange(doc.key, $event)"
+                            style="display: none"
+                          />
+                          <label :for="`file-${doc.key}`" class="file-label-btn secondary small">
+                            Выбрать файл
+                          </label>
+                          <button
+                            v-if="documentFiles[doc.key]"
+                            class="primary small"
+                            type="button"
+                            @click="uploadDocument(doc)"
+                          >
+                            Загрузить
+                          </button>
+                          <span v-if="documentFiles[doc.key]" class="file-selected">
+                            {{ documentFiles[doc.key].name }}
+                          </span>
+                        </template>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
 
             <div class="section">
