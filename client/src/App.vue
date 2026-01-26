@@ -295,6 +295,18 @@ async function saveEmployee() {
   saving.value = true;
   errorMessage.value = "";
   try {
+    // Валидация обязательных полей
+    if (!form.first_name || !form.first_name.trim()) {
+      errorMessage.value = "Имя обязательно для заполнения";
+      saving.value = false;
+      return;
+    }
+    if (!form.last_name || !form.last_name.trim()) {
+      errorMessage.value = "Фамилия обязательна для заполнения";
+      saving.value = false;
+      return;
+    }
+
     const payload = { ...form };
 
     if (isNew.value) {
@@ -669,6 +681,7 @@ onMounted(async () => {
                     :type="field.type || 'text'"
                     v-model="form[field.key]"
                     :readonly="field.readOnly"
+                    :required="field.key === 'first_name' || field.key === 'last_name'"
                   />
                 </div>
               </div>

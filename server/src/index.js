@@ -193,11 +193,12 @@ app.post("/api/employees/import", importUpload.single("file"), async (req, res) 
       return;
     }
 
-    const hasName = String(normalized.last_name || "").trim() || String(normalized.first_name || "").trim();
-    if (!hasName) {
+    const hasFirstName = String(normalized.first_name || "").trim();
+    const hasLastName = String(normalized.last_name || "").trim();
+    if (!hasFirstName || !hasLastName) {
       skipped += 1;
       if (errors.length < maxErrors) {
-        errors.push({ row: index + 2, reason: "Не указаны имя или фамилия" });
+        errors.push({ row: index + 2, reason: "Не указаны имя и фамилия (оба поля обязательны)" });
       }
       return;
     }
@@ -247,6 +248,17 @@ app.post("/api/employees", async (req, res) => {
   const employees = await loadEmployees();
 
   const baseEmployee = normalizeEmployeeInput(payload);
+
+  // Валидация обязательных полей
+  if (!baseEmployee.first_name || !baseEmployee.first_name.trim()) {
+    res.status(400).json({ error: "Имя обязательно для заполнения" });
+    return;
+  }
+  if (!baseEmployee.last_name || !baseEmployee.last_name.trim()) {
+    res.status(400).json({ error: "Фамилия обязательна для заполнения" });
+    return;
+  }
+
   const employeeId = baseEmployee.employee_id || getNextId(employees, "employee_id");
 
   if (employees.some((item) => item.employee_id === employeeId)) {
@@ -281,6 +293,16 @@ app.put("/api/employees/:id", async (req, res) => {
   const current = employees[index];
   const next = mergeRow(EMPLOYEE_COLUMNS, current, updates);
   next.employee_id = req.params.id;
+
+  // Валидация обязательных полей
+  if (!next.first_name || !next.first_name.trim()) {
+    res.status(400).json({ error: "Имя обязательно для заполнения" });
+    return;
+  }
+  if (!next.last_name || !next.last_name.trim()) {
+    res.status(400).json({ error: "Фамилия обязательна для заполнения" });
+    return;
+  }
   employees[index] = next;
 
   await saveEmployees(employees);
