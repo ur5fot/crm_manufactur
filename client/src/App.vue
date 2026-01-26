@@ -68,6 +68,7 @@ const loading = ref(false);
 const saving = ref(false);
 const errorMessage = ref("");
 const openingDataFolder = ref(false);
+const openingEmployeeFolder = ref(false);
 const importFile = ref(null);
 const importResult = ref(null);
 const importing = ref(false);
@@ -231,6 +232,19 @@ async function openDataFolder() {
     errorMessage.value = error.message;
   } finally {
     openingDataFolder.value = false;
+  }
+}
+
+async function openEmployeeFolder() {
+  if (!form.employee_id) return;
+  openingEmployeeFolder.value = true;
+  errorMessage.value = "";
+  try {
+    await api.openEmployeeFolder(form.employee_id);
+  } catch (error) {
+    errorMessage.value = error.message;
+  } finally {
+    openingEmployeeFolder.value = false;
   }
 }
 
@@ -726,7 +740,18 @@ onMounted(async () => {
             </div>
 
             <div class="section">
-              <div class="section-title">Документы</div>
+              <div class="panel-header">
+                <div class="section-title">Документы</div>
+                <button
+                  v-if="!isNew"
+                  class="secondary"
+                  type="button"
+                  :disabled="openingEmployeeFolder"
+                  @click="openEmployeeFolder"
+                >
+                  {{ openingEmployeeFolder ? "Открываем..." : "Открыть папку" }}
+                </button>
+              </div>
               <div v-if="isNew" class="inline-note">
                 Сначала сохраните сотрудника, затем загрузите документы.
               </div>

@@ -4,6 +4,7 @@ import multer from "multer";
 import { parse } from "csv-parse/sync";
 import path from "path";
 import fs from "fs";
+import fsPromises from "fs/promises";
 import { execFile } from "child_process";
 import {
   ensureDataDirs,
@@ -14,15 +15,18 @@ import {
   loadLogs,
   addLog,
   loadFieldsSchema,
-  ROOT_DIR
+  ROOT_DIR,
+  initializeEmployeeColumns,
+  getEmployeeColumnsSync,
+  getDocumentFieldsSync
 } from "./store.js";
 import { mergeRow, normalizeRows } from "./csv.js";
-import { DOCUMENT_FIELDS, EMPLOYEE_COLUMNS } from "./schema.js";
 
 const app = express();
 const port = process.env.PORT || 3000;
 
 await ensureDataDirs();
+await initializeEmployeeColumns();
 
 app.use(cors());
 app.use(express.json({ limit: "10mb" }));
@@ -73,7 +77,7 @@ function getNextId(items, idField) {
 
 function normalizeEmployeeInput(payload) {
   const input = payload && typeof payload === "object" ? payload : {};
-  return normalizeRows(EMPLOYEE_COLUMNS, [input])[0];
+  return normalizeRows(getEmployeeColumnsSync(), [input])[0];
 }
 
 app.get("/api/health", (req, res) => {
@@ -141,6 +145,21 @@ app.post("/api/open-data-folder", async (req, res) => {
   }
 });
 
+app.post("/api/employees/:id/open-folder", async (req, res) => {
+  try {
+    const employeeId = req.params.id;
+    const employeeFolder = path.join(FILES_DIR, `employee_${employeeId}`);
+
+    // Создаем папку если она не существует
+    await fsPromises.mkdir(employeeFolder, { recursive: true });
+
+    await openFolder(employeeFolder);
+    res.json({ ok: true });
+  } catch (error) {
+    res.status(500).json({ error: "Не удалось открыть папку сотрудника" });
+  }
+});
+
 app.post("/api/employees/import", importUpload.single("file"), async (req, res) => {
   if (!req.file) {
     res.status(400).json({ error: "Файл CSV не найден" });
@@ -170,7 +189,7 @@ app.post("/api/employees/import", importUpload.single("file"), async (req, res) 
   }
 
   const headerColumns = Object.keys(records[0] || {});
-  const hasKnownHeaders = headerColumns.some((column) => EMPLOYEE_COLUMNS.includes(column));
+  const hasKnownHeaders = headerColumns.some((column) => getEmployeeColumnsSync().includes(column));
   if (!hasKnownHeaders) {
     res.status(400).json({ error: "Заголовки CSV не совпадают с employees.csv" });
     return;
@@ -186,8 +205,8 @@ app.post("/api/employees/import", importUpload.single("file"), async (req, res) 
   let skipped = 0;
 
   records.forEach((record, index) => {
-    const normalized = normalizeRows(EMPLOYEE_COLUMNS, [record])[0];
-    const hasAnyValue = EMPLOYEE_COLUMNS.some((column) => String(normalized[column] || "").trim());
+    const normalized = normalizeRows(getEmployeeColumnsSync(), [record])[0];
+    const hasAnyValue = getEmployeeColumnsSync().some((column) => String(normalized[column] || "").trim());
     if (!hasAnyValue) {
       skipped += 1;
       return;
@@ -291,7 +310,7 @@ app.put("/api/employees/:id", async (req, res) => {
 
   const updates = payload;
   const current = employees[index];
-  const next = mergeRow(EMPLOYEE_COLUMNS, current, updates);
+  const next = mergeRow(getEmployeeColumnsSync(), current, updates);
   next.employee_id = req.params.id;
 
   // Валидация обязательных полей
@@ -314,7 +333,7 @@ app.put("/api/employees/:id", async (req, res) => {
 
   // Находим измененные поля
   const changedFields = [];
-  EMPLOYEE_COLUMNS.forEach((field) => {
+  getEmployeeColumnsSync().forEach((field) => {
     if (field !== "employee_id" && current[field] !== next[field]) {
       changedFields.push(field);
     }
@@ -368,11 +387,10 @@ const storage = multer.diskStorage({
     });
   },
   filename: (req, file, cb) => {
-    const fileField = String(req.body.file_field || req.body.file_type || "file")
-      .replace(/[^a-zA-Z0-9_-]/g, "_")
-      .toLowerCase();
+    // Используем временное имя, потому что req.body еще не доступен
     const ext = path.extname(file.originalname) || ".pdf";
-    cb(null, `${fileField}${ext}`);
+    const tempName = `temp_${Date.now()}${ext}`;
+    cb(null, tempName);
   }
 });
 
@@ -388,24 +406,39 @@ app.post("/api/employees/:id/files", upload.single("file"), async (req, res) => 
   const index = employees.findIndex((item) => item.employee_id === req.params.id);
 
   if (index === -1) {
+    // Удаляем временный файл
+    await fsPromises.unlink(req.file.path).catch(() => {});
     res.status(404).json({ error: "Сотрудник не найден" });
     return;
   }
 
+  const fileField = String(req.body.file_field || "");
+  if (!getDocumentFieldsSync().includes(fileField)) {
+    // Удаляем временный файл
+    await fsPromises.unlink(req.file.path).catch(() => {});
+    res.status(400).json({ error: "Неверное поле документа" });
+    return;
+  }
+
+  // Переименовываем файл с правильным именем
+  const targetFileName = fileField
+    .replace(/[^a-zA-Z0-9_-]/g, "_")
+    .toLowerCase() + path.extname(req.file.originalname || ".pdf");
+  const targetPath = path.join(path.dirname(req.file.path), targetFileName);
+
+  await fsPromises.rename(req.file.path, targetPath);
+
   const relativePath = path
-    .relative(ROOT_DIR, req.file.path)
+    .relative(ROOT_DIR, targetPath)
     .split(path.sep)
     .join("/");
 
-  const fileField = String(req.body.file_field || "");
-  if (DOCUMENT_FIELDS.includes(fileField)) {
-    const updated = mergeRow(EMPLOYEE_COLUMNS, employees[index], {
-      [fileField]: relativePath
-    });
-    updated.employee_id = req.params.id;
-    employees[index] = updated;
-    await saveEmployees(employees);
-  }
+  const updated = mergeRow(getEmployeeColumnsSync(), employees[index], {
+    [fileField]: relativePath
+  });
+  updated.employee_id = req.params.id;
+  employees[index] = updated;
+  await saveEmployees(employees);
 
   res.json({ path: relativePath });
 });
@@ -414,7 +447,7 @@ app.delete("/api/employees/:id/files/:fieldName", async (req, res) => {
   const { id, fieldName } = req.params;
 
   // Проверка что поле является документом
-  if (!DOCUMENT_FIELDS.includes(fieldName)) {
+  if (!getDocumentFieldsSync().includes(fieldName)) {
     res.status(400).json({ error: "Неверное поле документа" });
     return;
   }
@@ -445,7 +478,7 @@ app.delete("/api/employees/:id/files/:fieldName", async (req, res) => {
   }
 
   // Очищаем поле в CSV
-  const updated = mergeRow(EMPLOYEE_COLUMNS, employee, {
+  const updated = mergeRow(getEmployeeColumnsSync(), employee, {
     [fieldName]: ""
   });
   updated.employee_id = id;

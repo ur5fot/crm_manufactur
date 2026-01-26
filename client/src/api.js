@@ -50,6 +50,9 @@ export const api = {
   openDataFolder() {
     return request("/open-data-folder", { method: "POST" });
   },
+  openEmployeeFolder(id) {
+    return request(`/employees/${id}/open-folder`, { method: "POST" });
+  },
   importEmployees(formData) {
     return request("/employees/import", {
       method: "POST",

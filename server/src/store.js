@@ -2,7 +2,7 @@ import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
 import { readCsv, writeCsv } from "./csv.js";
-import { EMPLOYEE_COLUMNS, LOG_COLUMNS, FIELD_SCHEMA_COLUMNS } from "./schema.js";
+import { EMPLOYEE_COLUMNS, LOG_COLUMNS, FIELD_SCHEMA_COLUMNS, loadEmployeeColumns, getCachedEmployeeColumns, loadDocumentFields, getCachedDocumentFields } from "./schema.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -20,12 +20,46 @@ export async function ensureDataDirs() {
   await fs.mkdir(FILES_DIR, { recursive: true });
 }
 
+/**
+ * Инициализирует колонки из fields_schema.csv при старте сервера
+ * Должна быть вызвана один раз при запуске
+ */
+export async function initializeEmployeeColumns() {
+  console.log("Инициализация колонок из fields_schema.csv...");
+  const columns = await getEmployeeColumns();
+  console.log(`Инициализировано ${columns.length} колонок для employees.csv`);
+
+  console.log("Инициализация полей документов из fields_schema.csv...");
+  const documentFields = await getDocumentFields();
+  console.log(`Инициализировано ${documentFields.length} полей документов`);
+
+  return columns;
+}
+
+/**
+ * Возвращает текущий список колонок (должен быть вызван после инициализации)
+ * Используется в синхронных функциях где нельзя использовать await
+ */
+export function getEmployeeColumnsSync() {
+  return getCachedEmployeeColumns();
+}
+
+/**
+ * Возвращает текущий список полей документов (должен быть вызван после инициализации)
+ * Используется в синхронных функциях где нельзя использовать await
+ */
+export function getDocumentFieldsSync() {
+  return getCachedDocumentFields();
+}
+
 export async function loadEmployees() {
-  return readCsv(EMPLOYEES_PATH, EMPLOYEE_COLUMNS);
+  const columns = await getEmployeeColumns();
+  return readCsv(EMPLOYEES_PATH, columns);
 }
 
 export async function saveEmployees(rows) {
-  return writeCsv(EMPLOYEES_PATH, EMPLOYEE_COLUMNS, rows);
+  const columns = await getEmployeeColumns();
+  return writeCsv(EMPLOYEES_PATH, columns, rows);
 }
 
 export async function loadFieldsSchema() {
@@ -34,6 +68,22 @@ export async function loadFieldsSchema() {
 
 export async function saveFieldsSchema(rows) {
   return writeCsv(FIELD_SCHEMA_PATH, FIELD_SCHEMA_COLUMNS, rows);
+}
+
+/**
+ * Получает список колонок для employees.csv из fields_schema.csv
+ * @returns {Promise<string[]>}
+ */
+async function getEmployeeColumns() {
+  return loadEmployeeColumns(loadFieldsSchema);
+}
+
+/**
+ * Получает список полей документов из fields_schema.csv
+ * @returns {Promise<string[]>}
+ */
+async function getDocumentFields() {
+  return loadDocumentFields(loadFieldsSchema);
 }
 
 export async function loadLogs() {
