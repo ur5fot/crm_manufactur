@@ -888,7 +888,7 @@ onMounted(async () => {
       <div v-else-if="viewMode === 'table'" class="layout-table">
         <div class="panel table-panel">
           <div class="panel-header">
-            <div class="panel-title">Сводная таблица сотрудников</div>
+            <div class="panel-title">CRM Производство - Сводная таблица</div>
             <div class="actions">
               <button
                 v-if="getActiveFiltersCount() > 0"
@@ -918,7 +918,7 @@ onMounted(async () => {
             <table class="summary-table">
               <thead>
                 <tr>
-                  <th>ID</th>
+                  <th style="text-align: center;" title="ID сотрудника">ID</th>
                   <th v-for="col in summaryColumns" :key="col.key">
                     <div class="th-content">
                       <div class="th-label">{{ col.label }}</div>
@@ -955,14 +955,13 @@ onMounted(async () => {
                   v-for="employee in filteredEmployees"
                   :key="employee.employee_id"
                   class="table-row"
-                  @click="openEmployeeCard(employee.employee_id)"
                 >
-                  <td class="id-cell">{{ employee.employee_id }}</td>
+                  <td class="id-cell" @dblclick="openEmployeeCard(employee.employee_id)" :title="'ID: ' + employee.employee_id">{{ employee.employee_id }}</td>
                   <td
                     v-for="col in summaryColumns"
                     :key="col.key"
                     class="editable-cell"
-                    @click.stop="startEditCell(employee.employee_id, col.key, employee[col.key])"
+                    @dblclick.stop="startEditCell(employee.employee_id, col.key, employee[col.key])"
                   >
                     <!-- Режим редактирования -->
                     <div v-if="isEditingCell(employee.employee_id, col.key)" class="edit-cell" @click.stop>

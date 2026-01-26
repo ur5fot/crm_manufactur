@@ -536,6 +536,8 @@ button:hover:not(:disabled) {
   font-weight: 600;
   color: var(--muted);
   white-space: nowrap;
+  text-align: center;
+  cursor: pointer;
 }
 
 .editable-cell {

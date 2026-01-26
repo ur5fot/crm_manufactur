@@ -10,7 +10,7 @@ Local CRM system that stores data in CSV files and PDF documents. CSV files can 
 - **Dynamic UI** - entire form and table structure controlled by `fields_schema.csv`
 - **Sequential numeric IDs** - simple employee IDs (1, 2, 3...)
 - **File management** - upload and store PDF documents per employee
-- **Summary table** - 9 columns with inline editing and multi-select filters
+- **Summary table** - inline editing via double-click, multi-select filters with empty value support
 - **Automatic audit logging** - all changes tracked in `logs.csv` with field-level details
 - **CSV import** - bulk import employees from CSV files
 - **UTF-8 with BOM** - proper Cyrillic support in Excel
@@ -27,12 +27,13 @@ Local CRM system that stores data in CSV files and PDF documents. CSV files can 
 ```
 crm_manufactur/
 ├── data/
-│   ├── employees.csv              # Core employee data (37 fields)
+│   ├── employees.csv              # Core employee data (37 fields) - gitignored
 │   ├── fields_schema.csv          # Meta-schema: field types, labels, options, UI config
-│   ├── logs.csv                   # Audit log of all changes
+│   ├── logs.csv                   # Audit log of all changes - gitignored
+│   ├── employees_import_sample.csv # Import template with UTF-8 BOM
 │   └── dictionaries.csv           # (legacy, kept for compatibility)
-├── files/
-│   └── employee_[ID]/             # Uploaded PDF documents
+├── files/                         # Uploaded PDF documents - gitignored
+│   └── employee_[ID]/
 ├── server/                        # Express.js backend
 └── client/                        # Vue.js frontend
 ```
@@ -143,6 +144,23 @@ Open `http://localhost:5173` in your browser.
   - All dropdown options now in `fields_schema.csv` → `field_options`
 
 ## Features in Detail
+
+### Summary Table
+
+The summary table provides powerful filtering and editing capabilities:
+
+**Interaction:**
+- **Double-click on cell** - Edit field value inline (for editable fields)
+- **Double-click on ID** - Open employee card
+- **Multi-select filters** - Select multiple values simultaneously per column
+- **Empty value filter** - "(Пусто)" checkbox to filter rows with empty values
+- **Clear filters** - One-click button to reset all active filters
+
+**Filter behavior:**
+- Checkboxes for each unique value in select fields
+- Empty value option appears first in each filter
+- Multiple selections work with OR logic
+- Active filter count displayed in clear button
 
 ### File Uploads
 

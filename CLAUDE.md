@@ -58,11 +58,12 @@ npm run preview
 ### Data Storage Model
 
 **CSV-based database** instead of traditional RDBMS:
-- `data/employees.csv` - main employee records (37 columns) - single denormalized table
+- `data/employees.csv` - main employee records (37 columns) - single denormalized table (gitignored - user data)
 - `data/fields_schema.csv` - **meta-schema defining all fields, their types, labels, options, and UI configuration**
-- `data/logs.csv` - audit log of all CRUD operations
+- `data/logs.csv` - audit log of all CRUD operations (gitignored - user data)
+- `data/employees_import_sample.csv` - import template with UTF-8 BOM (tracked in git)
 - `data/dictionaries.csv` - (legacy, kept for compatibility) reference data
-- `files/employee_[ID]/` - uploaded PDF documents
+- `files/employee_[ID]/` - uploaded PDF documents (gitignored - user files)
 
 **CSV Format:**
 - Delimiter: `;` (semicolon) for Excel compatibility
@@ -114,6 +115,14 @@ npm run preview
 - **Dynamic UI generation**: Fields schema loaded on mount via `/api/fields-schema`
 - Form groups, table columns, and filters generated from schema
 - Three view modes: Cards (detail), Table (summary with inline editing), Logs (audit trail)
+
+**Summary Table UI:**
+- **Double-click on cell** - Triggers inline editing for editable fields
+- **Double-click on ID** - Opens employee detail card
+- **Multi-select filters** - Checkbox-based filters for select fields
+- **Empty value filter** - Special "(Пусто)" checkbox to filter rows with empty values
+- **ID column** - Center-aligned with title attribute for accessibility
+- **Filter state** - Reactive columnFilters object with `__EMPTY__` sentinel value for empty checks
 
 **Vite proxy configuration** ([vite.config.js](client/vite.config.js)):
 - `/api`, `/files`, `/data` proxied to `http://localhost:3000`
