@@ -636,7 +636,8 @@ onMounted(async () => {
             >
               <div class="employee-name">{{ displayName(employee) }}</div>
               <div class="employee-meta">
-                {{ employee.position || "Без должности" }}
+                ID: {{ employee.employee_id }}
+                <span v-if="employee.position"> · {{ employee.position }}</span>
                 <span v-if="employee.department"> · {{ employee.department }}</span>
               </div>
               <div class="employee-tags">
