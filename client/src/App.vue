@@ -375,7 +375,7 @@ async function uploadDocument(doc) {
 
 function openDocument(fieldKey) {
   if (!form[fieldKey]) return;
-  const url = `${import.meta.env.VITE_API_URL || ""}/files/${form[fieldKey]}`;
+  const url = `${import.meta.env.VITE_API_URL || ""}/${form[fieldKey]}`;
   window.open(url, "_blank");
 }
 
