@@ -149,7 +149,17 @@ const filteredEmployees = computed(() => {
     Object.keys(columnFilters).forEach((fieldName) => {
       const filterValues = columnFilters[fieldName];
       if (filterValues && filterValues.length > 0) {
-        result = result.filter((employee) => filterValues.includes(employee[fieldName]));
+        result = result.filter((employee) => {
+          const value = employee[fieldName];
+          // Проверка на пустое значение
+          if (filterValues.includes("__EMPTY__")) {
+            if (!value || value.trim() === "") {
+              return true;
+            }
+          }
+          // Проверка на конкретные значения
+          return filterValues.includes(value);
+        });
       }
     });
   }
@@ -913,6 +923,15 @@ onMounted(async () => {
                     <div class="th-content">
                       <div class="th-label">{{ col.label }}</div>
                       <div v-if="col.type === 'select'" class="column-filter-checkboxes" @click.stop>
+                        <label class="filter-checkbox-label">
+                          <input
+                            type="checkbox"
+                            :checked="isFilterChecked(col.key, '__EMPTY__')"
+                            @change="toggleFilter(col.key, '__EMPTY__')"
+                            class="filter-checkbox"
+                          />
+                          <span class="filter-checkbox-text">(Пусто)</span>
+                        </label>
                         <label
                           v-for="option in dictionaries[col.optionsKey] || []"
                           :key="option.value"
