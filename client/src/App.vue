@@ -79,6 +79,11 @@ const columnFilters = reactive({}); // { fieldName: selectedValue }
 const logs = ref([]);
 const logsSearchTerm = ref("");
 
+// Уведомления об отпусках
+const vacationReturning = ref([]);
+const vacationStarting = ref([]);
+const showVacationNotification = ref(false);
+
 // Маппинг технических названий полей на человекопонятные
 const fieldLabels = {
   employee_id: "ID сотрудника",
@@ -301,11 +306,114 @@ async function loadEmployees() {
   try {
     const data = await api.getEmployees();
     employees.value = data.employees || [];
+    await checkVacations();
   } catch (error) {
     errorMessage.value = error.message;
   } finally {
     loading.value = false;
   }
+}
+
+// Проверка и обработка отпусков
+async function checkVacations() {
+  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+  console.log('🔍 Проверка отпусков, сегодня:', today);
+
+  const returningToday = [];
+  const startingToday = [];
+  const needsUpdate = [];
+
+  employees.value.forEach(employee => {
+    const startDate = employee.vacation_start_date;
+    const endDate = employee.vacation_end_date;
+
+    // Пропускаем если нет дат отпуска
+    if (!startDate && !endDate) return;
+
+    console.log(`👤 ${displayName(employee)}: start=${startDate}, end=${endDate}, status=${employee.employment_status}`);
+
+    // Проверка 1: сегодня заканчивается отпуск (приоритет)
+    if (endDate === today) {
+      console.log(`  ✅ Возвращается сегодня!`);
+      returningToday.push({
+        id: employee.employee_id,
+        name: displayName(employee),
+        position: employee.position || ''
+      });
+
+      needsUpdate.push({
+        ...employee,
+        vacation_start_date: '',
+        vacation_end_date: '',
+        employment_status: 'Работает'
+      });
+      return; // Не проверяем дальше
+    }
+
+    // Проверка 2: отпуск уже прошел - очистить даты
+    if (endDate && endDate < today) {
+      console.log(`  🧹 Отпуск прошел, очищаем даты`);
+      needsUpdate.push({
+        ...employee,
+        vacation_start_date: '',
+        vacation_end_date: '',
+        employment_status: employee.employment_status === 'Отпуск' ? 'Работает' : employee.employment_status
+      });
+      return; // Не проверяем дальше
+    }
+
+    // Проверка 3: сегодня начинается отпуск
+    if (startDate === today && employee.employment_status !== 'Отпуск') {
+      console.log(`  🏖️ Отпуск начинается сегодня!`);
+      startingToday.push({
+        id: employee.employee_id,
+        name: displayName(employee),
+        position: employee.position || '',
+        endDate: endDate
+      });
+
+      needsUpdate.push({
+        ...employee,
+        employment_status: 'Отпуск'
+      });
+      return; // Не проверяем дальше
+    }
+
+    // Проверка 4: сейчас в отпуске (между датами)
+    if (startDate && endDate && startDate < today && endDate > today && employee.employment_status !== 'Отпуск') {
+      console.log(`  🏖️ Сейчас в отпуске (между датами)`);
+      needsUpdate.push({
+        ...employee,
+        employment_status: 'Отпуск'
+      });
+    }
+  });
+
+  // Обновляем статусы сотрудников
+  for (const employee of needsUpdate) {
+    try {
+      await api.updateEmployee(employee.employee_id, employee);
+    } catch (error) {
+      console.error(`Ошибка обновления сотрудника ${employee.employee_id}:`, error);
+    }
+  }
+
+  // Показываем уведомление если есть изменения
+  if (returningToday.length > 0 || startingToday.length > 0) {
+    vacationReturning.value = returningToday;
+    vacationStarting.value = startingToday;
+    showVacationNotification.value = true;
+  }
+
+  // Перезагружаем список если были обновления
+  if (needsUpdate.length > 0) {
+    const data = await api.getEmployees();
+    employees.value = data.employees || [];
+  }
+}
+
+function closeVacationNotification() {
+  showVacationNotification.value = false;
 }
 
 async function selectEmployee(id) {
@@ -613,6 +721,47 @@ onMounted(async () => {
 
 <template>
   <div class="app">
+    <!-- Уведомление об отпусках -->
+    <div v-if="showVacationNotification" class="vacation-notification-overlay" @click="closeVacationNotification">
+      <div class="vacation-notification-modal" @click.stop>
+        <div class="vacation-notification-header">
+          <h3>🏖️ Уведомления об отпусках</h3>
+          <button class="close-btn" @click="closeVacationNotification">×</button>
+        </div>
+        <div class="vacation-notification-body">
+          <!-- Уходят в отпуск -->
+          <div v-if="vacationStarting.length > 0" class="notification-section">
+            <p class="notification-message">✈️ Сегодня уходят в отпуск:</p>
+            <ul class="vacation-employees-list">
+              <li v-for="emp in vacationStarting" :key="emp.id" class="vacation-employee starting">
+                <div class="employee-info">
+                  <span class="employee-name">{{ emp.name }}</span>
+                  <span v-if="emp.position" class="employee-position">{{ emp.position }}</span>
+                </div>
+                <span v-if="emp.endDate" class="vacation-end-date">до {{ emp.endDate }}</span>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Возвращаются из отпуска -->
+          <div v-if="vacationReturning.length > 0" class="notification-section">
+            <p class="notification-message">🏢 Сегодня возвращаются из отпуска:</p>
+            <ul class="vacation-employees-list">
+              <li v-for="emp in vacationReturning" :key="emp.id" class="vacation-employee returning">
+                <div class="employee-info">
+                  <span class="employee-name">{{ emp.name }}</span>
+                  <span v-if="emp.position" class="employee-position">{{ emp.position }}</span>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </div>
+        <div class="vacation-notification-footer">
+          <button class="primary" @click="closeVacationNotification">Понятно</button>
+        </div>
+      </div>
+    </div>
+
     <div class="page">
       <header class="topbar">
         <div class="brand">
