@@ -28,8 +28,9 @@ Local CRM system that stores data in CSV files and PDF documents. CSV files can 
 ```
 crm_manufactur/
 ├── data/
-│   ├── employees.csv              # Core employee data (37 fields) - gitignored
-│   ├── fields_schema.csv          # Meta-schema: field types, labels, options, UI config
+│   ├── employees.csv              # Core employee data (40 fields) - gitignored
+│   ├── fields_schema.csv          # Meta-schema: field types, labels, options, UI config - gitignored
+│   ├── fields_schema.template.csv # Schema template for new installations (tracked in git)
 │   ├── logs.csv                   # Audit log of all changes - gitignored
 │   ├── employees_import_sample.csv # Import template with UTF-8 BOM
 │   └── dictionaries.csv           # (legacy, kept for compatibility)
@@ -40,6 +41,16 @@ crm_manufactur/
 ```
 
 ## Quick Start
+
+### First Installation
+
+On first deployment, create the local schema file from template:
+
+```bash
+cp data/fields_schema.template.csv data/fields_schema.csv
+```
+
+**Important:** `fields_schema.csv` is in `.gitignore` to prevent your local schema changes (custom fields, options) from conflicting with git updates. Edit it to fit your needs!
 
 ### Using the startup script
 
@@ -85,7 +96,7 @@ Open `http://localhost:5173` in your browser.
 
 ### Main Tables
 
-- **employees.csv** - Main employee records (37 fields):
+- **employees.csv** - Main employee records (40 fields):
   1. `employee_id` - Employee ID (auto-increment)
   2. `last_name` - Last name
   3. `first_name` - First name
@@ -123,9 +134,12 @@ Open `http://localhost:5173` in your browser.
   35. `phone_note` - Phone note
   36. `education` - Education
   37. `notes` - Notes
+  38. `vacation_start_date` - Vacation start date (YYYY-MM-DD)
+  39. `vacation_end_date` - Vacation end date (YYYY-MM-DD)
+  40. Additional document and service fields
 
-- **fields_schema.csv** - **Meta-schema for UI control** (8 columns):
-  - `field_order` - Sequential number (1-37)
+- **fields_schema.csv** - **Meta-schema for UI control** (8 columns, local file in `.gitignore`):
+  - `field_order` - Sequential number (1-40)
   - `field_name` - Technical field name
   - `field_label` - Display label (in Russian)
   - `field_type` - Input type: `text`, `select`, `textarea`, `number`, `email`, `tel`, `date`, `file`
@@ -134,6 +148,7 @@ Open `http://localhost:5173` in your browser.
   - `field_group` - Group name for employee card
   - `editable_in_table` - Allow inline editing: `yes` / `no`
   - **To change UI, simply edit this file and reload the page!**
+  - **Note:** File is in `.gitignore` for production independence from development. Create from `fields_schema.template.csv` on first install
 
 - **logs.csv** - Audit log of all changes (9 columns):
   - `log_id` - Log entry ID
@@ -190,10 +205,15 @@ Automatic vacation management with status changes and notifications.
 **How it works:**
 - Set `vacation_start_date` and `vacation_end_date` in employee card
 - On page load, the system automatically:
-  - Changes status to "Отпуск" (Vacation) when start date arrives
+  - Changes status to vacation value (found by searching "отпуск" in `employment_status` options from `fields_schema.csv`) when start date arrives
   - Shows notification with employees starting vacation today (✈️ blue)
   - Shows notification with employees returning from vacation today (🏢 green)
-  - Clears vacation dates and restores "Работает" (Working) status after vacation ends
+  - Clears vacation dates and restores first value from `employment_status` (usually "Работает" / Working) after vacation ends
+
+**Dynamic statuses:**
+- Status values are taken from `fields_schema.csv` → `employment_status` → `field_options`
+- On vacation return: first value (e.g., "Работает" / Working, "Активный" / Active)
+- On vacation start: value containing "отпуск" (e.g., "Отпуск" / Vacation, "В отпуске" / On vacation)
 
 **Notifications:**
 - Modal window with two sections: starting and returning employees
@@ -248,6 +268,44 @@ All dropdown values in forms are managed via `data/dictionaries.csv`:
 - `GET /api/dictionaries` - Get all reference data
 - `GET /api/fields-schema` - Get dynamic UI schema (field types, labels, options)
 - `POST /api/open-data-folder` - Open data folder in OS file explorer
+
+## Production Deployment
+
+### Initial Installation
+
+```bash
+git clone <repository-url>
+cd crm_manufactur
+cp data/fields_schema.template.csv data/fields_schema.csv
+./run.sh
+```
+
+### Updating from GitHub
+
+Since `fields_schema.csv` is in `.gitignore`, your local schema changes won't conflict with updates:
+
+```bash
+git pull origin master
+./stop.sh
+./run.sh
+```
+
+**Automatic schema migration:**
+- On startup, server automatically compares `fields_schema.csv` with `employees.csv`
+- If schema has new fields - they're added to `employees.csv` with empty values
+- All existing data is preserved without changes
+- Migration happens transparently on first start after update
+
+**Manual schema update (optional):**
+If new version adds important fields to `fields_schema.template.csv`:
+
+```bash
+# View changes in template
+git diff data/fields_schema.template.csv
+
+# Manually add needed fields to your local fields_schema.csv
+nano data/fields_schema.csv
+```
 
 ## Development
 

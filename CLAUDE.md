@@ -61,13 +61,38 @@ npm run build
 npm run preview
 ```
 
+### First Installation / Production Deployment
+
+**Initial setup:**
+```bash
+git clone <repository-url>
+cd crm_manufactur
+cp data/fields_schema.template.csv data/fields_schema.csv
+./run.sh
+```
+
+**Updating from GitHub:**
+Since `fields_schema.csv` is in `.gitignore`, local schema modifications won't conflict:
+```bash
+git pull origin master
+./stop.sh
+./run.sh
+```
+
+**Why fields_schema.csv is gitignored:**
+- Production environments often need custom fields, options, or labels
+- Schema changes in development shouldn't overwrite production configuration
+- Template file (`fields_schema.template.csv`) provides starting point for new installs
+- Automatic migration (see store.js) handles adding new fields from schema to employees.csv
+
 ## Architecture
 
 ### Data Storage Model
 
 **CSV-based database** instead of traditional RDBMS:
 - `data/employees.csv` - main employee records (40 columns) - single denormalized table (gitignored - user data)
-- `data/fields_schema.csv` - **meta-schema defining all fields, their types, labels, options, and UI configuration**
+- `data/fields_schema.csv` - **meta-schema defining all fields, their types, labels, options, and UI configuration** (gitignored - local production config)
+- `data/fields_schema.template.csv` - template schema for new installations (tracked in git)
 - `data/logs.csv` - audit log of all CRUD operations (gitignored - user data)
 - `data/employees_import_sample.csv` - import template with UTF-8 BOM (tracked in git)
 - `data/dictionaries.csv` - (legacy, kept for compatibility) reference data
@@ -147,8 +172,11 @@ npm run preview
 
 **Vacation Tracking:**
 - **Automatic status management** - On page load, checks all employees and updates statuses:
-  - Changes `employment_status` to "Отпуск" when `vacation_start_date` arrives
-  - Clears vacation dates and restores "Работает" status after `vacation_end_date` passes
+  - Changes `employment_status` to vacation value (found by searching "отпуск" in options) when `vacation_start_date` arrives
+  - Clears vacation dates and restores first value from `employment_status` options after `vacation_end_date` passes
+- **Dynamic status values** - Computed from `fields_schema.csv`:
+  - `workingStatus`: First value from `employment_status` field_options (e.g., "Работает", "Активный")
+  - `vacationStatus`: Value containing "отпуск" from options (e.g., "Отпуск", "В отпуске")
 - **Notifications** - Modal window with two sections:
   - ✈️ Employees starting vacation today (blue, shows end date)
   - 🏢 Employees returning from vacation today (green)
@@ -211,6 +239,8 @@ Defined in [server/src/schema.js](server/src/schema.js):
 **Dynamic UI system** controlled by [data/fields_schema.csv](data/fields_schema.csv):
 
 This file defines the entire UI structure - **edit this file to change form layout, table columns, field types, and dropdown options**.
+
+**Important:** `fields_schema.csv` is in `.gitignore` to allow production-specific customization. For new installations, copy from `fields_schema.template.csv`.
 
 **Columns:**
 - `field_order` - Sequential order (1-37)
@@ -294,6 +324,7 @@ Template: `data/employees_import_sample.csv`
 5. **Why relative file paths?** Makes data folder portable across systems
 6. **Why fields_schema.csv?** Single source of truth for UI configuration - no hardcoded forms, complete flexibility
 7. **Why multiple filter checkboxes?** Better UX than single-select dropdowns for filtering data
+8. **Why gitignore fields_schema.csv?** Production environments need custom fields/options without git conflicts; template provides starting point for new installs
 
 ## Modifying Data Model
 
