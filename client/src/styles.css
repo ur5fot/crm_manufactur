@@ -637,7 +637,7 @@ button:hover:not(:disabled) {
 
 .id-cell {
   padding: 10px;
-  min-height: 50px;
+  min-height: 57px;
   font-weight: 600;
   color: var(--muted);
   white-space: nowrap;
