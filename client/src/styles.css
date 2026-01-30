@@ -444,16 +444,22 @@ button:hover:not(:disabled) {
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--muted);
+  position: relative; /* NEW: positioning context for dropdown */
 }
 
 .th-content {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  flex-direction: row; /* CHANGED from column */
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px; /* CHANGED from 8px */
 }
 
 .th-label {
   white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .column-filter {
@@ -477,10 +483,7 @@ button:hover:not(:disabled) {
 }
 
 .column-filter-checkboxes {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 4px 0;
+  display: none; /* This class is no longer used - replaced by .filter-dropdown-content */
 }
 
 .filter-checkbox-label {
@@ -488,19 +491,18 @@ button:hover:not(:disabled) {
   align-items: center;
   gap: 6px;
   cursor: pointer;
-  padding: 3px 0;
+  padding: 6px 8px; /* Increased padding for better click area */
   font-size: 11px;
   text-transform: none;
   letter-spacing: normal;
   font-weight: normal;
   color: var(--ink);
   transition: background-color 0.15s ease;
-  border-radius: 4px;
-  padding: 3px 6px;
+  border-radius: 6px; /* Increased from 4px */
 }
 
 .filter-checkbox-label:hover {
-  background-color: rgba(15, 118, 110, 0.08);
+  background-color: rgba(15, 118, 110, 0.1); /* Slightly stronger hover */
 }
 
 .filter-checkbox {
@@ -514,6 +516,107 @@ button:hover:not(:disabled) {
 .filter-checkbox-text {
   user-select: none;
   white-space: nowrap;
+  flex: 1;
+}
+
+/* Filter icon indicator */
+.filter-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+  opacity: 0.5;
+  transition: opacity 0.2s ease, color 0.2s ease;
+  position: relative;
+}
+
+.filterable-column:hover .filter-icon {
+  opacity: 1;
+}
+
+.filter-icon.has-filters {
+  color: var(--accent);
+  opacity: 1;
+}
+
+/* Filter count badge */
+.filter-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  background: var(--accent);
+  color: white;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+/* Filter dropdown - hidden by default */
+.filter-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  min-width: 200px;
+  max-width: 300px;
+  margin-top: 4px;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(-8px);
+  transition: opacity 0.2s ease, transform 0.2s ease, visibility 0s linear 0.2s;
+  z-index: 100;
+}
+
+/* Show dropdown on header hover */
+.filterable-column:hover .filter-dropdown {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateY(0);
+  transition: opacity 0.2s ease, transform 0.2s ease, visibility 0s linear 0s;
+}
+
+/* Dropdown content box */
+.filter-dropdown-content {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  padding: 8px;
+  max-height: 320px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Scrollbar styling for dropdown */
+.filter-dropdown-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.filter-dropdown-content::-webkit-scrollbar-track {
+  background: var(--bg-accent);
+  border-radius: 3px;
+}
+
+.filter-dropdown-content::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 3px;
+}
+
+.filter-dropdown-content::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}
+
+/* Edge detection for rightmost columns */
+.filterable-column:nth-last-child(-n+2) .filter-dropdown {
+  left: auto;
+  right: 0;
 }
 
 .summary-table td {
