@@ -57,8 +57,8 @@ const documentFields = computed(() => {
 });
 
 const csvLinks = [
-  { label: "Сотрудники (employees.csv)", path: "/data/employees.csv" },
-  { label: "Справочники (dictionaries.csv)", path: "/data/dictionaries.csv" }
+  { label: "Співробітники (employees.csv)", path: "/data/employees.csv" },
+  { label: "Довідники (dictionaries.csv)", path: "/data/dictionaries.csv" }
 ];
 
 const employees = ref([]);
@@ -100,43 +100,43 @@ const vacationStatus = computed(() => {
 
 // Маппинг технических названий полей на человекопонятные
 const fieldLabels = {
-  employee_id: "ID сотрудника",
-  last_name: "Фамилия",
-  first_name: "Имя",
-  middle_name: "Отчество",
-  employment_status: "Статус работы",
-  additional_status: "Дополнительный статус",
-  location: "Местонахождение",
-  department: "Подразделение",
-  position: "Должность",
-  grade: "Разряд",
-  salary_grid: "Зарплатная сетка",
+  employee_id: "ID співробітника",
+  last_name: "Прізвище",
+  first_name: "Ім'я",
+  middle_name: "По батькові",
+  employment_status: "Статус роботи",
+  additional_status: "Додатковий статус",
+  location: "Місцезнаходження",
+  department: "Підрозділ",
+  position: "Посада",
+  grade: "Розряд",
+  salary_grid: "Зарплатна сітка",
   salary_amount: "Оклад",
-  specialty: "Специальность",
-  work_state: "Рабочее состояние",
-  work_type: "Тип работы",
-  gender: "Пол",
-  fit_status: "Пригодность",
-  order_ref: "Приказ",
+  specialty: "Спеціальність",
+  work_state: "Робочий стан",
+  work_type: "Тип роботи",
+  gender: "Стать",
+  fit_status: "Придатність",
+  order_ref: "Наказ",
   bank_name: "Банк",
-  bank_card_number: "Номер карты",
+  bank_card_number: "Номер картки",
   bank_iban: "IBAN",
-  tax_id: "ИНН",
-  email: "Эл. почта",
-  blood_group: "Группа крови",
-  workplace_location: "Место работы",
-  residence_place: "Место проживания",
-  registration_place: "Место регистрации",
-  driver_license_file: "Водительское удостоверение",
-  id_certificate_file: "Удостоверение личности",
-  foreign_passport_number: "Номер загранпаспорта",
-  foreign_passport_issue_date: "Дата выдачи загранпаспорта",
-  foreign_passport_file: "Загранпаспорт",
-  criminal_record_file: "Справка о несудимости",
+  tax_id: "ІПН",
+  email: "Ел. пошта",
+  blood_group: "Група крові",
+  workplace_location: "Місце роботи",
+  residence_place: "Місце проживання",
+  registration_place: "Місце реєстрації",
+  driver_license_file: "Водійське посвідчення",
+  id_certificate_file: "Посвідчення особи",
+  foreign_passport_number: "Номер закордонного паспорта",
+  foreign_passport_issue_date: "Дата видачі закордонного паспорта",
+  foreign_passport_file: "Закордонний паспорт",
+  criminal_record_file: "Довідка про несудимість",
   phone: "Телефон",
-  phone_note: "Примечание к телефону",
-  education: "Образование",
-  notes: "Примечание"
+  phone_note: "Примітка до телефону",
+  education: "Освіта",
+  notes: "Примітка"
 };
 
 const form = reactive(emptyEmployee());
@@ -243,7 +243,7 @@ function resetForm() {
 
 function displayName(employee) {
   const parts = [employee.last_name, employee.first_name, employee.middle_name].filter(Boolean);
-  return parts.length ? parts.join(" ") : "Без имени";
+  return parts.length ? parts.join(" ") : "Без імені";
 }
 
 function fileUrl(path) {
@@ -458,12 +458,12 @@ async function saveEmployee() {
   try {
     // Валидация обязательных полей
     if (!form.first_name || !form.first_name.trim()) {
-      errorMessage.value = "Имя обязательно для заполнения";
+      errorMessage.value = "Ім'я обов'язкове для заповнення";
       saving.value = false;
       return;
     }
     if (!form.last_name || !form.last_name.trim()) {
-      errorMessage.value = "Фамилия обязательна для заполнения";
+      errorMessage.value = "Прізвище обов'язкове для заповнення";
       saving.value = false;
       return;
     }
@@ -500,7 +500,7 @@ async function deleteEmployee() {
   if (!form.employee_id) {
     return;
   }
-  const confirmed = window.confirm("Удалить сотрудника и все связанные записи?");
+  const confirmed = window.confirm("Видалити співробітника та всі пов'язані записи?");
   if (!confirmed) {
     return;
   }
@@ -550,7 +550,7 @@ async function deleteDocument(doc) {
     return;
   }
 
-  const confirmed = window.confirm(`Удалить документ "${doc.label}"?`);
+  const confirmed = window.confirm(`Видалити документ "${doc.label}"?`);
   if (!confirmed) return;
 
   errorMessage.value = "";
@@ -722,7 +722,7 @@ function getDetailLabel(detail) {
   if (match) {
     const fieldName = match[1];
     const label = fieldLabels[fieldName] || fieldName;
-    return `Изменено поле: ${label} (${fieldName})`;
+    return `Змінено поле: ${label} (${fieldName})`;
   }
   return detail;
 }
@@ -739,13 +739,13 @@ onMounted(async () => {
     <div v-if="showVacationNotification" class="vacation-notification-overlay" @click="closeVacationNotification">
       <div class="vacation-notification-modal" @click.stop>
         <div class="vacation-notification-header">
-          <h3>🏖️ Уведомления об отпусках</h3>
+          <h3>🏖️ Сповіщення про відпустки</h3>
           <button class="close-btn" @click="closeVacationNotification">×</button>
         </div>
         <div class="vacation-notification-body">
           <!-- Уходят в отпуск -->
           <div v-if="vacationStarting.length > 0" class="notification-section">
-            <p class="notification-message">✈️ Сегодня уходят в отпуск:</p>
+            <p class="notification-message">✈️ Сьогодні йдуть у відпустку:</p>
             <ul class="vacation-employees-list">
               <li v-for="emp in vacationStarting" :key="emp.id" class="vacation-employee starting">
                 <div class="employee-info">
@@ -759,7 +759,7 @@ onMounted(async () => {
 
           <!-- Возвращаются из отпуска -->
           <div v-if="vacationReturning.length > 0" class="notification-section">
-            <p class="notification-message">🏢 Сегодня возвращаются из отпуска:</p>
+            <p class="notification-message">🏢 Сьогодні повертаються з відпустки:</p>
             <ul class="vacation-employees-list">
               <li v-for="emp in vacationReturning" :key="emp.id" class="vacation-employee returning">
                 <div class="employee-info">
@@ -771,7 +771,7 @@ onMounted(async () => {
           </div>
         </div>
         <div class="vacation-notification-footer">
-          <button class="primary" @click="closeVacationNotification">Понятно</button>
+          <button class="primary" @click="closeVacationNotification">Зрозуміло</button>
         </div>
       </div>
     </div>
@@ -780,7 +780,7 @@ onMounted(async () => {
       <header class="topbar">
         <div class="brand">
           <div class="brand-title">CRM на CSV</div>
-          <div class="brand-sub">Vue + Node, локальные CSV файлы</div>
+          <div class="brand-sub">Vue + Node, локальні CSV файли</div>
         </div>
         <div class="top-actions">
           <button
@@ -789,7 +789,7 @@ onMounted(async () => {
             type="button"
             @click="viewMode = 'cards'"
           >
-            Карточки
+            Картки
           </button>
           <button
             class="secondary"
@@ -797,7 +797,7 @@ onMounted(async () => {
             type="button"
             @click="viewMode = 'table'"
           >
-            Сводная таблица
+            Зведена таблиця
           </button>
           <button
             class="secondary"
@@ -808,10 +808,10 @@ onMounted(async () => {
             Логи
           </button>
           <button class="secondary" type="button" @click="loadEmployees">
-            Обновить
+            Оновити
           </button>
           <button class="primary" type="button" @click="startNew" v-if="viewMode === 'cards'">
-            Новый сотрудник
+            Новий співробітник
           </button>
         </div>
       </header>
@@ -820,17 +820,17 @@ onMounted(async () => {
       <div v-if="viewMode === 'cards'" class="layout">
         <aside class="panel">
           <div class="panel-header">
-            <div class="panel-title">Сотрудники</div>
+            <div class="panel-title">Співробітники</div>
             <div class="status-bar">
-              <span v-if="loading">Загрузка...</span>
-              <span v-else>{{ employees.length }} всего</span>
+              <span v-if="loading">Завантаження...</span>
+              <span v-else>{{ employees.length }} всього</span>
             </div>
           </div>
           <input
             v-model="searchTerm"
             class="search-input"
             type="search"
-            placeholder="Поиск по ФИО, подразделению или ID"
+            placeholder="Пошук за ПІБ, підрозділом або ID"
           />
           <div class="employee-list">
             <div
@@ -848,7 +848,7 @@ onMounted(async () => {
                 <span v-if="employee.department"> · {{ employee.department }}</span>
               </div>
               <div class="employee-tags">
-                <span class="tag">{{ employee.employment_status || "без статуса" }}</span>
+                <span class="tag">{{ employee.employment_status || "без статусу" }}</span>
               </div>
             </div>
           </div>
@@ -857,11 +857,11 @@ onMounted(async () => {
         <section class="panel">
           <div class="panel-header">
             <div class="panel-title">
-              {{ isNew ? "Новый сотрудник" : "Карточка сотрудника" }}
+              {{ isNew ? "Новий співробітник" : "Картка співробітника" }}
             </div>
             <div class="actions">
               <button class="secondary" type="button" @click="startNew">
-                Очистить форму
+                Очистити форму
               </button>
               <button
                 class="primary"
@@ -869,7 +869,7 @@ onMounted(async () => {
                 :disabled="saving"
                 @click="saveEmployee"
               >
-                {{ saving ? "Сохранение..." : "Сохранить" }}
+                {{ saving ? "Збереження..." : "Зберегти" }}
               </button>
               <button
                 v-if="!isNew"
@@ -878,7 +878,7 @@ onMounted(async () => {
                 :disabled="saving"
                 @click="deleteEmployee"
               >
-                Удалить
+                Видалити
               </button>
             </div>
           </div>
@@ -924,7 +924,7 @@ onMounted(async () => {
 
             <div class="section">
               <div class="panel-header">
-                <div class="section-title">Документы</div>
+                <div class="section-title">Документи</div>
                 <button
                   v-if="!isNew"
                   class="secondary"
@@ -932,26 +932,26 @@ onMounted(async () => {
                   :disabled="openingEmployeeFolder"
                   @click="openEmployeeFolder"
                 >
-                  {{ openingEmployeeFolder ? "Открываем..." : "Открыть папку" }}
+                  {{ openingEmployeeFolder ? "Відкриваємо..." : "Відкрити папку" }}
                 </button>
               </div>
               <div v-if="isNew" class="inline-note">
-                Сначала сохраните сотрудника, затем загрузите документы.
+                Спочатку збережіть співробітника, потім завантажте документи.
               </div>
               <table v-else class="documents-table">
                 <thead>
                   <tr>
                     <th>Документ</th>
                     <th>Статус</th>
-                    <th>Действия</th>
+                    <th>Дії</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr v-for="doc in documentFields" :key="doc.key">
                     <td>{{ doc.label }}</td>
                     <td>
-                      <span v-if="form[doc.key]" class="status-uploaded">✓ Загружен</span>
-                      <span v-else class="status-not-uploaded">✗ Не загружен</span>
+                      <span v-if="form[doc.key]" class="status-uploaded">✓ Завантажено</span>
+                      <span v-else class="status-not-uploaded">✗ Не завантажено</span>
                     </td>
                     <td>
                       <div class="document-actions">
@@ -960,17 +960,17 @@ onMounted(async () => {
                             class="secondary small"
                             type="button"
                             @click="openDocument(doc.key)"
-                            title="Открыть документ"
+                            title="Відкрити документ"
                           >
-                            Открыть
+                            Відкрити
                           </button>
                           <button
                             class="danger small"
                             type="button"
                             @click="deleteDocument(doc)"
-                            title="Удалить документ"
+                            title="Видалити документ"
                           >
-                            Удалить
+                            Видалити
                           </button>
                         </template>
                         <template v-else>
@@ -982,7 +982,7 @@ onMounted(async () => {
                             style="display: none"
                           />
                           <label :for="`file-${doc.key}`" class="file-label-btn secondary small">
-                            Выбрать файл
+                            Вибрати файл
                           </label>
                           <button
                             v-if="documentFiles[doc.key]"
@@ -990,7 +990,7 @@ onMounted(async () => {
                             type="button"
                             @click="uploadDocument(doc)"
                           >
-                            Загрузить
+                            Завантажити
                           </button>
                           <span v-if="documentFiles[doc.key]" class="file-selected">
                             {{ documentFiles[doc.key].name }}
@@ -1005,27 +1005,27 @@ onMounted(async () => {
 
             <div class="section">
               <div class="panel-header">
-                <div class="section-title">CSV файлы</div>
+                <div class="section-title">CSV файли</div>
                 <button
                   class="secondary"
                   type="button"
                   :disabled="openingDataFolder"
                   @click="openDataFolder"
                 >
-                  {{ openingDataFolder ? "Открываем..." : "Открыть папку data" }}
+                  {{ openingDataFolder ? "Відкриваємо..." : "Відкрити папку data" }}
                 </button>
               </div>
               <div class="table-list">
                 <div v-for="link in csvLinks" :key="link.path" class="file-row">
                   <div>
                     <div class="employee-name">{{ link.label }}</div>
-                    <div class="inline-note">Откроется в браузере, можно сохранить для Excel.</div>
+                    <div class="inline-note">Відкриється у браузері, можна зберегти для Excel.</div>
                   </div>
                   <a class="file-link" :href="link.path" target="_blank" rel="noopener">
-                    Открыть
+                    Відкрити
                   </a>
                   <a class="file-link" :href="link.path" download>
-                    Скачать
+                    Завантажити
                   </a>
                 </div>
               </div>
@@ -1033,9 +1033,9 @@ onMounted(async () => {
 
             <div class="section">
               <div class="panel-header">
-                <div class="section-title">Импорт новых сотрудников</div>
+                <div class="section-title">Імпорт нових співробітників</div>
                 <a class="file-link" href="/data/employees_import_sample.csv" download>
-                  Скачать шаблон
+                  Завантажити шаблон
                 </a>
               </div>
               <div class="field">
@@ -1049,7 +1049,7 @@ onMounted(async () => {
                   :disabled="!importFile || importing"
                   @click="importEmployees"
                 >
-                  {{ importing ? "Импортируем..." : "Импортировать" }}
+                  {{ importing ? "Імпортуємо..." : "Імпортувати" }}
                 </button>
                 <button
                   class="secondary"
@@ -1057,22 +1057,22 @@ onMounted(async () => {
                   :disabled="!importFile && !importResult"
                   @click="resetImport"
                 >
-                  Очистить
+                  Очистити
                 </button>
               </div>
               <div class="inline-note">
-                CSV: UTF-8, разделитель ;, заголовки как в employees.csv. Фамилия или имя
-                обязательны.
+                CSV: UTF-8, роздільник ;, заголовки як у employees.csv. Прізвище або ім'я
+                обов'язкові.
               </div>
               <div v-if="importFile" class="inline-note">Файл: {{ importFile.name }}</div>
               <div v-if="importResult" class="status-bar">
-                Добавлено: {{ importResult.added }} · Пропущено: {{ importResult.skipped }}
+                Додано: {{ importResult.added }} · Пропущено: {{ importResult.skipped }}
               </div>
               <div
                 v-if="importResult && importResult.errors && importResult.errors.length"
                 class="inline-note"
               >
-                Ошибки (первые {{ importResult.errors.length }}):
+                Помилки (перші {{ importResult.errors.length }}):
               </div>
               <div
                 v-if="importResult && importResult.errors && importResult.errors.length"
@@ -1083,7 +1083,7 @@ onMounted(async () => {
                   :key="`${error.row}-${error.reason}`"
                   class="error-row"
                 >
-                  <div class="employee-name">Строка {{ error.row }}</div>
+                  <div class="employee-name">Рядок {{ error.row }}</div>
                   <div class="inline-note">{{ error.reason }}</div>
                 </div>
               </div>
@@ -1096,7 +1096,7 @@ onMounted(async () => {
       <div v-else-if="viewMode === 'table'" class="layout-table">
         <div class="panel table-panel">
           <div class="panel-header">
-            <div class="panel-title">CRM Производство - Сводная таблица</div>
+            <div class="panel-title">CRM Виробництво - Зведена таблиця</div>
             <div class="actions">
               <button
                 v-if="getActiveFiltersCount() > 0"
@@ -1104,11 +1104,11 @@ onMounted(async () => {
                 type="button"
                 @click="clearAllFilters"
               >
-                Сбросить фильтры ({{ getActiveFiltersCount() }})
+                Скинути фільтри ({{ getActiveFiltersCount() }})
               </button>
               <div class="status-bar">
-                <span v-if="loading">Загрузка...</span>
-                <span v-else>{{ filteredEmployees.length }} записей</span>
+                <span v-if="loading">Завантаження...</span>
+                <span v-else>{{ filteredEmployees.length }} записів</span>
               </div>
             </div>
           </div>
@@ -1117,7 +1117,7 @@ onMounted(async () => {
             v-model="searchTerm"
             class="search-input"
             type="search"
-            placeholder="Поиск по ФИО, подразделению или ID"
+            placeholder="Пошук за ПІБ, підрозділом або ID"
           />
 
           <div v-if="errorMessage" class="alert">{{ errorMessage }}</div>
@@ -1126,7 +1126,7 @@ onMounted(async () => {
             <table class="summary-table">
               <thead>
                 <tr>
-                  <th style="text-align: center;" title="ID сотрудника">ID</th>
+                  <th style="text-align: center;" title="ID співробітника">ID</th>
                   <th v-for="col in summaryColumns" :key="col.key">
                     <div class="th-content">
                       <div class="th-label">{{ col.label }}</div>
@@ -1138,7 +1138,7 @@ onMounted(async () => {
                             @change="toggleFilter(col.key, '__EMPTY__')"
                             class="filter-checkbox"
                           />
-                          <span class="filter-checkbox-text">(Пусто)</span>
+                          <span class="filter-checkbox-text">(Порожньо)</span>
                         </label>
                         <label
                           v-for="option in dictionaries[col.optionsKey] || []"
@@ -1202,7 +1202,7 @@ onMounted(async () => {
                           class="cell-btn save-btn"
                           type="button"
                           @click="saveCell(employee, col.key)"
-                          title="Сохранить (Enter)"
+                          title="Зберегти (Enter)"
                         >
                           ✓
                         </button>
@@ -1210,14 +1210,14 @@ onMounted(async () => {
                           class="cell-btn cancel-btn"
                           type="button"
                           @click="cancelEditCell(employee.employee_id, col.key)"
-                          title="Отменить (Esc)"
+                          title="Скасувати (Esc)"
                         >
                           ✕
                         </button>
                       </div>
                     </div>
                     <!-- Режим просмотра -->
-                    <div v-else class="view-cell" :title="'Клик для редактирования'">
+                    <div v-else class="view-cell" :title="'Клік для редагування'">
                       {{ employee[col.key] || '—' }}
                     </div>
                   </td>
@@ -1232,14 +1232,14 @@ onMounted(async () => {
       <div v-else-if="viewMode === 'logs'" class="layout-table">
         <div class="panel table-panel">
           <div class="panel-header">
-            <div class="panel-title">Журнал изменений</div>
+            <div class="panel-title">Журнал змін</div>
             <div class="actions">
               <button class="secondary" type="button" @click="loadLogs">
-                Обновить
+                Оновити
               </button>
               <div class="status-bar">
-                <span v-if="loading">Загрузка...</span>
-                <span v-else>{{ filteredLogs.length }} записей</span>
+                <span v-if="loading">Завантаження...</span>
+                <span v-else>{{ filteredLogs.length }} записів</span>
               </div>
             </div>
           </div>
@@ -1248,7 +1248,7 @@ onMounted(async () => {
             v-model="logsSearchTerm"
             class="search-input"
             type="search"
-            placeholder="Поиск по ФИО, действию, полю или значению"
+            placeholder="Пошук за ПІБ, дією, полем або значенням"
           />
 
           <div v-if="errorMessage" class="alert">{{ errorMessage }}</div>
@@ -1257,14 +1257,14 @@ onMounted(async () => {
             <table class="summary-table logs-table">
               <thead>
                 <tr>
-                  <th>Дата и время</th>
-                  <th>Действие</th>
+                  <th>Дата і час</th>
+                  <th>Дія</th>
                   <th>ID</th>
-                  <th>Сотрудник</th>
+                  <th>Співробітник</th>
                   <th>Поле</th>
-                  <th>Старое значение</th>
-                  <th>Новое значение</th>
-                  <th>Детали</th>
+                  <th>Старе значення</th>
+                  <th>Нове значення</th>
+                  <th>Деталі</th>
                 </tr>
               </thead>
               <tbody>

@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 This repository maintains three documentation files that should be kept in sync:
 
 - **[README.md](README.md)** - Main documentation in English for international audience
-- **[README.ru.md](README.ru.md)** - Russian documentation (Русская документация)
+- **[README.uk.md](README.uk.md)** - Ukrainian documentation (Українська документація)
 - **[CLAUDE.md](CLAUDE.md)** (this file) - Technical architecture and development guide for AI assistants
 
 When updating features or architecture, ensure all three files reflect the changes.

@@ -1,6 +1,6 @@
 # CSV CRM (Vue + Node)
 
-**[Русская версия / Russian version](README.ru.md)**
+**[Українська версія / Ukrainian version](README.uk.md)**
 
 Local CRM system that stores data in CSV files and PDF documents. CSV files can be safely edited in Excel and changes reload automatically when you refresh the UI.
 
