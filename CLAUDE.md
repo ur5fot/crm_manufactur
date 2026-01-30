@@ -66,7 +66,7 @@ npm run preview
 ### Data Storage Model
 
 **CSV-based database** instead of traditional RDBMS:
-- `data/employees.csv` - main employee records (37 columns) - single denormalized table (gitignored - user data)
+- `data/employees.csv` - main employee records (40 columns) - single denormalized table (gitignored - user data)
 - `data/fields_schema.csv` - **meta-schema defining all fields, their types, labels, options, and UI configuration**
 - `data/logs.csv` - audit log of all CRUD operations (gitignored - user data)
 - `data/employees_import_sample.csv` - import template with UTF-8 BOM (tracked in git)
@@ -145,13 +145,23 @@ npm run preview
 - **File actions** - Open document in browser, delete document
 - **Empty form reset** - Creating new employee clears all document fields to prevent copying file links
 
+**Vacation Tracking:**
+- **Automatic status management** - On page load, checks all employees and updates statuses:
+  - Changes `employment_status` to "Отпуск" when `vacation_start_date` arrives
+  - Clears vacation dates and restores "Работает" status after `vacation_end_date` passes
+- **Notifications** - Modal window with two sections:
+  - ✈️ Employees starting vacation today (blue, shows end date)
+  - 🏢 Employees returning from vacation today (green)
+- **Implementation** - `checkVacations()` function in App.vue, called from `loadEmployees()`
+- **Logging** - Console output for debugging vacation checks and status changes
+
 **Vite proxy configuration** ([vite.config.js](client/vite.config.js)):
 - `/api`, `/files`, `/data` proxied to `http://localhost:3000`
 - Hot module replacement enabled
 
 ## Data Model
 
-### Employee Fields (37 columns)
+### Employee Fields (40 columns)
 
 Defined in [server/src/schema.js](server/src/schema.js):
 
@@ -192,6 +202,9 @@ Defined in [server/src/schema.js](server/src/schema.js):
 35. `phone_note` - Phone note
 36. `education` - Education
 37. `notes` - Notes
+38. `vacation_start_date` - Vacation start date (YYYY-MM-DD)
+39. `vacation_end_date` - Vacation end date (YYYY-MM-DD)
+40. `notes` - Notes (moved to position 40 in schema)
 
 ### Fields Schema (8 columns) - **Primary UI Configuration**
 
