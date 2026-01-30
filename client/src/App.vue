@@ -709,6 +709,20 @@ function getActiveFiltersCount() {
   }, 0);
 }
 
+/**
+ * Перевірити чи є активні фільтри для колонки
+ */
+function hasActiveFilters(fieldName) {
+  return columnFilters[fieldName] && columnFilters[fieldName].length > 0;
+}
+
+/**
+ * Отримати кількість активних фільтрів для колонки
+ */
+function getColumnFilterCount(fieldName) {
+  return columnFilters[fieldName]?.length || 0;
+}
+
 function getFieldLabel(fieldName) {
   if (!fieldName) return "";
   const label = fieldLabels[fieldName] || fieldName;
@@ -1127,32 +1141,42 @@ onMounted(async () => {
               <thead>
                 <tr>
                   <th style="text-align: center;" title="ID співробітника">ID</th>
-                  <th v-for="col in summaryColumns" :key="col.key">
+                  <th v-for="col in summaryColumns" :key="col.key" class="filterable-column">
                     <div class="th-content">
-                      <div class="th-label">{{ col.label }}</div>
-                      <div v-if="col.type === 'select'" class="column-filter-checkboxes" @click.stop>
-                        <label class="filter-checkbox-label">
-                          <input
-                            type="checkbox"
-                            :checked="isFilterChecked(col.key, '__EMPTY__')"
-                            @change="toggleFilter(col.key, '__EMPTY__')"
-                            class="filter-checkbox"
-                          />
-                          <span class="filter-checkbox-text">(Порожньо)</span>
-                        </label>
-                        <label
-                          v-for="option in dictionaries[col.optionsKey] || []"
-                          :key="option.value"
-                          class="filter-checkbox-label"
-                        >
-                          <input
-                            type="checkbox"
-                            :checked="isFilterChecked(col.key, option.value)"
-                            @change="toggleFilter(col.key, option.value)"
-                            class="filter-checkbox"
-                          />
-                          <span class="filter-checkbox-text">{{ option.label }}</span>
-                        </label>
+                      <div class="th-label">
+                        {{ col.label }}
+                        <span v-if="col.type === 'select'" class="filter-icon" :class="{ 'has-filters': hasActiveFilters(col.key) }">
+                          🔽
+                          <span v-if="getColumnFilterCount(col.key) > 0" class="filter-count">{{ getColumnFilterCount(col.key) }}</span>
+                        </span>
+                      </div>
+
+                      <!-- Dropdown з фільтрами -->
+                      <div v-if="col.type === 'select'" class="filter-dropdown" @click.stop>
+                        <div class="filter-dropdown-content">
+                          <label class="filter-checkbox-label">
+                            <input
+                              type="checkbox"
+                              :checked="isFilterChecked(col.key, '__EMPTY__')"
+                              @change="toggleFilter(col.key, '__EMPTY__')"
+                              class="filter-checkbox"
+                            />
+                            <span class="filter-checkbox-text">(Порожньо)</span>
+                          </label>
+                          <label
+                            v-for="option in dictionaries[col.optionsKey] || []"
+                            :key="option.value"
+                            class="filter-checkbox-label"
+                          >
+                            <input
+                              type="checkbox"
+                              :checked="isFilterChecked(col.key, option.value)"
+                              @change="toggleFilter(col.key, option.value)"
+                              class="filter-checkbox"
+                            />
+                            <span class="filter-checkbox-text">{{ option.label }}</span>
+                          </label>
+                        </div>
                       </div>
                     </div>
                   </th>
