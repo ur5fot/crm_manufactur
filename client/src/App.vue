@@ -84,6 +84,20 @@ const vacationReturning = ref([]);
 const vacationStarting = ref([]);
 const showVacationNotification = ref(false);
 
+// Динамические значения статусов из fields_schema
+const workingStatus = computed(() => {
+  // Первое значение из employment_status options (обычно "Работает")
+  const employmentField = allFieldsSchema.value.find(f => f.key === 'employment_status');
+  return employmentField?.options?.[0] || 'Работает';
+});
+
+const vacationStatus = computed(() => {
+  // Ищем значение содержащее "Отпуск" в employment_status options
+  const employmentField = allFieldsSchema.value.find(f => f.key === 'employment_status');
+  const vacationOption = employmentField?.options?.find(opt => opt.toLowerCase().includes('отпуск'));
+  return vacationOption || 'Отпуск';
+});
+
 // Маппинг технических названий полей на человекопонятные
 const fieldLabels = {
   employee_id: "ID сотрудника",
@@ -345,7 +359,7 @@ async function checkVacations() {
         ...employee,
         vacation_start_date: '',
         vacation_end_date: '',
-        employment_status: 'Работает'
+        employment_status: workingStatus.value
       });
       return; // Не проверяем дальше
     }
@@ -357,13 +371,13 @@ async function checkVacations() {
         ...employee,
         vacation_start_date: '',
         vacation_end_date: '',
-        employment_status: employee.employment_status === 'Отпуск' ? 'Работает' : employee.employment_status
+        employment_status: employee.employment_status === vacationStatus.value ? workingStatus.value : employee.employment_status
       });
       return; // Не проверяем дальше
     }
 
     // Проверка 3: сегодня начинается отпуск
-    if (startDate === today && employee.employment_status !== 'Отпуск') {
+    if (startDate === today && employee.employment_status !== vacationStatus.value) {
       console.log(`  🏖️ Отпуск начинается сегодня!`);
       startingToday.push({
         id: employee.employee_id,
@@ -374,17 +388,17 @@ async function checkVacations() {
 
       needsUpdate.push({
         ...employee,
-        employment_status: 'Отпуск'
+        employment_status: vacationStatus.value
       });
       return; // Не проверяем дальше
     }
 
     // Проверка 4: сейчас в отпуске (между датами)
-    if (startDate && endDate && startDate < today && endDate > today && employee.employment_status !== 'Отпуск') {
+    if (startDate && endDate && startDate < today && endDate > today && employee.employment_status !== vacationStatus.value) {
       console.log(`  🏖️ Сейчас в отпуске (между датами)`);
       needsUpdate.push({
         ...employee,
-        employment_status: 'Отпуск'
+        employment_status: vacationStatus.value
       });
     }
   });
