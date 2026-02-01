@@ -9,3 +9,8 @@ files/*
 data/employees.csv
 data/logs.csv
 data/fields_schema.csv
+
+# Claude Code та BMAD (особисті налаштування та output)
+.claude/
+_bmad/
+_bmad-output/
