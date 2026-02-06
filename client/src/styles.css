@@ -8,6 +8,7 @@
   --accent: #0f766e;
   --accent-strong: #0b5d55;
   --accent-2: #f59e0b;
+  --color-primary: #1976D2;
   --shadow: 0 24px 60px rgba(19, 16, 10, 0.12);
   --radius-lg: 22px;
   --radius-md: 14px;
@@ -110,9 +111,46 @@ a {
   color: var(--muted);
 }
 
-.top-actions {
+.topbar-actions {
   display: flex;
   gap: 12px;
+}
+
+/* Tab Bar навігація */
+.tab-bar {
+  display: flex;
+  height: 48px;
+  border-bottom: 1px solid #E0E0E0;
+  padding: 0 26px;
+  margin: 0 -26px -22px;
+}
+
+.tab-item {
+  padding: 0 20px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #666;
+  cursor: pointer;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  transition: none;
+  box-shadow: none;
+}
+
+.tab-item.active {
+  color: var(--color-primary);
+  border-bottom: 2px solid var(--color-primary);
+}
+
+.tab-item:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.tab-item:hover:not(.active) {
+  color: #333;
 }
 
 .layout {

@@ -73,7 +73,19 @@ const importFile = ref(null);
 const importResult = ref(null);
 const importing = ref(false);
 const dictionaries = ref({});
-const viewMode = ref("table"); // "cards", "table", or "logs"
+const currentView = ref("table"); // "dashboard", "cards", "table", or "logs"
+
+const tabs = [
+  { key: 'dashboard', label: 'Dashboard' },
+  { key: 'cards', label: 'Картки' },
+  { key: 'table', label: 'Таблиця' },
+  { key: 'logs', label: 'Логи' },
+];
+
+function switchView(view) {
+  currentView.value = view;
+  if (view === 'logs') loadLogs();
+}
 const editingCells = reactive({}); // { employeeId_fieldName: value }
 const columnFilters = reactive({}); // { fieldName: selectedValue }
 const logs = ref([]);
@@ -165,7 +177,7 @@ const filteredEmployees = computed(() => {
   }
 
   // Фильтры столбцов (только для режима таблицы)
-  if (viewMode.value === "table") {
+  if (currentView.value === "table") {
     Object.keys(columnFilters).forEach((fieldName) => {
       const filterValues = columnFilters[fieldName];
       if (filterValues && filterValues.length > 0) {
@@ -671,7 +683,7 @@ async function saveCell(employee, fieldName) {
 }
 
 function openEmployeeCard(employeeId) {
-  viewMode.value = "cards";
+  currentView.value = "cards";
   selectEmployee(employeeId);
 }
 
@@ -796,42 +808,38 @@ onMounted(async () => {
           <div class="brand-title">CRM на CSV</div>
           <div class="brand-sub">Vue + Node, локальні CSV файли</div>
         </div>
-        <div class="top-actions">
-          <button
-            class="secondary"
-            :class="{ active: viewMode === 'cards' }"
-            type="button"
-            @click="viewMode = 'cards'"
-          >
-            Картки
-          </button>
-          <button
-            class="secondary"
-            :class="{ active: viewMode === 'table' }"
-            type="button"
-            @click="viewMode = 'table'"
-          >
-            Зведена таблиця
-          </button>
-          <button
-            class="secondary"
-            :class="{ active: viewMode === 'logs' }"
-            type="button"
-            @click="viewMode = 'logs'; loadLogs()"
-          >
-            Логи
-          </button>
+        <div class="topbar-actions">
           <button class="secondary" type="button" @click="loadEmployees">
             Оновити
           </button>
-          <button class="primary" type="button" @click="startNew" v-if="viewMode === 'cards'">
+          <button class="primary" type="button" @click="startNew" v-if="currentView === 'cards'">
             Новий співробітник
+          </button>
+        </div>
+        <div class="tab-bar">
+          <button
+            v-for="tab in tabs"
+            :key="tab.key"
+            class="tab-item"
+            :class="{ active: currentView === tab.key }"
+            @click="switchView(tab.key)"
+          >
+            {{ tab.label }}
           </button>
         </div>
       </header>
 
+      <!-- Режим Dashboard -->
+      <div v-if="currentView === 'dashboard'" class="layout-table">
+        <div class="panel table-panel">
+          <div class="panel-header">
+            <div class="panel-title">Dashboard — coming soon</div>
+          </div>
+        </div>
+      </div>
+
       <!-- Режим карточек -->
-      <div v-if="viewMode === 'cards'" class="layout">
+      <div v-else-if="currentView === 'cards'" class="layout">
         <aside class="panel">
           <div class="panel-header">
             <div class="panel-title">Співробітники</div>
@@ -1107,7 +1115,7 @@ onMounted(async () => {
       </div>
 
       <!-- Режим сводной таблицы -->
-      <div v-else-if="viewMode === 'table'" class="layout-table">
+      <div v-else-if="currentView === 'table'" class="layout-table">
         <div class="panel table-panel">
           <div class="panel-header">
             <div class="panel-title">CRM Виробництво - Зведена таблиця</div>
@@ -1253,7 +1261,7 @@ onMounted(async () => {
       </div>
 
       <!-- Режим логов -->
-      <div v-else-if="viewMode === 'logs'" class="layout-table">
+      <div v-else-if="currentView === 'logs'" class="layout-table">
         <div class="panel table-panel">
           <div class="panel-header">
             <div class="panel-title">Журнал змін</div>
