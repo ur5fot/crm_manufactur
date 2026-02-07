@@ -73,7 +73,7 @@ const importFile = ref(null);
 const importResult = ref(null);
 const importing = ref(false);
 const dictionaries = ref({});
-const currentView = ref("table"); // "dashboard", "cards", "table", or "logs"
+const currentView = ref("dashboard"); // "dashboard", "cards", "table", or "logs"
 
 const tabs = [
   { key: 'dashboard', label: 'Dashboard' },
@@ -222,6 +222,16 @@ const filteredLogs = computed(() => {
       .toLowerCase();
     return haystack.includes(query);
   });
+});
+
+const dashboardStats = computed(() => {
+  const emps = employees.value;
+  const total = emps.length;
+  const working = emps.filter(e => e.employment_status === workingStatus.value).length;
+  const vacation = emps.filter(e => e.employment_status === vacationStatus.value).length;
+  // "Інше" = всі хто не working і не vacation
+  const other = total - working - vacation;
+  return { total, working, vacation, other };
 });
 
 function emptyEmployee() {
@@ -830,10 +840,26 @@ onMounted(async () => {
       </header>
 
       <!-- Режим Dashboard -->
-      <div v-if="currentView === 'dashboard'" class="layout-table">
-        <div class="panel table-panel">
-          <div class="panel-header">
-            <div class="panel-title">Dashboard — coming soon</div>
+      <div v-if="currentView === 'dashboard'" class="dashboard">
+        <div v-if="loading" class="status-bar" style="justify-content: center; padding: 24px;">
+          <span>Завантаження...</span>
+        </div>
+        <div class="stats-grid">
+          <div class="stat-card" style="--card-color: #E0E0E0">
+            <div class="stat-card-number">{{ dashboardStats.total }}</div>
+            <div class="stat-card-label">Всього</div>
+          </div>
+          <div class="stat-card" style="--card-color: var(--color-status-active)">
+            <div class="stat-card-number">{{ dashboardStats.working }}</div>
+            <div class="stat-card-label">Працює</div>
+          </div>
+          <div class="stat-card" style="--card-color: var(--color-status-vacation)">
+            <div class="stat-card-number">{{ dashboardStats.vacation }}</div>
+            <div class="stat-card-label">Відпустка</div>
+          </div>
+          <div class="stat-card" style="--card-color: var(--color-status-inactive)">
+            <div class="stat-card-number">{{ dashboardStats.other }}</div>
+            <div class="stat-card-label">Інше</div>
           </div>
         </div>
       </div>

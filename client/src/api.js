@@ -64,5 +64,8 @@ export const api = {
   },
   getFieldsSchema() {
     return request("/fields-schema");
+  },
+  getDashboardStats() {
+    return request("/dashboard/stats");
   }
 };

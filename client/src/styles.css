@@ -9,6 +9,10 @@
   --accent-strong: #0b5d55;
   --accent-2: #f59e0b;
   --color-primary: #1976D2;
+  --color-status-active: #4CAF50;
+  --color-status-vacation: #2196F3;
+  --color-status-warning: #FF9800;
+  --color-status-inactive: #9E9E9E;
   --shadow: 0 24px 60px rgba(19, 16, 10, 0.12);
   --radius-lg: 22px;
   --radius-md: 14px;
@@ -1103,4 +1107,44 @@ button.small {
   border-top: 1px solid var(--line);
   display: flex;
   justify-content: flex-end;
+}
+
+/* Dashboard styles */
+.dashboard {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.stat-card {
+  background: #FFFFFF;
+  border-radius: 8px;
+  padding: 16px;
+  border-left: 4px solid var(--card-color);
+  cursor: pointer;
+  transition: box-shadow 0.2s ease;
+}
+
+.stat-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.stat-card-number {
+  font-size: 36px;
+  font-weight: 700;
+  color: #212121;
+  line-height: 1;
+  margin-bottom: 8px;
+}
+
+.stat-card-label {
+  font-size: 14px;
+  font-weight: 400;
+  color: #666;
 }

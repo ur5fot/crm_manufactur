@@ -152,6 +152,35 @@ async function getDocumentFields() {
   return loadDocumentFields(loadFieldsSchema);
 }
 
+export async function getDashboardStats() {
+  const employees = await loadEmployees();
+  const schema = await loadFieldsSchema();
+
+  // Знаходимо поле employment_status та його options
+  const statusField = schema.find(f => f.field_name === 'employment_status');
+  const options = statusField?.field_options?.split('|') || [];
+
+  // Визначаємо статуси динамічно
+  const workingValue = options[0] || 'Работает';
+  const vacationValue = options.find(o => o.toLowerCase().includes('отпуск')) || 'Отпуск';
+  const sickValue = options.find(o => o.toLowerCase().includes('больнич')) || 'Больничный';
+  const firedValue = options.find(o => o.toLowerCase().includes('уволен')) || 'Уволен';
+
+  const total = employees.length;
+  let working = 0, vacation = 0, sick = 0, fired = 0;
+
+  employees.forEach(emp => {
+    const status = emp.employment_status;
+    if (status === workingValue) working++;
+    else if (status === vacationValue) vacation++;
+    else if (status === sickValue) sick++;
+    else if (status === firedValue) fired++;
+  });
+
+  const other = total - working - vacation - sick - fired;
+  return { total, working, vacation, sick, fired, other };
+}
+
 export async function loadLogs() {
   return readCsv(LOGS_PATH, LOG_COLUMNS);
 }

@@ -15,6 +15,7 @@ import {
   loadLogs,
   addLog,
   loadFieldsSchema,
+  getDashboardStats,
   ROOT_DIR,
   initializeEmployeeColumns,
   getEmployeeColumnsSync,
@@ -82,6 +83,16 @@ function normalizeEmployeeInput(payload) {
 
 app.get("/api/health", (req, res) => {
   res.json({ ok: true });
+});
+
+app.get("/api/dashboard/stats", async (_req, res) => {
+  try {
+    const stats = await getDashboardStats();
+    res.json(stats);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.get("/api/fields-schema", async (_req, res) => {
