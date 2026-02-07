@@ -12,6 +12,11 @@ This repository maintains three documentation files that should be kept in sync:
 
 When updating features or architecture, ensure all three files reflect the changes.
 
+## Communication Language
+
+- Общение в чате ведётся на **русском языке**
+- Если используются английские термины — писать перевод в скобках, например: "auto-refresh (автообновление)"
+
 ## Project Overview
 
 Local CRM system for managing employee data using CSV files as the database and PDF documents stored in local folders. The system uses a client-server architecture with Vue.js frontend and Express.js backend.

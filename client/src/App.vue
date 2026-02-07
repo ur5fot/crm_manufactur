@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, reactive, ref } from "vue";
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from "vue";
 import { api } from "./api";
 
 const employeeFields = [
@@ -74,6 +74,9 @@ const importResult = ref(null);
 const importing = ref(false);
 const dictionaries = ref({});
 const currentView = ref("dashboard"); // "dashboard", "cards", "table", or "logs"
+const refreshIntervalId = ref(null);
+const lastUpdated = ref(null);
+const isRefreshing = ref(false);
 
 const tabs = [
   { key: 'dashboard', label: 'Dashboard' },
@@ -86,6 +89,36 @@ function switchView(view) {
   currentView.value = view;
   if (view === 'logs') loadLogs();
 }
+
+function startDashboardRefresh() {
+  stopDashboardRefresh();
+  refreshIntervalId.value = setInterval(() => {
+    loadEmployees(true);
+  }, 300000);
+}
+
+function refreshManually() {
+  loadEmployees();
+  if (currentView.value === 'dashboard') {
+    startDashboardRefresh();
+  }
+}
+
+function stopDashboardRefresh() {
+  if (refreshIntervalId.value) {
+    clearInterval(refreshIntervalId.value);
+    refreshIntervalId.value = null;
+  }
+}
+
+watch(currentView, (newView, oldView) => {
+  if (newView === 'dashboard') {
+    loadEmployees();
+    startDashboardRefresh();
+  } else if (oldView === 'dashboard') {
+    stopDashboardRefresh();
+  }
+});
 const editingCells = reactive({}); // { employeeId_fieldName: value }
 const columnFilters = reactive({}); // { fieldName: selectedValue }
 const logs = ref([]);
@@ -234,6 +267,12 @@ const dashboardStats = computed(() => {
   return { total, working, vacation, other };
 });
 
+const formattedLastUpdated = computed(() => {
+  if (!lastUpdated.value) return '';
+  const d = lastUpdated.value;
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+});
+
 function emptyEmployee() {
   const base = {};
   // Используем динамический список полей из schema
@@ -336,17 +375,21 @@ async function importEmployees() {
   }
 }
 
-async function loadEmployees() {
-  loading.value = true;
-  errorMessage.value = "";
+async function loadEmployees(silent = false) {
+  if (silent && isRefreshing.value) return;
+  if (!silent) loading.value = true;
+  isRefreshing.value = true;
+  if (!silent) errorMessage.value = "";
   try {
     const data = await api.getEmployees();
     employees.value = data.employees || [];
     await checkVacations();
+    lastUpdated.value = new Date();
   } catch (error) {
-    errorMessage.value = error.message;
+    if (!silent) errorMessage.value = error.message;
   } finally {
-    loading.value = false;
+    isRefreshing.value = false;
+    if (!silent) loading.value = false;
   }
 }
 
@@ -766,6 +809,11 @@ function getDetailLabel(detail) {
 onMounted(async () => {
   await loadFieldsSchema();
   await loadEmployees();
+  startDashboardRefresh();
+});
+
+onUnmounted(() => {
+  stopDashboardRefresh();
 });
 </script>
 
@@ -819,7 +867,7 @@ onMounted(async () => {
           <div class="brand-sub">Vue + Node, локальні CSV файли</div>
         </div>
         <div class="topbar-actions">
-          <button class="secondary" type="button" @click="loadEmployees">
+          <button class="secondary" type="button" @click="refreshManually">
             Оновити
           </button>
           <button class="primary" type="button" @click="startNew" v-if="currentView === 'cards'">
@@ -861,6 +909,9 @@ onMounted(async () => {
             <div class="stat-card-number">{{ dashboardStats.other }}</div>
             <div class="stat-card-label">Інше</div>
           </div>
+        </div>
+        <div v-if="lastUpdated" class="dashboard-footer">
+          Оновлено: {{ formattedLastUpdated }}
         </div>
       </div>
 

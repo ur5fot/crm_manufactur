@@ -44,7 +44,7 @@ development_status:
   epic-1: in-progress
   1-1-tab-bar-navigation: done
   1-2-dashboard-api-stat-cards: done
-  1-3-auto-refresh-dashboard-timestamp-footer: backlog
+  1-3-auto-refresh-dashboard-timestamp-footer: done
   epic-1-retrospective: optional
 
   # Epic 2: Події відпусток та нагадування
