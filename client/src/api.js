@@ -67,5 +67,8 @@ export const api = {
   },
   getDashboardStats() {
     return request("/dashboard/stats");
+  },
+  getDashboardEvents() {
+    return request("/dashboard/events");
   }
 };

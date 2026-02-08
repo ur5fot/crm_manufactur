@@ -77,6 +77,7 @@ const currentView = ref("dashboard"); // "dashboard", "cards", "table", or "logs
 const refreshIntervalId = ref(null);
 const lastUpdated = ref(null);
 const isRefreshing = ref(false);
+const dashboardEvents = ref({ today: [], thisWeek: [] });
 
 const tabs = [
   { key: 'dashboard', label: 'Dashboard' },
@@ -94,12 +95,14 @@ function startDashboardRefresh() {
   stopDashboardRefresh();
   refreshIntervalId.value = setInterval(() => {
     loadEmployees(true);
+    loadDashboardEvents();
   }, 300000);
 }
 
 function refreshManually() {
   loadEmployees();
   if (currentView.value === 'dashboard') {
+    loadDashboardEvents();
     startDashboardRefresh();
   }
 }
@@ -114,6 +117,7 @@ function stopDashboardRefresh() {
 watch(currentView, (newView, oldView) => {
   if (newView === 'dashboard') {
     loadEmployees();
+    loadDashboardEvents();
     startDashboardRefresh();
   } else if (oldView === 'dashboard') {
     stopDashboardRefresh();
@@ -129,60 +133,35 @@ const vacationReturning = ref([]);
 const vacationStarting = ref([]);
 const showVacationNotification = ref(false);
 
-// Динамические значения статусов из fields_schema
-const workingStatus = computed(() => {
-  // Первое значение из employment_status options (обычно "Работает")
-  const employmentField = allFieldsSchema.value.find(f => f.key === 'employment_status');
-  return employmentField?.options?.[0] || 'Работает';
+// Динамические значения статусов из fields_schema (по позиции в field_options)
+// Конвенция: options[0] = рабочий, options[2] = отпуск
+const employmentOptions = computed(() => {
+  const field = allFieldsSchema.value.find(f => f.key === 'employment_status');
+  return field?.options || [];
 });
 
-const vacationStatus = computed(() => {
-  // Ищем значение содержащее "Отпуск" в employment_status options
-  const employmentField = allFieldsSchema.value.find(f => f.key === 'employment_status');
-  const vacationOption = employmentField?.options?.find(opt => opt.toLowerCase().includes('отпуск'));
-  return vacationOption || 'Отпуск';
+const workingStatus = computed(() => employmentOptions.value[0] || '');
+const vacationStatus = computed(() => employmentOptions.value[2] || '');
+
+// Маппинг технических названий полей на человекопонятные — динамически из fields_schema
+const fieldLabels = computed(() => {
+  const map = {};
+  allFieldsSchema.value.forEach(f => {
+    map[f.key] = f.label;
+  });
+  return map;
 });
 
-// Маппинг технических названий полей на человекопонятные
-const fieldLabels = {
-  employee_id: "ID співробітника",
-  last_name: "Прізвище",
-  first_name: "Ім'я",
-  middle_name: "По батькові",
-  employment_status: "Статус роботи",
-  additional_status: "Додатковий статус",
-  location: "Місцезнаходження",
-  department: "Підрозділ",
-  position: "Посада",
-  grade: "Розряд",
-  salary_grid: "Зарплатна сітка",
-  salary_amount: "Оклад",
-  specialty: "Спеціальність",
-  work_state: "Робочий стан",
-  work_type: "Тип роботи",
-  gender: "Стать",
-  fit_status: "Придатність",
-  order_ref: "Наказ",
-  bank_name: "Банк",
-  bank_card_number: "Номер картки",
-  bank_iban: "IBAN",
-  tax_id: "ІПН",
-  email: "Ел. пошта",
-  blood_group: "Група крові",
-  workplace_location: "Місце роботи",
-  residence_place: "Місце проживання",
-  registration_place: "Місце реєстрації",
-  driver_license_file: "Водійське посвідчення",
-  id_certificate_file: "Посвідчення особи",
-  foreign_passport_number: "Номер закордонного паспорта",
-  foreign_passport_issue_date: "Дата видачі закордонного паспорта",
-  foreign_passport_file: "Закордонний паспорт",
-  criminal_record_file: "Довідка про несудимість",
-  phone: "Телефон",
-  phone_note: "Примітка до телефону",
-  education: "Освіта",
-  notes: "Примітка"
-};
+// Цвета stat-card по позиции option (CSS-переменные)
+const statusColors = [
+  'var(--color-status-active)',    // options[0] — рабочий
+  'var(--color-status-warning)',   // options[1]
+  'var(--color-status-vacation)',  // options[2] — отпуск
+  'var(--color-status-warning)',   // options[3]
+];
+function statusCardColor(idx) {
+  return statusColors[idx] || 'var(--color-status-inactive)';
+}
 
 const form = reactive(emptyEmployee());
 const documentFiles = reactive({});
@@ -257,14 +236,20 @@ const filteredLogs = computed(() => {
   });
 });
 
+// Статистика по кожному статусу з field_options — повністю динамічно
 const dashboardStats = computed(() => {
   const emps = employees.value;
   const total = emps.length;
-  const working = emps.filter(e => e.employment_status === workingStatus.value).length;
-  const vacation = emps.filter(e => e.employment_status === vacationStatus.value).length;
-  // "Інше" = всі хто не working і не vacation
-  const other = total - working - vacation;
-  return { total, working, vacation, other };
+  const options = employmentOptions.value;
+
+  // Підрахунок по кожній опції з schema
+  const statusCounts = options.map(opt => ({
+    label: opt,
+    count: emps.filter(e => e.employment_status === opt).length
+  }));
+
+  const counted = statusCounts.reduce((sum, s) => sum + s.count, 0);
+  return { total, statusCounts, other: total - counted };
 });
 
 const formattedLastUpdated = computed(() => {
@@ -390,6 +375,37 @@ async function loadEmployees(silent = false) {
   } finally {
     isRefreshing.value = false;
     if (!silent) loading.value = false;
+  }
+}
+
+const shortDays = ['Нд', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+
+function formatEventDate(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr + 'T00:00:00');
+  if (isNaN(d.getTime())) return dateStr;
+  const day = shortDays[d.getDay()];
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  return `${day}, ${dd}.${mm}.${d.getFullYear()}`;
+}
+
+function daysFromNowLabel(dateStr) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const target = new Date(dateStr + 'T00:00:00');
+  const diff = Math.round((target - today) / 86400000);
+  if (diff === 1) return 'завтра';
+  if (diff >= 2 && diff <= 4) return `через ${diff} дні`;
+  return `через ${diff} днів`;
+}
+
+async function loadDashboardEvents() {
+  try {
+    const data = await api.getDashboardEvents();
+    dashboardEvents.value = data;
+  } catch (error) {
+    console.error('Failed to load dashboard events:', error);
   }
 }
 
@@ -790,7 +806,7 @@ function getColumnFilterCount(fieldName) {
 
 function getFieldLabel(fieldName) {
   if (!fieldName) return "";
-  const label = fieldLabels[fieldName] || fieldName;
+  const label = fieldLabels.value[fieldName] || fieldName;
   return `${label} (${fieldName})`;
 }
 
@@ -800,7 +816,7 @@ function getDetailLabel(detail) {
   const match = detail.match(/Изменено поле: (\w+)/);
   if (match) {
     const fieldName = match[1];
-    const label = fieldLabels[fieldName] || fieldName;
+    const label = fieldLabels.value[fieldName] || fieldName;
     return `Змінено поле: ${label} (${fieldName})`;
   }
   return detail;
@@ -809,6 +825,7 @@ function getDetailLabel(detail) {
 onMounted(async () => {
   await loadFieldsSchema();
   await loadEmployees();
+  loadDashboardEvents();
   startDashboardRefresh();
 });
 
@@ -897,17 +914,48 @@ onUnmounted(() => {
             <div class="stat-card-number">{{ dashboardStats.total }}</div>
             <div class="stat-card-label">Всього</div>
           </div>
-          <div class="stat-card" style="--card-color: var(--color-status-active)">
-            <div class="stat-card-number">{{ dashboardStats.working }}</div>
-            <div class="stat-card-label">Працює</div>
-          </div>
-          <div class="stat-card" style="--card-color: var(--color-status-vacation)">
-            <div class="stat-card-number">{{ dashboardStats.vacation }}</div>
-            <div class="stat-card-label">Відпустка</div>
+          <div
+            v-for="(stat, idx) in dashboardStats.statusCounts"
+            :key="stat.label"
+            class="stat-card"
+            :style="{ '--card-color': statusCardColor(idx) }"
+          >
+            <div class="stat-card-number">{{ stat.count }}</div>
+            <div class="stat-card-label">{{ stat.label }}</div>
           </div>
           <div class="stat-card" style="--card-color: var(--color-status-inactive)">
             <div class="stat-card-number">{{ dashboardStats.other }}</div>
             <div class="stat-card-label">Інше</div>
+          </div>
+        </div>
+        <!-- Timeline: Сьогодні -->
+        <div class="timeline-section">
+          <div class="timeline-title">Сьогодні</div>
+          <div v-if="dashboardEvents.today.length === 0" class="timeline-empty">
+            Нічого термінового
+          </div>
+          <div v-for="event in dashboardEvents.today" :key="event.employee_id + event.type" class="timeline-event">
+            <span class="timeline-emoji">{{ event.type === 'vacation_start' ? '✈️' : '🏢' }}</span>
+            <span class="timeline-name">{{ event.name }}</span>
+            <span class="timeline-desc">
+              {{ event.type === 'vacation_start' ? (event.end_date ? `— початок відпустки (до ${formatEventDate(event.end_date)})` : '— початок відпустки') : '— повернення з відпустки' }}
+            </span>
+          </div>
+        </div>
+        <!-- Timeline: Цього тижня -->
+        <div class="timeline-section">
+          <div class="timeline-title">Найближчі 7 днів</div>
+          <div v-if="dashboardEvents.thisWeek.length === 0" class="timeline-empty">
+            Немає запланованих подій
+          </div>
+          <div v-for="event in dashboardEvents.thisWeek" :key="event.employee_id + event.type + event.date" class="timeline-event">
+            <span class="timeline-date">{{ formatEventDate(event.date) }}</span>
+            <span class="timeline-days-badge">{{ daysFromNowLabel(event.date) }}</span>
+            <span class="timeline-emoji">{{ event.type === 'vacation_start' ? '✈️' : '🏢' }}</span>
+            <span class="timeline-name">{{ event.name }}</span>
+            <span class="timeline-desc">
+              {{ event.type === 'vacation_start' ? (event.end_date ? `— початок відпустки (до ${formatEventDate(event.end_date)})` : '— початок відпустки') : '— повернення з відпустки' }}
+            </span>
           </div>
         </div>
         <div v-if="lastUpdated" class="dashboard-footer">

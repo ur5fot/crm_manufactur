@@ -1149,6 +1149,65 @@ button.small {
   color: #666;
 }
 
+.timeline-section {
+  margin-top: 24px;
+}
+
+.timeline-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #212121;
+  margin-bottom: 12px;
+}
+
+.timeline-event {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  font-size: 14px;
+  color: #212121;
+  border-bottom: 1px solid #F5F5F5;
+}
+
+.timeline-event:last-child {
+  border-bottom: none;
+}
+
+.timeline-emoji {
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.timeline-name {
+  font-weight: 500;
+}
+
+.timeline-desc {
+  color: #666;
+}
+
+.timeline-date {
+  color: #999;
+  font-size: 12px;
+  min-width: 40px;
+}
+
+.timeline-days-badge {
+  font-size: 11px;
+  color: #666;
+  background: #F0F0F0;
+  padding: 2px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.timeline-empty {
+  color: #999;
+  font-size: 14px;
+  padding: 8px 0;
+}
+
 .dashboard-footer {
   text-align: right;
   color: #999;

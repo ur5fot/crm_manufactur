@@ -156,29 +156,90 @@ export async function getDashboardStats() {
   const employees = await loadEmployees();
   const schema = await loadFieldsSchema();
 
-  // Знаходимо поле employment_status та його options
+  // Знаходимо поле employment_status та його options з fields_schema
   const statusField = schema.find(f => f.field_name === 'employment_status');
   const options = statusField?.field_options?.split('|') || [];
 
-  // Визначаємо статуси динамічно
-  const workingValue = options[0] || 'Работает';
-  const vacationValue = options.find(o => o.toLowerCase().includes('отпуск')) || 'Отпуск';
-  const sickValue = options.find(o => o.toLowerCase().includes('больнич')) || 'Больничный';
-  const firedValue = options.find(o => o.toLowerCase().includes('уволен')) || 'Уволен';
-
   const total = employees.length;
-  let working = 0, vacation = 0, sick = 0, fired = 0;
+
+  // Підрахунок по кожній опції з schema — без хардкоду значень
+  const statusCounts = options.map(opt => ({
+    label: opt,
+    count: employees.filter(e => e.employment_status === opt).length
+  }));
+
+  const counted = statusCounts.reduce((sum, s) => sum + s.count, 0);
+  return { total, statusCounts, other: total - counted };
+}
+
+function localDateStr(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+export async function getDashboardEvents() {
+  const employees = await loadEmployees();
+  const now = new Date();
+  const today = localDateStr(now);
+
+  const tomorrow = new Date(now);
+  tomorrow.setDate(now.getDate() + 1);
+  const tomorrowStr = localDateStr(tomorrow);
+
+  const in7days = new Date(now);
+  in7days.setDate(now.getDate() + 7);
+  const in7daysStr = localDateStr(in7days);
+
+  const todayEvents = [];
+  const weekEvents = [];
 
   employees.forEach(emp => {
-    const status = emp.employment_status;
-    if (status === workingValue) working++;
-    else if (status === vacationValue) vacation++;
-    else if (status === sickValue) sick++;
-    else if (status === firedValue) fired++;
+    const name = [emp.last_name, emp.first_name, emp.middle_name].filter(Boolean).join(' ');
+    const startDate = emp.vacation_start_date;
+    const endDate = emp.vacation_end_date;
+
+    if (startDate === today) {
+      todayEvents.push({
+        employee_id: emp.employee_id,
+        name,
+        type: 'vacation_start',
+        date: startDate,
+        end_date: endDate || ''
+      });
+    }
+    if (endDate === today) {
+      todayEvents.push({
+        employee_id: emp.employee_id,
+        name,
+        type: 'vacation_end',
+        date: endDate
+      });
+    }
+
+    if (startDate && startDate >= tomorrowStr && startDate <= in7daysStr) {
+      weekEvents.push({
+        employee_id: emp.employee_id,
+        name,
+        type: 'vacation_start',
+        date: startDate,
+        end_date: endDate || ''
+      });
+    }
+    if (endDate && endDate >= tomorrowStr && endDate <= in7daysStr) {
+      weekEvents.push({
+        employee_id: emp.employee_id,
+        name,
+        type: 'vacation_end',
+        date: endDate
+      });
+    }
   });
 
-  const other = total - working - vacation - sick - fired;
-  return { total, working, vacation, sick, fired, other };
+  weekEvents.sort((a, b) => a.date.localeCompare(b.date));
+
+  return { today: todayEvents, thisWeek: weekEvents };
 }
 
 export async function loadLogs() {

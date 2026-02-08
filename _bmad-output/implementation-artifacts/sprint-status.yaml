@@ -48,8 +48,8 @@ development_status:
   epic-1-retrospective: optional
 
   # Epic 2: Події відпусток та нагадування
-  epic-2: backlog
-  2-1-dashboard-events-api-timeline: backlog
+  epic-2: in-progress
+  2-1-dashboard-events-api-timeline: done
   2-2-inline-expand-stat-cards: backlog
   2-3-enhanced-notifications-modal: backlog
   epic-2-retrospective: optional

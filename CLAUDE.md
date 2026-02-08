@@ -331,6 +331,33 @@ Template: `data/employees_import_sample.csv`
 7. **Why multiple filter checkboxes?** Better UX than single-select dropdowns for filtering data
 8. **Why gitignore fields_schema.csv?** Production environments need custom fields/options without git conflicts; template provides starting point for new installs
 
+## CRITICAL: No Hardcoded Schema Values
+
+**`fields_schema.csv` is the single source of truth.** All field labels, dropdown options, status values, and field metadata MUST come from `fields_schema.csv` dynamically. Never hardcode values that are defined in the schema.
+
+**What MUST NOT be hardcoded in code:**
+- Field labels (e.g., "Прізвище", "Статус роботи") — use `field_label` from schema
+- Dropdown option values (e.g., "Працює", "Відпустка") — use `field_options` from schema
+- Status detection patterns (e.g., searching for "отпуск" or "відпустк" in option strings) — use positional convention instead
+- Fallback values for statuses — if schema not loaded, use empty string `''`
+
+**Positional convention for `employment_status` options:**
+The order of values in `field_options` for `employment_status` has semantic meaning:
+- `options[0]` = working/active status (e.g., "Працює")
+- `options[1]` = fired/dismissed status (e.g., "Звільнений")
+- `options[2]` = vacation status (e.g., "Відпустка") — used by vacation automation
+- `options[3]` = sick leave status (e.g., "Лікарняний")
+- `options[4+]` = other statuses
+
+This convention is used by:
+- `workingStatus` computed in App.vue — `employmentOptions[0]`
+- `vacationStatus` computed in App.vue — `employmentOptions[2]`
+- `checkVacations()` function — uses `workingStatus` and `vacationStatus`
+- Dashboard stat cards — rendered dynamically via `v-for` over all options
+- `getDashboardStats()` in store.js — counts per each option dynamically
+
+**Dashboard stat card colors** are assigned by position index via `statusCardColor(idx)` function using CSS variables (`--color-status-active`, `--color-status-warning`, `--color-status-vacation`, etc.).
+
 ## Modifying Data Model
 
 **Adding or changing fields is now extremely simple:**

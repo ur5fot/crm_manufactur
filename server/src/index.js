@@ -16,6 +16,7 @@ import {
   addLog,
   loadFieldsSchema,
   getDashboardStats,
+  getDashboardEvents,
   ROOT_DIR,
   initializeEmployeeColumns,
   getEmployeeColumnsSync,
@@ -89,6 +90,16 @@ app.get("/api/dashboard/stats", async (_req, res) => {
   try {
     const stats = await getDashboardStats();
     res.json(stats);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get("/api/dashboard/events", async (_req, res) => {
+  try {
+    const events = await getDashboardEvents();
+    res.json(events);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
