@@ -158,7 +158,22 @@ git pull origin master
 - Form data mirrors employee object structure
 - **Dynamic UI generation**: Fields schema loaded on mount via `/api/fields-schema`
 - Form groups, table columns, and filters generated from schema
-- Three view modes: Cards (detail), Table (summary with inline editing), Logs (audit trail)
+- Four view modes: Dashboard (home), Cards (detail), Table (summary with inline editing), Logs (audit trail)
+
+**Dashboard UI** (full-width, no max-width constraint)**:**
+- **Stat Cards** - 4-column grid showing employee counts by `employment_status` (total, per-status, other)
+- **Inline Expand** - Click any stat card to expand an accordion list of employee names filtered by that status
+  - Single-expand behavior: only one card expanded at a time (`expandedCard` ref)
+  - `toggleStatCard(cardKey)` function, `expandedEmployees` computed property
+  - Employee names are clickable — navigate to employee card via `openEmployeeCard()`
+  - Each card + expand wrapped in `.stat-card-wrap` container
+  - CSS transition 200ms for both expand and collapse animation
+- **Timeline Cards** - Two-column grid (`.timeline-grid`) showing vacation events:
+  - "Сьогодні" (today) and "Найближчі 7 днів" (next 7 days)
+  - Card-style containers (`.timeline-card`) with white background and rounded corners
+  - Employee names are clickable links (`.timeline-link`) to employee cards
+- **Auto-refresh** - Dashboard data refreshes automatically via interval
+- **Footer** - Shows last update timestamp
 
 **Summary Table UI:**
 - **Double-click on cell** - Triggers inline editing for editable fields
@@ -355,6 +370,7 @@ This convention is used by:
 - `checkVacations()` function — uses `workingStatus` and `vacationStatus`
 - Dashboard stat cards — rendered dynamically via `v-for` over all options
 - `getDashboardStats()` in store.js — counts per each option dynamically
+- `expandedEmployees` computed — filters employees by clicked stat card status
 
 **Dashboard stat card colors** are assigned by position index via `statusCardColor(idx)` function using CSS variables (`--color-status-active`, `--color-status-warning`, `--color-status-vacation`, etc.).
 

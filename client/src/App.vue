@@ -78,6 +78,7 @@ const refreshIntervalId = ref(null);
 const lastUpdated = ref(null);
 const isRefreshing = ref(false);
 const dashboardEvents = ref({ today: [], thisWeek: [] });
+const expandedCard = ref(null); // null | 'total' | '<status_label>' | 'other'
 
 const tabs = [
   { key: 'dashboard', label: 'Dashboard' },
@@ -162,6 +163,22 @@ const statusColors = [
 function statusCardColor(idx) {
   return statusColors[idx] || 'var(--color-status-inactive)';
 }
+
+function toggleStatCard(cardKey) {
+  expandedCard.value = expandedCard.value === cardKey ? null : cardKey;
+}
+
+const expandedEmployees = computed(() => {
+  const key = expandedCard.value;
+  if (!key) return [];
+  const emps = employees.value;
+  if (key === 'total') return emps;
+  if (key === 'other') {
+    const options = employmentOptions.value;
+    return emps.filter(e => !options.includes(e.employment_status));
+  }
+  return emps.filter(e => e.employment_status === key);
+});
 
 const form = reactive(emptyEmployee());
 const documentFiles = reactive({});
@@ -910,40 +927,92 @@ onUnmounted(() => {
           <span>Завантаження...</span>
         </div>
         <div class="stats-grid">
-          <div class="stat-card" style="--card-color: #E0E0E0">
-            <div class="stat-card-number">{{ dashboardStats.total }}</div>
-            <div class="stat-card-label">Всього</div>
+          <div class="stat-card-wrap">
+            <div class="stat-card" :class="{ expanded: expandedCard === 'total' }"
+                 style="--card-color: #E0E0E0" @click="toggleStatCard('total')">
+              <div class="stat-card-header">
+                <div>
+                  <div class="stat-card-number">{{ dashboardStats.total }}</div>
+                  <div class="stat-card-label">Всього</div>
+                </div>
+                <span class="stat-card-toggle">{{ expandedCard === 'total' ? '▲' : '▼' }}</span>
+              </div>
+            </div>
+            <div class="inline-expand" :class="{ open: expandedCard === 'total' }">
+              <div class="inline-expand-list">
+                <div v-if="expandedEmployees.length === 0" class="inline-expand-empty">Немає працівників</div>
+                <div v-for="emp in expandedEmployees" :key="emp.employee_id" class="inline-expand-item" @click.stop="openEmployeeCard(emp.employee_id)">
+                  {{ [emp.last_name, emp.first_name, emp.middle_name].filter(Boolean).join(' ') }}
+                </div>
+              </div>
+            </div>
           </div>
           <div
             v-for="(stat, idx) in dashboardStats.statusCounts"
             :key="stat.label"
-            class="stat-card"
-            :style="{ '--card-color': statusCardColor(idx) }"
+            class="stat-card-wrap"
           >
-            <div class="stat-card-number">{{ stat.count }}</div>
-            <div class="stat-card-label">{{ stat.label }}</div>
+            <div
+              class="stat-card"
+              :class="{ expanded: expandedCard === stat.label }"
+              :style="{ '--card-color': statusCardColor(idx) }"
+              @click="toggleStatCard(stat.label)"
+            >
+              <div class="stat-card-header">
+                <div>
+                  <div class="stat-card-number">{{ stat.count }}</div>
+                  <div class="stat-card-label">{{ stat.label }}</div>
+                </div>
+                <span class="stat-card-toggle">{{ expandedCard === stat.label ? '▲' : '▼' }}</span>
+              </div>
+            </div>
+            <div class="inline-expand" :class="{ open: expandedCard === stat.label }">
+              <div class="inline-expand-list">
+                <div v-if="expandedEmployees.length === 0" class="inline-expand-empty">Немає працівників</div>
+                <div v-for="emp in expandedEmployees" :key="emp.employee_id" class="inline-expand-item" @click.stop="openEmployeeCard(emp.employee_id)">
+                  {{ [emp.last_name, emp.first_name, emp.middle_name].filter(Boolean).join(' ') }}
+                </div>
+              </div>
+            </div>
           </div>
-          <div class="stat-card" style="--card-color: var(--color-status-inactive)">
-            <div class="stat-card-number">{{ dashboardStats.other }}</div>
-            <div class="stat-card-label">Інше</div>
+          <div class="stat-card-wrap">
+            <div class="stat-card" :class="{ expanded: expandedCard === 'other' }"
+                 style="--card-color: var(--color-status-inactive)" @click="toggleStatCard('other')">
+              <div class="stat-card-header">
+                <div>
+                  <div class="stat-card-number">{{ dashboardStats.other }}</div>
+                  <div class="stat-card-label">Інше</div>
+                </div>
+                <span class="stat-card-toggle">{{ expandedCard === 'other' ? '▲' : '▼' }}</span>
+              </div>
+            </div>
+            <div class="inline-expand" :class="{ open: expandedCard === 'other' }">
+              <div class="inline-expand-list">
+                <div v-if="expandedEmployees.length === 0" class="inline-expand-empty">Немає працівників</div>
+                <div v-for="emp in expandedEmployees" :key="emp.employee_id" class="inline-expand-item" @click.stop="openEmployeeCard(emp.employee_id)">
+                  {{ [emp.last_name, emp.first_name, emp.middle_name].filter(Boolean).join(' ') }}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
+        <div class="timeline-grid">
         <!-- Timeline: Сьогодні -->
-        <div class="timeline-section">
+        <div class="timeline-card">
           <div class="timeline-title">Сьогодні</div>
           <div v-if="dashboardEvents.today.length === 0" class="timeline-empty">
             Нічого термінового
           </div>
           <div v-for="event in dashboardEvents.today" :key="event.employee_id + event.type" class="timeline-event">
             <span class="timeline-emoji">{{ event.type === 'vacation_start' ? '✈️' : '🏢' }}</span>
-            <span class="timeline-name">{{ event.name }}</span>
+            <span class="timeline-name timeline-link" @click="openEmployeeCard(event.employee_id)">{{ event.name }}</span>
             <span class="timeline-desc">
               {{ event.type === 'vacation_start' ? (event.end_date ? `— початок відпустки (до ${formatEventDate(event.end_date)})` : '— початок відпустки') : '— повернення з відпустки' }}
             </span>
           </div>
         </div>
         <!-- Timeline: Цього тижня -->
-        <div class="timeline-section">
+        <div class="timeline-card">
           <div class="timeline-title">Найближчі 7 днів</div>
           <div v-if="dashboardEvents.thisWeek.length === 0" class="timeline-empty">
             Немає запланованих подій
@@ -952,11 +1021,12 @@ onUnmounted(() => {
             <span class="timeline-date">{{ formatEventDate(event.date) }}</span>
             <span class="timeline-days-badge">{{ daysFromNowLabel(event.date) }}</span>
             <span class="timeline-emoji">{{ event.type === 'vacation_start' ? '✈️' : '🏢' }}</span>
-            <span class="timeline-name">{{ event.name }}</span>
+            <span class="timeline-name timeline-link" @click="openEmployeeCard(event.employee_id)">{{ event.name }}</span>
             <span class="timeline-desc">
               {{ event.type === 'vacation_start' ? (event.end_date ? `— початок відпустки (до ${formatEventDate(event.end_date)})` : '— початок відпустки') : '— повернення з відпустки' }}
             </span>
           </div>
+        </div>
         </div>
         <div v-if="lastUpdated" class="dashboard-footer">
           Оновлено: {{ formattedLastUpdated }}

@@ -10,6 +10,7 @@ Local CRM system that stores data in CSV files and PDF documents. CSV files can 
 - **Dynamic UI** - entire form and table structure controlled by `fields_schema.csv`
 - **Sequential numeric IDs** - simple employee IDs (1, 2, 3...)
 - **File management** - upload and store PDF documents per employee
+- **Dashboard** - stat cards with expandable employee lists, vacation timeline with clickable links
 - **Vacation tracking** - automatic status changes, notifications for vacation start/end dates
 - **Summary table** - inline editing via double-click, multi-select filters with empty value support
 - **Automatic audit logging** - all changes tracked in `logs.csv` with field-level details
@@ -166,6 +167,21 @@ Open `http://localhost:5173` in your browser.
   - All dropdown options now in `fields_schema.csv` → `field_options`
 
 ## Features in Detail
+
+### Dashboard
+
+The Dashboard is the home screen showing employee statistics and upcoming vacation events.
+
+**Stat Cards:**
+- 4-column grid displaying employee counts by employment status (Total, per-status, Other)
+- Click any card to expand an inline list of employee names with that status
+- Only one card can be expanded at a time (accordion behavior)
+- Click an employee name to navigate directly to their card
+
+**Vacation Timeline:**
+- Two-column layout with "Today" and "Next 7 days" cards
+- Shows employees starting or returning from vacation with date badges
+- Employee names are clickable links to their cards
 
 ### Summary Table
 
