@@ -73,17 +73,17 @@ These companion fields will be auto-generated in the schema loading logic (NOT m
 **Files:**
 - Modify: `client/src/App.vue`
 
-- [ ] Replace inline file input with "Завантажити" button that opens a popup modal
-- [ ] Create document upload popup (reuse vacation-notification-modal CSS pattern) with:
+- [x] Replace inline file input with "Завантажити" button that opens a popup modal
+- [x] Create document upload popup (reuse vacation-notification-modal CSS pattern) with:
   - Document name shown in header
   - File picker (accept PDF + images)
   - Issue date input (type=date, optional)
   - Expiry date input (type=date, optional)
   - "Завантажити" and "Скасувати" buttons
-- [ ] On upload, send file + issue_date + expiry_date to the existing file upload endpoint
-- [ ] Show issue_date and expiry_date in the documents table for uploaded documents (add columns or show below filename)
-- [ ] Allow editing dates for already-uploaded documents without re-uploading the file
-- [ ] Test: open popup, select file, fill dates, upload, verify dates shown in table
+- [x] On upload, send file + issue_date + expiry_date to the existing file upload endpoint
+- [x] Show issue_date and expiry_date in the documents table for uploaded documents (add columns or show below filename)
+- [x] Allow editing dates for already-uploaded documents without re-uploading the file
+- [x] Test: open popup, select file, fill dates, upload, verify dates shown in table
 
 ### Task 4: Frontend - Document expiry notifications
 

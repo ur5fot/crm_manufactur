@@ -241,7 +241,6 @@ async function toggleReport(type) {
 }
 
 const form = reactive(emptyEmployee());
-const documentFiles = reactive({});
 
 // Dictionaries теперь формируются динамически из fields_schema.csv
 
@@ -427,6 +426,152 @@ const statusChangeOptions = computed(() => {
   return employmentOptions.value.slice(1);
 });
 
+// Попап завантаження документа
+const showDocUploadPopup = ref(false);
+const docUploadForm = reactive({
+  fieldKey: '',
+  fieldLabel: '',
+  file: null,
+  issueDate: '',
+  expiryDate: ''
+});
+const docUploadSaving = ref(false);
+
+// Попап редагування дат документа (без перезавантаження файлу)
+const showDocEditDatesPopup = ref(false);
+const docEditDatesForm = reactive({
+  fieldKey: '',
+  fieldLabel: '',
+  issueDate: '',
+  expiryDate: ''
+});
+const docEditDatesSaving = ref(false);
+
+function openDocUploadPopup(doc) {
+  docUploadForm.fieldKey = doc.key;
+  docUploadForm.fieldLabel = doc.label;
+  docUploadForm.file = null;
+  docUploadForm.issueDate = '';
+  docUploadForm.expiryDate = '';
+  showDocUploadPopup.value = true;
+}
+
+function closeDocUploadPopup() {
+  showDocUploadPopup.value = false;
+}
+
+function onDocUploadFileChange(event) {
+  docUploadForm.file = event.target.files?.[0] || null;
+}
+
+async function submitDocUpload() {
+  if (!form.employee_id || !docUploadForm.file || !docUploadForm.fieldKey) return;
+  if (docUploadSaving.value) return;
+
+  docUploadSaving.value = true;
+  errorMessage.value = '';
+  try {
+    const formData = new FormData();
+    formData.append('file', docUploadForm.file);
+    formData.append('file_field', docUploadForm.fieldKey);
+    if (docUploadForm.issueDate) {
+      formData.append('issue_date', docUploadForm.issueDate);
+    }
+    if (docUploadForm.expiryDate) {
+      formData.append('expiry_date', docUploadForm.expiryDate);
+    }
+    const response = await api.uploadEmployeeFile(form.employee_id, formData);
+    form[docUploadForm.fieldKey] = response?.path || '';
+    // Оновлюємо дати в формі
+    const issueDateField = `${docUploadForm.fieldKey}_issue_date`;
+    const expiryDateField = `${docUploadForm.fieldKey}_expiry_date`;
+    form[issueDateField] = docUploadForm.issueDate || '';
+    form[expiryDateField] = docUploadForm.expiryDate || '';
+    closeDocUploadPopup();
+    await loadEmployees();
+    await selectEmployee(form.employee_id);
+  } catch (error) {
+    errorMessage.value = error.message;
+  } finally {
+    docUploadSaving.value = false;
+  }
+}
+
+function openDocEditDatesPopup(doc) {
+  const issueDateField = `${doc.key}_issue_date`;
+  const expiryDateField = `${doc.key}_expiry_date`;
+  docEditDatesForm.fieldKey = doc.key;
+  docEditDatesForm.fieldLabel = doc.label;
+  docEditDatesForm.issueDate = form[issueDateField] || '';
+  docEditDatesForm.expiryDate = form[expiryDateField] || '';
+  showDocEditDatesPopup.value = true;
+}
+
+function closeDocEditDatesPopup() {
+  showDocEditDatesPopup.value = false;
+}
+
+async function submitDocEditDates() {
+  if (!form.employee_id || !docEditDatesForm.fieldKey) return;
+  if (docEditDatesSaving.value) return;
+
+  docEditDatesSaving.value = true;
+  errorMessage.value = '';
+  try {
+    const issueDateField = `${docEditDatesForm.fieldKey}_issue_date`;
+    const expiryDateField = `${docEditDatesForm.fieldKey}_expiry_date`;
+    const currentEmployee = employees.value.find(e => e.employee_id === form.employee_id);
+    if (!currentEmployee) {
+      errorMessage.value = 'Співробітника не знайдено. Оновіть сторінку.';
+      docEditDatesSaving.value = false;
+      return;
+    }
+    const payload = {
+      ...currentEmployee,
+      [issueDateField]: docEditDatesForm.issueDate || '',
+      [expiryDateField]: docEditDatesForm.expiryDate || ''
+    };
+    await api.updateEmployee(form.employee_id, payload);
+    await loadEmployees();
+    await selectEmployee(form.employee_id);
+    closeDocEditDatesPopup();
+  } catch (error) {
+    errorMessage.value = error.message;
+  } finally {
+    docEditDatesSaving.value = false;
+  }
+}
+
+function formatDocDate(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr + 'T00:00:00');
+  if (isNaN(d.getTime())) return dateStr;
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  return `${dd}.${mm}.${d.getFullYear()}`;
+}
+
+function isDocExpiringSoon(doc) {
+  const expiryDateField = `${doc.key}_expiry_date`;
+  const expiryDate = form[expiryDateField];
+  if (!expiryDate) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const expiry = new Date(expiryDate + 'T00:00:00');
+  const diffDays = Math.round((expiry - today) / 86400000);
+  return diffDays <= 7;
+}
+
+function isDocExpired(doc) {
+  const expiryDateField = `${doc.key}_expiry_date`;
+  const expiryDate = form[expiryDateField];
+  if (!expiryDate) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const expiry = new Date(expiryDate + 'T00:00:00');
+  return expiry < today;
+}
+
 function emptyEmployee() {
   const base = {};
   // Используем динамический список полей из schema
@@ -450,10 +595,6 @@ function resetForm() {
   }
   // Заполняем пустыми значениями
   Object.assign(form, emptyEmployee());
-  // Очищаем файлы
-  for (const key of Object.keys(documentFiles)) {
-    documentFiles[key] = null;
-  }
 }
 
 function displayName(employee) {
@@ -682,9 +823,6 @@ async function selectEmployee(id) {
   try {
     const data = await api.getEmployee(id);
     Object.assign(form, emptyEmployee(), data.employee || {});
-    for (const key of Object.keys(documentFiles)) {
-      documentFiles[key] = null;
-    }
   } catch (error) {
     errorMessage.value = error.message;
   }
@@ -770,28 +908,6 @@ async function deleteEmployee() {
     errorMessage.value = error.message;
   } finally {
     saving.value = false;
-  }
-}
-
-function onDocumentFileChange(key, event) {
-  const file = event.target.files?.[0] || null;
-  documentFiles[key] = file;
-}
-
-async function uploadDocument(doc) {
-  if (!form.employee_id || !documentFiles[doc.key]) {
-    return;
-  }
-  errorMessage.value = "";
-  try {
-    const formData = new FormData();
-    formData.append("file", documentFiles[doc.key]);
-    formData.append("file_field", doc.key);
-    const response = await api.uploadEmployeeFile(form.employee_id, formData);
-    form[doc.key] = response?.path || form[doc.key];
-    documentFiles[doc.key] = null;
-  } catch (error) {
-    errorMessage.value = error.message;
   }
 }
 
@@ -1007,7 +1123,11 @@ function getDetailLabel(detail) {
 
 function handleGlobalKeydown(e) {
   if (e.key === 'Escape') {
-    if (showStatusChangePopup.value) {
+    if (showDocUploadPopup.value) {
+      closeDocUploadPopup();
+    } else if (showDocEditDatesPopup.value) {
+      closeDocEditDatesPopup();
+    } else if (showStatusChangePopup.value) {
       closeStatusChangePopup();
     } else if (showStatusNotification.value) {
       closeStatusNotification();
@@ -1111,6 +1231,80 @@ onUnmounted(() => {
             @click="applyStatusChange"
           >
             Застосувати
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Попап завантаження документа -->
+    <div v-if="showDocUploadPopup" class="vacation-notification-overlay" @click="closeDocUploadPopup">
+      <div class="vacation-notification-modal" @click.stop>
+        <div class="vacation-notification-header">
+          <h3>{{ docUploadForm.fieldLabel }}</h3>
+          <button class="close-btn" @click="closeDocUploadPopup">&times;</button>
+        </div>
+        <div class="vacation-notification-body">
+          <div class="status-change-form">
+            <div class="field">
+              <label>Файл (PDF або зображення)</label>
+              <input
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,application/pdf,image/jpeg,image/png,image/gif,image/webp"
+                @change="onDocUploadFileChange"
+              />
+            </div>
+            <div class="field">
+              <label>Дата видачі</label>
+              <input type="date" v-model="docUploadForm.issueDate" />
+            </div>
+            <div class="field">
+              <label>Дата закінчення</label>
+              <input type="date" v-model="docUploadForm.expiryDate" />
+            </div>
+          </div>
+        </div>
+        <div class="vacation-notification-footer status-change-footer">
+          <button class="secondary" type="button" @click="closeDocUploadPopup">Скасувати</button>
+          <button
+            class="primary"
+            type="button"
+            :disabled="!docUploadForm.file || docUploadSaving"
+            @click="submitDocUpload"
+          >
+            {{ docUploadSaving ? 'Завантаження...' : 'Завантажити' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Попап редагування дат документа -->
+    <div v-if="showDocEditDatesPopup" class="vacation-notification-overlay" @click="closeDocEditDatesPopup">
+      <div class="vacation-notification-modal" @click.stop>
+        <div class="vacation-notification-header">
+          <h3>{{ docEditDatesForm.fieldLabel }} — дати</h3>
+          <button class="close-btn" @click="closeDocEditDatesPopup">&times;</button>
+        </div>
+        <div class="vacation-notification-body">
+          <div class="status-change-form">
+            <div class="field">
+              <label>Дата видачі</label>
+              <input type="date" v-model="docEditDatesForm.issueDate" />
+            </div>
+            <div class="field">
+              <label>Дата закінчення</label>
+              <input type="date" v-model="docEditDatesForm.expiryDate" />
+            </div>
+          </div>
+        </div>
+        <div class="vacation-notification-footer status-change-footer">
+          <button class="secondary" type="button" @click="closeDocEditDatesPopup">Скасувати</button>
+          <button
+            class="primary"
+            type="button"
+            :disabled="docEditDatesSaving"
+            @click="submitDocEditDates"
+          >
+            {{ docEditDatesSaving ? 'Збереження...' : 'Зберегти' }}
           </button>
         </div>
       </div>
@@ -1444,6 +1638,8 @@ onUnmounted(() => {
                   <tr>
                     <th>Документ</th>
                     <th>Статус</th>
+                    <th>Дата видачі</th>
+                    <th>Дата закінчення</th>
                     <th>Дії</th>
                   </tr>
                 </thead>
@@ -1453,6 +1649,17 @@ onUnmounted(() => {
                     <td>
                       <span v-if="form[doc.key]" class="status-uploaded">✓ Завантажено</span>
                       <span v-else class="status-not-uploaded">✗ Не завантажено</span>
+                    </td>
+                    <td>
+                      <span v-if="form[doc.key + '_issue_date']">{{ formatDocDate(form[doc.key + '_issue_date']) }}</span>
+                      <span v-else class="doc-date-empty">—</span>
+                    </td>
+                    <td>
+                      <span
+                        v-if="form[doc.key + '_expiry_date']"
+                        :class="{ 'doc-date-expiring': isDocExpiringSoon(doc), 'doc-date-expired': isDocExpired(doc) }"
+                      >{{ formatDocDate(form[doc.key + '_expiry_date']) }}</span>
+                      <span v-else class="doc-date-empty">—</span>
                     </td>
                     <td>
                       <div class="document-actions">
@@ -1466,6 +1673,14 @@ onUnmounted(() => {
                             Відкрити
                           </button>
                           <button
+                            class="secondary small"
+                            type="button"
+                            @click="openDocEditDatesPopup(doc)"
+                            title="Редагувати дати"
+                          >
+                            Дати
+                          </button>
+                          <button
                             class="danger small"
                             type="button"
                             @click="deleteDocument(doc)"
@@ -1475,27 +1690,13 @@ onUnmounted(() => {
                           </button>
                         </template>
                         <template v-else>
-                          <input
-                            type="file"
-                            :id="`file-${doc.key}`"
-                            accept="application/pdf"
-                            @change="onDocumentFileChange(doc.key, $event)"
-                            style="display: none"
-                          />
-                          <label :for="`file-${doc.key}`" class="file-label-btn secondary small">
-                            Вибрати файл
-                          </label>
                           <button
-                            v-if="documentFiles[doc.key]"
                             class="primary small"
                             type="button"
-                            @click="uploadDocument(doc)"
+                            @click="openDocUploadPopup(doc)"
                           >
                             Завантажити
                           </button>
-                          <span v-if="documentFiles[doc.key]" class="file-selected">
-                            {{ documentFiles[doc.key].name }}
-                          </span>
                         </template>
                       </div>
                     </td>

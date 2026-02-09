@@ -1446,3 +1446,18 @@ button.small {
   background: rgba(15, 118, 110, 0.08);
   color: var(--accent-strong);
 }
+
+/* Document date display */
+.doc-date-empty {
+  color: var(--muted);
+}
+
+.doc-date-expiring {
+  color: #d97706;
+  font-weight: 500;
+}
+
+.doc-date-expired {
+  color: #dc2626;
+  font-weight: 600;
+}
