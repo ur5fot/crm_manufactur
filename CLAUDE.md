@@ -17,6 +17,47 @@ When updating features or architecture, ensure all three files reflect the chang
 - Общение в чате ведётся на **русском языке**
 - Если используются английские термины — писать перевод в скобках, например: "auto-refresh (автообновление)"
 
+## Development Workflow
+
+### Story Completion and Git Commits
+
+**IMPORTANT:** After implementing or reviewing a story, ALWAYS ask the user before committing changes:
+
+```
+Story завершена! Создать git commit?
+
+1. Да, закоммитить изменения
+2. Нет, я сделаю это сам позже
+```
+
+**Only create commits when explicitly requested by the user.** Never commit automatically after:
+- Completing story implementation (`/bmad-bmm-dev-story`)
+- Finishing code review fixes (`/bmad-bmm-code-review`)
+- Applying architectural changes
+- Any other code modifications
+
+**If user chooses [1]:**
+1. Follow the standard git commit process (see below)
+2. Use story title and key changes in commit message
+3. Include `Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>` trailer
+
+**If user chooses [2]:**
+- List modified files for user reference
+- Continue to next workflow step
+
+### Git Commit Guidelines
+
+When user explicitly requests a commit, follow these steps:
+
+1. Run `git status` and `git diff` to see all changes
+2. Stage relevant files (avoid `git add .` - stage specific files by name)
+3. Draft commit message following project conventions:
+   - First line: Brief summary (e.g., "Story 3.2: CSV Export — реалізація + code review fixes")
+   - Body: Key changes as bullet points
+   - Trailer: `Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>`
+4. Create commit using heredoc for proper formatting
+5. **Never force push, amend without permission, or skip hooks**
+
 ## Project Overview
 
 Local CRM system for managing employee data using CSV files as the database and PDF documents stored in local folders. The system uses a client-server architecture with Vue.js frontend and Express.js backend.

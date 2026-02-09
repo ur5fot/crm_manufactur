@@ -70,5 +70,31 @@ export const api = {
   },
   getDashboardEvents() {
     return request("/dashboard/events");
+  },
+  getVacationReport(type) {
+    return request(`/reports/vacations?type=${type}`);
+  },
+  async exportCSV(filters, searchTerm = '') {
+    const queryParams = new URLSearchParams();
+    if (filters && Object.keys(filters).length > 0) {
+      queryParams.set('filters', JSON.stringify(filters));
+    }
+    if (searchTerm && searchTerm.trim()) {
+      queryParams.set('search', searchTerm.trim());
+    }
+    const params = queryParams.toString() ? `?${queryParams.toString()}` : '';
+    const response = await fetch(`${BASE_URL}/export${params}`);
+    if (!response.ok) {
+      throw new Error(`Export failed: ${response.status}`);
+    }
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'employees_export.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
 };

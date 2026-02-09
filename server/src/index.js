@@ -17,6 +17,8 @@ import {
   loadFieldsSchema,
   getDashboardStats,
   getDashboardEvents,
+  getVacationReport,
+  exportEmployees,
   ROOT_DIR,
   initializeEmployeeColumns,
   getEmployeeColumnsSync,
@@ -100,6 +102,43 @@ app.get("/api/dashboard/events", async (_req, res) => {
   try {
     const events = await getDashboardEvents();
     res.json(events);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get("/api/reports/vacations", async (req, res) => {
+  const type = req.query.type;
+  if (type !== 'current' && type !== 'month') {
+    res.status(400).json({ error: 'Query parameter "type" must be "current" or "month"' });
+    return;
+  }
+  try {
+    const report = await getVacationReport(type);
+    res.json(report);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get("/api/export", async (req, res) => {
+  try {
+    let filters = {};
+    if (req.query.filters) {
+      try {
+        filters = JSON.parse(req.query.filters);
+      } catch {
+        res.status(400).json({ error: 'Invalid filters JSON' });
+        return;
+      }
+    }
+    const searchTerm = req.query.search || '';
+    const csvString = await exportEmployees(filters, searchTerm);
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="employees_export.csv"');
+    res.send(csvString);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });

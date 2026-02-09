@@ -242,6 +242,144 @@ export async function getDashboardEvents() {
   return { today: todayEvents, thisWeek: weekEvents };
 }
 
+export async function getVacationReport(type) {
+  const employees = await loadEmployees();
+  const schema = await loadFieldsSchema();
+  const statusField = schema.find(f => f.field_name === 'employment_status');
+  const options = statusField?.field_options?.split('|') || [];
+  const vacationOpt = options[2] || '';
+
+  const now = new Date();
+  const today = localDateStr(now);
+
+  let filtered;
+  if (type === 'current') {
+    filtered = employees.filter(emp => {
+      if (vacationOpt && emp.employment_status === vacationOpt) return true;
+      const start = emp.vacation_start_date;
+      const end = emp.vacation_end_date;
+      if (start && end && start <= today && end >= today) return true;
+      return false;
+    });
+  } else if (type === 'month') {
+    const monthStart = today.slice(0, 7) + '-01';
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const monthEnd = today.slice(0, 7) + '-' + String(lastDay).padStart(2, '0');
+    filtered = employees.filter(emp => {
+      const start = emp.vacation_start_date;
+      const end = emp.vacation_end_date;
+      if (!start && !end) return false;
+      if (start && start >= monthStart && start <= monthEnd) return true;
+      if (end && end >= monthStart && end <= monthEnd) return true;
+      if (start && end && start < monthStart && end > monthEnd) return true;
+      return false;
+    });
+  } else {
+    filtered = [];
+  }
+
+  return filtered.map(emp => {
+    const name = [emp.last_name, emp.first_name, emp.middle_name].filter(Boolean).join(' ');
+    const start = emp.vacation_start_date;
+    const end = emp.vacation_end_date;
+    let days = 0;
+    if (start && end) {
+      days = Math.floor((new Date(end) - new Date(start)) / 86400000) + 1;
+      if (days < 0) days = 0;
+    }
+    return { employee_id: emp.employee_id, name, vacation_start_date: start, vacation_end_date: end, days };
+  });
+}
+
+export async function exportEmployees(filters, searchTerm = '') {
+  const employees = await loadEmployees();
+  const schema = await loadFieldsSchema();
+
+  // Визначити колонки для export: тільки show_in_table=yes, відсортовані по field_order
+  const exportFields = schema
+    .filter(f => f.show_in_table === 'yes')
+    .sort((a, b) => parseInt(a.field_order) - parseInt(b.field_order))
+    .map(f => ({ key: f.field_name, label: f.field_label }));
+
+  // Створити whitelist для валідації фільтрів
+  const allFieldNames = schema.map(f => f.field_name);
+
+  // Текстовий пошук (як в App.vue filteredEmployees)
+  let filtered = employees;
+  const query = searchTerm.trim().toLowerCase();
+  if (query) {
+    filtered = filtered.filter(emp => {
+      const displayName = [emp.last_name, emp.first_name, emp.middle_name]
+        .filter(Boolean)
+        .join(' ');
+      const haystack = [
+        displayName,
+        emp.department,
+        emp.position,
+        emp.employee_id
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(query);
+    });
+  }
+
+  // Фільтрація за колонками (AND між полями, OR всередині значень)
+  if (filters && typeof filters === 'object') {
+    Object.keys(filters).forEach(fieldName => {
+      // Problem #1 fix: Валідація fieldName по whitelist
+      if (!allFieldNames.includes(fieldName)) {
+        return; // Ігнорувати невалідні поля
+      }
+
+      const filterValues = filters[fieldName];
+      if (Array.isArray(filterValues) && filterValues.length > 0) {
+        filtered = filtered.filter(emp => {
+          const value = emp[fieldName];
+
+          // Problem #2 fix: Явна логіка для __EMPTY__
+          const hasEmptyFilter = filterValues.includes('__EMPTY__');
+          const isEmpty = !value || value.trim() === '';
+
+          if (hasEmptyFilter && isEmpty) {
+            return true;
+          }
+
+          // Перевірка на конкретні значення (виключаючи __EMPTY__ sentinel)
+          const actualValues = filterValues.filter(v => v !== '__EMPTY__');
+          if (actualValues.length > 0) {
+            return actualValues.includes(value);
+          }
+
+          return false;
+        });
+      }
+    });
+  }
+
+  // Генерація CSV з csv-stringify: field_label як заголовки
+  const { stringify } = await import('csv-stringify/sync');
+  const headers = exportFields.map(f => f.label);
+
+  const rows = filtered.map(emp => {
+    const row = {};
+    exportFields.forEach(f => {
+      row[f.label] = emp[f.key] || '';
+    });
+    return row;
+  });
+
+  const csv = stringify(rows, {
+    header: true,
+    columns: headers,
+    delimiter: ';',
+    record_delimiter: '\r\n'
+  });
+
+  return '\uFEFF' + csv;
+}
+
 export async function loadLogs() {
   return readCsv(LOGS_PATH, LOG_COLUMNS);
 }

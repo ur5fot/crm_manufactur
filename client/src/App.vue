@@ -79,6 +79,9 @@ const lastUpdated = ref(null);
 const isRefreshing = ref(false);
 const dashboardEvents = ref({ today: [], thisWeek: [] });
 const expandedCard = ref(null); // null | 'total' | '<status_label>' | 'other'
+const activeReport = ref(null); // null | 'current' | 'month'
+const reportData = ref([]);
+const reportLoading = ref(false);
 
 const tabs = [
   { key: 'dashboard', label: 'Dashboard' },
@@ -180,6 +183,36 @@ const expandedEmployees = computed(() => {
   return emps.filter(e => e.employment_status === key);
 });
 
+async function exportTableData() {
+  errorMessage.value = '';
+  try {
+    await api.exportCSV(columnFilters, searchTerm.value);
+  } catch (e) {
+    console.error('Export error:', e);
+    errorMessage.value = `Помилка експорту: ${e.message}`;
+  }
+}
+
+async function toggleReport(type) {
+  if (activeReport.value === type) {
+    activeReport.value = null;
+    reportData.value = [];
+    return;
+  }
+  activeReport.value = type;
+  reportLoading.value = true;
+  try {
+    const data = await api.getVacationReport(type);
+    reportData.value = data;
+    errorMessage.value = '';
+  } catch (e) {
+    reportData.value = [];
+    errorMessage.value = 'Помилка завантаження звіту';
+  } finally {
+    reportLoading.value = false;
+  }
+}
+
 const form = reactive(emptyEmployee());
 const documentFiles = reactive({});
 
@@ -273,6 +306,52 @@ const formattedLastUpdated = computed(() => {
   if (!lastUpdated.value) return '';
   const d = lastUpdated.value;
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+});
+
+// Розрахунок кількості календарних днів відпустки (Story 3.3)
+const vacationDays = computed(() => {
+  const start = form.vacation_start_date;
+  const end = form.vacation_end_date;
+
+  // Валідація: обидві дати обов'язкові
+  if (!start || !end) return null;
+
+  // Парсинг дат (формат YYYY-MM-DD з CSV)
+  const startDate = new Date(start + 'T00:00:00');
+  const endDate = new Date(end + 'T00:00:00');
+
+  // Валідація: перевірка на Invalid Date
+  if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) return null;
+
+  // Валідація: end >= start
+  if (endDate < startDate) return null;
+
+  // Розрахунок включаючи обидві граничні дати
+  // Math.round замість Math.floor для коректної роботи при переході на літній/зимовий час (DST)
+  const MS_PER_DAY = 86400000; // 1000 * 60 * 60 * 24
+  const days = Math.round((endDate - startDate) / MS_PER_DAY) + 1;
+
+  return days > 0 ? days : null;
+});
+
+// Українські форми множини для "день/дні/днів" (Story 3.3 code review fix)
+const vacationDaysLabel = computed(() => {
+  const days = vacationDays.value;
+  if (days === null) return null;
+
+  const lastDigit = days % 10;
+  const lastTwoDigits = days % 100;
+
+  // Українські правила множини
+  if (lastTwoDigits >= 11 && lastTwoDigits <= 14) {
+    return `${days} календарних днів`;
+  } else if (lastDigit === 1) {
+    return `${days} календарний день`;
+  } else if (lastDigit >= 2 && lastDigit <= 4) {
+    return `${days} календарні дні`;
+  } else {
+    return `${days} календарних днів`;
+  }
 });
 
 function emptyEmployee() {
@@ -428,9 +507,8 @@ async function loadDashboardEvents() {
 
 // Проверка и обработка отпусков
 async function checkVacations() {
-  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-  console.log('🔍 Проверка отпусков, сегодня:', today);
-
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   const returningToday = [];
   const startingToday = [];
   const needsUpdate = [];
@@ -442,11 +520,8 @@ async function checkVacations() {
     // Пропускаем если нет дат отпуска
     if (!startDate && !endDate) return;
 
-    console.log(`👤 ${displayName(employee)}: start=${startDate}, end=${endDate}, status=${employee.employment_status}`);
-
     // Проверка 1: сегодня заканчивается отпуск (приоритет)
     if (endDate === today) {
-      console.log(`  ✅ Возвращается сегодня!`);
       returningToday.push({
         id: employee.employee_id,
         name: displayName(employee),
@@ -464,7 +539,6 @@ async function checkVacations() {
 
     // Проверка 2: отпуск уже прошел - очистить даты
     if (endDate && endDate < today) {
-      console.log(`  🧹 Отпуск прошел, очищаем даты`);
       needsUpdate.push({
         ...employee,
         vacation_start_date: '',
@@ -476,7 +550,6 @@ async function checkVacations() {
 
     // Проверка 3: сегодня начинается отпуск
     if (startDate === today && employee.employment_status !== vacationStatus.value) {
-      console.log(`  🏖️ Отпуск начинается сегодня!`);
       startingToday.push({
         id: employee.employee_id,
         name: displayName(employee),
@@ -493,7 +566,6 @@ async function checkVacations() {
 
     // Проверка 4: сейчас в отпуске (между датами)
     if (startDate && endDate && startDate < today && endDate > today && employee.employment_status !== vacationStatus.value) {
-      console.log(`  🏖️ Сейчас в отпуске (между датами)`);
       needsUpdate.push({
         ...employee,
         employment_status: vacationStatus.value
@@ -839,7 +911,14 @@ function getDetailLabel(detail) {
   return detail;
 }
 
+function handleGlobalKeydown(e) {
+  if (e.key === 'Escape' && showVacationNotification.value) {
+    closeVacationNotification();
+  }
+}
+
 onMounted(async () => {
+  document.addEventListener('keydown', handleGlobalKeydown);
   await loadFieldsSchema();
   await loadEmployees();
   loadDashboardEvents();
@@ -847,6 +926,7 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
+  document.removeEventListener('keydown', handleGlobalKeydown);
   stopDashboardRefresh();
 });
 </script>
@@ -870,7 +950,7 @@ onUnmounted(() => {
                   <span class="employee-name">{{ emp.name }}</span>
                   <span v-if="emp.position" class="employee-position">{{ emp.position }}</span>
                 </div>
-                <span v-if="emp.endDate" class="vacation-end-date">до {{ emp.endDate }}</span>
+                <span v-if="emp.endDate" class="vacation-end-date">до {{ formatEventDate(emp.endDate) }}</span>
               </li>
             </ul>
           </div>
@@ -1028,6 +1108,41 @@ onUnmounted(() => {
           </div>
         </div>
         </div>
+        <!-- Швидкі звіти по відпустках -->
+        <div class="report-section">
+          <div class="report-buttons">
+            <button class="report-btn" :class="{ active: activeReport === 'current' }" @click="toggleReport('current')">
+              Хто у відпустці зараз
+            </button>
+            <button class="report-btn" :class="{ active: activeReport === 'month' }" @click="toggleReport('month')">
+              Відпустки цього місяця
+            </button>
+          </div>
+          <div v-if="activeReport && !reportLoading" class="report-result">
+            <div v-if="reportData.length === 0" class="report-empty">
+              {{ activeReport === 'current' ? 'Наразі ніхто не у відпустці' : 'Немає відпусток цього місяця' }}
+            </div>
+            <table v-else class="report-table">
+              <thead>
+                <tr>
+                  <th>ПІБ</th>
+                  <th>Початок</th>
+                  <th>Закінчення</th>
+                  <th>Днів</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="row in reportData" :key="row.employee_id">
+                  <td><span class="report-name-link" @click="openEmployeeCard(row.employee_id)">{{ row.name }}</span></td>
+                  <td>{{ formatEventDate(row.vacation_start_date) }}</td>
+                  <td>{{ formatEventDate(row.vacation_end_date) }}</td>
+                  <td>{{ row.days }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div v-if="reportLoading" class="report-empty">Завантаження...</div>
+        </div>
         <div v-if="lastUpdated" class="dashboard-footer">
           Оновлено: {{ formattedLastUpdated }}
         </div>
@@ -1136,6 +1251,10 @@ onUnmounted(() => {
                     :required="field.key === 'first_name' || field.key === 'last_name'"
                   />
                 </div>
+              </div>
+              <!-- Vacation days calculation display (Story 3.3) -->
+              <div v-if="group.fields.some(f => f.key === 'vacation_start_date' || f.key === 'vacation_end_date') && vacationDaysLabel !== null" class="vacation-days-display">
+                {{ vacationDaysLabel }}
               </div>
             </div>
 
@@ -1322,6 +1441,9 @@ onUnmounted(() => {
                 @click="clearAllFilters"
               >
                 Скинути фільтри ({{ getActiveFiltersCount() }})
+              </button>
+              <button class="export-btn" type="button" @click="exportTableData">
+                Експорт
               </button>
               <div class="status-bar">
                 <span v-if="loading">Завантаження...</span>
