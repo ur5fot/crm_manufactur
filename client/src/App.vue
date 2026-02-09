@@ -320,14 +320,38 @@ const vacationDays = computed(() => {
   const startDate = new Date(start + 'T00:00:00');
   const endDate = new Date(end + 'T00:00:00');
 
+  // Валідація: перевірка на Invalid Date
+  if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) return null;
+
   // Валідація: end >= start
   if (endDate < startDate) return null;
 
   // Розрахунок включаючи обидві граничні дати
-  // Формула виправлена після code review Story 3.1: +1 для включення end date
-  const days = Math.floor((endDate - startDate) / 86400000) + 1;
+  // Math.round замість Math.floor для коректної роботи при переході на літній/зимовий час (DST)
+  const MS_PER_DAY = 86400000; // 1000 * 60 * 60 * 24
+  const days = Math.round((endDate - startDate) / MS_PER_DAY) + 1;
 
   return days > 0 ? days : null;
+});
+
+// Українські форми множини для "день/дні/днів" (Story 3.3 code review fix)
+const vacationDaysLabel = computed(() => {
+  const days = vacationDays.value;
+  if (days === null) return null;
+
+  const lastDigit = days % 10;
+  const lastTwoDigits = days % 100;
+
+  // Українські правила множини
+  if (lastTwoDigits >= 11 && lastTwoDigits <= 14) {
+    return `${days} календарних днів`;
+  } else if (lastDigit === 1) {
+    return `${days} календарний день`;
+  } else if (lastDigit >= 2 && lastDigit <= 4) {
+    return `${days} календарні дні`;
+  } else {
+    return `${days} календарних днів`;
+  }
 });
 
 function emptyEmployee() {
@@ -1229,8 +1253,8 @@ onUnmounted(() => {
                 </div>
               </div>
               <!-- Vacation days calculation display (Story 3.3) -->
-              <div v-if="group.title === 'Відпустка' && vacationDays !== null" class="vacation-days-display">
-                {{ vacationDays }} календарних днів
+              <div v-if="group.fields.some(f => f.key === 'vacation_start_date' || f.key === 'vacation_end_date') && vacationDaysLabel !== null" class="vacation-days-display">
+                {{ vacationDaysLabel }}
               </div>
             </div>
 
