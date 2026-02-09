@@ -36,6 +36,6 @@
 35;foreign_passport_number;Номер закордонного паспорта;text;;no;Документи;no
 36;foreign_passport_file;Закордонний паспорт;file;;no;Документи;no
 37;criminal_record_file;Довідка про несудимість;file;;no;Документи;no
-38;vacation_start_date;Дата початку відпустки;date;;yes;Відпустка;yes
-39;vacation_end_date;Дата закінчення відпустки;date;;yes;Відпустка;yes
+38;status_start_date;Дата початку статусу;date;;no;;no
+39;status_end_date;Дата завершення статусу;date;;no;;no
 40;notes;Примітка;textarea;;yes;Інше;yes
