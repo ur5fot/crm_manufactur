@@ -148,6 +148,14 @@ const workingStatus = computed(() => employmentOptions.value[0] || '');
 // vacationStatus остаётся для определения эмодзи по позиции (options[2] = отпуск)
 const vacationStatus = computed(() => employmentOptions.value[2] || '');
 
+// Эмодзи по позиции статуса: options[2] (отпуск) — ✈️, options[3] (лікарняний) — 🏥, остальные — ℹ️
+function statusEmoji(statusValue) {
+  const idx = employmentOptions.value.indexOf(statusValue);
+  if (idx === 2) return '✈️';
+  if (idx === 3) return '🏥';
+  return 'ℹ️';
+}
+
 // Маппинг технических названий полей на человекопонятные — динамически из fields_schema
 const fieldLabels = computed(() => {
   const map = {};
@@ -569,8 +577,8 @@ async function checkStatusChanges() {
       return;
     }
 
-    // Проверка 3: сегодня начинается статус — убедиться что статус установлен
-    if (startDate === today && employee.employment_status === workingStatus.value) {
+    // Проверка 3: сегодня начинается статус — уведомить
+    if (startDate === today && employee.employment_status !== workingStatus.value) {
       startingToday.push({
         id: employee.employee_id,
         name: displayName(employee),
@@ -955,33 +963,37 @@ onUnmounted(() => {
     <div v-if="showStatusNotification" class="vacation-notification-overlay" @click="closeStatusNotification">
       <div class="vacation-notification-modal" @click.stop>
         <div class="vacation-notification-header">
-          <h3>🏖️ Сповіщення про відпустки</h3>
+          <h3>📋 Сповіщення про зміну статусів</h3>
           <button class="close-btn" @click="closeStatusNotification">×</button>
         </div>
         <div class="vacation-notification-body">
           <!-- Сьогодні змінюють статус -->
           <div v-if="statusStarting.length > 0" class="notification-section">
-            <p class="notification-message">✈️ Сьогодні йдуть у відпустку:</p>
+            <p class="notification-message">{{ statusStarting.length > 0 ? statusEmoji(statusStarting[0].statusType) : 'ℹ️' }} Сьогодні змінюють статус:</p>
             <ul class="vacation-employees-list">
               <li v-for="emp in statusStarting" :key="emp.id" class="vacation-employee starting">
                 <div class="employee-info">
-                  <span class="employee-name">{{ emp.name }}</span>
+                  <span class="employee-name">{{ statusEmoji(emp.statusType) }} {{ emp.name }}</span>
                   <span v-if="emp.position" class="employee-position">{{ emp.position }}</span>
                 </div>
-                <span v-if="emp.endDate" class="vacation-end-date">до {{ formatEventDate(emp.endDate) }}</span>
+                <div class="status-details">
+                  <span class="status-badge">{{ emp.statusType }}</span>
+                  <span v-if="emp.endDate" class="vacation-end-date">до {{ formatEventDate(emp.endDate) }}</span>
+                </div>
               </li>
             </ul>
           </div>
 
           <!-- Повертаються до робочого стану -->
           <div v-if="statusReturning.length > 0" class="notification-section">
-            <p class="notification-message">🏢 Сьогодні повертаються з відпустки:</p>
+            <p class="notification-message">🏢 Сьогодні повертаються:</p>
             <ul class="vacation-employees-list">
               <li v-for="emp in statusReturning" :key="emp.id" class="vacation-employee returning">
                 <div class="employee-info">
                   <span class="employee-name">{{ emp.name }}</span>
                   <span v-if="emp.position" class="employee-position">{{ emp.position }}</span>
                 </div>
+                <span class="status-badge returning-badge">{{ emp.statusType }} → {{ workingStatus }}</span>
               </li>
             </ul>
           </div>

@@ -1102,6 +1102,27 @@ button.small {
   font-style: italic;
 }
 
+.status-details {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.status-badge {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.status-badge.returning-badge {
+  background: #d1fae5;
+  color: #065f46;
+}
+
 .vacation-notification-footer {
   padding: 16px 24px;
   border-top: 1px solid var(--line);
