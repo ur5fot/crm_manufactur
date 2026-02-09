@@ -3,6 +3,19 @@ set -euo pipefail
 
 root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# Режим: dev (за замовчуванням) або prod
+MODE="${1:-dev}"
+
+if [ "$MODE" = "prod" ]; then
+  export PORT=3001
+  export VITE_PORT=5174
+  echo "=== PROD mode (backend :3001, frontend :5174) ==="
+else
+  export PORT=3000
+  export VITE_PORT=5173
+  echo "=== DEV mode (backend :3000, frontend :5173) ==="
+fi
+
 if ! command -v npm >/dev/null 2>&1; then
   echo "npm is required but not found in PATH"
   exit 1

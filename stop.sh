@@ -1,30 +1,32 @@
 #!/bin/bash
 
-echo "Останавливаем серверы..."
+# Режим: dev (за замовчуванням) або prod
+MODE="${1:-dev}"
 
-# Останавливаем процесс на порту 3000 (backend)
-if lsof -ti:3000 > /dev/null 2>&1; then
-  echo "Останавливаем backend (port 3000)..."
-  lsof -ti:3000 | xargs kill -9 2>/dev/null
-  echo "✓ Backend остановлен"
+if [ "$MODE" = "prod" ]; then
+  BACKEND_PORT=3001
+  FRONTEND_PORT=5174
 else
-  echo "Backend уже остановлен"
+  BACKEND_PORT=3000
+  FRONTEND_PORT=5173
 fi
 
-# Останавливаем процесс на порту 5173 (frontend)
-if lsof -ti:5173 > /dev/null 2>&1; then
-  echo "Останавливаем frontend (port 5173)..."
-  lsof -ti:5173 | xargs kill -9 2>/dev/null
-  echo "✓ Frontend остановлен"
+echo "Зупиняємо сервери ($MODE)..."
+
+if lsof -ti:"$BACKEND_PORT" > /dev/null 2>&1; then
+  echo "Зупиняємо backend (port $BACKEND_PORT)..."
+  lsof -ti:"$BACKEND_PORT" | xargs kill -9 2>/dev/null
+  echo "✓ Backend зупинено"
 else
-  echo "Frontend уже остановлен"
+  echo "Backend вже зупинено"
 fi
 
-# Останавливаем процесс на порту 5174 (альтернативный frontend)
-if lsof -ti:5174 > /dev/null 2>&1; then
-  echo "Останавливаем frontend (port 5174)..."
-  lsof -ti:5174 | xargs kill -9 2>/dev/null
-  echo "✓ Frontend (5174) остановлен"
+if lsof -ti:"$FRONTEND_PORT" > /dev/null 2>&1; then
+  echo "Зупиняємо frontend (port $FRONTEND_PORT)..."
+  lsof -ti:"$FRONTEND_PORT" | xargs kill -9 2>/dev/null
+  echo "✓ Frontend зупинено"
+else
+  echo "Frontend вже зупинено"
 fi
 
-echo "Все серверы остановлены"
+echo "Всі сервери ($MODE) зупинено"
