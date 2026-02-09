@@ -132,19 +132,20 @@ const columnFilters = reactive({}); // { fieldName: selectedValue }
 const logs = ref([]);
 const logsSearchTerm = ref("");
 
-// Уведомления об отпусках
-const vacationReturning = ref([]);
-const vacationStarting = ref([]);
-const showVacationNotification = ref(false);
+// Уведомления о сменах статусов
+const statusReturning = ref([]);
+const statusStarting = ref([]);
+const showStatusNotification = ref(false);
 
 // Динамические значения статусов из fields_schema (по позиции в field_options)
-// Конвенция: options[0] = рабочий, options[2] = отпуск
+// Конвенция: options[0] = рабочий, options[1] = уволен, options[2] = отпуск, options[3] = больничный
 const employmentOptions = computed(() => {
   const field = allFieldsSchema.value.find(f => f.key === 'employment_status');
   return field?.options || [];
 });
 
 const workingStatus = computed(() => employmentOptions.value[0] || '');
+// vacationStatus остаётся для определения эмодзи по позиции (options[2] = отпуск)
 const vacationStatus = computed(() => employmentOptions.value[2] || '');
 
 // Маппинг технических названий полей на человекопонятные — динамически из fields_schema
@@ -483,7 +484,7 @@ async function loadEmployees(silent = false) {
   try {
     const data = await api.getEmployees();
     employees.value = data.employees || [];
-    await checkVacations();
+    await checkStatusChanges();
     lastUpdated.value = new Date();
   } catch (error) {
     if (!silent) errorMessage.value = error.message;
@@ -524,8 +525,8 @@ async function loadDashboardEvents() {
   }
 }
 
-// Проверка и обработка отпусков
-async function checkVacations() {
+// Универсальная проверка и обработка смены статусов
+async function checkStatusChanges() {
   const now = new Date();
   const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   const returningToday = [];
@@ -533,62 +534,56 @@ async function checkVacations() {
   const needsUpdate = [];
 
   employees.value.forEach(employee => {
-    const startDate = employee.vacation_start_date;
-    const endDate = employee.vacation_end_date;
+    const startDate = employee.status_start_date;
+    const endDate = employee.status_end_date;
 
-    // Пропускаем если нет дат отпуска
+    // Пропускаем если нет дат статуса
     if (!startDate && !endDate) return;
 
-    // Проверка 1: сегодня заканчивается отпуск (приоритет)
+    // Проверка 1: сегодня заканчивается статус (приоритет) — возврат к options[0]
     if (endDate === today) {
       returningToday.push({
         id: employee.employee_id,
         name: displayName(employee),
-        position: employee.position || ''
+        position: employee.position || '',
+        statusType: employee.employment_status
       });
 
       needsUpdate.push({
         ...employee,
-        vacation_start_date: '',
-        vacation_end_date: '',
+        status_start_date: '',
+        status_end_date: '',
         employment_status: workingStatus.value
       });
-      return; // Не проверяем дальше
+      return;
     }
 
-    // Проверка 2: отпуск уже прошел - очистить даты
+    // Проверка 2: статус уже прошел (end_date < today) — очистить даты, вернуть options[0]
     if (endDate && endDate < today) {
       needsUpdate.push({
         ...employee,
-        vacation_start_date: '',
-        vacation_end_date: '',
-        employment_status: employee.employment_status === vacationStatus.value ? workingStatus.value : employee.employment_status
+        status_start_date: '',
+        status_end_date: '',
+        employment_status: workingStatus.value
       });
-      return; // Не проверяем дальше
+      return;
     }
 
-    // Проверка 3: сегодня начинается отпуск
-    if (startDate === today && employee.employment_status !== vacationStatus.value) {
+    // Проверка 3: сегодня начинается статус — убедиться что статус установлен
+    if (startDate === today && employee.employment_status === workingStatus.value) {
       startingToday.push({
         id: employee.employee_id,
         name: displayName(employee),
         position: employee.position || '',
-        endDate: endDate
+        endDate: endDate,
+        statusType: employee.employment_status
       });
-
-      needsUpdate.push({
-        ...employee,
-        employment_status: vacationStatus.value
-      });
-      return; // Не проверяем дальше
+      return;
     }
 
-    // Проверка 4: сейчас в отпуске (между датами)
-    if (startDate && endDate && startDate < today && endDate > today && employee.employment_status !== vacationStatus.value) {
-      needsUpdate.push({
-        ...employee,
-        employment_status: vacationStatus.value
-      });
+    // Проверка 4: сейчас в статусе (start_date <= today, end_date > today или пуста)
+    if (startDate && startDate <= today && (!endDate || endDate > today)) {
+      // Статус уже должен быть установлен — ничего не делаем
     }
   });
 
@@ -603,9 +598,9 @@ async function checkVacations() {
 
   // Показываем уведомление если есть изменения
   if (returningToday.length > 0 || startingToday.length > 0) {
-    vacationReturning.value = returningToday;
-    vacationStarting.value = startingToday;
-    showVacationNotification.value = true;
+    statusReturning.value = returningToday;
+    statusStarting.value = startingToday;
+    showStatusNotification.value = true;
   }
 
   // Перезагружаем список если были обновления
@@ -615,8 +610,8 @@ async function checkVacations() {
   }
 }
 
-function closeVacationNotification() {
-  showVacationNotification.value = false;
+function closeStatusNotification() {
+  showStatusNotification.value = false;
 }
 
 async function selectEmployee(id) {
@@ -934,8 +929,8 @@ function handleGlobalKeydown(e) {
   if (e.key === 'Escape') {
     if (showStatusChangePopup.value) {
       closeStatusChangePopup();
-    } else if (showVacationNotification.value) {
-      closeVacationNotification();
+    } else if (showStatusNotification.value) {
+      closeStatusNotification();
     }
   }
 }
@@ -956,19 +951,19 @@ onUnmounted(() => {
 
 <template>
   <div class="app">
-    <!-- Уведомление об отпусках -->
-    <div v-if="showVacationNotification" class="vacation-notification-overlay" @click="closeVacationNotification">
+    <!-- Уведомление о сменах статусов -->
+    <div v-if="showStatusNotification" class="vacation-notification-overlay" @click="closeStatusNotification">
       <div class="vacation-notification-modal" @click.stop>
         <div class="vacation-notification-header">
           <h3>🏖️ Сповіщення про відпустки</h3>
-          <button class="close-btn" @click="closeVacationNotification">×</button>
+          <button class="close-btn" @click="closeStatusNotification">×</button>
         </div>
         <div class="vacation-notification-body">
-          <!-- Уходят в отпуск -->
-          <div v-if="vacationStarting.length > 0" class="notification-section">
+          <!-- Сьогодні змінюють статус -->
+          <div v-if="statusStarting.length > 0" class="notification-section">
             <p class="notification-message">✈️ Сьогодні йдуть у відпустку:</p>
             <ul class="vacation-employees-list">
-              <li v-for="emp in vacationStarting" :key="emp.id" class="vacation-employee starting">
+              <li v-for="emp in statusStarting" :key="emp.id" class="vacation-employee starting">
                 <div class="employee-info">
                   <span class="employee-name">{{ emp.name }}</span>
                   <span v-if="emp.position" class="employee-position">{{ emp.position }}</span>
@@ -978,11 +973,11 @@ onUnmounted(() => {
             </ul>
           </div>
 
-          <!-- Возвращаются из отпуска -->
-          <div v-if="vacationReturning.length > 0" class="notification-section">
+          <!-- Повертаються до робочого стану -->
+          <div v-if="statusReturning.length > 0" class="notification-section">
             <p class="notification-message">🏢 Сьогодні повертаються з відпустки:</p>
             <ul class="vacation-employees-list">
-              <li v-for="emp in vacationReturning" :key="emp.id" class="vacation-employee returning">
+              <li v-for="emp in statusReturning" :key="emp.id" class="vacation-employee returning">
                 <div class="employee-info">
                   <span class="employee-name">{{ emp.name }}</span>
                   <span v-if="emp.position" class="employee-position">{{ emp.position }}</span>
@@ -992,7 +987,7 @@ onUnmounted(() => {
           </div>
         </div>
         <div class="vacation-notification-footer">
-          <button class="primary" @click="closeVacationNotification">Зрозуміло</button>
+          <button class="primary" @click="closeStatusNotification">Зрозуміло</button>
         </div>
       </div>
     </div>

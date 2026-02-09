@@ -79,11 +79,11 @@
 - Modify: `client/src/App.vue`
 
 **Steps:**
-- [ ] Переименовать `checkVacations()` -> `checkStatusChanges()`
-- [ ] Логика: если `status_start_date` <= сегодня и `status_end_date` пуста или >= сегодня — убедиться что статус установлен
-- [ ] Логика: если `status_end_date` < сегодня — вернуть `options[0]`, очистить `status_start_date` и `status_end_date`
-- [ ] Обновить все ссылки на vacation_start_date/vacation_end_date -> status_start_date/status_end_date
-- [ ] Обновить computed свойства: `workingStatus`, `vacationStatus` -> обобщить (vacationStatus может остаться как options[2] для эмодзи)
+- [x] Переименовать `checkVacations()` -> `checkStatusChanges()`
+- [x] Логика: если `status_start_date` <= сегодня и `status_end_date` пуста или >= сегодня — убедиться что статус установлен
+- [x] Логика: если `status_end_date` < сегодня — вернуть `options[0]`, очистить `status_start_date` и `status_end_date`
+- [x] Обновить все ссылки на vacation_start_date/vacation_end_date -> status_start_date/status_end_date
+- [x] Обновить computed свойства: `workingStatus`, `vacationStatus` -> обобщить (vacationStatus может остаться как options[2] для эмодзи)
 
 ### Task 5: Frontend — Universal Notifications
 
