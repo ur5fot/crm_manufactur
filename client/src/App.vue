@@ -518,6 +518,10 @@ function onDocUploadFileChange(event) {
 async function submitDocUpload() {
   if (!form.employee_id || !docUploadForm.file || !docUploadForm.fieldKey) return;
   if (docUploadSaving.value) return;
+  if (docUploadForm.issueDate && docUploadForm.expiryDate && docUploadForm.expiryDate < docUploadForm.issueDate) {
+    errorMessage.value = 'Дата закінчення не може бути раніше дати видачі';
+    return;
+  }
 
   docUploadSaving.value = true;
   errorMessage.value = '';
@@ -565,6 +569,10 @@ function closeDocEditDatesPopup() {
 async function submitDocEditDates() {
   if (!form.employee_id || !docEditDatesForm.fieldKey) return;
   if (docEditDatesSaving.value) return;
+  if (docEditDatesForm.issueDate && docEditDatesForm.expiryDate && docEditDatesForm.expiryDate < docEditDatesForm.issueDate) {
+    errorMessage.value = 'Дата закінчення не може бути раніше дати видачі';
+    return;
+  }
 
   docEditDatesSaving.value = true;
   errorMessage.value = '';
@@ -913,7 +921,7 @@ async function checkDocumentExpiry() {
 
   try {
     const data = await api.getDocumentExpiry();
-    const todayItems = data.today || [];
+    const todayItems = (data.today || []).filter(evt => evt.type !== 'already_expired');
     const weekItems = data.thisWeek || [];
 
     docExpiryNotifiedDate = today;
@@ -1071,10 +1079,10 @@ async function loadFieldsSchema() {
   try {
     const data = await api.getFieldsSchema();
 
-    // Формируем группы полей для карточек (исключаем группу "Документы" - для нее отдельная таблица)
+    // Формируем группы полей для карточек (исключаем группу "Документи" - для неї окрема таблиця)
     const groups = data.groups || {};
     fieldGroups.value = Object.keys(groups)
-      .filter(groupName => groupName && groupName !== 'Документы')
+      .filter(groupName => groupName && groupName !== 'Документи')
       .map(groupName => ({
         title: groupName,
         fields: groups[groupName].map(field => ({
