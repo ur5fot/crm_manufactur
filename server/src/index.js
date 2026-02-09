@@ -14,6 +14,7 @@ import {
   saveEmployees,
   loadLogs,
   addLog,
+  addLogs,
   loadFieldsSchema,
   getDashboardStats,
   getDashboardEvents,
@@ -475,6 +476,13 @@ app.put("/api/employees/:id", async (req, res) => {
           res.status(400).json({ error: `Невірна дата для поля ${dateField} (неіснуюча дата)` });
           return;
         }
+        // Validate calendar date: check that parsed date matches input (prevents Feb 30, Apr 31, etc.)
+        const parsed = new Date(dateValue);
+        const roundtrip = `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, '0')}-${String(parsed.getDate()).padStart(2, '0')}`;
+        if (roundtrip !== dateValue) {
+          res.status(400).json({ error: `Невірна календарна дата для поля ${dateField}: ${dateValue}` });
+          return;
+        }
       }
     }
 
@@ -509,17 +517,18 @@ app.put("/api/employees/:id", async (req, res) => {
       }
     });
 
-    // Логируем каждое изменение
-    for (const field of changedFields) {
-      await addLog(
-        "UPDATE",
-        req.params.id,
-        employeeName,
-        field,
-        current[field] || "",
-        next[field] || "",
-        `Изменено поле: ${field}`
-      );
+    // Логируем все изменения одной batch-операцией для предотвращения race condition
+    if (changedFields.length > 0) {
+      const logEntries = changedFields.map(field => ({
+        action: "UPDATE",
+        employeeId: req.params.id,
+        employeeName: employeeName,
+        fieldName: field,
+        oldValue: current[field] || "",
+        newValue: next[field] || "",
+        details: `Изменено поле: ${field}`
+      }));
+      await addLogs(logEntries);
     }
 
     res.json({ employee: next });
@@ -633,6 +642,16 @@ app.post("/api/employees/:id/files", (req, res, next) => {
       res.status(400).json({ error: "Невірна дата видачі (неіснуюча дата)" });
       return;
     }
+    // Validate calendar date for issue_date
+    if (issueDate) {
+      const parsed = new Date(issueDate);
+      const roundtrip = `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, '0')}-${String(parsed.getDate()).padStart(2, '0')}`;
+      if (roundtrip !== issueDate) {
+        await fsPromises.unlink(req.file.path).catch(() => {});
+        res.status(400).json({ error: `Невірна календарна дата видачі: ${issueDate}` });
+        return;
+      }
+    }
 
     if (expiryDate && !dateRegex.test(expiryDate)) {
       await fsPromises.unlink(req.file.path).catch(() => {});
@@ -643,6 +662,16 @@ app.post("/api/employees/:id/files", (req, res, next) => {
       await fsPromises.unlink(req.file.path).catch(() => {});
       res.status(400).json({ error: "Невірна дата закінчення (неіснуюча дата)" });
       return;
+    }
+    // Validate calendar date for expiry_date
+    if (expiryDate) {
+      const parsed = new Date(expiryDate);
+      const roundtrip = `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, '0')}-${String(parsed.getDate()).padStart(2, '0')}`;
+      if (roundtrip !== expiryDate) {
+        await fsPromises.unlink(req.file.path).catch(() => {});
+        res.status(400).json({ error: `Невірна календарна дата закінчення: ${expiryDate}` });
+        return;
+      }
     }
 
     // Перевіряємо що дата закінчення не раніше дати видачі

@@ -472,25 +472,38 @@ export async function saveLogs(rows) {
 }
 
 export async function addLog(action, employeeId, employeeName, fieldName = "", oldValue = "", newValue = "", details = "") {
+  return addLogs([{ action, employeeId, employeeName, fieldName, oldValue, newValue, details }]);
+}
+
+/**
+ * Batch-adds multiple log entries in a single write operation
+ * Prevents race condition when logging multiple field changes
+ */
+export async function addLogs(entries) {
+  if (!entries || entries.length === 0) return [];
+
   const logs = await loadLogs();
-  const maxId = logs.reduce((max, log) => {
+  let maxId = logs.reduce((max, log) => {
     const id = parseInt(log.log_id, 10);
     return isNaN(id) ? max : Math.max(max, id);
   }, 0);
 
-  const newLog = {
-    log_id: String(maxId + 1),
-    timestamp: new Date().toISOString(),
-    action,
-    employee_id: employeeId || "",
-    employee_name: employeeName || "",
-    field_name: fieldName || "",
-    old_value: oldValue || "",
-    new_value: newValue || "",
-    details: details || ""
-  };
+  const newLogs = entries.map(({ action, employeeId, employeeName, fieldName = "", oldValue = "", newValue = "", details = "" }) => {
+    maxId++;
+    return {
+      log_id: String(maxId),
+      timestamp: new Date().toISOString(),
+      action,
+      employee_id: employeeId || "",
+      employee_name: employeeName || "",
+      field_name: fieldName || "",
+      old_value: oldValue || "",
+      new_value: newValue || "",
+      details: details || ""
+    };
+  });
 
-  logs.push(newLog);
+  logs.push(...newLogs);
 
   // Автоматическая очистка логов - выполняем в той же операции записи для предотвращения race condition
   const config = await loadConfig();
@@ -507,7 +520,7 @@ export async function addLog(action, employeeId, employeeName, fieldName = "", o
     await saveLogs(logs);
   }
 
-  return newLog;
+  return newLogs;
 }
 
 /**
@@ -545,6 +558,9 @@ export async function getBirthdayEvents() {
   const currentYear = now.getFullYear();
   const today = localDateStr(now);
 
+  // Normalize now to midnight for date-only comparison
+  const nowDateOnly = new Date(currentYear, now.getMonth(), now.getDate());
+
   const in7days = new Date(now);
   in7days.setDate(now.getDate() + 7);
 
@@ -572,7 +588,7 @@ export async function getBirthdayEvents() {
     const name = [emp.last_name, emp.first_name, emp.middle_name].filter(Boolean).join(' ');
 
     // Проверяем день рождения в текущем году
-    if (thisYearBirthday >= now && thisYearBirthday <= in7days) {
+    if (thisYearBirthday >= nowDateOnly && thisYearBirthday <= in7days) {
       const birthdayStr = localDateStr(thisYearBirthday);
       const age = currentYear - birthYear;
 
@@ -591,7 +607,7 @@ export async function getBirthdayEvents() {
       }
     }
     // Проверяем день рождения в следующем году (для случаев типа 29 декабря -> 2 января)
-    else if (nextYearBirthday >= now && nextYearBirthday <= in7days) {
+    else if (nextYearBirthday >= nowDateOnly && nextYearBirthday <= in7days) {
       const birthdayStr = localDateStr(nextYearBirthday);
       const age = (currentYear + 1) - birthYear;
 

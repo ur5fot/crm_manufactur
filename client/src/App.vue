@@ -1305,7 +1305,7 @@ async function saveCell(employee, fieldName) {
 function openEmployeeCard(employeeId) {
   isCreatingNew.value = false;
   router.push({ name: 'cards', params: { id: employeeId } });
-  selectEmployee(employeeId);
+  // selectEmployee will be called by route.params.id watcher
 }
 
 function toggleFilter(fieldName, value) {
