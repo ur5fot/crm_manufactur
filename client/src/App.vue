@@ -141,6 +141,12 @@ const showStatusNotification = ref(false);
 const notifiedEmployeeIds = new Set();
 let notifiedDate = '';
 
+// Уведомления о закінченні терміну дії документів
+const docExpiryToday = ref([]);
+const docExpiryWeek = ref([]);
+const showDocExpiryNotification = ref(false);
+let docExpiryNotifiedDate = '';
+
 // Динамические значения статусов из fields_schema (по позиции в field_options)
 // Конвенция: options[0] = рабочий, options[1] = уволен, options[2] = отпуск, options[3] = больничный
 const employmentOptions = computed(() => {
@@ -158,12 +164,25 @@ function statusEmoji(statusValue) {
   return 'ℹ️';
 }
 
+function docExpiryEmoji(event) {
+  if (event.type === 'already_expired' || event.type === 'expired_today') return '⚠️';
+  return '📄';
+}
+
 function timelineEventEmoji(event) {
+  if (event.type === 'doc_expiry') return docExpiryEmoji(event);
   if (event.type === 'status_end') return '🏢';
   return statusEmoji(event.status_type);
 }
 
 function timelineEventDesc(event) {
+  if (event.type === 'doc_expiry') {
+    const label = event.document_label || event.document_field;
+    if (event.expiry_type === 'already_expired' || event.expiry_type === 'expired_today') {
+      return `— ${label} (термін сплив)`;
+    }
+    return `— ${label} (до ${formatEventDate(event.expiry_date)})`;
+  }
   if (event.type === 'status_end') {
     return `— повернення (${event.status_type || 'статус'})`;
   }
@@ -679,6 +698,7 @@ async function loadEmployees(silent = false) {
     const data = await api.getEmployees();
     employees.value = data.employees || [];
     await checkStatusChanges();
+    await checkDocumentExpiry();
     lastUpdated.value = new Date();
   } catch (error) {
     if (!silent) errorMessage.value = error.message;
@@ -712,8 +732,35 @@ function daysFromNowLabel(dateStr) {
 
 async function loadDashboardEvents() {
   try {
-    const data = await api.getDashboardEvents();
-    dashboardEvents.value = data;
+    const [statusData, docData] = await Promise.all([
+      api.getDashboardEvents(),
+      api.getDocumentExpiry()
+    ]);
+
+    // Перетворюємо події закінчення документів у формат timeline
+    const mapDocEvent = (evt) => ({
+      employee_id: evt.employee_id,
+      name: evt.name,
+      type: 'doc_expiry',
+      expiry_type: evt.type,
+      document_field: evt.document_field,
+      document_label: evt.document_label,
+      expiry_date: evt.expiry_date,
+      date: evt.expiry_date
+    });
+
+    const todayEvents = [
+      ...(statusData.today || []),
+      ...(docData.today || []).map(mapDocEvent)
+    ];
+
+    const weekEvents = [
+      ...(statusData.thisWeek || []),
+      ...(docData.thisWeek || []).map(mapDocEvent)
+    ];
+    weekEvents.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+
+    dashboardEvents.value = { today: todayEvents, thisWeek: weekEvents };
   } catch (error) {
     console.error('Failed to load dashboard events:', error);
   }
@@ -812,6 +859,33 @@ async function checkStatusChanges() {
 
 function closeStatusNotification() {
   showStatusNotification.value = false;
+}
+
+async function checkDocumentExpiry() {
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+  // Показываем уведомления один раз в день
+  if (docExpiryNotifiedDate === today) return;
+
+  try {
+    const data = await api.getDocumentExpiry();
+    const todayItems = data.today || [];
+    const weekItems = data.thisWeek || [];
+
+    if (todayItems.length > 0 || weekItems.length > 0) {
+      docExpiryToday.value = todayItems;
+      docExpiryWeek.value = weekItems;
+      showDocExpiryNotification.value = true;
+      docExpiryNotifiedDate = today;
+    }
+  } catch (error) {
+    console.error('Failed to check document expiry:', error);
+  }
+}
+
+function closeDocExpiryNotification() {
+  showDocExpiryNotification.value = false;
 }
 
 async function selectEmployee(id) {
@@ -1129,6 +1203,8 @@ function handleGlobalKeydown(e) {
       closeDocEditDatesPopup();
     } else if (showStatusChangePopup.value) {
       closeStatusChangePopup();
+    } else if (showDocExpiryNotification.value) {
+      closeDocExpiryNotification();
     } else if (showStatusNotification.value) {
       closeStatusNotification();
     }
@@ -1192,6 +1268,49 @@ onUnmounted(() => {
         </div>
         <div class="vacation-notification-footer">
           <button class="primary" @click="closeStatusNotification">Зрозуміло</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Уведомление про закінчення терміну дії документів -->
+    <div v-if="showDocExpiryNotification" class="vacation-notification-overlay" @click="closeDocExpiryNotification">
+      <div class="vacation-notification-modal" @click.stop>
+        <div class="vacation-notification-header">
+          <h3>📋 Сповіщення про закінчення терміну дії документів</h3>
+          <button class="close-btn" @click="closeDocExpiryNotification">&times;</button>
+        </div>
+        <div class="vacation-notification-body">
+          <div v-if="docExpiryToday.length > 0" class="notification-section">
+            <p class="notification-message">⚠️ Термін дії сплив або спливає сьогодні:</p>
+            <ul class="vacation-employees-list">
+              <li v-for="(evt, idx) in docExpiryToday" :key="'doc-today-' + idx" class="vacation-employee starting">
+                <div class="employee-info">
+                  <span class="employee-name">{{ docExpiryEmoji(evt) }} {{ evt.name }}</span>
+                </div>
+                <div class="status-details">
+                  <span class="status-badge">{{ evt.document_label }}</span>
+                  <span class="vacation-end-date">{{ formatEventDate(evt.expiry_date) }}</span>
+                </div>
+              </li>
+            </ul>
+          </div>
+          <div v-if="docExpiryWeek.length > 0" class="notification-section">
+            <p class="notification-message">📄 Термін дії спливає найближчим часом:</p>
+            <ul class="vacation-employees-list">
+              <li v-for="(evt, idx) in docExpiryWeek" :key="'doc-week-' + idx" class="vacation-employee returning">
+                <div class="employee-info">
+                  <span class="employee-name">📄 {{ evt.name }}</span>
+                </div>
+                <div class="status-details">
+                  <span class="status-badge">{{ evt.document_label }}</span>
+                  <span class="vacation-end-date">{{ formatEventDate(evt.expiry_date) }}</span>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </div>
+        <div class="vacation-notification-footer">
+          <button class="primary" @click="closeDocExpiryNotification">Зрозуміло</button>
         </div>
       </div>
     </div>
@@ -1419,7 +1538,7 @@ onUnmounted(() => {
           <div v-if="dashboardEvents.today.length === 0" class="timeline-empty">
             Нічого термінового
           </div>
-          <div v-for="event in dashboardEvents.today" :key="event.employee_id + event.type" class="timeline-event">
+          <div v-for="event in dashboardEvents.today" :key="event.employee_id + event.type + (event.document_field || '')" class="timeline-event">
             <span class="timeline-emoji">{{ timelineEventEmoji(event) }}</span>
             <span class="timeline-name timeline-link" @click="openEmployeeCard(event.employee_id)">{{ event.name }}</span>
             <span class="timeline-desc">{{ timelineEventDesc(event) }}</span>
@@ -1431,7 +1550,7 @@ onUnmounted(() => {
           <div v-if="dashboardEvents.thisWeek.length === 0" class="timeline-empty">
             Немає запланованих подій
           </div>
-          <div v-for="event in dashboardEvents.thisWeek" :key="event.employee_id + event.type + event.date" class="timeline-event">
+          <div v-for="event in dashboardEvents.thisWeek" :key="event.employee_id + event.type + event.date + (event.document_field || '')" class="timeline-event">
             <span class="timeline-date">{{ formatEventDate(event.date) }}</span>
             <span class="timeline-days-badge">{{ daysFromNowLabel(event.date) }}</span>
             <span class="timeline-emoji">{{ timelineEventEmoji(event) }}</span>

@@ -71,6 +71,9 @@ export const api = {
   getDashboardEvents() {
     return request("/dashboard/events");
   },
+  getDocumentExpiry() {
+    return request("/document-expiry");
+  },
   getStatusReport(type) {
     return request(`/reports/statuses?type=${type}`);
   },

@@ -91,14 +91,14 @@ These companion fields will be auto-generated in the schema loading logic (NOT m
 - Modify: `client/src/App.vue`
 - Modify: `client/src/api.js`
 
-- [ ] Add api.getDocumentExpiry() in api.js
-- [ ] Add checkDocumentExpiry() function similar to checkStatusChanges() - called on loadEmployees()
-- [ ] Show notification popup when documents expire today or within 7 days:
+- [x] Add api.getDocumentExpiry() in api.js
+- [x] Add checkDocumentExpiry() function similar to checkStatusChanges() - called on loadEmployees()
+- [x] Show notification popup when documents expire today or within 7 days:
   - Title: "Сповіщення про закінчення терміну дії документів"
   - List: employee name, document type, expiry date
   - Emoji: document emoji (📄) for expiring, warning (⚠️) for expired today
-- [ ] Add document expiry events to dashboard timeline (getDashboardEvents extended or separate section)
-- [ ] Test: set a document expiry_date to today, reload page, verify notification appears
+- [x] Add document expiry events to dashboard timeline (getDashboardEvents extended or separate section)
+- [x] Test: set a document expiry_date to today, reload page, verify notification appears
 
 ### Task 5: Update fields_schema template with new document types
 
