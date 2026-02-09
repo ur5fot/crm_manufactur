@@ -63,7 +63,7 @@ async function migrateEmployeesSchema(expectedColumns) {
     }
 
     // Парсим заголовок
-    const headerLine = lines[0];
+    const headerLine = lines[0].replace(/^\uFEFF/, '');
     const currentColumns = headerLine.split(";").map(col => col.trim().replace(/^"|"$/g, ''));
 
     // Находим недостающие колонки

@@ -101,7 +101,7 @@ function startDashboardRefresh() {
   stopDashboardRefresh();
   refreshIntervalId.value = setInterval(async () => {
     await loadEmployees(true);
-    loadDashboardEvents();
+    await loadDashboardEvents();
   }, 300000);
 }
 
@@ -369,7 +369,12 @@ async function applyStatusChange() {
   saving.value = true;
   try {
     // Используем данные из employees.value, а не из form, чтобы не сохранять несохранённые изменения формы
-    const currentEmployee = employees.value.find(e => e.employee_id === form.employee_id) || {};
+    const currentEmployee = employees.value.find(e => e.employee_id === form.employee_id);
+    if (!currentEmployee) {
+      errorMessage.value = 'Співробітника не знайдено. Оновіть сторінку.';
+      saving.value = false;
+      return;
+    }
     const payload = {
       ...currentEmployee,
       employment_status: statusChangeForm.status,
@@ -395,7 +400,12 @@ async function resetStatus() {
   saving.value = true;
   try {
     // Используем данные из employees.value, а не из form, чтобы не сохранять несохранённые изменения формы
-    const currentEmployee = employees.value.find(e => e.employee_id === form.employee_id) || {};
+    const currentEmployee = employees.value.find(e => e.employee_id === form.employee_id);
+    if (!currentEmployee) {
+      errorMessage.value = 'Співробітника не знайдено. Оновіть сторінку.';
+      saving.value = false;
+      return;
+    }
     const payload = {
       ...currentEmployee,
       employment_status: workingStatus.value,
@@ -590,8 +600,12 @@ async function checkStatusChanges() {
     // Пропускаем если нет дат статуса
     if (!startDate && !endDate) return;
 
+    // Пропускаем автовозврат для уволенных (options[1]) — увольнение не должно автоматически сбрасываться
+    const firedStatus = employmentOptions.value[1] || '';
+    const isFired = firedStatus && employee.employment_status === firedStatus;
+
     // Проверка 1: сегодня заканчивается статус (приоритет) — возврат к options[0]
-    if (endDate === today) {
+    if (endDate === today && !isFired) {
       returningToday.push({
         id: employee.employee_id,
         name: displayName(employee),
@@ -609,7 +623,7 @@ async function checkStatusChanges() {
     }
 
     // Проверка 2: статус уже прошел (end_date < today) — очистить даты, вернуть options[0]
-    if (endDate && endDate < today) {
+    if (endDate && endDate < today && !isFired) {
       needsUpdate.push({
         ...employee,
         status_start_date: '',
@@ -704,6 +718,14 @@ async function saveEmployee() {
     }
 
     const payload = { ...form };
+
+    // Статусные поля управляются только через попап смены статуса — удаляем из payload,
+    // чтобы не перезаписать актуальные значения устаревшими данными из формы
+    if (!isNew.value) {
+      delete payload.employment_status;
+      delete payload.status_start_date;
+      delete payload.status_end_date;
+    }
 
     // Очищаем пустые поля документов при создании нового сотрудника
     if (isNew.value) {
