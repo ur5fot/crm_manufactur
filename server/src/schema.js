@@ -28,11 +28,19 @@ const DEFAULT_EMPLOYEE_COLUMNS = [
   "residence_place",
   "registration_place",
   "driver_license_file",
+  "driver_license_file_issue_date",
+  "driver_license_file_expiry_date",
   "id_certificate_file",
+  "id_certificate_file_issue_date",
+  "id_certificate_file_expiry_date",
   "foreign_passport_number",
   "foreign_passport_issue_date",
   "foreign_passport_file",
+  "foreign_passport_file_issue_date",
+  "foreign_passport_file_expiry_date",
   "criminal_record_file",
+  "criminal_record_file_issue_date",
+  "criminal_record_file_expiry_date",
   "phone",
   "phone_note",
   "education",
@@ -75,10 +83,19 @@ export async function loadEmployeeColumns(loadFieldsSchemaFn) {
     }
 
     // Сортируем по field_order и извлекаем field_name
-    const columns = schema
+    const sortedFields = schema
       .sort((a, b) => parseInt(a.field_order || 0, 10) - parseInt(b.field_order || 0, 10))
-      .map(field => field.field_name)
-      .filter(name => name && name.trim() !== "");
+      .filter(field => field.field_name && field.field_name.trim() !== "");
+
+    // Строим список колонок, для file-полей автоматически добавляем _issue_date и _expiry_date
+    const columns = [];
+    for (const field of sortedFields) {
+      columns.push(field.field_name);
+      if (field.field_type === "file") {
+        columns.push(`${field.field_name}_issue_date`);
+        columns.push(`${field.field_name}_expiry_date`);
+      }
+    }
 
     if (columns.length === 0) {
       console.warn("Не найдено ни одной валидной колонки в fields_schema.csv");
@@ -87,7 +104,7 @@ export async function loadEmployeeColumns(loadFieldsSchemaFn) {
     }
 
     cachedEmployeeColumns = columns;
-    console.log(`Загружено ${columns.length} колонок из fields_schema.csv`);
+    console.log(`Загружено ${columns.length} колонок из fields_schema.csv (включая auto-generated date колонки для документов)`);
     return cachedEmployeeColumns;
   } catch (error) {
     console.error("Ошибка загрузки fields_schema.csv:", error.message);
