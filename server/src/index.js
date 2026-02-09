@@ -463,13 +463,6 @@ app.delete("/api/employees/:id", async (req, res) => {
 });
 
 const ALLOWED_FILE_EXTENSIONS = ['.pdf', '.jpg', '.jpeg', '.png', '.gif', '.webp'];
-const ALLOWED_MIME_TYPES = [
-  'application/pdf',
-  'image/jpeg',
-  'image/png',
-  'image/gif',
-  'image/webp'
-];
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -489,6 +482,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
+  limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();
     if (ALLOWED_FILE_EXTENSIONS.includes(ext)) {
@@ -499,7 +493,12 @@ const upload = multer({
   }
 });
 
-app.post("/api/employees/:id/files", upload.single("file"), async (req, res) => {
+app.post("/api/employees/:id/files", (req, res, next) => {
+  upload.single("file")(req, res, (err) => {
+    if (err) return res.status(400).json({ error: err.message });
+    next();
+  });
+}, async (req, res) => {
   if (!req.file) {
     res.status(400).json({ error: "Файл обязателен" });
     return;

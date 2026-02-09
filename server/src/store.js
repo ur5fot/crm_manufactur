@@ -276,6 +276,10 @@ export async function getDocumentExpiryEvents() {
   in7days.setDate(now.getDate() + 7);
   const in7daysStr = localDateStr(in7days);
 
+  const past30days = new Date(now);
+  past30days.setDate(now.getDate() - 30);
+  const past30daysStr = localDateStr(past30days);
+
   // Находим все поля типа file и их labels
   const fileFields = schema.filter(f => f.field_type === 'file');
 
@@ -303,7 +307,7 @@ export async function getDocumentExpiryEvents() {
         todayEvents.push({ ...event, type: 'expired_today' });
       } else if (expiryDate > today && expiryDate <= in7daysStr) {
         weekEvents.push({ ...event, type: 'expiring_soon' });
-      } else if (expiryDate < today) {
+      } else if (expiryDate < today && expiryDate >= past30daysStr) {
         todayEvents.push({ ...event, type: 'already_expired' });
       }
     });
@@ -347,7 +351,7 @@ export async function getStatusReport(type) {
       if (start && start >= monthStart && start <= monthEnd) return true;
       if (end && end >= monthStart && end <= monthEnd) return true;
       if (start && end && start < monthStart && end > monthEnd) return true;
-      if (start && !end && start <= monthEnd) return true;
+      if (start && !end && start >= monthStart && start <= monthEnd) return true;
       return false;
     });
   } else {

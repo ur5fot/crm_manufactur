@@ -170,7 +170,7 @@ function docExpiryEmoji(event) {
 }
 
 function timelineEventEmoji(event) {
-  if (event.type === 'doc_expiry') return docExpiryEmoji(event);
+  if (event.type === 'doc_expiry') return docExpiryEmoji({ type: event.expiry_type });
   if (event.type === 'status_end') return '🏢';
   return statusEmoji(event.status_type);
 }
