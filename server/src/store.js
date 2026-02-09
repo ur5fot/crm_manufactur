@@ -294,6 +294,7 @@ export async function getDocumentExpiryEvents() {
       const expiryDateField = `${field.field_name}_expiry_date`;
       const expiryDate = emp[expiryDateField];
       if (!expiryDate) return;
+      if (!emp[field.field_name]) return; // Пропускаем если документ отсутствует
 
       const event = {
         employee_id: emp.employee_id,
@@ -301,7 +302,7 @@ export async function getDocumentExpiryEvents() {
         document_field: field.field_name,
         document_label: field.field_label,
         expiry_date: expiryDate,
-        has_file: !!emp[field.field_name]
+        has_file: true
       };
 
       if (expiryDate === today) {

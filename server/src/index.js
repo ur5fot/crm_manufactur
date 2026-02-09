@@ -319,6 +319,11 @@ app.post("/api/employees/import", importUpload.single("file"), async (req, res) 
       employeeId = getNextId(nextEmployees, "employee_id");
     }
 
+    // Очищаем файловые поля — файлы загружаются только через upload endpoint
+    for (const docField of getDocumentFieldsSync()) {
+      normalized[docField] = "";
+    }
+
     normalized.employee_id = employeeId;
     existingIds.add(employeeId);
     nextEmployees.push(normalized);
@@ -361,6 +366,11 @@ app.post("/api/employees", async (req, res) => {
     const employees = await loadEmployees();
 
     const baseEmployee = normalizeEmployeeInput(payload);
+
+    // Запрещаем установку файловых полей через create — только через upload endpoint
+    for (const docField of getDocumentFieldsSync()) {
+      baseEmployee[docField] = "";
+    }
 
     // Валидация обязательных полей
     if (!baseEmployee.first_name || !baseEmployee.first_name.trim()) {
@@ -407,7 +417,11 @@ app.put("/api/employees/:id", async (req, res) => {
       return;
     }
 
-    const updates = payload;
+    // Запрещаем изменение файловых полей через PUT — только через upload endpoint
+    const updates = { ...payload };
+    for (const docField of getDocumentFieldsSync()) {
+      delete updates[docField];
+    }
     const current = employees[index];
     const next = mergeRow(getEmployeeColumnsSync(), current, updates);
     next.employee_id = req.params.id;
@@ -523,144 +537,196 @@ app.post("/api/employees/:id/files", (req, res, next) => {
     next();
   });
 }, async (req, res) => {
-  if (!req.file) {
-    res.status(400).json({ error: "Файл обязателен" });
-    return;
+  try {
+    if (!req.file) {
+      res.status(400).json({ error: "Файл обязателен" });
+      return;
+    }
+
+    const employees = await loadEmployees();
+    const index = employees.findIndex((item) => item.employee_id === req.params.id);
+
+    if (index === -1) {
+      // Удаляем временный файл
+      await fsPromises.unlink(req.file.path).catch(() => {});
+      res.status(404).json({ error: "Сотрудник не найден" });
+      return;
+    }
+
+    const fileField = String(req.body.file_field || "");
+    if (!getDocumentFieldsSync().includes(fileField)) {
+      // Удаляем временный файл
+      await fsPromises.unlink(req.file.path).catch(() => {});
+      res.status(400).json({ error: "Неверное поле документа" });
+      return;
+    }
+
+    // Валідація формату дат до збереження файлу
+    const issueDate = String(req.body.issue_date || "").trim();
+    const expiryDate = String(req.body.expiry_date || "").trim();
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (issueDate && !dateRegex.test(issueDate)) {
+      await fsPromises.unlink(req.file.path).catch(() => {});
+      res.status(400).json({ error: "Невірний формат дати видачі (очікується YYYY-MM-DD)" });
+      return;
+    }
+    if (expiryDate && !dateRegex.test(expiryDate)) {
+      await fsPromises.unlink(req.file.path).catch(() => {});
+      res.status(400).json({ error: "Невірний формат дати закінчення (очікується YYYY-MM-DD)" });
+      return;
+    }
+
+    // Переименовываем файл с правильным именем
+    // Нормализуем расширение в lowercase для предотвращения проблем на case-insensitive FS (macOS HFS+/APFS)
+    const targetFileName = fileField
+      .replace(/[^a-zA-Z0-9_-]/g, "_")
+      .toLowerCase() + path.extname(req.file.originalname || ".pdf").toLowerCase();
+    const targetPath = path.join(path.dirname(req.file.path), targetFileName);
+
+    // Запоминаем старый путь до переименования (для удаления orphaned файла после сохранения)
+    const oldFilePath = employees[index][fileField];
+
+    // Проверяем, совпадает ли старый файл с целевым путём
+    // На case-insensitive FS (macOS/Windows) сравниваем без учёта регистра, на Linux — точное совпадение
+    let oldFileIsSameAsTarget = false;
+    if (oldFilePath) {
+      const oldFullPath = path.resolve(ROOT_DIR, oldFilePath);
+      if (process.platform === 'linux') {
+        oldFileIsSameAsTarget = oldFullPath === targetPath;
+      } else {
+        oldFileIsSameAsTarget = oldFullPath.toLowerCase() === targetPath.toLowerCase();
+      }
+    }
+
+    try {
+      await fsPromises.rename(req.file.path, targetPath);
+    } catch (renameErr) {
+      await fsPromises.unlink(req.file.path).catch(() => {});
+      res.status(500).json({ error: "Ошибка сохранения файла" });
+      return;
+    }
+
+    const relativePath = path
+      .relative(ROOT_DIR, targetPath)
+      .split(path.sep)
+      .join("/");
+
+    // Сохраняем файл и даты (issue_date, expiry_date)
+    const updateData = { [fileField]: relativePath };
+    const issueDateField = `${fileField}_issue_date`;
+    const expiryDateField = `${fileField}_expiry_date`;
+    if (getEmployeeColumnsSync().includes(issueDateField)) {
+      updateData[issueDateField] = issueDate;
+    }
+    if (getEmployeeColumnsSync().includes(expiryDateField)) {
+      updateData[expiryDateField] = expiryDate;
+    }
+
+    const updated = mergeRow(getEmployeeColumnsSync(), employees[index], updateData);
+    updated.employee_id = req.params.id;
+    employees[index] = updated;
+
+    try {
+      await saveEmployees(employees);
+    } catch (saveErr) {
+      // CSV сохранение не удалось — откатываем файл только если он не перезаписал существующий
+      // Если старый и новый путь совпадают (re-upload с тем же расширением), откат невозможен —
+      // файл уже перезаписан rename, перемещение в temp оставит CSV без файла
+      if (!oldFileIsSameAsTarget) {
+        await fsPromises.rename(targetPath, req.file.path).catch(() => {});
+      }
+      res.status(500).json({ error: "Ошибка сохранения данных" });
+      return;
+    }
+
+    // Удаляем старый файл после успешного сохранения CSV (предотвращаем orphaned files при смене расширения)
+    // Пропускаем если старый путь совпадает с новым (case-insensitive — файл уже перезаписан rename)
+    if (oldFilePath && !oldFileIsSameAsTarget) {
+      const oldFullPath = path.resolve(ROOT_DIR, oldFilePath);
+      if (oldFullPath.startsWith(FILES_DIR + path.sep)) {
+        await fsPromises.unlink(oldFullPath).catch(() => {});
+      }
+    }
+
+    res.json({ path: relativePath });
+  } catch (err) {
+    // Очищаем временный файл при непредвиденной ошибке
+    if (req.file && req.file.path) {
+      await fsPromises.unlink(req.file.path).catch(() => {});
+    }
+    console.error(err);
+    res.status(500).json({ error: err.message });
   }
-
-  const employees = await loadEmployees();
-  const index = employees.findIndex((item) => item.employee_id === req.params.id);
-
-  if (index === -1) {
-    // Удаляем временный файл
-    await fsPromises.unlink(req.file.path).catch(() => {});
-    res.status(404).json({ error: "Сотрудник не найден" });
-    return;
-  }
-
-  const fileField = String(req.body.file_field || "");
-  if (!getDocumentFieldsSync().includes(fileField)) {
-    // Удаляем временный файл
-    await fsPromises.unlink(req.file.path).catch(() => {});
-    res.status(400).json({ error: "Неверное поле документа" });
-    return;
-  }
-
-  // Валідація формату дат до збереження файлу
-  const issueDate = String(req.body.issue_date || "").trim();
-  const expiryDate = String(req.body.expiry_date || "").trim();
-  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-  if (issueDate && !dateRegex.test(issueDate)) {
-    await fsPromises.unlink(req.file.path).catch(() => {});
-    res.status(400).json({ error: "Невірний формат дати видачі (очікується YYYY-MM-DD)" });
-    return;
-  }
-  if (expiryDate && !dateRegex.test(expiryDate)) {
-    await fsPromises.unlink(req.file.path).catch(() => {});
-    res.status(400).json({ error: "Невірний формат дати закінчення (очікується YYYY-MM-DD)" });
-    return;
-  }
-
-  // Удаляем старый файл если он существует (предотвращаем orphaned files при смене расширения)
-  const oldFilePath = employees[index][fileField];
-  if (oldFilePath) {
-    const oldFullPath = path.join(ROOT_DIR, oldFilePath);
-    await fsPromises.unlink(oldFullPath).catch(() => {});
-  }
-
-  // Переименовываем файл с правильным именем
-  const targetFileName = fileField
-    .replace(/[^a-zA-Z0-9_-]/g, "_")
-    .toLowerCase() + path.extname(req.file.originalname || ".pdf");
-  const targetPath = path.join(path.dirname(req.file.path), targetFileName);
-
-  await fsPromises.rename(req.file.path, targetPath);
-
-  const relativePath = path
-    .relative(ROOT_DIR, targetPath)
-    .split(path.sep)
-    .join("/");
-
-  // Сохраняем файл и даты (issue_date, expiry_date)
-  const updateData = { [fileField]: relativePath };
-  const issueDateField = `${fileField}_issue_date`;
-  const expiryDateField = `${fileField}_expiry_date`;
-  if (getEmployeeColumnsSync().includes(issueDateField)) {
-    updateData[issueDateField] = issueDate;
-  }
-  if (getEmployeeColumnsSync().includes(expiryDateField)) {
-    updateData[expiryDateField] = expiryDate;
-  }
-
-  const updated = mergeRow(getEmployeeColumnsSync(), employees[index], updateData);
-  updated.employee_id = req.params.id;
-  employees[index] = updated;
-  await saveEmployees(employees);
-
-  res.json({ path: relativePath });
 });
 
 app.delete("/api/employees/:id/files/:fieldName", async (req, res) => {
-  const { id, fieldName } = req.params;
-
-  // Проверка что поле является документом
-  if (!getDocumentFieldsSync().includes(fieldName)) {
-    res.status(400).json({ error: "Неверное поле документа" });
-    return;
-  }
-
-  const employees = await loadEmployees();
-  const index = employees.findIndex((item) => item.employee_id === id);
-
-  if (index === -1) {
-    res.status(404).json({ error: "Сотрудник не найден" });
-    return;
-  }
-
-  const employee = employees[index];
-  const filePath = employee[fieldName];
-
-  if (!filePath) {
-    res.status(404).json({ error: "Файл не найден" });
-    return;
-  }
-
-  // Удаляем физический файл
-  const fullPath = path.join(ROOT_DIR, filePath);
   try {
-    await fs.promises.unlink(fullPath);
-  } catch (error) {
-    console.error("Failed to delete file:", error);
-    // Продолжаем даже если файл не удалось удалить
+    const { id, fieldName } = req.params;
+
+    // Проверка что поле является документом
+    if (!getDocumentFieldsSync().includes(fieldName)) {
+      res.status(400).json({ error: "Неверное поле документа" });
+      return;
+    }
+
+    const employees = await loadEmployees();
+    const index = employees.findIndex((item) => item.employee_id === id);
+
+    if (index === -1) {
+      res.status(404).json({ error: "Сотрудник не найден" });
+      return;
+    }
+
+    const employee = employees[index];
+    const filePath = employee[fieldName];
+
+    if (!filePath) {
+      res.status(404).json({ error: "Файл не найден" });
+      return;
+    }
+
+    // Удаляем физический файл (только если путь внутри FILES_DIR)
+    const fullPath = path.resolve(ROOT_DIR, filePath);
+    if (fullPath.startsWith(FILES_DIR + path.sep)) {
+      try {
+        await fs.promises.unlink(fullPath);
+      } catch (error) {
+        console.error("Failed to delete file:", error);
+        // Продолжаем даже если файл не удалось удалить
+      }
+    }
+
+    // Очищаем поле и companion date-колонки в CSV
+    const clearData = { [fieldName]: "" };
+    const columns = getEmployeeColumnsSync();
+    const issueDateField = `${fieldName}_issue_date`;
+    const expiryDateField = `${fieldName}_expiry_date`;
+    if (columns.includes(issueDateField)) clearData[issueDateField] = "";
+    if (columns.includes(expiryDateField)) clearData[expiryDateField] = "";
+    const updated = mergeRow(columns, employee, clearData);
+    updated.employee_id = id;
+    employees[index] = updated;
+    await saveEmployees(employees);
+
+    // Логирование удаления
+    const employeeName = [employee.last_name, employee.first_name, employee.middle_name]
+      .filter(Boolean)
+      .join(" ");
+    await addLog(
+      "UPDATE",
+      id,
+      employeeName,
+      fieldName,
+      filePath,
+      "",
+      `Удален документ: ${fieldName}`
+    );
+
+    res.status(204).end();
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
   }
-
-  // Очищаем поле и companion date-колонки в CSV
-  const clearData = { [fieldName]: "" };
-  const columns = getEmployeeColumnsSync();
-  const issueDateField = `${fieldName}_issue_date`;
-  const expiryDateField = `${fieldName}_expiry_date`;
-  if (columns.includes(issueDateField)) clearData[issueDateField] = "";
-  if (columns.includes(expiryDateField)) clearData[expiryDateField] = "";
-  const updated = mergeRow(columns, employee, clearData);
-  updated.employee_id = id;
-  employees[index] = updated;
-  await saveEmployees(employees);
-
-  // Логирование удаления
-  const employeeName = [employee.last_name, employee.first_name, employee.middle_name]
-    .filter(Boolean)
-    .join(" ");
-  await addLog(
-    "UPDATE",
-    id,
-    employeeName,
-    fieldName,
-    filePath,
-    "",
-    `Удален документ: ${fieldName}`
-  );
-
-  res.status(204).end();
 });
 
 app.listen(port, () => {

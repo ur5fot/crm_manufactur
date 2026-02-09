@@ -1158,11 +1158,15 @@ async function saveCell(employee, fieldName) {
 
   errorMessage.value = "";
   try {
+    const statusFields = ['employment_status', 'status_start_date', 'status_end_date'];
+    // Статусные поля управляются только через попап — не разрешаем inline-редактирование
+    if (statusFields.includes(fieldName)) {
+      delete editingCells[key];
+      return;
+    }
     const updatedEmployee = { ...employee, [fieldName]: newValue };
-    // Статусные поля управляются только через попап — не перезаписываем их при inline-редактировании
-    delete updatedEmployee.employment_status;
-    delete updatedEmployee.status_start_date;
-    delete updatedEmployee.status_end_date;
+    // Не перезаписываем статусные поля при inline-редактировании
+    for (const sf of statusFields) delete updatedEmployee[sf];
     await api.updateEmployee(employee.employee_id, updatedEmployee);
 
     // Обновляем локальные данные
