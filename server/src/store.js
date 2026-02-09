@@ -77,10 +77,11 @@ async function migrateEmployeesSchema(expectedColumns) {
     console.log(`⚠️  Обнаружены недостающие колонки в employees.csv: ${missingColumns.join(", ")}`);
     console.log("🔄 Выполняется автоматическая миграция...");
 
-    // Миграция переименованных колонок (vacation_* -> status_*)
+    // Миграция переименованных колонок
     const renamedColumns = {
       vacation_start_date: 'status_start_date',
-      vacation_end_date: 'status_end_date'
+      vacation_end_date: 'status_end_date',
+      foreign_passport_issue_date: 'foreign_passport_file_issue_date'
     };
     const renameMap = {};
     for (const [oldName, newName] of Object.entries(renamedColumns)) {
@@ -351,7 +352,6 @@ export async function getStatusReport(type) {
       if (start && start >= monthStart && start <= monthEnd) return true;
       if (end && end >= monthStart && end <= monthEnd) return true;
       if (start && end && start < monthStart && end > monthEnd) return true;
-      if (start && !end && start >= monthStart && start <= monthEnd) return true;
       return false;
     });
   } else {

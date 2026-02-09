@@ -331,19 +331,28 @@ app.post("/api/employees/import", importUpload.single("file"), async (req, res) 
 });
 
 app.get("/api/employees", async (req, res) => {
-  const employees = await loadEmployees();
-  res.json({ employees });
+  try {
+    const employees = await loadEmployees();
+    res.json({ employees });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.get("/api/employees/:id", async (req, res) => {
-  const employees = await loadEmployees();
-  const employee = employees.find((item) => item.employee_id === req.params.id);
-  if (!employee) {
-    res.status(404).json({ error: "Сотрудник не найден" });
-    return;
+  try {
+    const employees = await loadEmployees();
+    const employee = employees.find((item) => item.employee_id === req.params.id);
+    if (!employee) {
+      res.status(404).json({ error: "Сотрудник не найден" });
+      return;
+    }
+    res.json({ employee });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
   }
-
-  res.json({ employee });
 });
 
 app.post("/api/employees", async (req, res) => {
@@ -520,6 +529,13 @@ app.post("/api/employees/:id/files", (req, res, next) => {
     await fsPromises.unlink(req.file.path).catch(() => {});
     res.status(400).json({ error: "Неверное поле документа" });
     return;
+  }
+
+  // Удаляем старый файл если он существует (предотвращаем orphaned files при смене расширения)
+  const oldFilePath = employees[index][fileField];
+  if (oldFilePath) {
+    const oldFullPath = path.join(ROOT_DIR, oldFilePath);
+    await fsPromises.unlink(oldFullPath).catch(() => {});
   }
 
   // Переименовываем файл с правильным именем
