@@ -79,6 +79,9 @@ const lastUpdated = ref(null);
 const isRefreshing = ref(false);
 const dashboardEvents = ref({ today: [], thisWeek: [] });
 const expandedCard = ref(null); // null | 'total' | '<status_label>' | 'other'
+const activeReport = ref(null); // null | 'current' | 'month'
+const reportData = ref([]);
+const reportLoading = ref(false);
 
 const tabs = [
   { key: 'dashboard', label: 'Dashboard' },
@@ -179,6 +182,34 @@ const expandedEmployees = computed(() => {
   }
   return emps.filter(e => e.employment_status === key);
 });
+
+async function exportTableData() {
+  try {
+    await api.exportCSV(columnFilters);
+  } catch (e) {
+    console.error('Export error:', e);
+    errorMessage.value = 'Помилка експорту';
+  }
+}
+
+async function toggleReport(type) {
+  if (activeReport.value === type) {
+    activeReport.value = null;
+    reportData.value = [];
+    return;
+  }
+  activeReport.value = type;
+  reportLoading.value = true;
+  try {
+    const data = await api.getVacationReport(type);
+    reportData.value = data;
+  } catch (e) {
+    console.error('Report error:', e);
+    reportData.value = [];
+  } finally {
+    reportLoading.value = false;
+  }
+}
 
 const form = reactive(emptyEmployee());
 const documentFiles = reactive({});
@@ -428,7 +459,8 @@ async function loadDashboardEvents() {
 
 // Проверка и обработка отпусков
 async function checkVacations() {
-  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   console.log('🔍 Проверка отпусков, сегодня:', today);
 
   const returningToday = [];
@@ -839,7 +871,14 @@ function getDetailLabel(detail) {
   return detail;
 }
 
+function handleGlobalKeydown(e) {
+  if (e.key === 'Escape' && showVacationNotification.value) {
+    closeVacationNotification();
+  }
+}
+
 onMounted(async () => {
+  document.addEventListener('keydown', handleGlobalKeydown);
   await loadFieldsSchema();
   await loadEmployees();
   loadDashboardEvents();
@@ -847,6 +886,7 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
+  document.removeEventListener('keydown', handleGlobalKeydown);
   stopDashboardRefresh();
 });
 </script>
@@ -1027,6 +1067,41 @@ onUnmounted(() => {
             </span>
           </div>
         </div>
+        </div>
+        <!-- Швидкі звіти по відпустках -->
+        <div class="report-section">
+          <div class="report-buttons">
+            <button class="report-btn" :class="{ active: activeReport === 'current' }" @click="toggleReport('current')">
+              Хто у відпустці зараз
+            </button>
+            <button class="report-btn" :class="{ active: activeReport === 'month' }" @click="toggleReport('month')">
+              Відпустки цього місяця
+            </button>
+          </div>
+          <div v-if="activeReport && !reportLoading" class="report-result">
+            <div v-if="reportData.length === 0" class="report-empty">
+              {{ activeReport === 'current' ? 'Наразі ніхто не у відпустці' : 'Немає відпусток цього місяця' }}
+            </div>
+            <table v-else class="report-table">
+              <thead>
+                <tr>
+                  <th>ПІБ</th>
+                  <th>Початок</th>
+                  <th>Закінчення</th>
+                  <th>Днів</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="row in reportData" :key="row.employee_id">
+                  <td>{{ row.name }}</td>
+                  <td>{{ row.vacation_start_date }}</td>
+                  <td>{{ row.vacation_end_date }}</td>
+                  <td>{{ row.days }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div v-if="reportLoading" class="report-empty">Завантаження...</div>
         </div>
         <div v-if="lastUpdated" class="dashboard-footer">
           Оновлено: {{ formattedLastUpdated }}
@@ -1322,6 +1397,9 @@ onUnmounted(() => {
                 @click="clearAllFilters"
               >
                 Скинути фільтри ({{ getActiveFiltersCount() }})
+              </button>
+              <button class="export-btn" type="button" @click="exportTableData">
+                Експорт
               </button>
               <div class="status-bar">
                 <span v-if="loading">Завантаження...</span>
