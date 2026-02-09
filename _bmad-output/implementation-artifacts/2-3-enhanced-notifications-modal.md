@@ -312,3 +312,4 @@ Claude Opus 4.6
 
 - 2026-02-09: Story 2.3 implemented — Enhanced Notifications Modal. Changed backdrop opacity from 0.5 to 0.3 per UX spec. Added Escape key handler for closing modal via onMounted/onUnmounted lifecycle pattern. All 6 AC verified (5 were already implemented, 2 minor changes applied).
 - 2026-02-09: Code review fixes — [H1] Fixed timezone bug in checkVacations(): replaced toISOString().split('T')[0] with local date construction to prevent wrong date near midnight in non-UTC timezones. [M2] Fixed undefined CSS variable var(--radius) → var(--radius-lg) in .vacation-notification-modal border-radius. Production build passed (429ms).
+- 2026-02-09: Code review #2 fixes — [H1] Fixed endDate display in notification modal: used formatEventDate() instead of raw YYYY-MM-DD format. [M1] Removed 6 debug console.log() calls from checkVacations() function. Production build passed (426ms).

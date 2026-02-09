@@ -1,6 +1,6 @@
 # Story 3.1: Швидкі звіти по відпустках
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -328,3 +328,4 @@ Claude Opus 4.6
 ## Change Log
 
 - 2026-02-09: Story 3.1 implemented — Quick Vacation Reports. Added `GET /api/reports/vacations?type=current|month` backend endpoint with schema-driven vacation status detection. Frontend: 2 toggle buttons on Dashboard with inline result table. Production build passed (438ms).
+- 2026-02-09: Code review fixes — [H1] Fixed vacation days calculation: changed `Math.ceil((end - start) / 86400000)` to `Math.floor((end - start) / 86400000) + 1` to include both boundary dates (off-by-one error). [H2] Improved error UX in toggleReport: show `errorMessage` instead of console.error. [M1] Applied formatEventDate() to vacation dates in report table for user-friendly display. Production build passed (442ms).
