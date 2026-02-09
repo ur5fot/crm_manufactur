@@ -457,6 +457,41 @@ app.put("/api/employees/:id", async (req, res) => {
       res.status(400).json({ error: "Фамилия обязательна для заполнения" });
       return;
     }
+
+    // Валидация дат (формат и корректность)
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    const dateFields = getEmployeeColumnsSync().filter(col =>
+      col.includes('_date') || col === 'birth_date'
+    );
+
+    for (const dateField of dateFields) {
+      const dateValue = String(next[dateField] || "").trim();
+      if (dateValue) {
+        if (!dateRegex.test(dateValue)) {
+          res.status(400).json({ error: `Невірний формат дати для поля ${dateField} (очікується YYYY-MM-DD)` });
+          return;
+        }
+        if (isNaN(Date.parse(dateValue))) {
+          res.status(400).json({ error: `Невірна дата для поля ${dateField} (неіснуюча дата)` });
+          return;
+        }
+      }
+    }
+
+    // Валидация пар issue_date/expiry_date для документів
+    for (const docField of getDocumentFieldsSync()) {
+      const issueDateField = `${docField}_issue_date`;
+      const expiryDateField = `${docField}_expiry_date`;
+      const issueDate = String(next[issueDateField] || "").trim();
+      const expiryDate = String(next[expiryDateField] || "").trim();
+
+      if (issueDate && expiryDate && new Date(expiryDate) < new Date(issueDate)) {
+        res.status(400).json({
+          error: `Дата закінчення не може бути раніше дати видачі для документа ${docField}`
+        });
+        return;
+      }
+    }
     employees[index] = next;
 
     await saveEmployees(employees);
@@ -583,18 +618,37 @@ app.post("/api/employees/:id/files", (req, res, next) => {
       return;
     }
 
-    // Валідація формату дат до збереження файлу
+    // Валідація формату та коректності дат до збереження файлу
     const issueDate = String(req.body.issue_date || "").trim();
     const expiryDate = String(req.body.expiry_date || "").trim();
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+
     if (issueDate && !dateRegex.test(issueDate)) {
       await fsPromises.unlink(req.file.path).catch(() => {});
       res.status(400).json({ error: "Невірний формат дати видачі (очікується YYYY-MM-DD)" });
       return;
     }
+    if (issueDate && isNaN(Date.parse(issueDate))) {
+      await fsPromises.unlink(req.file.path).catch(() => {});
+      res.status(400).json({ error: "Невірна дата видачі (неіснуюча дата)" });
+      return;
+    }
+
     if (expiryDate && !dateRegex.test(expiryDate)) {
       await fsPromises.unlink(req.file.path).catch(() => {});
       res.status(400).json({ error: "Невірний формат дати закінчення (очікується YYYY-MM-DD)" });
+      return;
+    }
+    if (expiryDate && isNaN(Date.parse(expiryDate))) {
+      await fsPromises.unlink(req.file.path).catch(() => {});
+      res.status(400).json({ error: "Невірна дата закінчення (неіснуюча дата)" });
+      return;
+    }
+
+    // Перевіряємо що дата закінчення не раніше дати видачі
+    if (issueDate && expiryDate && new Date(expiryDate) < new Date(issueDate)) {
+      await fsPromises.unlink(req.file.path).catch(() => {});
+      res.status(400).json({ error: "Дата закінчення не може бути раніше дати видачі" });
       return;
     }
 

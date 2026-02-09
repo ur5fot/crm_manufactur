@@ -12,6 +12,7 @@ const employeeFields = [
   "last_name",
   "first_name",
   "middle_name",
+  "birth_date",
   "employment_status",
   "additional_status",
   "gender",
@@ -200,6 +201,13 @@ watch(() => route.name, async (newRoute, oldRoute) => {
   // Reset the creating new flag when navigating away from cards
   if (oldView === 'cards' && newView !== 'cards') {
     isCreatingNew.value = false;
+  }
+});
+
+// Watch route.params.id to handle URL changes within cards view
+watch(() => route.params.id, (newId) => {
+  if (route.name === 'cards' && newId && newId !== selectedId.value) {
+    selectEmployee(newId);
   }
 });
 
@@ -1856,7 +1864,7 @@ onUnmounted(() => {
               class="employee-card"
               :class="{ active: employee.employee_id === selectedId }"
               :style="{ animationDelay: `${index * 0.04}s` }"
-              @click="selectEmployee(employee.employee_id)"
+              @click="openEmployeeCard(employee.employee_id)"
             >
               <div class="employee-name">{{ displayName(employee) }}</div>
               <div class="employee-meta">

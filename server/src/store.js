@@ -491,10 +491,21 @@ export async function addLog(action, employeeId, employeeName, fieldName = "", o
   };
 
   logs.push(newLog);
-  await saveLogs(logs);
 
-  // Автоматическая очистка логов после записи
-  await cleanupLogsIfNeeded();
+  // Автоматическая очистка логов - выполняем в той же операции записи для предотвращения race condition
+  const config = await loadConfig();
+  const maxEntries = parseInt(config.max_log_entries, 10) || 1000;
+
+  if (logs.length > maxEntries) {
+    // Сортируем по timestamp (новые сначала)
+    logs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    // Оставляем только maxEntries последних записей
+    const trimmedLogs = logs.slice(0, maxEntries);
+    await saveLogs(trimmedLogs);
+    console.log(`✂️  Логи очищены: ${logs.length} → ${trimmedLogs.length} записей (лимит: ${maxEntries})`);
+  } else {
+    await saveLogs(logs);
+  }
 
   return newLog;
 }
@@ -523,31 +534,6 @@ export async function loadConfig() {
   }
 }
 
-/**
- * Очистка старых логов если превышен лимит
- */
-export async function cleanupLogsIfNeeded() {
-  try {
-    const config = await loadConfig();
-    const maxEntries = parseInt(config.max_log_entries, 10) || 1000;
-
-    const logs = await loadLogs();
-
-    if (logs.length > maxEntries) {
-      // Сортируем по timestamp (новые сначала)
-      logs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-
-      // Оставляем только maxEntries последних записей
-      const trimmedLogs = logs.slice(0, maxEntries);
-
-      await saveLogs(trimmedLogs);
-
-      console.log(`✂️  Логи очищены: ${logs.length} → ${trimmedLogs.length} записей (лимит: ${maxEntries})`);
-    }
-  } catch (error) {
-    console.error('Ошибка очистки логов:', error.message);
-  }
-}
 
 /**
  * Получить события дней рождения (сегодня и следующие 7 дней)
@@ -579,27 +565,49 @@ export async function getBirthdayEvents() {
 
     if (isNaN(birthYear) || isNaN(birthMonth) || isNaN(birthDay)) return;
 
-    // Проверяем день рождения в текущем году
+    // Проверяем день рождения в текущем году и следующем (для случая перехода через Новый год)
     const thisYearBirthday = new Date(currentYear, birthMonth - 1, birthDay);
-    const birthdayStr = localDateStr(thisYearBirthday);
-
-    // Вычисляем возраст
-    const age = currentYear - birthYear;
+    const nextYearBirthday = new Date(currentYear + 1, birthMonth - 1, birthDay);
 
     const name = [emp.last_name, emp.first_name, emp.middle_name].filter(Boolean).join(' ');
 
-    const event = {
-      employee_id: emp.employee_id,
-      employee_name: name,
-      birth_date: birthDate,
-      current_year_birthday: birthdayStr,  // Birthday in current year for display/sorting
-      age: age
-    };
+    // Проверяем день рождения в текущем году
+    if (thisYearBirthday >= now && thisYearBirthday <= in7days) {
+      const birthdayStr = localDateStr(thisYearBirthday);
+      const age = currentYear - birthYear;
 
-    if (birthdayStr === today) {
-      todayEvents.push(event);
-    } else if (thisYearBirthday > now && thisYearBirthday <= in7days) {
-      next7DaysEvents.push(event);
+      const event = {
+        employee_id: emp.employee_id,
+        employee_name: name,
+        birth_date: birthDate,
+        current_year_birthday: birthdayStr,
+        age: age
+      };
+
+      if (birthdayStr === today) {
+        todayEvents.push(event);
+      } else {
+        next7DaysEvents.push(event);
+      }
+    }
+    // Проверяем день рождения в следующем году (для случаев типа 29 декабря -> 2 января)
+    else if (nextYearBirthday >= now && nextYearBirthday <= in7days) {
+      const birthdayStr = localDateStr(nextYearBirthday);
+      const age = (currentYear + 1) - birthYear;
+
+      const event = {
+        employee_id: emp.employee_id,
+        employee_name: name,
+        birth_date: birthDate,
+        current_year_birthday: birthdayStr,
+        age: age
+      };
+
+      if (birthdayStr === today) {
+        todayEvents.push(event);
+      } else {
+        next7DaysEvents.push(event);
+      }
     }
   });
 
