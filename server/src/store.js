@@ -77,12 +77,31 @@ async function migrateEmployeesSchema(expectedColumns) {
     console.log(`⚠️  Обнаружены недостающие колонки в employees.csv: ${missingColumns.join(", ")}`);
     console.log("🔄 Выполняется автоматическая миграция...");
 
+    // Миграция переименованных колонок (vacation_* -> status_*)
+    const renamedColumns = {
+      vacation_start_date: 'status_start_date',
+      vacation_end_date: 'status_end_date'
+    };
+    const renameMap = {};
+    for (const [oldName, newName] of Object.entries(renamedColumns)) {
+      if (currentColumns.includes(oldName) && !currentColumns.includes(newName)) {
+        renameMap[oldName] = newName;
+        console.log(`🔄 Переименование колонки: ${oldName} → ${newName}`);
+      }
+    }
+
     // Загружаем данные
     const employees = await readCsv(EMPLOYEES_PATH, currentColumns);
 
-    // Добавляем недостающие колонки с пустыми значениями
+    // Добавляем недостающие колонки с пустыми значениями и переносим данные из переименованных
     const migratedEmployees = employees.map(emp => {
       const updated = { ...emp };
+      // Копируем данные из старых колонок в новые
+      for (const [oldName, newName] of Object.entries(renameMap)) {
+        if (updated[oldName] && !updated[newName]) {
+          updated[newName] = updated[oldName];
+        }
+      }
       missingColumns.forEach(col => {
         if (!(col in updated)) {
           updated[col] = "";

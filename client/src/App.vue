@@ -99,8 +99,8 @@ function switchView(view) {
 
 function startDashboardRefresh() {
   stopDashboardRefresh();
-  refreshIntervalId.value = setInterval(() => {
-    loadEmployees(true);
+  refreshIntervalId.value = setInterval(async () => {
+    await loadEmployees(true);
     loadDashboardEvents();
   }, 300000);
 }
@@ -358,12 +358,14 @@ function closeStatusChangePopup() {
 async function applyStatusChange() {
   if (!statusChangeForm.status || !statusChangeForm.startDate) return;
   if (!form.employee_id) return;
+  if (saving.value) return;
   if (statusChangeForm.endDate && statusChangeForm.endDate < statusChangeForm.startDate) {
     errorMessage.value = 'Дата завершення не може бути раніше дати початку';
     return;
   }
 
   errorMessage.value = '';
+  saving.value = true;
   try {
     // Используем данные из employees.value, а не из form, чтобы не сохранять несохранённые изменения формы
     const currentEmployee = employees.value.find(e => e.employee_id === form.employee_id) || {};
@@ -379,13 +381,17 @@ async function applyStatusChange() {
     closeStatusChangePopup();
   } catch (error) {
     errorMessage.value = error.message;
+  } finally {
+    saving.value = false;
   }
 }
 
 async function resetStatus() {
   if (!form.employee_id) return;
+  if (saving.value) return;
 
   errorMessage.value = '';
+  saving.value = true;
   try {
     // Используем данные из employees.value, а не из form, чтобы не сохранять несохранённые изменения формы
     const currentEmployee = employees.value.find(e => e.employee_id === form.employee_id) || {};
@@ -400,6 +406,8 @@ async function resetStatus() {
     await selectEmployee(form.employee_id);
   } catch (error) {
     errorMessage.value = error.message;
+  } finally {
+    saving.value = false;
   }
 }
 
@@ -974,7 +982,7 @@ onMounted(async () => {
   document.addEventListener('keydown', handleGlobalKeydown);
   await loadFieldsSchema();
   await loadEmployees();
-  loadDashboardEvents();
+  await loadDashboardEvents();
   startDashboardRefresh();
 });
 
@@ -1062,7 +1070,7 @@ onUnmounted(() => {
           <button
             class="primary"
             type="button"
-            :disabled="!statusChangeForm.status || !statusChangeForm.startDate"
+            :disabled="!statusChangeForm.status || !statusChangeForm.startDate || saving"
             @click="applyStatusChange"
           >
             Застосувати
@@ -1340,6 +1348,7 @@ onUnmounted(() => {
                         v-if="!isNew && form.employment_status && form.employment_status !== workingStatus"
                         class="secondary small"
                         type="button"
+                        :disabled="saving"
                         @click="resetStatus"
                       >
                         Скинути статус
