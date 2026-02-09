@@ -156,6 +156,22 @@ function statusEmoji(statusValue) {
   return 'ℹ️';
 }
 
+function timelineEventEmoji(event) {
+  if (event.type === 'status_end') return '🏢';
+  return statusEmoji(event.status_type);
+}
+
+function timelineEventDesc(event) {
+  if (event.type === 'status_end') {
+    return `— повернення (${event.status_type || 'статус'})`;
+  }
+  const label = event.status_type || 'статус';
+  if (event.end_date) {
+    return `— ${label} (до ${formatEventDate(event.end_date)})`;
+  }
+  return `— ${label}`;
+}
+
 // Маппинг технических названий полей на человекопонятные — динамически из fields_schema
 const fieldLabels = computed(() => {
   const map = {};
@@ -1154,11 +1170,9 @@ onUnmounted(() => {
             Нічого термінового
           </div>
           <div v-for="event in dashboardEvents.today" :key="event.employee_id + event.type" class="timeline-event">
-            <span class="timeline-emoji">{{ event.type === 'vacation_start' ? '✈️' : '🏢' }}</span>
+            <span class="timeline-emoji">{{ timelineEventEmoji(event) }}</span>
             <span class="timeline-name timeline-link" @click="openEmployeeCard(event.employee_id)">{{ event.name }}</span>
-            <span class="timeline-desc">
-              {{ event.type === 'vacation_start' ? (event.end_date ? `— початок відпустки (до ${formatEventDate(event.end_date)})` : '— початок відпустки') : '— повернення з відпустки' }}
-            </span>
+            <span class="timeline-desc">{{ timelineEventDesc(event) }}</span>
           </div>
         </div>
         <!-- Timeline: Цього тижня -->
@@ -1170,11 +1184,9 @@ onUnmounted(() => {
           <div v-for="event in dashboardEvents.thisWeek" :key="event.employee_id + event.type + event.date" class="timeline-event">
             <span class="timeline-date">{{ formatEventDate(event.date) }}</span>
             <span class="timeline-days-badge">{{ daysFromNowLabel(event.date) }}</span>
-            <span class="timeline-emoji">{{ event.type === 'vacation_start' ? '✈️' : '🏢' }}</span>
+            <span class="timeline-emoji">{{ timelineEventEmoji(event) }}</span>
             <span class="timeline-name timeline-link" @click="openEmployeeCard(event.employee_id)">{{ event.name }}</span>
-            <span class="timeline-desc">
-              {{ event.type === 'vacation_start' ? (event.end_date ? `— початок відпустки (до ${formatEventDate(event.end_date)})` : '— початок відпустки') : '— повернення з відпустки' }}
-            </span>
+            <span class="timeline-desc">{{ timelineEventDesc(event) }}</span>
           </div>
         </div>
         </div>
