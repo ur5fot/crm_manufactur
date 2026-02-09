@@ -461,7 +461,7 @@ When adding new dictionary types:
 
 **Important:** This project maintains bilingual documentation. When making changes:
 
-1. **Update all three docs:** [README.md](README.md), [README.ru.md](README.ru.md), and [CLAUDE.md](CLAUDE.md)
+1. **Update all three docs:** [README.md](README.md), [README.uk.md](README.uk.md), and [CLAUDE.md](CLAUDE.md)
 2. **Keep sections synchronized:** Same structure, same code examples
 3. **Translate accurately:** Technical terms consistent, instructions equivalent
 4. **Test instructions:** Verify setup steps work on fresh install
