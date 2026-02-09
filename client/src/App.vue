@@ -139,6 +139,7 @@ const statusReturning = ref([]);
 const statusStarting = ref([]);
 const showStatusNotification = ref(false);
 const notifiedEmployeeIds = new Set();
+let notifiedDate = '';
 
 // Динамические значения статусов из fields_schema (по позиции в field_options)
 // Конвенция: options[0] = рабочий, options[1] = уволен, options[2] = отпуск, options[3] = больничный
@@ -571,6 +572,13 @@ async function loadDashboardEvents() {
 async function checkStatusChanges() {
   const now = new Date();
   const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+  // Сбрасываем уведомления при смене дня (для длительных сессий)
+  if (notifiedDate !== today) {
+    notifiedEmployeeIds.clear();
+    notifiedDate = today;
+  }
+
   const returningToday = [];
   const startingToday = [];
   const needsUpdate = [];
@@ -855,6 +863,10 @@ async function loadFieldsSchema() {
 const summaryColumns = ref([]);
 
 function startEditCell(employeeId, fieldName, currentValue) {
+  // Проверяем, разрешено ли редактирование этого поля в таблице
+  const col = summaryColumns.value.find(c => c.key === fieldName);
+  if (col && !col.editable) return;
+
   const key = `${employeeId}_${fieldName}`;
   editingCells[key] = currentValue || "";
 }
