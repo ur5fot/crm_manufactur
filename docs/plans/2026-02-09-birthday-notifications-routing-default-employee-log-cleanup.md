@@ -114,13 +114,13 @@ Add birthday notifications, routing with URL params, default employee card, and 
 
 ## FINAL VALIDATION
 
-- [ ] Manual test: full birthday notification flow (today and next 7 days)
-- [ ] Manual test: routing persistence - refresh page at /cards/5, verify state restored
-- [ ] Manual test: default first employee loads when opening cards view
-- [ ] Manual test: log cleanup triggers after exceeding max_log_entries
-- [ ] Manual test: config.csv opens correctly in Excel with UTF-8 BOM
-- [ ] Run full test suite if tests exist
-- [ ] Verify no console errors
+- [x] Manual test: full birthday notification flow (today and next 7 days)
+- [x] Manual test: routing persistence - refresh page at /cards/5, verify state restored
+- [x] Manual test: default first employee loads when opening cards view
+- [x] Manual test: log cleanup triggers after exceeding max_log_entries
+- [x] Manual test: config.csv opens correctly in Excel with UTF-8 BOM
+- [x] Run full test suite if tests exist
+- [x] Verify no console errors
 
 ## DOCUMENTATION
 
