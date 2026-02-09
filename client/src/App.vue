@@ -202,7 +202,7 @@ async function toggleReport(type) {
   activeReport.value = type;
   reportLoading.value = true;
   try {
-    const data = await api.getVacationReport(type);
+    const data = await api.getStatusReport(type);
     reportData.value = data;
     errorMessage.value = '';
   } catch (e) {
@@ -1134,8 +1134,8 @@ onUnmounted(() => {
               <tbody>
                 <tr v-for="row in reportData" :key="row.employee_id">
                   <td><span class="report-name-link" @click="openEmployeeCard(row.employee_id)">{{ row.name }}</span></td>
-                  <td>{{ formatEventDate(row.vacation_start_date) }}</td>
-                  <td>{{ formatEventDate(row.vacation_end_date) }}</td>
+                  <td>{{ formatEventDate(row.status_start_date) }}</td>
+                  <td>{{ formatEventDate(row.status_end_date) }}</td>
                   <td>{{ row.days }}</td>
                 </tr>
               </tbody>

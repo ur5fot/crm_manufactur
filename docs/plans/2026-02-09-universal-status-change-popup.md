@@ -49,11 +49,11 @@
 - Modify: `server/src/index.js`
 
 **Steps:**
-- [ ] В `store.js`: `getDashboardEvents()` — искать `status_start_date`/`status_end_date` вместо `vacation_*`
-- [ ] Добавить поле `status_type` к событиям (значение `employment_status` сотрудника)
-- [ ] Адаптировать описания событий — вместо "початок відпустки" использовать значение статуса из данных
-- [ ] В `index.js`: проверить endpoint `/api/reports/vacations` — адаптировать или убрать если не используется в UI
-- [ ] Проверить что API возвращает корректные события для всех типов статусов
+- [x] В `store.js`: `getDashboardEvents()` — искать `status_start_date`/`status_end_date` вместо `vacation_*`
+- [x] Добавить поле `status_type` к событиям (значение `employment_status` сотрудника)
+- [x] Адаптировать описания событий — вместо "початок відпустки" использовать значение статуса из данных
+- [x] В `index.js`: проверить endpoint `/api/reports/vacations` — адаптировать или убрать если не используется в UI
+- [x] Проверить что API возвращает корректные события для всех типов статусов
 
 ### Task 3: Frontend — Status Change Popup
 

@@ -17,7 +17,7 @@ import {
   loadFieldsSchema,
   getDashboardStats,
   getDashboardEvents,
-  getVacationReport,
+  getStatusReport,
   exportEmployees,
   ROOT_DIR,
   initializeEmployeeColumns,
@@ -108,14 +108,14 @@ app.get("/api/dashboard/events", async (_req, res) => {
   }
 });
 
-app.get("/api/reports/vacations", async (req, res) => {
+app.get("/api/reports/statuses", async (req, res) => {
   const type = req.query.type;
   if (type !== 'current' && type !== 'month') {
     res.status(400).json({ error: 'Query parameter "type" must be "current" or "month"' });
     return;
   }
   try {
-    const report = await getVacationReport(type);
+    const report = await getStatusReport(type);
     res.json(report);
   } catch (err) {
     console.error(err);

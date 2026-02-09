@@ -197,14 +197,16 @@ export async function getDashboardEvents() {
 
   employees.forEach(emp => {
     const name = [emp.last_name, emp.first_name, emp.middle_name].filter(Boolean).join(' ');
-    const startDate = emp.vacation_start_date;
-    const endDate = emp.vacation_end_date;
+    const startDate = emp.status_start_date;
+    const endDate = emp.status_end_date;
+    const statusType = emp.employment_status || '';
 
     if (startDate === today) {
       todayEvents.push({
         employee_id: emp.employee_id,
         name,
-        type: 'vacation_start',
+        type: 'status_start',
+        status_type: statusType,
         date: startDate,
         end_date: endDate || ''
       });
@@ -213,7 +215,8 @@ export async function getDashboardEvents() {
       todayEvents.push({
         employee_id: emp.employee_id,
         name,
-        type: 'vacation_end',
+        type: 'status_end',
+        status_type: statusType,
         date: endDate
       });
     }
@@ -222,7 +225,8 @@ export async function getDashboardEvents() {
       weekEvents.push({
         employee_id: emp.employee_id,
         name,
-        type: 'vacation_start',
+        type: 'status_start',
+        status_type: statusType,
         date: startDate,
         end_date: endDate || ''
       });
@@ -231,7 +235,8 @@ export async function getDashboardEvents() {
       weekEvents.push({
         employee_id: emp.employee_id,
         name,
-        type: 'vacation_end',
+        type: 'status_end',
+        status_type: statusType,
         date: endDate
       });
     }
@@ -242,22 +247,26 @@ export async function getDashboardEvents() {
   return { today: todayEvents, thisWeek: weekEvents };
 }
 
-export async function getVacationReport(type) {
+export async function getStatusReport(type) {
   const employees = await loadEmployees();
   const schema = await loadFieldsSchema();
   const statusField = schema.find(f => f.field_name === 'employment_status');
   const options = statusField?.field_options?.split('|') || [];
-  const vacationOpt = options[2] || '';
+  const workingOpt = options[0] || '';
 
   const now = new Date();
   const today = localDateStr(now);
 
   let filtered;
   if (type === 'current') {
+    // Employees with any non-working status that have active date ranges
     filtered = employees.filter(emp => {
-      if (vacationOpt && emp.employment_status === vacationOpt) return true;
-      const start = emp.vacation_start_date;
-      const end = emp.vacation_end_date;
+      if (workingOpt && emp.employment_status !== workingOpt && emp.employment_status) {
+        const start = emp.status_start_date;
+        if (start) return true;
+      }
+      const start = emp.status_start_date;
+      const end = emp.status_end_date;
       if (start && end && start <= today && end >= today) return true;
       return false;
     });
@@ -266,8 +275,8 @@ export async function getVacationReport(type) {
     const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
     const monthEnd = today.slice(0, 7) + '-' + String(lastDay).padStart(2, '0');
     filtered = employees.filter(emp => {
-      const start = emp.vacation_start_date;
-      const end = emp.vacation_end_date;
+      const start = emp.status_start_date;
+      const end = emp.status_end_date;
       if (!start && !end) return false;
       if (start && start >= monthStart && start <= monthEnd) return true;
       if (end && end >= monthStart && end <= monthEnd) return true;
@@ -280,14 +289,14 @@ export async function getVacationReport(type) {
 
   return filtered.map(emp => {
     const name = [emp.last_name, emp.first_name, emp.middle_name].filter(Boolean).join(' ');
-    const start = emp.vacation_start_date;
-    const end = emp.vacation_end_date;
+    const start = emp.status_start_date;
+    const end = emp.status_end_date;
     let days = 0;
     if (start && end) {
       days = Math.floor((new Date(end) - new Date(start)) / 86400000) + 1;
       if (days < 0) days = 0;
     }
-    return { employee_id: emp.employee_id, name, vacation_start_date: start, vacation_end_date: end, days };
+    return { employee_id: emp.employee_id, name, status_type: emp.employment_status || '', status_start_date: start, status_end_date: end, days };
   });
 }
 
