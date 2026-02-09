@@ -9,9 +9,9 @@ Local CRM system that stores data in CSV files and PDF documents. CSV files can 
 - **CSV-based storage** - no database required, edit data directly in Excel
 - **Dynamic UI** - entire form and table structure controlled by `fields_schema.csv`
 - **Sequential numeric IDs** - simple employee IDs (1, 2, 3...)
-- **File management** - upload and store PDF documents per employee
-- **Dashboard** - stat cards with expandable employee lists, vacation timeline with clickable links
-- **Vacation tracking** - automatic status changes, notifications for vacation start/end dates
+- **Document management** - upload PDF and image documents with issue/expiry dates, document expiry notifications
+- **Dashboard** - stat cards with expandable employee lists, status change and document expiry timeline with clickable links
+- **Universal status tracking** - status change popup, automatic status management, notifications for all status types (vacation, sick leave, etc.)
 - **Summary table** - inline editing via double-click, multi-select filters with empty value support
 - **Automatic audit logging** - all changes tracked in `logs.csv` with field-level details
 - **CSV import** - bulk import employees from CSV files
@@ -35,7 +35,7 @@ crm_manufactur/
 │   ├── logs.csv                   # Audit log of all changes - gitignored
 │   ├── employees_import_sample.csv # Import template with UTF-8 BOM
 │   └── dictionaries.csv           # (legacy, kept for compatibility)
-├── files/                         # Uploaded PDF documents - gitignored
+├── files/                         # Uploaded documents (PDF/images) - gitignored
 │   └── employee_[ID]/
 ├── server/                        # Express.js backend
 └── client/                        # Vue.js frontend
@@ -122,21 +122,26 @@ Open `http://localhost:5173` in your browser.
   22. `tax_id` - Tax ID
   23. `email` - Email
   24. `blood_group` - Blood group (I (0), II (A), III (B), IV (AB))
-  25. `workplace_location` - Workplace location
-  26. `residence_place` - Residence place
-  27. `registration_place` - Registration place
-  28. `driver_license_file` - Driver's license (file)
-  29. `id_certificate_file` - ID certificate (file)
-  30. `foreign_passport_number` - Foreign passport number
-  31. `foreign_passport_issue_date` - Foreign passport issue date
-  32. `foreign_passport_file` - Foreign passport (file)
-  33. `criminal_record_file` - Criminal record certificate (file)
-  34. `phone` - Phone number
-  35. `phone_note` - Phone note
-  36. `education` - Education
-  37. `notes` - Notes
-  38. `vacation_start_date` - Vacation start date (YYYY-MM-DD)
-  39. `vacation_end_date` - Vacation end date (YYYY-MM-DD)
+  25. `residence_place` - Residence place
+  26. `registration_place` - Registration place
+  27. `personal_matter_file` - Personal matter (file)
+  28. `medical_commission_file` - Medical commission (file)
+  29. `veterans_certificate_file` - Veteran's certificate (file)
+  30. `driver_license_file` - Driver's license (file)
+  31. `id_certificate_file` - ID certificate (file)
+  32. `foreign_passport_number` - Foreign passport number
+  33. `foreign_passport_file` - Foreign passport (file)
+  34. `criminal_record_file` - Criminal record certificate (file)
+  35. `military_id_file` - Military ID (file)
+  36. `medical_certificate_file` - Medical certificate (file)
+  37. `insurance_file` - Insurance policy (file)
+  38. `education_diploma_file` - Education diploma (file)
+  39. `phone` - Phone number
+  40. `phone_note` - Phone note
+  41. `education` - Education
+  42. `notes` - Notes
+  43. `status_start_date` - Status start date (YYYY-MM-DD)
+  44. `status_end_date` - Status end date (YYYY-MM-DD)
   40. Additional document and service fields
 
 - **fields_schema.csv** - **Meta-schema for UI control** (8 columns, local file in `.gitignore`):
@@ -170,7 +175,7 @@ Open `http://localhost:5173` in your browser.
 
 ### Dashboard
 
-The Dashboard is the home screen showing employee statistics and upcoming vacation events.
+The Dashboard is the home screen showing employee statistics and upcoming status change events.
 
 **Stat Cards:**
 - 4-column grid displaying employee counts by employment status (Total, per-status, Other)
@@ -178,9 +183,11 @@ The Dashboard is the home screen showing employee statistics and upcoming vacati
 - Only one card can be expanded at a time (accordion behavior)
 - Click an employee name to navigate directly to their card
 
-**Vacation Timeline:**
+**Status Timeline:**
 - Two-column layout with "Today" and "Next 7 days" cards
-- Shows employees starting or returning from vacation with date badges
+- Shows employees with upcoming status changes (vacation, sick leave, etc.) with date badges
+- Shows document expiry events (📄 expiring soon, ⚠️ expiring today)
+- Emoji indicators by status type: ✈️ vacation, 🏥 sick leave, ℹ️ other
 - Employee names are clickable links to their cards
 
 ### Summary Table
@@ -200,44 +207,56 @@ The summary table provides powerful filtering and editing capabilities:
 - Multiple selections work with OR logic
 - Active filter count displayed in clear button
 
-### File Uploads
+### Document Management
 
 **Dynamic document types:** All fields with type `file` in `fields_schema.csv` automatically become available for upload in the Documents section.
 
+**Upload popup:**
+- Click "Завантажити" button to open an upload popup modal
+- Select a file (PDF or images: jpg, jpeg, png, gif, webp)
+- Optionally set issue/registration date and expiry date
+- Dates are stored in auto-generated companion columns (`{field}_issue_date`, `{field}_expiry_date`)
+
 **Features:**
-- Upload PDF documents per employee
-- Files saved with proper names based on field type (e.g., `driver_license_file.pdf`, `id_certificate_file.pdf`)
+- Upload PDF and image documents per employee
+- Files saved with proper names and original extensions (e.g., `driver_license_file.pdf`, `id_certificate_file.jpg`)
+- Issue and expiry dates displayed in the documents table
+- Dates can be edited for existing documents without re-uploading the file
 - "Open Folder" button in Documents section opens employee's folder in OS file explorer
 - File paths automatically written to corresponding columns in `employees.csv`
-- Temporary file handling ensures correct naming even when form data is delayed
+
+**Document expiry notifications:**
+- Automatic notification popup when documents expire today or within 7 days
+- Document expiry events shown in the dashboard timeline
+- Emoji indicators: ⚠️ expired today, 📄 expiring within 7 days
 
 **Adding new document types:**
-Simply add a new row to `fields_schema.csv` with `field_type=file` - no code changes needed!
+Simply add a new row to `fields_schema.csv` with `field_type=file` and restart the server - date columns are auto-generated, no code changes needed!
 
-### Vacation Tracking
+### Status Change System
 
-Automatic vacation management with status changes and notifications.
+Universal status management with popup, automatic status changes, and notifications for all status types.
 
-**How it works:**
-- Set `vacation_start_date` and `vacation_end_date` in employee card
-- On page load, the system automatically:
-  - Changes status to vacation value (found by searching "отпуск" in `employment_status` options from `fields_schema.csv`) when start date arrives
-  - Shows notification with employees starting vacation today (✈️ blue)
-  - Shows notification with employees returning from vacation today (🏢 green)
-  - Clears vacation dates and restores first value from `employment_status` (usually "Работает" / Working) after vacation ends
+**Status Change Popup:**
+- `employment_status` is read-only in the employee card
+- Click "Change Status" button to open the popup
+- Select any status (except the working/active status which is the default)
+- Set a start date (required) and optionally an end date
+- Click "Reset Status" to restore the working status and clear dates
 
-**Dynamic statuses:**
-- Status values are taken from `fields_schema.csv` → `employment_status` → `field_options`
-- On vacation return: first value (e.g., "Работает" / Working, "Активный" / Active)
-- On vacation start: value containing "отпуск" (e.g., "Отпуск" / Vacation, "В отпуске" / On vacation)
+**Automatic status management:**
+- On page load, the system automatically checks all employees with `status_start_date`/`status_end_date`:
+  - If `status_end_date` has passed — restores working status (first value from `employment_status` options) and clears dates
+  - Works for all statuses (vacation, sick leave, etc.), not just vacation
 
 **Notifications:**
-- Modal window with two sections: starting and returning employees
-- Color-coded indicators (blue for starting, green for returning)
+- Modal window with two sections: employees changing status today and employees returning
+- Emoji indicators by status type: ✈️ vacation, 🏥 sick leave, ℹ️ other statuses
+- Color-coded (blue for status change, green for returning)
 - Displays name, position, and end date for context
-- Appears automatically on page load when there are vacation events today
+- Appears automatically on page load when there are status events today
 
-**No manual intervention required** - all status changes happen automatically!
+**No manual intervention required** - expired statuses are restored automatically!
 
 ### CSV Import
 
@@ -277,8 +296,9 @@ All dropdown values in forms are managed via `data/dictionaries.csv`:
 - `POST /api/employees` - Create employee (accepts single employee object)
 - `PUT /api/employees/:id` - Update employee (accepts single employee object)
 - `DELETE /api/employees/:id` - Delete employee
-- `POST /api/employees/:id/files` - Upload PDF document
+- `POST /api/employees/:id/files` - Upload document (PDF/images) with optional issue_date and expiry_date
 - `DELETE /api/employees/:id/files/:fieldName` - Delete employee document
+- `GET /api/document-expiry` - Get document expiry events (today and next 7 days)
 - `POST /api/employees/:id/open-folder` - Open employee's document folder in OS file explorer
 - `POST /api/employees/import` - Bulk import from CSV
 - `GET /api/dictionaries` - Get all reference data

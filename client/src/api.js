@@ -71,8 +71,11 @@ export const api = {
   getDashboardEvents() {
     return request("/dashboard/events");
   },
-  getVacationReport(type) {
-    return request(`/reports/vacations?type=${type}`);
+  getDocumentExpiry() {
+    return request("/document-expiry");
+  },
+  getStatusReport(type) {
+    return request(`/reports/statuses?type=${type}`);
   },
   async exportCSV(filters, searchTerm = '') {
     const queryParams = new URLSearchParams();

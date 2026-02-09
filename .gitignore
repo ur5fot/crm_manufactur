@@ -13,3 +13,6 @@ data/fields_schema.csv
 # Claude Code та BMAD (особисті налаштування та output)
 .claude/
 _bmad/
+
+# ralphex progress logs
+progress*.txt

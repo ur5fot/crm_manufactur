@@ -1102,6 +1102,27 @@ button.small {
   font-style: italic;
 }
 
+.status-details {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.status-badge {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.status-badge.returning-badge {
+  background: #d1fae5;
+  color: #065f46;
+}
+
 .vacation-notification-footer {
   padding: 16px 24px;
   border-top: 1px solid var(--line);
@@ -1388,12 +1409,28 @@ button.small {
   background: #1565C0;
 }
 
-/* Vacation days calculation display (Story 3.3) */
-.vacation-days-display {
-  margin-top: 12px;
-  font-size: 0.85em;
-  color: var(--muted);
-  font-style: italic;
+/* Status field row — readonly input + action buttons */
+.status-field-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.status-readonly-input {
+  flex: 1;
+  background: var(--bg) !important;
+  cursor: default;
+}
+
+/* Status change popup form */
+.status-change-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.status-change-footer {
+  gap: 12px;
 }
 
 /* Clickable employee names in reports (Story 3.3 enhancement) */
@@ -1408,4 +1445,19 @@ button.small {
 .report-name-link:hover {
   background: rgba(15, 118, 110, 0.08);
   color: var(--accent-strong);
+}
+
+/* Document date display */
+.doc-date-empty {
+  color: var(--muted);
+}
+
+.doc-date-expiring {
+  color: #d97706;
+  font-weight: 500;
+}
+
+.doc-date-expired {
+  color: #dc2626;
+  font-weight: 600;
 }

@@ -63,7 +63,7 @@ async function migrateEmployeesSchema(expectedColumns) {
     }
 
     // Парсим заголовок
-    const headerLine = lines[0];
+    const headerLine = lines[0].replace(/^\uFEFF/, '');
     const currentColumns = headerLine.split(";").map(col => col.trim().replace(/^"|"$/g, ''));
 
     // Находим недостающие колонки
@@ -77,12 +77,32 @@ async function migrateEmployeesSchema(expectedColumns) {
     console.log(`⚠️  Обнаружены недостающие колонки в employees.csv: ${missingColumns.join(", ")}`);
     console.log("🔄 Выполняется автоматическая миграция...");
 
+    // Миграция переименованных колонок
+    const renamedColumns = {
+      vacation_start_date: 'status_start_date',
+      vacation_end_date: 'status_end_date',
+      foreign_passport_issue_date: 'foreign_passport_file_issue_date'
+    };
+    const renameMap = {};
+    for (const [oldName, newName] of Object.entries(renamedColumns)) {
+      if (currentColumns.includes(oldName) && !currentColumns.includes(newName)) {
+        renameMap[oldName] = newName;
+        console.log(`🔄 Переименование колонки: ${oldName} → ${newName}`);
+      }
+    }
+
     // Загружаем данные
     const employees = await readCsv(EMPLOYEES_PATH, currentColumns);
 
-    // Добавляем недостающие колонки с пустыми значениями
+    // Добавляем недостающие колонки с пустыми значениями и переносим данные из переименованных
     const migratedEmployees = employees.map(emp => {
       const updated = { ...emp };
+      // Копируем данные из старых колонок в новые
+      for (const [oldName, newName] of Object.entries(renameMap)) {
+        if (updated[oldName] && !updated[newName]) {
+          updated[newName] = updated[oldName];
+        }
+      }
       missingColumns.forEach(col => {
         if (!(col in updated)) {
           updated[col] = "";
@@ -197,14 +217,16 @@ export async function getDashboardEvents() {
 
   employees.forEach(emp => {
     const name = [emp.last_name, emp.first_name, emp.middle_name].filter(Boolean).join(' ');
-    const startDate = emp.vacation_start_date;
-    const endDate = emp.vacation_end_date;
+    const startDate = emp.status_start_date;
+    const endDate = emp.status_end_date;
+    const statusType = emp.employment_status || '';
 
     if (startDate === today) {
       todayEvents.push({
         employee_id: emp.employee_id,
         name,
-        type: 'vacation_start',
+        type: 'status_start',
+        status_type: statusType,
         date: startDate,
         end_date: endDate || ''
       });
@@ -213,7 +235,8 @@ export async function getDashboardEvents() {
       todayEvents.push({
         employee_id: emp.employee_id,
         name,
-        type: 'vacation_end',
+        type: 'status_end',
+        status_type: statusType,
         date: endDate
       });
     }
@@ -222,7 +245,8 @@ export async function getDashboardEvents() {
       weekEvents.push({
         employee_id: emp.employee_id,
         name,
-        type: 'vacation_start',
+        type: 'status_start',
+        status_type: statusType,
         date: startDate,
         end_date: endDate || ''
       });
@@ -231,7 +255,8 @@ export async function getDashboardEvents() {
       weekEvents.push({
         employee_id: emp.employee_id,
         name,
-        type: 'vacation_end',
+        type: 'status_end',
+        status_type: statusType,
         date: endDate
       });
     }
@@ -242,32 +267,89 @@ export async function getDashboardEvents() {
   return { today: todayEvents, thisWeek: weekEvents };
 }
 
-export async function getVacationReport(type) {
+export async function getDocumentExpiryEvents() {
+  const employees = await loadEmployees();
+  const schema = await loadFieldsSchema();
+  const now = new Date();
+  const today = localDateStr(now);
+
+  const in7days = new Date(now);
+  in7days.setDate(now.getDate() + 7);
+  const in7daysStr = localDateStr(in7days);
+
+  const past30days = new Date(now);
+  past30days.setDate(now.getDate() - 30);
+  const past30daysStr = localDateStr(past30days);
+
+  // Находим все поля типа file и их labels
+  const fileFields = schema.filter(f => f.field_type === 'file');
+
+  const todayEvents = [];
+  const weekEvents = [];
+
+  employees.forEach(emp => {
+    const name = [emp.last_name, emp.first_name, emp.middle_name].filter(Boolean).join(' ');
+
+    fileFields.forEach(field => {
+      const expiryDateField = `${field.field_name}_expiry_date`;
+      const expiryDate = emp[expiryDateField];
+      if (!expiryDate) return;
+      if (!emp[field.field_name]) return; // Пропускаем если документ отсутствует
+
+      const event = {
+        employee_id: emp.employee_id,
+        name,
+        document_field: field.field_name,
+        document_label: field.field_label,
+        expiry_date: expiryDate,
+        has_file: true
+      };
+
+      if (expiryDate === today) {
+        todayEvents.push({ ...event, type: 'expired_today' });
+      } else if (expiryDate > today && expiryDate <= in7daysStr) {
+        weekEvents.push({ ...event, type: 'expiring_soon' });
+      } else if (expiryDate < today && expiryDate >= past30daysStr) {
+        todayEvents.push({ ...event, type: 'already_expired' });
+      }
+    });
+  });
+
+  weekEvents.sort((a, b) => a.expiry_date.localeCompare(b.expiry_date));
+
+  return { today: todayEvents, thisWeek: weekEvents };
+}
+
+export async function getStatusReport(type) {
   const employees = await loadEmployees();
   const schema = await loadFieldsSchema();
   const statusField = schema.find(f => f.field_name === 'employment_status');
   const options = statusField?.field_options?.split('|') || [];
-  const vacationOpt = options[2] || '';
+  const workingOpt = options[0] || '';
 
   const now = new Date();
   const today = localDateStr(now);
 
   let filtered;
   if (type === 'current') {
+    // Employees with active non-working status (start_date <= today, no end_date or end_date >= today)
     filtered = employees.filter(emp => {
-      if (vacationOpt && emp.employment_status === vacationOpt) return true;
-      const start = emp.vacation_start_date;
-      const end = emp.vacation_end_date;
-      if (start && end && start <= today && end >= today) return true;
-      return false;
+      if (!emp.employment_status || emp.employment_status === workingOpt) return false;
+      const start = emp.status_start_date;
+      const end = emp.status_end_date;
+      if (!start) return false;
+      if (start > today) return false;
+      if (end && end < today) return false;
+      return true;
     });
   } else if (type === 'month') {
     const monthStart = today.slice(0, 7) + '-01';
     const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
     const monthEnd = today.slice(0, 7) + '-' + String(lastDay).padStart(2, '0');
     filtered = employees.filter(emp => {
-      const start = emp.vacation_start_date;
-      const end = emp.vacation_end_date;
+      if (!emp.employment_status || emp.employment_status === workingOpt) return false;
+      const start = emp.status_start_date;
+      const end = emp.status_end_date;
       if (!start && !end) return false;
       if (start && start >= monthStart && start <= monthEnd) return true;
       if (end && end >= monthStart && end <= monthEnd) return true;
@@ -280,14 +362,14 @@ export async function getVacationReport(type) {
 
   return filtered.map(emp => {
     const name = [emp.last_name, emp.first_name, emp.middle_name].filter(Boolean).join(' ');
-    const start = emp.vacation_start_date;
-    const end = emp.vacation_end_date;
+    const start = emp.status_start_date;
+    const end = emp.status_end_date;
     let days = 0;
     if (start && end) {
       days = Math.floor((new Date(end) - new Date(start)) / 86400000) + 1;
       if (days < 0) days = 0;
     }
-    return { employee_id: emp.employee_id, name, vacation_start_date: start, vacation_end_date: end, days };
+    return { employee_id: emp.employee_id, name, status_type: emp.employment_status || '', status_start_date: start, status_end_date: end, days };
   });
 }
 

@@ -1,4 +1,5 @@
 // Fallback список колонок если fields_schema.csv недоступен
+// Должен соответствовать fields_schema.template.csv
 const DEFAULT_EMPLOYEE_COLUMNS = [
   "employee_id",
   "last_name",
@@ -6,36 +7,65 @@ const DEFAULT_EMPLOYEE_COLUMNS = [
   "middle_name",
   "employment_status",
   "additional_status",
-  "location",
+  "gender",
+  "blood_group",
   "department",
-  "position",
   "grade",
-  "salary_grid",
-  "salary_amount",
+  "position",
   "specialty",
   "work_state",
   "work_type",
-  "gender",
   "fit_status",
   "order_ref",
+  "location",
+  "residence_place",
+  "registration_place",
+  "email",
+  "phone",
+  "phone_note",
+  "education",
+  "salary_grid",
+  "salary_amount",
   "bank_name",
   "bank_card_number",
   "bank_iban",
   "tax_id",
-  "email",
-  "blood_group",
-  "workplace_location",
-  "residence_place",
-  "registration_place",
+  "personal_matter_file",
+  "personal_matter_file_issue_date",
+  "personal_matter_file_expiry_date",
+  "medical_commission_file",
+  "medical_commission_file_issue_date",
+  "medical_commission_file_expiry_date",
+  "veterans_certificate_file",
+  "veterans_certificate_file_issue_date",
+  "veterans_certificate_file_expiry_date",
   "driver_license_file",
+  "driver_license_file_issue_date",
+  "driver_license_file_expiry_date",
   "id_certificate_file",
+  "id_certificate_file_issue_date",
+  "id_certificate_file_expiry_date",
   "foreign_passport_number",
-  "foreign_passport_issue_date",
   "foreign_passport_file",
+  "foreign_passport_file_issue_date",
+  "foreign_passport_file_expiry_date",
   "criminal_record_file",
-  "phone",
-  "phone_note",
-  "education",
+  "criminal_record_file_issue_date",
+  "criminal_record_file_expiry_date",
+  "military_id_file",
+  "military_id_file_issue_date",
+  "military_id_file_expiry_date",
+  "medical_certificate_file",
+  "medical_certificate_file_issue_date",
+  "medical_certificate_file_expiry_date",
+  "insurance_file",
+  "insurance_file_issue_date",
+  "insurance_file_expiry_date",
+  "education_diploma_file",
+  "education_diploma_file_issue_date",
+  "education_diploma_file_expiry_date",
+  "status_start_date",
+  "status_end_date",
   "notes"
 ];
 
@@ -47,7 +77,11 @@ const DEFAULT_DOCUMENT_FIELDS = [
   "driver_license_file",
   "id_certificate_file",
   "foreign_passport_file",
-  "criminal_record_file"
+  "criminal_record_file",
+  "military_id_file",
+  "medical_certificate_file",
+  "insurance_file",
+  "education_diploma_file"
 ];
 
 // Кэш для динамически загруженных колонок
@@ -73,10 +107,19 @@ export async function loadEmployeeColumns(loadFieldsSchemaFn) {
     }
 
     // Сортируем по field_order и извлекаем field_name
-    const columns = schema
+    const sortedFields = schema
       .sort((a, b) => parseInt(a.field_order || 0, 10) - parseInt(b.field_order || 0, 10))
-      .map(field => field.field_name)
-      .filter(name => name && name.trim() !== "");
+      .filter(field => field.field_name && field.field_name.trim() !== "");
+
+    // Строим список колонок, для file-полей автоматически добавляем _issue_date и _expiry_date
+    const columns = [];
+    for (const field of sortedFields) {
+      columns.push(field.field_name);
+      if (field.field_type === "file") {
+        columns.push(`${field.field_name}_issue_date`);
+        columns.push(`${field.field_name}_expiry_date`);
+      }
+    }
 
     if (columns.length === 0) {
       console.warn("Не найдено ни одной валидной колонки в fields_schema.csv");
@@ -85,7 +128,7 @@ export async function loadEmployeeColumns(loadFieldsSchemaFn) {
     }
 
     cachedEmployeeColumns = columns;
-    console.log(`Загружено ${columns.length} колонок из fields_schema.csv`);
+    console.log(`Загружено ${columns.length} колонок из fields_schema.csv (включая auto-generated date колонки для документов)`);
     return cachedEmployeeColumns;
   } catch (error) {
     console.error("Ошибка загрузки fields_schema.csv:", error.message);
@@ -194,35 +237,42 @@ export const FIELD_LABELS = {
   middle_name: "Отчество",
   employment_status: "Статус работы",
   additional_status: "Дополнительный статус",
-  location: "Местонахождение",
+  gender: "Пол",
+  blood_group: "Группа крови",
   department: "Подразделение",
-  position: "Должность",
   grade: "Разряд",
-  salary_grid: "Зарплатная сетка",
-  salary_amount: "Оклад",
+  position: "Должность",
   specialty: "Специальность",
   work_state: "Рабочее состояние",
   work_type: "Тип работы",
-  gender: "Пол",
   fit_status: "Пригодность",
   order_ref: "Приказ",
+  location: "Местонахождение",
+  residence_place: "Место проживания",
+  registration_place: "Место регистрации",
+  email: "Эл. почта",
+  phone: "Телефон",
+  phone_note: "Примечание к телефону",
+  education: "Образование",
+  salary_grid: "Зарплатная сетка",
+  salary_amount: "Оклад",
   bank_name: "Банк",
   bank_card_number: "Номер карты",
   bank_iban: "IBAN",
   tax_id: "ИНН",
-  email: "Эл. почта",
-  blood_group: "Группа крови",
-  workplace_location: "Место работы",
-  residence_place: "Место проживания",
-  registration_place: "Место регистрации",
+  personal_matter_file: "Личное дело",
+  medical_commission_file: "Медкомиссия",
+  veterans_certificate_file: "Удостоверение ветерана",
   driver_license_file: "Водительское удостоверение",
   id_certificate_file: "Удостоверение личности",
   foreign_passport_number: "Номер загранпаспорта",
-  foreign_passport_issue_date: "Дата выдачи загранпаспорта",
   foreign_passport_file: "Загранпаспорт",
   criminal_record_file: "Справка о несудимости",
-  phone: "Телефон",
-  phone_note: "Примечание к телефону",
-  education: "Образование",
+  military_id_file: "Военный билет",
+  medical_certificate_file: "Медицинская справка",
+  insurance_file: "Страховой полис",
+  education_diploma_file: "Диплом об образовании",
+  status_start_date: "Дата начала статуса",
+  status_end_date: "Дата окончания статуса",
   notes: "Примечание"
 };

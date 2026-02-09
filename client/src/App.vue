@@ -2,6 +2,7 @@
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from "vue";
 import { api } from "./api";
 
+// Fallback список полей — должен соответствовать DEFAULT_EMPLOYEE_COLUMNS в schema.js
 const employeeFields = [
   "employee_id",
   "last_name",
@@ -9,36 +10,65 @@ const employeeFields = [
   "middle_name",
   "employment_status",
   "additional_status",
-  "location",
+  "gender",
+  "blood_group",
   "department",
-  "position",
   "grade",
-  "salary_grid",
-  "salary_amount",
+  "position",
   "specialty",
   "work_state",
   "work_type",
-  "gender",
   "fit_status",
   "order_ref",
+  "location",
+  "residence_place",
+  "registration_place",
+  "email",
+  "phone",
+  "phone_note",
+  "education",
+  "salary_grid",
+  "salary_amount",
   "bank_name",
   "bank_card_number",
   "bank_iban",
   "tax_id",
-  "email",
-  "blood_group",
-  "workplace_location",
-  "residence_place",
-  "registration_place",
+  "personal_matter_file",
+  "personal_matter_file_issue_date",
+  "personal_matter_file_expiry_date",
+  "medical_commission_file",
+  "medical_commission_file_issue_date",
+  "medical_commission_file_expiry_date",
+  "veterans_certificate_file",
+  "veterans_certificate_file_issue_date",
+  "veterans_certificate_file_expiry_date",
   "driver_license_file",
+  "driver_license_file_issue_date",
+  "driver_license_file_expiry_date",
   "id_certificate_file",
+  "id_certificate_file_issue_date",
+  "id_certificate_file_expiry_date",
   "foreign_passport_number",
-  "foreign_passport_issue_date",
   "foreign_passport_file",
+  "foreign_passport_file_issue_date",
+  "foreign_passport_file_expiry_date",
   "criminal_record_file",
-  "phone",
-  "phone_note",
-  "education",
+  "criminal_record_file_issue_date",
+  "criminal_record_file_expiry_date",
+  "military_id_file",
+  "military_id_file_issue_date",
+  "military_id_file_expiry_date",
+  "medical_certificate_file",
+  "medical_certificate_file_issue_date",
+  "medical_certificate_file_expiry_date",
+  "insurance_file",
+  "insurance_file_issue_date",
+  "insurance_file_expiry_date",
+  "education_diploma_file",
+  "education_diploma_file_issue_date",
+  "education_diploma_file_expiry_date",
+  "status_start_date",
+  "status_end_date",
   "notes"
 ];
 
@@ -97,9 +127,9 @@ function switchView(view) {
 
 function startDashboardRefresh() {
   stopDashboardRefresh();
-  refreshIntervalId.value = setInterval(() => {
-    loadEmployees(true);
-    loadDashboardEvents();
+  refreshIntervalId.value = setInterval(async () => {
+    await loadEmployees(true);
+    await loadDashboardEvents();
   }, 300000);
 }
 
@@ -132,20 +162,64 @@ const columnFilters = reactive({}); // { fieldName: selectedValue }
 const logs = ref([]);
 const logsSearchTerm = ref("");
 
-// Уведомления об отпусках
-const vacationReturning = ref([]);
-const vacationStarting = ref([]);
-const showVacationNotification = ref(false);
+// Уведомления о сменах статусов
+const statusReturning = ref([]);
+const statusStarting = ref([]);
+const showStatusNotification = ref(false);
+const notifiedEmployeeIds = new Set();
+let notifiedDate = '';
+
+// Уведомления о закінченні терміну дії документів
+const docExpiryToday = ref([]);
+const docExpiryWeek = ref([]);
+const showDocExpiryNotification = ref(false);
+let docExpiryNotifiedDate = '';
 
 // Динамические значения статусов из fields_schema (по позиции в field_options)
-// Конвенция: options[0] = рабочий, options[2] = отпуск
+// Конвенция: options[0] = рабочий, options[1] = уволен, options[2] = отпуск, options[3] = больничный
 const employmentOptions = computed(() => {
   const field = allFieldsSchema.value.find(f => f.key === 'employment_status');
   return field?.options || [];
 });
 
 const workingStatus = computed(() => employmentOptions.value[0] || '');
-const vacationStatus = computed(() => employmentOptions.value[2] || '');
+
+// Эмодзи по позиции статуса: options[2] (отпуск) — ✈️, options[3] (лікарняний) — 🏥, остальные — ℹ️
+function statusEmoji(statusValue) {
+  const idx = employmentOptions.value.indexOf(statusValue);
+  if (idx === 2) return '✈️';
+  if (idx === 3) return '🏥';
+  return 'ℹ️';
+}
+
+function docExpiryEmoji(event) {
+  if (event.type === 'already_expired' || event.type === 'expired_today') return '⚠️';
+  return '📄';
+}
+
+function timelineEventEmoji(event) {
+  if (event.type === 'doc_expiry') return docExpiryEmoji({ type: event.expiry_type });
+  if (event.type === 'status_end') return '🏢';
+  return statusEmoji(event.status_type);
+}
+
+function timelineEventDesc(event) {
+  if (event.type === 'doc_expiry') {
+    const label = event.document_label || event.document_field;
+    if (event.expiry_type === 'already_expired' || event.expiry_type === 'expired_today') {
+      return `— ${label} (термін сплив)`;
+    }
+    return `— ${label} (до ${formatEventDate(event.expiry_date)})`;
+  }
+  if (event.type === 'status_end') {
+    return `— повернення (${event.status_type || 'статус'})`;
+  }
+  const label = event.status_type || 'статус';
+  if (event.end_date) {
+    return `— ${label} (до ${formatEventDate(event.end_date)})`;
+  }
+  return `— ${label}`;
+}
 
 // Маппинг технических названий полей на человекопонятные — динамически из fields_schema
 const fieldLabels = computed(() => {
@@ -202,7 +276,7 @@ async function toggleReport(type) {
   activeReport.value = type;
   reportLoading.value = true;
   try {
-    const data = await api.getVacationReport(type);
+    const data = await api.getStatusReport(type);
     reportData.value = data;
     errorMessage.value = '';
   } catch (e) {
@@ -214,7 +288,6 @@ async function toggleReport(type) {
 }
 
 const form = reactive(emptyEmployee());
-const documentFiles = reactive({});
 
 // Dictionaries теперь формируются динамически из fields_schema.csv
 
@@ -308,51 +381,255 @@ const formattedLastUpdated = computed(() => {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 });
 
-// Розрахунок кількості календарних днів відпустки (Story 3.3)
-const vacationDays = computed(() => {
-  const start = form.vacation_start_date;
-  const end = form.vacation_end_date;
-
-  // Валідація: обидві дати обов'язкові
-  if (!start || !end) return null;
-
-  // Парсинг дат (формат YYYY-MM-DD з CSV)
-  const startDate = new Date(start + 'T00:00:00');
-  const endDate = new Date(end + 'T00:00:00');
-
-  // Валідація: перевірка на Invalid Date
-  if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) return null;
-
-  // Валідація: end >= start
-  if (endDate < startDate) return null;
-
-  // Розрахунок включаючи обидві граничні дати
-  // Math.round замість Math.floor для коректної роботи при переході на літній/зимовий час (DST)
-  const MS_PER_DAY = 86400000; // 1000 * 60 * 60 * 24
-  const days = Math.round((endDate - startDate) / MS_PER_DAY) + 1;
-
-  return days > 0 ? days : null;
+// Попап зміни статусу
+const showStatusChangePopup = ref(false);
+const statusChangeForm = reactive({
+  status: '',
+  startDate: '',
+  endDate: ''
 });
 
-// Українські форми множини для "день/дні/днів" (Story 3.3 code review fix)
-const vacationDaysLabel = computed(() => {
-  const days = vacationDays.value;
-  if (days === null) return null;
+function openStatusChangePopup() {
+  // Заповнюємо поточними значеннями (якщо статус = робочий, скидаємо на порожній для вибору)
+  const currentStatus = form.employment_status || '';
+  statusChangeForm.status = currentStatus === workingStatus.value ? '' : currentStatus;
+  statusChangeForm.startDate = form.status_start_date || '';
+  statusChangeForm.endDate = form.status_end_date || '';
+  showStatusChangePopup.value = true;
+}
 
-  const lastDigit = days % 10;
-  const lastTwoDigits = days % 100;
+function closeStatusChangePopup() {
+  showStatusChangePopup.value = false;
+}
 
-  // Українські правила множини
-  if (lastTwoDigits >= 11 && lastTwoDigits <= 14) {
-    return `${days} календарних днів`;
-  } else if (lastDigit === 1) {
-    return `${days} календарний день`;
-  } else if (lastDigit >= 2 && lastDigit <= 4) {
-    return `${days} календарні дні`;
-  } else {
-    return `${days} календарних днів`;
+async function applyStatusChange() {
+  if (!statusChangeForm.status || !statusChangeForm.startDate) return;
+  if (!form.employee_id) return;
+  if (saving.value) return;
+  if (statusChangeForm.endDate && statusChangeForm.endDate < statusChangeForm.startDate) {
+    errorMessage.value = 'Дата завершення не може бути раніше дати початку';
+    return;
   }
+
+  errorMessage.value = '';
+  saving.value = true;
+  try {
+    // Используем данные из employees.value, а не из form, чтобы не сохранять несохранённые изменения формы
+    const currentEmployee = employees.value.find(e => e.employee_id === form.employee_id);
+    if (!currentEmployee) {
+      errorMessage.value = 'Співробітника не знайдено. Оновіть сторінку.';
+      saving.value = false;
+      return;
+    }
+    const payload = {
+      ...currentEmployee,
+      employment_status: statusChangeForm.status,
+      status_start_date: statusChangeForm.startDate,
+      status_end_date: statusChangeForm.endDate || ''
+    };
+    await api.updateEmployee(form.employee_id, payload);
+    await loadEmployees();
+    await selectEmployee(form.employee_id);
+    closeStatusChangePopup();
+  } catch (error) {
+    errorMessage.value = error.message;
+  } finally {
+    saving.value = false;
+  }
+}
+
+async function resetStatus() {
+  if (!form.employee_id) return;
+  if (saving.value) return;
+
+  errorMessage.value = '';
+  saving.value = true;
+  try {
+    // Используем данные из employees.value, а не из form, чтобы не сохранять несохранённые изменения формы
+    const currentEmployee = employees.value.find(e => e.employee_id === form.employee_id);
+    if (!currentEmployee) {
+      errorMessage.value = 'Співробітника не знайдено. Оновіть сторінку.';
+      saving.value = false;
+      return;
+    }
+    const payload = {
+      ...currentEmployee,
+      employment_status: workingStatus.value,
+      status_start_date: '',
+      status_end_date: ''
+    };
+    await api.updateEmployee(form.employee_id, payload);
+    await loadEmployees();
+    await selectEmployee(form.employee_id);
+    closeStatusChangePopup();
+  } catch (error) {
+    errorMessage.value = error.message;
+  } finally {
+    saving.value = false;
+  }
+}
+
+// Опції для попапу зміни статусу (всі крім options[0] — "робочий" стан)
+const statusChangeOptions = computed(() => {
+  return employmentOptions.value.slice(1);
 });
+
+// Попап завантаження документа
+const showDocUploadPopup = ref(false);
+const docUploadForm = reactive({
+  fieldKey: '',
+  fieldLabel: '',
+  file: null,
+  issueDate: '',
+  expiryDate: ''
+});
+const docUploadSaving = ref(false);
+
+// Попап редагування дат документа (без перезавантаження файлу)
+const showDocEditDatesPopup = ref(false);
+const docEditDatesForm = reactive({
+  fieldKey: '',
+  fieldLabel: '',
+  issueDate: '',
+  expiryDate: ''
+});
+const docEditDatesSaving = ref(false);
+
+function openDocUploadPopup(doc) {
+  docUploadForm.fieldKey = doc.key;
+  docUploadForm.fieldLabel = doc.label;
+  docUploadForm.file = null;
+  // Якщо документ вже завантажений — підставляємо існуючі дати
+  const issueDateField = `${doc.key}_issue_date`;
+  const expiryDateField = `${doc.key}_expiry_date`;
+  docUploadForm.issueDate = form[issueDateField] || '';
+  docUploadForm.expiryDate = form[expiryDateField] || '';
+  showDocUploadPopup.value = true;
+}
+
+function closeDocUploadPopup() {
+  showDocUploadPopup.value = false;
+}
+
+function onDocUploadFileChange(event) {
+  docUploadForm.file = event.target.files?.[0] || null;
+}
+
+async function submitDocUpload() {
+  if (!form.employee_id || !docUploadForm.file || !docUploadForm.fieldKey) return;
+  if (docUploadSaving.value) return;
+  if (docUploadForm.issueDate && docUploadForm.expiryDate && docUploadForm.expiryDate < docUploadForm.issueDate) {
+    errorMessage.value = 'Дата закінчення не може бути раніше дати видачі';
+    return;
+  }
+
+  docUploadSaving.value = true;
+  errorMessage.value = '';
+  try {
+    const formData = new FormData();
+    formData.append('file', docUploadForm.file);
+    formData.append('file_field', docUploadForm.fieldKey);
+    if (docUploadForm.issueDate) {
+      formData.append('issue_date', docUploadForm.issueDate);
+    }
+    if (docUploadForm.expiryDate) {
+      formData.append('expiry_date', docUploadForm.expiryDate);
+    }
+    const response = await api.uploadEmployeeFile(form.employee_id, formData);
+    form[docUploadForm.fieldKey] = response?.path || '';
+    // Оновлюємо дати в формі
+    const issueDateField = `${docUploadForm.fieldKey}_issue_date`;
+    const expiryDateField = `${docUploadForm.fieldKey}_expiry_date`;
+    form[issueDateField] = docUploadForm.issueDate || '';
+    form[expiryDateField] = docUploadForm.expiryDate || '';
+    closeDocUploadPopup();
+    await loadEmployees();
+    await selectEmployee(form.employee_id);
+  } catch (error) {
+    errorMessage.value = error.message;
+  } finally {
+    docUploadSaving.value = false;
+  }
+}
+
+function openDocEditDatesPopup(doc) {
+  const issueDateField = `${doc.key}_issue_date`;
+  const expiryDateField = `${doc.key}_expiry_date`;
+  docEditDatesForm.fieldKey = doc.key;
+  docEditDatesForm.fieldLabel = doc.label;
+  docEditDatesForm.issueDate = form[issueDateField] || '';
+  docEditDatesForm.expiryDate = form[expiryDateField] || '';
+  showDocEditDatesPopup.value = true;
+}
+
+function closeDocEditDatesPopup() {
+  showDocEditDatesPopup.value = false;
+}
+
+async function submitDocEditDates() {
+  if (!form.employee_id || !docEditDatesForm.fieldKey) return;
+  if (docEditDatesSaving.value) return;
+  if (docEditDatesForm.issueDate && docEditDatesForm.expiryDate && docEditDatesForm.expiryDate < docEditDatesForm.issueDate) {
+    errorMessage.value = 'Дата закінчення не може бути раніше дати видачі';
+    return;
+  }
+
+  docEditDatesSaving.value = true;
+  errorMessage.value = '';
+  try {
+    const issueDateField = `${docEditDatesForm.fieldKey}_issue_date`;
+    const expiryDateField = `${docEditDatesForm.fieldKey}_expiry_date`;
+    const currentEmployee = employees.value.find(e => e.employee_id === form.employee_id);
+    if (!currentEmployee) {
+      errorMessage.value = 'Співробітника не знайдено. Оновіть сторінку.';
+      docEditDatesSaving.value = false;
+      return;
+    }
+    const payload = {
+      ...currentEmployee,
+      [issueDateField]: docEditDatesForm.issueDate || '',
+      [expiryDateField]: docEditDatesForm.expiryDate || ''
+    };
+    await api.updateEmployee(form.employee_id, payload);
+    await loadEmployees();
+    await selectEmployee(form.employee_id);
+    closeDocEditDatesPopup();
+  } catch (error) {
+    errorMessage.value = error.message;
+  } finally {
+    docEditDatesSaving.value = false;
+  }
+}
+
+function formatDocDate(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr + 'T00:00:00');
+  if (isNaN(d.getTime())) return dateStr;
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  return `${dd}.${mm}.${d.getFullYear()}`;
+}
+
+function isDocExpiringSoon(doc) {
+  const expiryDateField = `${doc.key}_expiry_date`;
+  const expiryDate = form[expiryDateField];
+  if (!expiryDate) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const expiry = new Date(expiryDate + 'T00:00:00');
+  const diffDays = Math.round((expiry - today) / 86400000);
+  return diffDays >= 0 && diffDays <= 7;
+}
+
+function isDocExpired(doc) {
+  const expiryDateField = `${doc.key}_expiry_date`;
+  const expiryDate = form[expiryDateField];
+  if (!expiryDate) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const expiry = new Date(expiryDate + 'T00:00:00');
+  return expiry < today;
+}
 
 function emptyEmployee() {
   const base = {};
@@ -360,6 +637,11 @@ function emptyEmployee() {
   if (allFieldsSchema.value.length > 0) {
     for (const field of allFieldsSchema.value) {
       base[field.key] = "";
+      // Для file-полей добавляем companion date columns
+      if (field.type === 'file') {
+        base[`${field.key}_issue_date`] = "";
+        base[`${field.key}_expiry_date`] = "";
+      }
     }
   } else {
     // Fallback на статический список если schema еще не загружена
@@ -377,10 +659,6 @@ function resetForm() {
   }
   // Заполняем пустыми значениями
   Object.assign(form, emptyEmployee());
-  // Очищаем файлы
-  for (const key of Object.keys(documentFiles)) {
-    documentFiles[key] = null;
-  }
 }
 
 function displayName(employee) {
@@ -464,7 +742,8 @@ async function loadEmployees(silent = false) {
   try {
     const data = await api.getEmployees();
     employees.value = data.employees || [];
-    await checkVacations();
+    await checkStatusChanges();
+    await checkDocumentExpiry();
     lastUpdated.value = new Date();
   } catch (error) {
     if (!silent) errorMessage.value = error.message;
@@ -491,6 +770,8 @@ function daysFromNowLabel(dateStr) {
   today.setHours(0, 0, 0, 0);
   const target = new Date(dateStr + 'T00:00:00');
   const diff = Math.round((target - today) / 86400000);
+  if (diff === 0) return 'сьогодні';
+  if (diff < 0) return `${Math.abs(diff)} дн. тому`;
   if (diff === 1) return 'завтра';
   if (diff >= 2 && diff <= 4) return `через ${diff} дні`;
   return `через ${diff} днів`;
@@ -498,79 +779,106 @@ function daysFromNowLabel(dateStr) {
 
 async function loadDashboardEvents() {
   try {
-    const data = await api.getDashboardEvents();
-    dashboardEvents.value = data;
+    const [statusData, docData] = await Promise.all([
+      api.getDashboardEvents(),
+      api.getDocumentExpiry()
+    ]);
+
+    // Перетворюємо події закінчення документів у формат timeline
+    const mapDocEvent = (evt) => ({
+      employee_id: evt.employee_id,
+      name: evt.name,
+      type: 'doc_expiry',
+      expiry_type: evt.type,
+      document_field: evt.document_field,
+      document_label: evt.document_label,
+      expiry_date: evt.expiry_date,
+      date: evt.expiry_date
+    });
+
+    // На дашборд виводимо лише сьогоднішні події (не прострочені за минулі 30 днів)
+    const todayDocEvents = (docData.today || [])
+      .filter(evt => evt.type !== 'already_expired')
+      .map(mapDocEvent);
+    const todayEvents = [
+      ...(statusData.today || []),
+      ...todayDocEvents
+    ];
+
+    const weekEvents = [
+      ...(statusData.thisWeek || []),
+      ...(docData.thisWeek || []).map(mapDocEvent)
+    ];
+    weekEvents.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+
+    dashboardEvents.value = { today: todayEvents, thisWeek: weekEvents };
   } catch (error) {
     console.error('Failed to load dashboard events:', error);
   }
 }
 
-// Проверка и обработка отпусков
-async function checkVacations() {
+// Универсальная проверка и обработка смены статусов
+async function checkStatusChanges() {
   const now = new Date();
   const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+  // Сбрасываем уведомления при смене дня (для длительных сессий)
+  if (notifiedDate !== today) {
+    notifiedEmployeeIds.clear();
+    notifiedDate = today;
+  }
+
   const returningToday = [];
   const startingToday = [];
   const needsUpdate = [];
 
   employees.value.forEach(employee => {
-    const startDate = employee.vacation_start_date;
-    const endDate = employee.vacation_end_date;
+    const startDate = employee.status_start_date;
+    const endDate = employee.status_end_date;
 
-    // Пропускаем если нет дат отпуска
+    // Пропускаем если нет дат статуса
     if (!startDate && !endDate) return;
 
-    // Проверка 1: сегодня заканчивается отпуск (приоритет)
-    if (endDate === today) {
+    // Пропускаем автовозврат для уволенных (options[1]) — увольнение не должно автоматически сбрасываться
+    const firedStatus = employmentOptions.value[1] || '';
+    const isFired = firedStatus && employee.employment_status === firedStatus;
+
+    // Проверка 1: сегодня последний день статуса — уведомить (но НЕ сбрасывать,
+    // end_date включительна, сброс произойдёт завтра в проверке 2: end_date < today)
+    if (endDate === today && !isFired) {
       returningToday.push({
         id: employee.employee_id,
         name: displayName(employee),
-        position: employee.position || ''
+        position: employee.position || '',
+        statusType: employee.employment_status
       });
+      return;
+    }
 
+    // Проверка 2: статус уже прошел (end_date < today) — очистить даты, вернуть options[0]
+    if (endDate && endDate < today && !isFired) {
       needsUpdate.push({
         ...employee,
-        vacation_start_date: '',
-        vacation_end_date: '',
+        status_start_date: '',
+        status_end_date: '',
         employment_status: workingStatus.value
       });
-      return; // Не проверяем дальше
+      return;
     }
 
-    // Проверка 2: отпуск уже прошел - очистить даты
-    if (endDate && endDate < today) {
-      needsUpdate.push({
-        ...employee,
-        vacation_start_date: '',
-        vacation_end_date: '',
-        employment_status: employee.employment_status === vacationStatus.value ? workingStatus.value : employee.employment_status
-      });
-      return; // Не проверяем дальше
-    }
-
-    // Проверка 3: сегодня начинается отпуск
-    if (startDate === today && employee.employment_status !== vacationStatus.value) {
+    // Проверка 3: сегодня начинается статус — уведомить
+    if (startDate === today && employee.employment_status !== workingStatus.value) {
       startingToday.push({
         id: employee.employee_id,
         name: displayName(employee),
         position: employee.position || '',
-        endDate: endDate
+        endDate: endDate,
+        statusType: employee.employment_status
       });
-
-      needsUpdate.push({
-        ...employee,
-        employment_status: vacationStatus.value
-      });
-      return; // Не проверяем дальше
+      return;
     }
 
-    // Проверка 4: сейчас в отпуске (между датами)
-    if (startDate && endDate && startDate < today && endDate > today && employee.employment_status !== vacationStatus.value) {
-      needsUpdate.push({
-        ...employee,
-        employment_status: vacationStatus.value
-      });
-    }
+    // Проверка 4: сейчас в статусе (start_date <= today, end_date > today или пуста) — ничего не делаем
   });
 
   // Обновляем статусы сотрудников
@@ -582,11 +890,15 @@ async function checkVacations() {
     }
   }
 
-  // Показываем уведомление если есть изменения
-  if (returningToday.length > 0 || startingToday.length > 0) {
-    vacationReturning.value = returningToday;
-    vacationStarting.value = startingToday;
-    showVacationNotification.value = true;
+  // Показываем уведомление только для ещё не показанных сотрудников
+  const newReturning = returningToday.filter(e => !notifiedEmployeeIds.has(e.id));
+  const newStarting = startingToday.filter(e => !notifiedEmployeeIds.has(e.id));
+  if (newReturning.length > 0 || newStarting.length > 0) {
+    newReturning.forEach(e => notifiedEmployeeIds.add(e.id));
+    newStarting.forEach(e => notifiedEmployeeIds.add(e.id));
+    statusReturning.value = newReturning;
+    statusStarting.value = newStarting;
+    showStatusNotification.value = true;
   }
 
   // Перезагружаем список если были обновления
@@ -596,8 +908,35 @@ async function checkVacations() {
   }
 }
 
-function closeVacationNotification() {
-  showVacationNotification.value = false;
+function closeStatusNotification() {
+  showStatusNotification.value = false;
+}
+
+async function checkDocumentExpiry() {
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+  // Показываем уведомления один раз в день
+  if (docExpiryNotifiedDate === today) return;
+
+  try {
+    const data = await api.getDocumentExpiry();
+    const todayItems = (data.today || []).filter(evt => evt.type !== 'already_expired');
+    const weekItems = data.thisWeek || [];
+
+    docExpiryNotifiedDate = today;
+    if (todayItems.length > 0 || weekItems.length > 0) {
+      docExpiryToday.value = todayItems;
+      docExpiryWeek.value = weekItems;
+      showDocExpiryNotification.value = true;
+    }
+  } catch (error) {
+    console.error('Failed to check document expiry:', error);
+  }
+}
+
+function closeDocExpiryNotification() {
+  showDocExpiryNotification.value = false;
 }
 
 async function selectEmployee(id) {
@@ -609,9 +948,6 @@ async function selectEmployee(id) {
   try {
     const data = await api.getEmployee(id);
     Object.assign(form, emptyEmployee(), data.employee || {});
-    for (const key of Object.keys(documentFiles)) {
-      documentFiles[key] = null;
-    }
   } catch (error) {
     errorMessage.value = error.message;
   }
@@ -639,6 +975,19 @@ async function saveEmployee() {
     }
 
     const payload = { ...form };
+
+    // Статусные поля управляются только через попап смены статуса — удаляем из payload,
+    // чтобы не перезаписать актуальные значения устаревшими данными из формы
+    if (!isNew.value) {
+      delete payload.employment_status;
+      delete payload.status_start_date;
+      delete payload.status_end_date;
+    }
+
+    // Новому сотруднику устанавливаем статус по умолчанию — options[0] (рабочий)
+    if (isNew.value && !payload.employment_status && workingStatus.value) {
+      payload.employment_status = workingStatus.value;
+    }
 
     // Очищаем пустые поля документов при создании нового сотрудника
     if (isNew.value) {
@@ -687,28 +1036,6 @@ async function deleteEmployee() {
   }
 }
 
-function onDocumentFileChange(key, event) {
-  const file = event.target.files?.[0] || null;
-  documentFiles[key] = file;
-}
-
-async function uploadDocument(doc) {
-  if (!form.employee_id || !documentFiles[doc.key]) {
-    return;
-  }
-  errorMessage.value = "";
-  try {
-    const formData = new FormData();
-    formData.append("file", documentFiles[doc.key]);
-    formData.append("file_field", doc.key);
-    const response = await api.uploadEmployeeFile(form.employee_id, formData);
-    form[doc.key] = response?.path || form[doc.key];
-    documentFiles[doc.key] = null;
-  } catch (error) {
-    errorMessage.value = error.message;
-  }
-}
-
 function openDocument(fieldKey) {
   if (!form[fieldKey]) return;
   const url = `${import.meta.env.VITE_API_URL || ""}/${form[fieldKey]}`;
@@ -727,6 +1054,8 @@ async function deleteDocument(doc) {
   try {
     await api.deleteEmployeeFile(form.employee_id, doc.key);
     form[doc.key] = "";
+    form[`${doc.key}_issue_date`] = "";
+    form[`${doc.key}_expiry_date`] = "";
     await loadEmployees();
   } catch (error) {
     errorMessage.value = error.message;
@@ -750,10 +1079,10 @@ async function loadFieldsSchema() {
   try {
     const data = await api.getFieldsSchema();
 
-    // Формируем группы полей для карточек (исключаем группу "Документы" - для нее отдельная таблица)
+    // Формируем группы полей для карточек (исключаем группу "Документи" - для неї окрема таблиця)
     const groups = data.groups || {};
     fieldGroups.value = Object.keys(groups)
-      .filter(groupName => groupName !== 'Документы')
+      .filter(groupName => groupName && groupName !== 'Документи')
       .map(groupName => ({
         title: groupName,
         fields: groups[groupName].map(field => ({
@@ -798,6 +1127,10 @@ async function loadFieldsSchema() {
 const summaryColumns = ref([]);
 
 function startEditCell(employeeId, fieldName, currentValue) {
+  // Проверяем, разрешено ли редактирование этого поля в таблице
+  const col = summaryColumns.value.find(c => c.key === fieldName);
+  if (col && !col.editable) return;
+
   const key = `${employeeId}_${fieldName}`;
   editingCells[key] = currentValue || "";
 }
@@ -825,7 +1158,15 @@ async function saveCell(employee, fieldName) {
 
   errorMessage.value = "";
   try {
+    const statusFields = ['employment_status', 'status_start_date', 'status_end_date'];
+    // Статусные поля управляются только через попап — не разрешаем inline-редактирование
+    if (statusFields.includes(fieldName)) {
+      delete editingCells[key];
+      return;
+    }
     const updatedEmployee = { ...employee, [fieldName]: newValue };
+    // Не перезаписываем статусные поля при inline-редактировании
+    for (const sf of statusFields) delete updatedEmployee[sf];
     await api.updateEmployee(employee.employee_id, updatedEmployee);
 
     // Обновляем локальные данные
@@ -912,8 +1253,18 @@ function getDetailLabel(detail) {
 }
 
 function handleGlobalKeydown(e) {
-  if (e.key === 'Escape' && showVacationNotification.value) {
-    closeVacationNotification();
+  if (e.key === 'Escape') {
+    if (showDocUploadPopup.value) {
+      closeDocUploadPopup();
+    } else if (showDocEditDatesPopup.value) {
+      closeDocEditDatesPopup();
+    } else if (showStatusChangePopup.value) {
+      closeStatusChangePopup();
+    } else if (showDocExpiryNotification.value) {
+      closeDocExpiryNotification();
+    } else if (showStatusNotification.value) {
+      closeStatusNotification();
+    }
   }
 }
 
@@ -921,7 +1272,7 @@ onMounted(async () => {
   document.addEventListener('keydown', handleGlobalKeydown);
   await loadFieldsSchema();
   await loadEmployees();
-  loadDashboardEvents();
+  await loadDashboardEvents();
   startDashboardRefresh();
 });
 
@@ -933,43 +1284,204 @@ onUnmounted(() => {
 
 <template>
   <div class="app">
-    <!-- Уведомление об отпусках -->
-    <div v-if="showVacationNotification" class="vacation-notification-overlay" @click="closeVacationNotification">
+    <!-- Уведомление о сменах статусов -->
+    <div v-if="showStatusNotification" class="vacation-notification-overlay" @click="closeStatusNotification">
       <div class="vacation-notification-modal" @click.stop>
         <div class="vacation-notification-header">
-          <h3>🏖️ Сповіщення про відпустки</h3>
-          <button class="close-btn" @click="closeVacationNotification">×</button>
+          <h3>📋 Сповіщення про зміну статусів</h3>
+          <button class="close-btn" @click="closeStatusNotification">×</button>
         </div>
         <div class="vacation-notification-body">
-          <!-- Уходят в отпуск -->
-          <div v-if="vacationStarting.length > 0" class="notification-section">
-            <p class="notification-message">✈️ Сьогодні йдуть у відпустку:</p>
+          <!-- Сьогодні змінюють статус -->
+          <div v-if="statusStarting.length > 0" class="notification-section">
+            <p class="notification-message">📋 Сьогодні змінюють статус:</p>
             <ul class="vacation-employees-list">
-              <li v-for="emp in vacationStarting" :key="emp.id" class="vacation-employee starting">
+              <li v-for="emp in statusStarting" :key="emp.id" class="vacation-employee starting">
                 <div class="employee-info">
-                  <span class="employee-name">{{ emp.name }}</span>
+                  <span class="employee-name">{{ statusEmoji(emp.statusType) }} {{ emp.name }}</span>
                   <span v-if="emp.position" class="employee-position">{{ emp.position }}</span>
                 </div>
-                <span v-if="emp.endDate" class="vacation-end-date">до {{ formatEventDate(emp.endDate) }}</span>
+                <div class="status-details">
+                  <span class="status-badge">{{ emp.statusType }}</span>
+                  <span v-if="emp.endDate" class="vacation-end-date">до {{ formatEventDate(emp.endDate) }}</span>
+                </div>
               </li>
             </ul>
           </div>
 
-          <!-- Возвращаются из отпуска -->
-          <div v-if="vacationReturning.length > 0" class="notification-section">
-            <p class="notification-message">🏢 Сьогодні повертаються з відпустки:</p>
+          <!-- Повертаються до робочого стану -->
+          <div v-if="statusReturning.length > 0" class="notification-section">
+            <p class="notification-message">🏢 Сьогодні повертаються:</p>
             <ul class="vacation-employees-list">
-              <li v-for="emp in vacationReturning" :key="emp.id" class="vacation-employee returning">
+              <li v-for="emp in statusReturning" :key="emp.id" class="vacation-employee returning">
                 <div class="employee-info">
                   <span class="employee-name">{{ emp.name }}</span>
                   <span v-if="emp.position" class="employee-position">{{ emp.position }}</span>
+                </div>
+                <span class="status-badge returning-badge">{{ emp.statusType }} → {{ workingStatus }}</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+        <div class="vacation-notification-footer">
+          <button class="primary" @click="closeStatusNotification">Зрозуміло</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Уведомление про закінчення терміну дії документів -->
+    <div v-if="showDocExpiryNotification" class="vacation-notification-overlay" @click="closeDocExpiryNotification">
+      <div class="vacation-notification-modal" @click.stop>
+        <div class="vacation-notification-header">
+          <h3>📋 Сповіщення про закінчення терміну дії документів</h3>
+          <button class="close-btn" @click="closeDocExpiryNotification">&times;</button>
+        </div>
+        <div class="vacation-notification-body">
+          <div v-if="docExpiryToday.length > 0" class="notification-section">
+            <p class="notification-message">⚠️ Термін дії сплив або спливає сьогодні:</p>
+            <ul class="vacation-employees-list">
+              <li v-for="(evt, idx) in docExpiryToday" :key="'doc-today-' + idx" class="vacation-employee starting">
+                <div class="employee-info">
+                  <span class="employee-name">{{ docExpiryEmoji(evt) }} {{ evt.name }}</span>
+                </div>
+                <div class="status-details">
+                  <span class="status-badge">{{ evt.document_label }}</span>
+                  <span class="vacation-end-date">{{ formatEventDate(evt.expiry_date) }}</span>
+                </div>
+              </li>
+            </ul>
+          </div>
+          <div v-if="docExpiryWeek.length > 0" class="notification-section">
+            <p class="notification-message">📄 Термін дії спливає найближчим часом:</p>
+            <ul class="vacation-employees-list">
+              <li v-for="(evt, idx) in docExpiryWeek" :key="'doc-week-' + idx" class="vacation-employee returning">
+                <div class="employee-info">
+                  <span class="employee-name">📄 {{ evt.name }}</span>
+                </div>
+                <div class="status-details">
+                  <span class="status-badge">{{ evt.document_label }}</span>
+                  <span class="vacation-end-date">{{ formatEventDate(evt.expiry_date) }}</span>
                 </div>
               </li>
             </ul>
           </div>
         </div>
         <div class="vacation-notification-footer">
-          <button class="primary" @click="closeVacationNotification">Зрозуміло</button>
+          <button class="primary" @click="closeDocExpiryNotification">Зрозуміло</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Попап зміни статусу -->
+    <div v-if="showStatusChangePopup" class="vacation-notification-overlay" @click="closeStatusChangePopup">
+      <div class="vacation-notification-modal" @click.stop>
+        <div class="vacation-notification-header">
+          <h3>Зміна статусу роботи</h3>
+          <button class="close-btn" @click="closeStatusChangePopup">×</button>
+        </div>
+        <div class="vacation-notification-body">
+          <div class="status-change-form">
+            <div class="field">
+              <label for="status-change-select">Новий статус</label>
+              <select id="status-change-select" v-model="statusChangeForm.status">
+                <option value="">-- Оберіть статус --</option>
+                <option v-for="opt in statusChangeOptions" :key="opt" :value="opt">{{ opt }}</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="status-change-start">Дата початку *</label>
+              <input id="status-change-start" type="date" v-model="statusChangeForm.startDate" required />
+            </div>
+            <div class="field">
+              <label for="status-change-end">Дата завершення</label>
+              <input id="status-change-end" type="date" v-model="statusChangeForm.endDate" />
+            </div>
+          </div>
+        </div>
+        <div class="vacation-notification-footer status-change-footer">
+          <button class="secondary" type="button" @click="closeStatusChangePopup">Скасувати</button>
+          <button
+            class="primary"
+            type="button"
+            :disabled="!statusChangeForm.status || !statusChangeForm.startDate || saving"
+            @click="applyStatusChange"
+          >
+            Застосувати
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Попап завантаження документа -->
+    <div v-if="showDocUploadPopup" class="vacation-notification-overlay" @click="closeDocUploadPopup">
+      <div class="vacation-notification-modal" @click.stop>
+        <div class="vacation-notification-header">
+          <h3>{{ docUploadForm.fieldLabel }}</h3>
+          <button class="close-btn" @click="closeDocUploadPopup">&times;</button>
+        </div>
+        <div class="vacation-notification-body">
+          <div class="status-change-form">
+            <div class="field">
+              <label>Файл (PDF або зображення)</label>
+              <input
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,application/pdf,image/jpeg,image/png,image/gif,image/webp"
+                @change="onDocUploadFileChange"
+              />
+            </div>
+            <div class="field">
+              <label>Дата видачі</label>
+              <input type="date" v-model="docUploadForm.issueDate" />
+            </div>
+            <div class="field">
+              <label>Дата закінчення</label>
+              <input type="date" v-model="docUploadForm.expiryDate" />
+            </div>
+          </div>
+        </div>
+        <div class="vacation-notification-footer status-change-footer">
+          <button class="secondary" type="button" @click="closeDocUploadPopup">Скасувати</button>
+          <button
+            class="primary"
+            type="button"
+            :disabled="!docUploadForm.file || docUploadSaving"
+            @click="submitDocUpload"
+          >
+            {{ docUploadSaving ? 'Завантаження...' : 'Завантажити' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Попап редагування дат документа -->
+    <div v-if="showDocEditDatesPopup" class="vacation-notification-overlay" @click="closeDocEditDatesPopup">
+      <div class="vacation-notification-modal" @click.stop>
+        <div class="vacation-notification-header">
+          <h3>{{ docEditDatesForm.fieldLabel }} — дати</h3>
+          <button class="close-btn" @click="closeDocEditDatesPopup">&times;</button>
+        </div>
+        <div class="vacation-notification-body">
+          <div class="status-change-form">
+            <div class="field">
+              <label>Дата видачі</label>
+              <input type="date" v-model="docEditDatesForm.issueDate" />
+            </div>
+            <div class="field">
+              <label>Дата закінчення</label>
+              <input type="date" v-model="docEditDatesForm.expiryDate" />
+            </div>
+          </div>
+        </div>
+        <div class="vacation-notification-footer status-change-footer">
+          <button class="secondary" type="button" @click="closeDocEditDatesPopup">Скасувати</button>
+          <button
+            class="primary"
+            type="button"
+            :disabled="docEditDatesSaving"
+            @click="submitDocEditDates"
+          >
+            {{ docEditDatesSaving ? 'Збереження...' : 'Зберегти' }}
+          </button>
         </div>
       </div>
     </div>
@@ -1083,12 +1595,10 @@ onUnmounted(() => {
           <div v-if="dashboardEvents.today.length === 0" class="timeline-empty">
             Нічого термінового
           </div>
-          <div v-for="event in dashboardEvents.today" :key="event.employee_id + event.type" class="timeline-event">
-            <span class="timeline-emoji">{{ event.type === 'vacation_start' ? '✈️' : '🏢' }}</span>
+          <div v-for="event in dashboardEvents.today" :key="event.employee_id + event.type + (event.document_field || '')" class="timeline-event">
+            <span class="timeline-emoji">{{ timelineEventEmoji(event) }}</span>
             <span class="timeline-name timeline-link" @click="openEmployeeCard(event.employee_id)">{{ event.name }}</span>
-            <span class="timeline-desc">
-              {{ event.type === 'vacation_start' ? (event.end_date ? `— початок відпустки (до ${formatEventDate(event.end_date)})` : '— початок відпустки') : '— повернення з відпустки' }}
-            </span>
+            <span class="timeline-desc">{{ timelineEventDesc(event) }}</span>
           </div>
         </div>
         <!-- Timeline: Цього тижня -->
@@ -1097,35 +1607,34 @@ onUnmounted(() => {
           <div v-if="dashboardEvents.thisWeek.length === 0" class="timeline-empty">
             Немає запланованих подій
           </div>
-          <div v-for="event in dashboardEvents.thisWeek" :key="event.employee_id + event.type + event.date" class="timeline-event">
+          <div v-for="event in dashboardEvents.thisWeek" :key="event.employee_id + event.type + event.date + (event.document_field || '')" class="timeline-event">
             <span class="timeline-date">{{ formatEventDate(event.date) }}</span>
             <span class="timeline-days-badge">{{ daysFromNowLabel(event.date) }}</span>
-            <span class="timeline-emoji">{{ event.type === 'vacation_start' ? '✈️' : '🏢' }}</span>
+            <span class="timeline-emoji">{{ timelineEventEmoji(event) }}</span>
             <span class="timeline-name timeline-link" @click="openEmployeeCard(event.employee_id)">{{ event.name }}</span>
-            <span class="timeline-desc">
-              {{ event.type === 'vacation_start' ? (event.end_date ? `— початок відпустки (до ${formatEventDate(event.end_date)})` : '— початок відпустки') : '— повернення з відпустки' }}
-            </span>
+            <span class="timeline-desc">{{ timelineEventDesc(event) }}</span>
           </div>
         </div>
         </div>
-        <!-- Швидкі звіти по відпустках -->
+        <!-- Швидкі звіти по статусах -->
         <div class="report-section">
           <div class="report-buttons">
             <button class="report-btn" :class="{ active: activeReport === 'current' }" @click="toggleReport('current')">
-              Хто у відпустці зараз
+              Хто відсутній зараз
             </button>
             <button class="report-btn" :class="{ active: activeReport === 'month' }" @click="toggleReport('month')">
-              Відпустки цього місяця
+              Зміни статусів цього місяця
             </button>
           </div>
           <div v-if="activeReport && !reportLoading" class="report-result">
             <div v-if="reportData.length === 0" class="report-empty">
-              {{ activeReport === 'current' ? 'Наразі ніхто не у відпустці' : 'Немає відпусток цього місяця' }}
+              {{ activeReport === 'current' ? 'Наразі всі працюють' : 'Немає змін статусів цього місяця' }}
             </div>
             <table v-else class="report-table">
               <thead>
                 <tr>
                   <th>ПІБ</th>
+                  <th>Статус</th>
                   <th>Початок</th>
                   <th>Закінчення</th>
                   <th>Днів</th>
@@ -1134,8 +1643,9 @@ onUnmounted(() => {
               <tbody>
                 <tr v-for="row in reportData" :key="row.employee_id">
                   <td><span class="report-name-link" @click="openEmployeeCard(row.employee_id)">{{ row.name }}</span></td>
-                  <td>{{ formatEventDate(row.vacation_start_date) }}</td>
-                  <td>{{ formatEventDate(row.vacation_end_date) }}</td>
+                  <td>{{ row.status_type }}</td>
+                  <td>{{ formatEventDate(row.status_start_date) }}</td>
+                  <td>{{ formatEventDate(row.status_end_date) }}</td>
                   <td>{{ row.days }}</td>
                 </tr>
               </tbody>
@@ -1223,8 +1733,37 @@ onUnmounted(() => {
               <div class="form-grid">
                 <div v-for="field in group.fields" :key="field.key" class="field">
                   <label :for="field.key">{{ field.label }}</label>
+                  <!-- employment_status: readonly display + buttons -->
+                  <template v-if="field.key === 'employment_status'">
+                    <div class="status-field-row">
+                      <input
+                        :id="field.key"
+                        type="text"
+                        :value="form[field.key] || '—'"
+                        readonly
+                        class="status-readonly-input"
+                      />
+                      <button
+                        v-if="!isNew"
+                        class="secondary small"
+                        type="button"
+                        @click="openStatusChangePopup"
+                      >
+                        Змінити статус
+                      </button>
+                      <button
+                        v-if="!isNew && form.employment_status && form.employment_status !== workingStatus"
+                        class="secondary small"
+                        type="button"
+                        :disabled="saving"
+                        @click="resetStatus"
+                      >
+                        Скинути статус
+                      </button>
+                    </div>
+                  </template>
                   <select
-                    v-if="field.type === 'select'"
+                    v-else-if="field.type === 'select'"
                     :id="field.key"
                     v-model="form[field.key]"
                   >
@@ -1252,10 +1791,6 @@ onUnmounted(() => {
                   />
                 </div>
               </div>
-              <!-- Vacation days calculation display (Story 3.3) -->
-              <div v-if="group.fields.some(f => f.key === 'vacation_start_date' || f.key === 'vacation_end_date') && vacationDaysLabel !== null" class="vacation-days-display">
-                {{ vacationDaysLabel }}
-              </div>
             </div>
 
             <div class="section">
@@ -1279,6 +1814,8 @@ onUnmounted(() => {
                   <tr>
                     <th>Документ</th>
                     <th>Статус</th>
+                    <th>Дата видачі</th>
+                    <th>Дата закінчення</th>
                     <th>Дії</th>
                   </tr>
                 </thead>
@@ -1288,6 +1825,17 @@ onUnmounted(() => {
                     <td>
                       <span v-if="form[doc.key]" class="status-uploaded">✓ Завантажено</span>
                       <span v-else class="status-not-uploaded">✗ Не завантажено</span>
+                    </td>
+                    <td>
+                      <span v-if="form[doc.key + '_issue_date']">{{ formatDocDate(form[doc.key + '_issue_date']) }}</span>
+                      <span v-else class="doc-date-empty">—</span>
+                    </td>
+                    <td>
+                      <span
+                        v-if="form[doc.key + '_expiry_date']"
+                        :class="{ 'doc-date-expiring': isDocExpiringSoon(doc), 'doc-date-expired': isDocExpired(doc) }"
+                      >{{ formatDocDate(form[doc.key + '_expiry_date']) }}</span>
+                      <span v-else class="doc-date-empty">—</span>
                     </td>
                     <td>
                       <div class="document-actions">
@@ -1301,6 +1849,22 @@ onUnmounted(() => {
                             Відкрити
                           </button>
                           <button
+                            class="secondary small"
+                            type="button"
+                            @click="openDocUploadPopup(doc)"
+                            title="Замінити документ"
+                          >
+                            Замінити
+                          </button>
+                          <button
+                            class="secondary small"
+                            type="button"
+                            @click="openDocEditDatesPopup(doc)"
+                            title="Редагувати дати"
+                          >
+                            Дати
+                          </button>
+                          <button
                             class="danger small"
                             type="button"
                             @click="deleteDocument(doc)"
@@ -1310,27 +1874,13 @@ onUnmounted(() => {
                           </button>
                         </template>
                         <template v-else>
-                          <input
-                            type="file"
-                            :id="`file-${doc.key}`"
-                            accept="application/pdf"
-                            @change="onDocumentFileChange(doc.key, $event)"
-                            style="display: none"
-                          />
-                          <label :for="`file-${doc.key}`" class="file-label-btn secondary small">
-                            Вибрати файл
-                          </label>
                           <button
-                            v-if="documentFiles[doc.key]"
                             class="primary small"
                             type="button"
-                            @click="uploadDocument(doc)"
+                            @click="openDocUploadPopup(doc)"
                           >
                             Завантажити
                           </button>
-                          <span v-if="documentFiles[doc.key]" class="file-selected">
-                            {{ documentFiles[doc.key].name }}
-                          </span>
                         </template>
                       </div>
                     </td>
