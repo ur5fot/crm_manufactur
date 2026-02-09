@@ -227,6 +227,11 @@ const docExpiryWeek = ref([]);
 const showDocExpiryNotification = ref(false);
 let docExpiryNotifiedDate = '';
 
+const birthdayToday = ref([]);
+const birthdayNext7Days = ref([]);
+const showBirthdayNotification = ref(false);
+let birthdayNotifiedDate = '';
+
 // Динамические значения статусов из fields_schema (по позиции в field_options)
 // Конвенция: options[0] = рабочий, options[1] = уволен, options[2] = отпуск, options[3] = больничный
 const employmentOptions = computed(() => {
@@ -252,6 +257,8 @@ function docExpiryEmoji(event) {
 function timelineEventEmoji(event) {
   if (event.type === 'doc_expiry') return docExpiryEmoji({ type: event.expiry_type });
   if (event.type === 'status_end') return '🏢';
+  if (event.type === 'birthday_today') return '🎂';
+  if (event.type === 'birthday_upcoming') return '🎉';
   return statusEmoji(event.status_type);
 }
 
@@ -265,6 +272,12 @@ function timelineEventDesc(event) {
   }
   if (event.type === 'status_end') {
     return `— повернення (${event.status_type || 'статус'})`;
+  }
+  if (event.type === 'birthday_today') {
+    return `— день народження (${event.age} років)`;
+  }
+  if (event.type === 'birthday_upcoming') {
+    return `— день народження (${event.age} років, ${formatEventDate(event.birth_date)})`;
   }
   const label = event.status_type || 'статус';
   if (event.end_date) {
@@ -796,6 +809,7 @@ async function loadEmployees(silent = false) {
     employees.value = data.employees || [];
     await checkStatusChanges();
     await checkDocumentExpiry();
+    await checkBirthdayEvents();
     lastUpdated.value = new Date();
   } catch (error) {
     if (!silent) errorMessage.value = error.message;
@@ -831,9 +845,10 @@ function daysFromNowLabel(dateStr) {
 
 async function loadDashboardEvents() {
   try {
-    const [statusData, docData] = await Promise.all([
+    const [statusData, docData, birthdayData] = await Promise.all([
       api.getDashboardEvents(),
-      api.getDocumentExpiry()
+      api.getDocumentExpiry(),
+      api.getBirthdayEvents()
     ]);
 
     // Перетворюємо події закінчення документів у формат timeline
@@ -848,18 +863,32 @@ async function loadDashboardEvents() {
       date: evt.expiry_date
     });
 
+    // Перетворюємо події днів народження у формат timeline
+    const mapBirthdayEvent = (evt, isToday) => ({
+      employee_id: evt.employee_id,
+      name: evt.employee_name,
+      type: isToday ? 'birthday_today' : 'birthday_upcoming',
+      birth_date: evt.birth_date,
+      age: evt.age,
+      date: evt.birth_date
+    });
+
     // На дашборд виводимо лише сьогоднішні події (не прострочені за минулі 30 днів)
     const todayDocEvents = (docData.today || [])
       .filter(evt => evt.type !== 'already_expired')
       .map(mapDocEvent);
+    const todayBirthdayEvents = (birthdayData.today || []).map(evt => mapBirthdayEvent(evt, true));
     const todayEvents = [
       ...(statusData.today || []),
-      ...todayDocEvents
+      ...todayDocEvents,
+      ...todayBirthdayEvents
     ];
 
+    const weekBirthdayEvents = (birthdayData.next7Days || []).map(evt => mapBirthdayEvent(evt, false));
     const weekEvents = [
       ...(statusData.thisWeek || []),
-      ...(docData.thisWeek || []).map(mapDocEvent)
+      ...(docData.thisWeek || []).map(mapDocEvent),
+      ...weekBirthdayEvents
     ];
     weekEvents.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
 
@@ -989,6 +1018,33 @@ async function checkDocumentExpiry() {
 
 function closeDocExpiryNotification() {
   showDocExpiryNotification.value = false;
+}
+
+async function checkBirthdayEvents() {
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+  // Показываем уведомления один раз в день
+  if (birthdayNotifiedDate === today) return;
+
+  try {
+    const data = await api.getBirthdayEvents();
+    const todayItems = data.today || [];
+    const next7DaysItems = data.next7Days || [];
+
+    birthdayNotifiedDate = today;
+    if (todayItems.length > 0 || next7DaysItems.length > 0) {
+      birthdayToday.value = todayItems;
+      birthdayNext7Days.value = next7DaysItems;
+      showBirthdayNotification.value = true;
+    }
+  } catch (error) {
+    console.error('Failed to check birthday events:', error);
+  }
+}
+
+function closeBirthdayNotification() {
+  showBirthdayNotification.value = false;
 }
 
 async function selectEmployee(id) {
@@ -1318,6 +1374,8 @@ function handleGlobalKeydown(e) {
       closeDocEditDatesPopup();
     } else if (showStatusChangePopup.value) {
       closeStatusChangePopup();
+    } else if (showBirthdayNotification.value) {
+      closeBirthdayNotification();
     } else if (showDocExpiryNotification.value) {
       closeDocExpiryNotification();
     } else if (showStatusNotification.value) {
@@ -1442,6 +1500,49 @@ onUnmounted(() => {
         </div>
         <div class="vacation-notification-footer">
           <button class="primary" @click="closeDocExpiryNotification">Зрозуміло</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Уведомление про дні народження -->
+    <div v-if="showBirthdayNotification" class="vacation-notification-overlay" @click="closeBirthdayNotification">
+      <div class="vacation-notification-modal" @click.stop>
+        <div class="vacation-notification-header">
+          <h3>🎂 Сповіщення про дні народження</h3>
+          <button class="close-btn" @click="closeBirthdayNotification">&times;</button>
+        </div>
+        <div class="vacation-notification-body">
+          <div v-if="birthdayToday.length > 0" class="notification-section">
+            <p class="notification-message">🎂 Сьогодні день народження:</p>
+            <ul class="vacation-employees-list">
+              <li v-for="(evt, idx) in birthdayToday" :key="'bday-today-' + idx" class="vacation-employee starting">
+                <div class="employee-info">
+                  <span class="employee-name">🎂 {{ evt.employee_name }}</span>
+                </div>
+                <div class="status-details">
+                  <span class="status-badge">{{ evt.age }} років</span>
+                  <span class="vacation-end-date">{{ formatEventDate(evt.birth_date) }}</span>
+                </div>
+              </li>
+            </ul>
+          </div>
+          <div v-if="birthdayNext7Days.length > 0" class="notification-section">
+            <p class="notification-message">🎉 Найближчі дні народження:</p>
+            <ul class="vacation-employees-list">
+              <li v-for="(evt, idx) in birthdayNext7Days" :key="'bday-week-' + idx" class="vacation-employee returning">
+                <div class="employee-info">
+                  <span class="employee-name">🎉 {{ evt.employee_name }}</span>
+                </div>
+                <div class="status-details">
+                  <span class="status-badge">{{ evt.age }} років</span>
+                  <span class="vacation-end-date">{{ formatEventDate(evt.birth_date) }}</span>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </div>
+        <div class="vacation-notification-footer">
+          <button class="primary" @click="closeBirthdayNotification">Зрозуміло</button>
         </div>
       </div>
     </div>

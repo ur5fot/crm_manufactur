@@ -99,18 +99,18 @@ Add birthday notifications, routing with URL params, default employee card, and 
 - Modify: `client/src/App.vue`
 
 **Steps:**
-- [ ] Add birthdayEvents reactive variable {today: [], next7Days: []}
-- [ ] Add checkBirthdayEvents() function (fetch from /api/birthday-events, store in birthdayEvents)
-- [ ] Call checkBirthdayEvents() from loadEmployees() (similar to checkDocumentExpiry)
-- [ ] Add birthday notification popup "Сповіщення про дні народження" with two sections
-- [ ] Today section: show employee name, age, birth date with 🎂 emoji
-- [ ] Next 7 days section: show employee name, upcoming age, birth date with 🎉 emoji
-- [ ] Integrate birthday events into dashboard timeline (both "Сьогодні" and "Найближчі 7 днів" cards)
-- [ ] Use 🎂 emoji for today birthdays, 🎉 for upcoming birthdays in timeline
-- [ ] Make employee names in timeline clickable (navigate to /cards/:id)
-- [ ] Manual test: add employee with today's birthday, verify notification popup shows
-- [ ] Manual test: verify birthday appears in dashboard timeline "Сьогодні"
-- [ ] Manual test: add employee with birthday in 5 days, verify appears in "Найближчі 7 днів"
+- [x] Add birthdayEvents reactive variable {today: [], next7Days: []}
+- [x] Add checkBirthdayEvents() function (fetch from /api/birthday-events, store in birthdayEvents)
+- [x] Call checkBirthdayEvents() from loadEmployees() (similar to checkDocumentExpiry)
+- [x] Add birthday notification popup "Сповіщення про дні народження" with two sections
+- [x] Today section: show employee name, age, birth date with 🎂 emoji
+- [x] Next 7 days section: show employee name, upcoming age, birth date with 🎉 emoji
+- [x] Integrate birthday events into dashboard timeline (both "Сьогодні" and "Найближчі 7 днів" cards)
+- [x] Use 🎂 emoji for today birthdays, 🎉 for upcoming birthdays in timeline
+- [x] Make employee names in timeline clickable (navigate to /cards/:id)
+- [x] Manual test: add employee with today's birthday, verify notification popup shows
+- [x] Manual test: verify birthday appears in dashboard timeline "Сьогодні"
+- [x] Manual test: add employee with birthday in 5 days, verify appears in "Найближчі 7 днів"
 
 ## FINAL VALIDATION
 
