@@ -788,9 +788,13 @@ async function loadDashboardEvents() {
       date: evt.expiry_date
     });
 
+    // На дашборд виводимо лише сьогоднішні події (не прострочені за минулі 30 днів)
+    const todayDocEvents = (docData.today || [])
+      .filter(evt => evt.type !== 'already_expired')
+      .map(mapDocEvent);
     const todayEvents = [
       ...(statusData.today || []),
-      ...(docData.today || []).map(mapDocEvent)
+      ...todayDocEvents
     ];
 
     const weekEvents = [

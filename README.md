@@ -122,21 +122,26 @@ Open `http://localhost:5173` in your browser.
   22. `tax_id` - Tax ID
   23. `email` - Email
   24. `blood_group` - Blood group (I (0), II (A), III (B), IV (AB))
-  25. `workplace_location` - Workplace location
-  26. `residence_place` - Residence place
-  27. `registration_place` - Registration place
-  28. `driver_license_file` - Driver's license (file)
-  29. `id_certificate_file` - ID certificate (file)
-  30. `foreign_passport_number` - Foreign passport number
-  31. `foreign_passport_issue_date` - Foreign passport issue date
-  32. `foreign_passport_file` - Foreign passport (file)
-  33. `criminal_record_file` - Criminal record certificate (file)
-  34. `phone` - Phone number
-  35. `phone_note` - Phone note
-  36. `education` - Education
-  37. `notes` - Notes
-  38. `status_start_date` - Status start date (YYYY-MM-DD)
-  39. `status_end_date` - Status end date (YYYY-MM-DD)
+  25. `residence_place` - Residence place
+  26. `registration_place` - Registration place
+  27. `personal_matter_file` - Personal matter (file)
+  28. `medical_commission_file` - Medical commission (file)
+  29. `veterans_certificate_file` - Veteran's certificate (file)
+  30. `driver_license_file` - Driver's license (file)
+  31. `id_certificate_file` - ID certificate (file)
+  32. `foreign_passport_number` - Foreign passport number
+  33. `foreign_passport_file` - Foreign passport (file)
+  34. `criminal_record_file` - Criminal record certificate (file)
+  35. `military_id_file` - Military ID (file)
+  36. `medical_certificate_file` - Medical certificate (file)
+  37. `insurance_file` - Insurance policy (file)
+  38. `education_diploma_file` - Education diploma (file)
+  39. `phone` - Phone number
+  40. `phone_note` - Phone note
+  41. `education` - Education
+  42. `notes` - Notes
+  43. `status_start_date` - Status start date (YYYY-MM-DD)
+  44. `status_end_date` - Status end date (YYYY-MM-DD)
   40. Additional document and service fields
 
 - **fields_schema.csv** - **Meta-schema for UI control** (8 columns, local file in `.gitignore`):

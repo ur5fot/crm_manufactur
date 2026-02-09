@@ -356,119 +356,134 @@ app.get("/api/employees/:id", async (req, res) => {
 });
 
 app.post("/api/employees", async (req, res) => {
-  const payload = req.body || {};
-  const employees = await loadEmployees();
+  try {
+    const payload = req.body || {};
+    const employees = await loadEmployees();
 
-  const baseEmployee = normalizeEmployeeInput(payload);
+    const baseEmployee = normalizeEmployeeInput(payload);
 
-  // Валидация обязательных полей
-  if (!baseEmployee.first_name || !baseEmployee.first_name.trim()) {
-    res.status(400).json({ error: "Имя обязательно для заполнения" });
-    return;
+    // Валидация обязательных полей
+    if (!baseEmployee.first_name || !baseEmployee.first_name.trim()) {
+      res.status(400).json({ error: "Имя обязательно для заполнения" });
+      return;
+    }
+    if (!baseEmployee.last_name || !baseEmployee.last_name.trim()) {
+      res.status(400).json({ error: "Фамилия обязательна для заполнения" });
+      return;
+    }
+
+    const employeeId = baseEmployee.employee_id || getNextId(employees, "employee_id");
+
+    if (employees.some((item) => item.employee_id === employeeId)) {
+      res.status(409).json({ error: "ID сотрудника уже существует" });
+      return;
+    }
+
+    baseEmployee.employee_id = employeeId;
+    employees.push(baseEmployee);
+    await saveEmployees(employees);
+
+    // Логирование создания
+    const employeeName = [baseEmployee.last_name, baseEmployee.first_name, baseEmployee.middle_name]
+      .filter(Boolean)
+      .join(" ");
+    await addLog("CREATE", employeeId, employeeName, "", "", "", "Создан новый сотрудник");
+
+    res.status(201).json({ employee_id: employeeId });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
   }
-  if (!baseEmployee.last_name || !baseEmployee.last_name.trim()) {
-    res.status(400).json({ error: "Фамилия обязательна для заполнения" });
-    return;
-  }
-
-  const employeeId = baseEmployee.employee_id || getNextId(employees, "employee_id");
-
-  if (employees.some((item) => item.employee_id === employeeId)) {
-    res.status(409).json({ error: "ID сотрудника уже существует" });
-    return;
-  }
-
-  baseEmployee.employee_id = employeeId;
-  employees.push(baseEmployee);
-  await saveEmployees(employees);
-
-  // Логирование создания
-  const employeeName = [baseEmployee.last_name, baseEmployee.first_name, baseEmployee.middle_name]
-    .filter(Boolean)
-    .join(" ");
-  await addLog("CREATE", employeeId, employeeName, "", "", "", "Создан новый сотрудник");
-
-  res.status(201).json({ employee_id: employeeId });
 });
 
 app.put("/api/employees/:id", async (req, res) => {
-  const payload = req.body || {};
-  const employees = await loadEmployees();
-  const index = employees.findIndex((item) => item.employee_id === req.params.id);
+  try {
+    const payload = req.body || {};
+    const employees = await loadEmployees();
+    const index = employees.findIndex((item) => item.employee_id === req.params.id);
 
-  if (index === -1) {
-    res.status(404).json({ error: "Сотрудник не найден" });
-    return;
-  }
-
-  const updates = payload;
-  const current = employees[index];
-  const next = mergeRow(getEmployeeColumnsSync(), current, updates);
-  next.employee_id = req.params.id;
-
-  // Валидация обязательных полей
-  if (!next.first_name || !next.first_name.trim()) {
-    res.status(400).json({ error: "Имя обязательно для заполнения" });
-    return;
-  }
-  if (!next.last_name || !next.last_name.trim()) {
-    res.status(400).json({ error: "Фамилия обязательна для заполнения" });
-    return;
-  }
-  employees[index] = next;
-
-  await saveEmployees(employees);
-
-  // Логирование изменений
-  const employeeName = [next.last_name, next.first_name, next.middle_name]
-    .filter(Boolean)
-    .join(" ");
-
-  // Находим измененные поля
-  const changedFields = [];
-  getEmployeeColumnsSync().forEach((field) => {
-    if (field !== "employee_id" && current[field] !== next[field]) {
-      changedFields.push(field);
+    if (index === -1) {
+      res.status(404).json({ error: "Сотрудник не найден" });
+      return;
     }
-  });
 
-  // Логируем каждое изменение
-  for (const field of changedFields) {
-    await addLog(
-      "UPDATE",
-      req.params.id,
-      employeeName,
-      field,
-      current[field] || "",
-      next[field] || "",
-      `Изменено поле: ${field}`
-    );
+    const updates = payload;
+    const current = employees[index];
+    const next = mergeRow(getEmployeeColumnsSync(), current, updates);
+    next.employee_id = req.params.id;
+
+    // Валидация обязательных полей
+    if (!next.first_name || !next.first_name.trim()) {
+      res.status(400).json({ error: "Имя обязательно для заполнения" });
+      return;
+    }
+    if (!next.last_name || !next.last_name.trim()) {
+      res.status(400).json({ error: "Фамилия обязательна для заполнения" });
+      return;
+    }
+    employees[index] = next;
+
+    await saveEmployees(employees);
+
+    // Логирование изменений
+    const employeeName = [next.last_name, next.first_name, next.middle_name]
+      .filter(Boolean)
+      .join(" ");
+
+    // Находим измененные поля
+    const changedFields = [];
+    getEmployeeColumnsSync().forEach((field) => {
+      if (field !== "employee_id" && current[field] !== next[field]) {
+        changedFields.push(field);
+      }
+    });
+
+    // Логируем каждое изменение
+    for (const field of changedFields) {
+      await addLog(
+        "UPDATE",
+        req.params.id,
+        employeeName,
+        field,
+        current[field] || "",
+        next[field] || "",
+        `Изменено поле: ${field}`
+      );
+    }
+
+    res.json({ employee: next });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
   }
-
-  res.json({ employee: next });
 });
 
 app.delete("/api/employees/:id", async (req, res) => {
-  const employees = await loadEmployees();
-  const deletedEmployee = employees.find((item) => item.employee_id === req.params.id);
-  const nextEmployees = employees.filter((item) => item.employee_id !== req.params.id);
+  try {
+    const employees = await loadEmployees();
+    const deletedEmployee = employees.find((item) => item.employee_id === req.params.id);
+    const nextEmployees = employees.filter((item) => item.employee_id !== req.params.id);
 
-  if (nextEmployees.length === employees.length) {
-    res.status(404).json({ error: "Сотрудник не найден" });
-    return;
+    if (nextEmployees.length === employees.length) {
+      res.status(404).json({ error: "Сотрудник не найден" });
+      return;
+    }
+
+    await saveEmployees(nextEmployees);
+
+    // Логирование удаления
+    if (deletedEmployee) {
+      const employeeName = [deletedEmployee.last_name, deletedEmployee.first_name, deletedEmployee.middle_name]
+        .filter(Boolean)
+        .join(" ");
+      await addLog("DELETE", req.params.id, employeeName, "", "", "", "Сотрудник удален");
+    }
+
+    res.status(204).end();
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
   }
-
-  await saveEmployees(nextEmployees);
-
-  // Логирование удаления
-  if (deletedEmployee) {
-    const employeeName = [deletedEmployee.last_name, deletedEmployee.first_name, deletedEmployee.middle_name]
-      .filter(Boolean)
-      .join(" ");
-    await addLog("DELETE", req.params.id, employeeName, "", "", "", "Сотрудник удален");
-  }
-
-  res.status(204).end();
 });
 
 const ALLOWED_FILE_EXTENSIONS = ['.pdf', '.jpg', '.jpeg', '.png', '.gif', '.webp'];

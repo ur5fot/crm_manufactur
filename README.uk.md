@@ -121,21 +121,26 @@ npm run dev
   22. `tax_id` - ІПН
   23. `email` - Ел. пошта
   24. `blood_group` - Група крові (I (0), II (A), III (B), IV (AB))
-  25. `workplace_location` - Місце роботи
-  26. `residence_place` - Місце проживання
-  27. `registration_place` - Місце реєстрації
-  28. `driver_license_file` - Водійське посвідчення (файл)
-  29. `id_certificate_file` - Посвідчення особи (файл)
-  30. `foreign_passport_number` - Номер закордонного паспорта
-  31. `foreign_passport_issue_date` - Дата видачі закордонного паспорта
-  32. `foreign_passport_file` - Закордонний паспорт (файл)
-  33. `criminal_record_file` - Довідка про несудимість (файл)
-  34. `phone` - Телефон
-  35. `phone_note` - Примітка до телефону
-  36. `education` - Освіта
-  37. `notes` - Примітка
-  38. `status_start_date` - Дата початку статусу (YYYY-MM-DD)
-  39. `status_end_date` - Дата завершення статусу (YYYY-MM-DD)
+  25. `residence_place` - Місце проживання
+  26. `registration_place` - Місце реєстрації
+  27. `personal_matter_file` - Особова справа (файл)
+  28. `medical_commission_file` - Медична комісія (файл)
+  29. `veterans_certificate_file` - Посвідчення ветерана (файл)
+  30. `driver_license_file` - Водійське посвідчення (файл)
+  31. `id_certificate_file` - Посвідчення особи (файл)
+  32. `foreign_passport_number` - Номер закордонного паспорта
+  33. `foreign_passport_file` - Закордонний паспорт (файл)
+  34. `criminal_record_file` - Довідка про несудимість (файл)
+  35. `military_id_file` - Військовий квиток (файл)
+  36. `medical_certificate_file` - Медична довідка (файл)
+  37. `insurance_file` - Страховий поліс (файл)
+  38. `education_diploma_file` - Диплом про освіту (файл)
+  39. `phone` - Телефон
+  40. `phone_note` - Примітка до телефону
+  41. `education` - Освіта
+  42. `notes` - Примітка
+  43. `status_start_date` - Дата початку статусу (YYYY-MM-DD)
+  44. `status_end_date` - Дата завершення статусу (YYYY-MM-DD)
   40. Решта полів документів та службових даних
 
 - **fields_schema.csv** - **Мета-схема керування UI** (8 колонок, локальний файл в `.gitignore`):

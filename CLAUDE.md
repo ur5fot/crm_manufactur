@@ -306,29 +306,48 @@ Defined in [server/src/schema.js](server/src/schema.js). The column list is dyna
 22. `tax_id` - Tax ID
 23. `email` - Email
 24. `blood_group` - Blood group (dictionary: I (0), II (A), III (B), IV (AB))
-25. `workplace_location` - Workplace location
-26. `residence_place` - Residence place
-27. `registration_place` - Registration place
-28. `driver_license_file` - Driver's license file path
-29. + `driver_license_file_issue_date` - auto-generated
-30. + `driver_license_file_expiry_date` - auto-generated
-31. `id_certificate_file` - ID certificate file path
-32. + `id_certificate_file_issue_date` - auto-generated
-33. + `id_certificate_file_expiry_date` - auto-generated
-34. `foreign_passport_number` - Foreign passport number
-35. `foreign_passport_issue_date` - Foreign passport issue date (YYYY-MM-DD)
-36. `foreign_passport_file` - Foreign passport file path
-37. + `foreign_passport_file_issue_date` - auto-generated
-38. + `foreign_passport_file_expiry_date` - auto-generated
-39. `criminal_record_file` - Criminal record certificate file path
-40. + `criminal_record_file_issue_date` - auto-generated
-41. + `criminal_record_file_expiry_date` - auto-generated
-42. `phone` - Phone number
-43. `phone_note` - Phone note
-44. `education` - Education
-45. `status_start_date` - Status start date (YYYY-MM-DD) — managed via Status Change popup
-46. `status_end_date` - Status end date (YYYY-MM-DD) — managed via Status Change popup
-47. `notes` - Notes
+25. `residence_place` - Residence place
+26. `registration_place` - Registration place
+27. `personal_matter_file` - Personal matter file path
+28. + `personal_matter_file_issue_date` - auto-generated
+29. + `personal_matter_file_expiry_date` - auto-generated
+30. `medical_commission_file` - Medical commission file path
+31. + `medical_commission_file_issue_date` - auto-generated
+32. + `medical_commission_file_expiry_date` - auto-generated
+33. `veterans_certificate_file` - Veteran's certificate file path
+34. + `veterans_certificate_file_issue_date` - auto-generated
+35. + `veterans_certificate_file_expiry_date` - auto-generated
+36. `driver_license_file` - Driver's license file path
+37. + `driver_license_file_issue_date` - auto-generated
+38. + `driver_license_file_expiry_date` - auto-generated
+39. `id_certificate_file` - ID certificate file path
+40. + `id_certificate_file_issue_date` - auto-generated
+41. + `id_certificate_file_expiry_date` - auto-generated
+42. `foreign_passport_number` - Foreign passport number
+43. `foreign_passport_file` - Foreign passport file path
+44. + `foreign_passport_file_issue_date` - auto-generated
+45. + `foreign_passport_file_expiry_date` - auto-generated
+46. `criminal_record_file` - Criminal record certificate file path
+47. + `criminal_record_file_issue_date` - auto-generated
+48. + `criminal_record_file_expiry_date` - auto-generated
+49. `military_id_file` - Military ID file path
+50. + `military_id_file_issue_date` - auto-generated
+51. + `military_id_file_expiry_date` - auto-generated
+52. `medical_certificate_file` - Medical certificate file path
+53. + `medical_certificate_file_issue_date` - auto-generated
+54. + `medical_certificate_file_expiry_date` - auto-generated
+55. `insurance_file` - Insurance policy file path
+56. + `insurance_file_issue_date` - auto-generated
+57. + `insurance_file_expiry_date` - auto-generated
+58. `education_diploma_file` - Education diploma file path
+59. + `education_diploma_file_issue_date` - auto-generated
+60. + `education_diploma_file_expiry_date` - auto-generated
+61. `phone` - Phone number
+62. `phone_note` - Phone note
+63. `education` - Education
+64. `status_start_date` - Status start date (YYYY-MM-DD) — managed via Status Change popup
+65. `status_end_date` - Status end date (YYYY-MM-DD) — managed via Status Change popup
+66. `notes` - Notes
 
 **Auto-generated date columns convention:**
 - For every `field_type=file` field in `fields_schema.csv`, the system auto-generates two companion columns in `employees.csv`:
