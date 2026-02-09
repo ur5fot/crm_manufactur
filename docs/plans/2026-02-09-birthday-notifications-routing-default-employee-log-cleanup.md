@@ -69,15 +69,15 @@ Add birthday notifications, routing with URL params, default employee card, and 
 - Modify: `client/src/App.vue`
 
 **Steps:**
-- [ ] Import and install Vue Router in main.js
-- [ ] Define routes: / (dashboard), /cards (employee cards with optional :id param), /table (summary table), /logs (audit logs)
-- [ ] Update App.vue to use router-view instead of v-if view switching
-- [ ] Replace currentView reactive variable with router-based navigation
-- [ ] Update all view switching functions (showDashboard, showCards, showTable, showLogs) to use router.push()
-- [ ] Update showCards(employeeId) to navigate to /cards/:id when employeeId provided
-- [ ] Read route params in mounted() hook to restore view state (e.g., load employee by :id)
-- [ ] Manual test: navigate to /cards/5, refresh page, verify employee 5 loads
-- [ ] Manual test: navigate between views, verify URL updates correctly
+- [x] Import and install Vue Router in main.js
+- [x] Define routes: / (dashboard), /cards (employee cards with optional :id param), /table (summary table), /logs (audit logs)
+- [x] Update App.vue to use router-view instead of v-if view switching
+- [x] Replace currentView reactive variable with router-based navigation
+- [x] Update all view switching functions (showDashboard, showCards, showTable, showLogs) to use router.push()
+- [x] Update showCards(employeeId) to navigate to /cards/:id when employeeId provided
+- [x] Read route params in mounted() hook to restore view state (e.g., load employee by :id)
+- [x] Manual test: navigate to /cards/5, refresh page, verify employee 5 loads
+- [x] Manual test: navigate between views, verify URL updates correctly
 
 ## TASK 4: Show first employee by default in cards view
 

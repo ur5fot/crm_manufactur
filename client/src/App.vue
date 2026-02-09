@@ -1,6 +1,10 @@
 <script setup>
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from "vue";
+import { useRouter, useRoute } from "vue-router";
 import { api } from "./api";
+
+const router = useRouter();
+const route = useRoute();
 
 // Fallback список полей — должен соответствовать DEFAULT_EMPLOYEE_COLUMNS в schema.js
 const employeeFields = [
@@ -103,7 +107,6 @@ const importFile = ref(null);
 const importResult = ref(null);
 const importing = ref(false);
 const dictionaries = ref({});
-const currentView = ref("dashboard"); // "dashboard", "cards", "table", or "logs"
 const refreshIntervalId = ref(null);
 const lastUpdated = ref(null);
 const isRefreshing = ref(false);
@@ -113,6 +116,16 @@ const activeReport = ref(null); // null | 'current' | 'month'
 const reportData = ref([]);
 const reportLoading = ref(false);
 
+// Compute current view based on route
+const currentView = computed(() => {
+  const name = route.name;
+  if (name === 'dashboard') return 'dashboard';
+  if (name === 'cards') return 'cards';
+  if (name === 'table') return 'table';
+  if (name === 'logs') return 'logs';
+  return 'dashboard';
+});
+
 const tabs = [
   { key: 'dashboard', label: 'Dashboard' },
   { key: 'cards', label: 'Картки' },
@@ -121,8 +134,15 @@ const tabs = [
 ];
 
 function switchView(view) {
-  currentView.value = view;
-  if (view === 'logs') loadLogs();
+  if (view === 'dashboard') {
+    router.push({ name: 'dashboard' });
+  } else if (view === 'cards') {
+    router.push({ name: 'cards' });
+  } else if (view === 'table') {
+    router.push({ name: 'table' });
+  } else if (view === 'logs') {
+    router.push({ name: 'logs' });
+  }
 }
 
 function startDashboardRefresh() {
@@ -148,13 +168,23 @@ function stopDashboardRefresh() {
   }
 }
 
-watch(currentView, (newView, oldView) => {
+watch(() => route.name, (newRoute, oldRoute) => {
+  const newView = currentView.value;
+  const oldView = oldRoute === 'dashboard' ? 'dashboard' :
+                   oldRoute === 'cards' ? 'cards' :
+                   oldRoute === 'table' ? 'table' :
+                   oldRoute === 'logs' ? 'logs' : 'dashboard';
+
   if (newView === 'dashboard') {
     loadEmployees();
     loadDashboardEvents();
     startDashboardRefresh();
   } else if (oldView === 'dashboard') {
     stopDashboardRefresh();
+  }
+
+  if (newView === 'logs') {
+    loadLogs();
   }
 });
 const editingCells = reactive({}); // { employeeId_fieldName: value }
@@ -1182,7 +1212,7 @@ async function saveCell(employee, fieldName) {
 }
 
 function openEmployeeCard(employeeId) {
-  currentView.value = "cards";
+  router.push({ name: 'cards', params: { id: employeeId } });
   selectEmployee(employeeId);
 }
 
@@ -1272,8 +1302,19 @@ onMounted(async () => {
   document.addEventListener('keydown', handleGlobalKeydown);
   await loadFieldsSchema();
   await loadEmployees();
-  await loadDashboardEvents();
-  startDashboardRefresh();
+
+  // Restore view state from route params
+  if (route.name === 'cards' && route.params.id) {
+    selectEmployee(route.params.id);
+  } else if (route.name === 'logs') {
+    await loadLogs();
+  }
+
+  // Load dashboard events if on dashboard
+  if (route.name === 'dashboard' || !route.name) {
+    await loadDashboardEvents();
+    startDashboardRefresh();
+  }
 });
 
 onUnmounted(() => {
