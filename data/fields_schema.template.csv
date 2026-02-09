@@ -3,7 +3,7 @@
 2;last_name;Прізвище;text;;yes;Особисті дані;yes
 3;first_name;Ім'я;text;;yes;Особисті дані;yes
 4;middle_name;По батькові;text;;yes;Особисті дані;yes
-5;employment_status;Статус роботи;select;Працює|Звільнений|Відпустка|Лікарняний|Відкомандирований;yes;Особисті дані;yes
+5;employment_status;Статус роботи;select;Працює|Звільнений|Відпустка|Лікарняний|Відкомандирований;yes;Особисті дані;no
 6;additional_status;Додатковий статус;select;може працювати|Не може працювати;no;Особисті дані;no
 7;gender;Стать;select;Чоловіча|Жіноча;no;Особисті дані;no
 8;blood_group;Група крові;select;0(I) Rh+|0(I) Rh-|A(II) Rh+|A(II) Rh-|B(III) Rh+|B(III) Rh-|AB(IV) Rh+|AB(IV) Rh-;no;Особисті дані;no

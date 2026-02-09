@@ -138,6 +138,7 @@ const logsSearchTerm = ref("");
 const statusReturning = ref([]);
 const statusStarting = ref([]);
 const showStatusNotification = ref(false);
+const notifiedEmployeeIds = new Set();
 
 // Динамические значения статусов из fields_schema (по позиции в field_options)
 // Конвенция: options[0] = рабочий, options[1] = уволен, options[2] = отпуск, options[3] = больничный
@@ -357,11 +358,17 @@ function closeStatusChangePopup() {
 async function applyStatusChange() {
   if (!statusChangeForm.status || !statusChangeForm.startDate) return;
   if (!form.employee_id) return;
+  if (statusChangeForm.endDate && statusChangeForm.endDate < statusChangeForm.startDate) {
+    errorMessage.value = 'Дата завершення не може бути раніше дати початку';
+    return;
+  }
 
   errorMessage.value = '';
   try {
+    // Используем данные из employees.value, а не из form, чтобы не сохранять несохранённые изменения формы
+    const currentEmployee = employees.value.find(e => e.employee_id === form.employee_id) || {};
     const payload = {
-      ...form,
+      ...currentEmployee,
       employment_status: statusChangeForm.status,
       status_start_date: statusChangeForm.startDate,
       status_end_date: statusChangeForm.endDate || ''
@@ -380,8 +387,10 @@ async function resetStatus() {
 
   errorMessage.value = '';
   try {
+    // Используем данные из employees.value, а не из form, чтобы не сохранять несохранённые изменения формы
+    const currentEmployee = employees.value.find(e => e.employee_id === form.employee_id) || {};
     const payload = {
-      ...form,
+      ...currentEmployee,
       employment_status: workingStatus.value,
       status_start_date: '',
       status_end_date: ''
@@ -618,10 +627,14 @@ async function checkStatusChanges() {
     }
   }
 
-  // Показываем уведомление если есть изменения
-  if (returningToday.length > 0 || startingToday.length > 0) {
-    statusReturning.value = returningToday;
-    statusStarting.value = startingToday;
+  // Показываем уведомление только для ещё не показанных сотрудников
+  const newReturning = returningToday.filter(e => !notifiedEmployeeIds.has(e.id));
+  const newStarting = startingToday.filter(e => !notifiedEmployeeIds.has(e.id));
+  if (newReturning.length > 0 || newStarting.length > 0) {
+    newReturning.forEach(e => notifiedEmployeeIds.add(e.id));
+    newStarting.forEach(e => notifiedEmployeeIds.add(e.id));
+    statusReturning.value = newReturning;
+    statusStarting.value = newStarting;
     showStatusNotification.value = true;
   }
 
@@ -1206,6 +1219,7 @@ onUnmounted(() => {
               <thead>
                 <tr>
                   <th>ПІБ</th>
+                  <th>Статус</th>
                   <th>Початок</th>
                   <th>Закінчення</th>
                   <th>Днів</th>
@@ -1214,6 +1228,7 @@ onUnmounted(() => {
               <tbody>
                 <tr v-for="row in reportData" :key="row.employee_id">
                   <td><span class="report-name-link" @click="openEmployeeCard(row.employee_id)">{{ row.name }}</span></td>
+                  <td>{{ row.status_type }}</td>
                   <td>{{ formatEventDate(row.status_start_date) }}</td>
                   <td>{{ formatEventDate(row.status_end_date) }}</td>
                   <td>{{ row.days }}</td>
