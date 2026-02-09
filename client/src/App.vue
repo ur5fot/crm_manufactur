@@ -308,50 +308,69 @@ const formattedLastUpdated = computed(() => {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 });
 
-// Розрахунок кількості календарних днів відпустки (Story 3.3)
-const vacationDays = computed(() => {
-  const start = form.vacation_start_date;
-  const end = form.vacation_end_date;
-
-  // Валідація: обидві дати обов'язкові
-  if (!start || !end) return null;
-
-  // Парсинг дат (формат YYYY-MM-DD з CSV)
-  const startDate = new Date(start + 'T00:00:00');
-  const endDate = new Date(end + 'T00:00:00');
-
-  // Валідація: перевірка на Invalid Date
-  if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) return null;
-
-  // Валідація: end >= start
-  if (endDate < startDate) return null;
-
-  // Розрахунок включаючи обидві граничні дати
-  // Math.round замість Math.floor для коректної роботи при переході на літній/зимовий час (DST)
-  const MS_PER_DAY = 86400000; // 1000 * 60 * 60 * 24
-  const days = Math.round((endDate - startDate) / MS_PER_DAY) + 1;
-
-  return days > 0 ? days : null;
+// Попап зміни статусу
+const showStatusChangePopup = ref(false);
+const statusChangeForm = reactive({
+  status: '',
+  startDate: '',
+  endDate: ''
 });
 
-// Українські форми множини для "день/дні/днів" (Story 3.3 code review fix)
-const vacationDaysLabel = computed(() => {
-  const days = vacationDays.value;
-  if (days === null) return null;
+function openStatusChangePopup() {
+  // Заповнюємо поточними значеннями
+  statusChangeForm.status = form.employment_status || '';
+  statusChangeForm.startDate = form.status_start_date || '';
+  statusChangeForm.endDate = form.status_end_date || '';
+  showStatusChangePopup.value = true;
+}
 
-  const lastDigit = days % 10;
-  const lastTwoDigits = days % 100;
+function closeStatusChangePopup() {
+  showStatusChangePopup.value = false;
+}
 
-  // Українські правила множини
-  if (lastTwoDigits >= 11 && lastTwoDigits <= 14) {
-    return `${days} календарних днів`;
-  } else if (lastDigit === 1) {
-    return `${days} календарний день`;
-  } else if (lastDigit >= 2 && lastDigit <= 4) {
-    return `${days} календарні дні`;
-  } else {
-    return `${days} календарних днів`;
+async function applyStatusChange() {
+  if (!statusChangeForm.status || !statusChangeForm.startDate) return;
+  if (!form.employee_id) return;
+
+  errorMessage.value = '';
+  try {
+    const payload = {
+      ...form,
+      employment_status: statusChangeForm.status,
+      status_start_date: statusChangeForm.startDate,
+      status_end_date: statusChangeForm.endDate || ''
+    };
+    await api.updateEmployee(form.employee_id, payload);
+    await loadEmployees();
+    await selectEmployee(form.employee_id);
+    closeStatusChangePopup();
+  } catch (error) {
+    errorMessage.value = error.message;
   }
+}
+
+async function resetStatus() {
+  if (!form.employee_id) return;
+
+  errorMessage.value = '';
+  try {
+    const payload = {
+      ...form,
+      employment_status: workingStatus.value,
+      status_start_date: '',
+      status_end_date: ''
+    };
+    await api.updateEmployee(form.employee_id, payload);
+    await loadEmployees();
+    await selectEmployee(form.employee_id);
+  } catch (error) {
+    errorMessage.value = error.message;
+  }
+}
+
+// Опції для попапу зміни статусу (всі крім options[0] — "робочий" стан)
+const statusChangeOptions = computed(() => {
+  return employmentOptions.value.slice(1);
 });
 
 function emptyEmployee() {
@@ -912,8 +931,12 @@ function getDetailLabel(detail) {
 }
 
 function handleGlobalKeydown(e) {
-  if (e.key === 'Escape' && showVacationNotification.value) {
-    closeVacationNotification();
+  if (e.key === 'Escape') {
+    if (showStatusChangePopup.value) {
+      closeStatusChangePopup();
+    } else if (showVacationNotification.value) {
+      closeVacationNotification();
+    }
   }
 }
 
@@ -970,6 +993,46 @@ onUnmounted(() => {
         </div>
         <div class="vacation-notification-footer">
           <button class="primary" @click="closeVacationNotification">Зрозуміло</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Попап зміни статусу -->
+    <div v-if="showStatusChangePopup" class="vacation-notification-overlay" @click="closeStatusChangePopup">
+      <div class="vacation-notification-modal" @click.stop>
+        <div class="vacation-notification-header">
+          <h3>Зміна статусу роботи</h3>
+          <button class="close-btn" @click="closeStatusChangePopup">×</button>
+        </div>
+        <div class="vacation-notification-body">
+          <div class="status-change-form">
+            <div class="field">
+              <label for="status-change-select">Новий статус</label>
+              <select id="status-change-select" v-model="statusChangeForm.status">
+                <option value="">-- Оберіть статус --</option>
+                <option v-for="opt in statusChangeOptions" :key="opt" :value="opt">{{ opt }}</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="status-change-start">Дата початку *</label>
+              <input id="status-change-start" type="date" v-model="statusChangeForm.startDate" required />
+            </div>
+            <div class="field">
+              <label for="status-change-end">Дата завершення</label>
+              <input id="status-change-end" type="date" v-model="statusChangeForm.endDate" />
+            </div>
+          </div>
+        </div>
+        <div class="vacation-notification-footer status-change-footer">
+          <button class="secondary" type="button" @click="closeStatusChangePopup">Скасувати</button>
+          <button
+            class="primary"
+            type="button"
+            :disabled="!statusChangeForm.status || !statusChangeForm.startDate"
+            @click="applyStatusChange"
+          >
+            Застосувати
+          </button>
         </div>
       </div>
     </div>
@@ -1223,8 +1286,36 @@ onUnmounted(() => {
               <div class="form-grid">
                 <div v-for="field in group.fields" :key="field.key" class="field">
                   <label :for="field.key">{{ field.label }}</label>
+                  <!-- employment_status: readonly display + buttons -->
+                  <template v-if="field.key === 'employment_status'">
+                    <div class="status-field-row">
+                      <input
+                        :id="field.key"
+                        type="text"
+                        :value="form[field.key] || '—'"
+                        readonly
+                        class="status-readonly-input"
+                      />
+                      <button
+                        v-if="!isNew"
+                        class="secondary small"
+                        type="button"
+                        @click="openStatusChangePopup"
+                      >
+                        Змінити статус
+                      </button>
+                      <button
+                        v-if="!isNew && form.employment_status && form.employment_status !== workingStatus"
+                        class="secondary small"
+                        type="button"
+                        @click="resetStatus"
+                      >
+                        Скинути статус
+                      </button>
+                    </div>
+                  </template>
                   <select
-                    v-if="field.type === 'select'"
+                    v-else-if="field.type === 'select'"
                     :id="field.key"
                     v-model="form[field.key]"
                   >
@@ -1251,10 +1342,6 @@ onUnmounted(() => {
                     :required="field.key === 'first_name' || field.key === 'last_name'"
                   />
                 </div>
-              </div>
-              <!-- Vacation days calculation display (Story 3.3) -->
-              <div v-if="group.fields.some(f => f.key === 'vacation_start_date' || f.key === 'vacation_end_date') && vacationDaysLabel !== null" class="vacation-days-display">
-                {{ vacationDaysLabel }}
               </div>
             </div>
 

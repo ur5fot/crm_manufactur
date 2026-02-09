@@ -1388,12 +1388,28 @@ button.small {
   background: #1565C0;
 }
 
-/* Vacation days calculation display (Story 3.3) */
-.vacation-days-display {
-  margin-top: 12px;
-  font-size: 0.85em;
-  color: var(--muted);
-  font-style: italic;
+/* Status field row — readonly input + action buttons */
+.status-field-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.status-readonly-input {
+  flex: 1;
+  background: var(--bg) !important;
+  cursor: default;
+}
+
+/* Status change popup form */
+.status-change-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.status-change-footer {
+  gap: 12px;
 }
 
 /* Clickable employee names in reports (Story 3.3 enhancement) */

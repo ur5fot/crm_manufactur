@@ -61,17 +61,17 @@
 - Modify: `client/src/App.vue`
 
 **Steps:**
-- [ ] Убрать блок "Відпустка" из карточки сотрудника (секция с vacation_start_date, vacation_end_date)
-- [ ] Сделать поле `employment_status` в карточке readonly (не редактируемое напрямую)
-- [ ] Добавить кнопку "Змінити статус" рядом с `employment_status` в карточке
-- [ ] Создать попап "Зміна статусу роботи":
+- [x] Убрать блок "Відпустка" из карточки сотрудника (секция с vacation_start_date, vacation_end_date)
+- [x] Сделать поле `employment_status` в карточке readonly (не редактируемое напрямую)
+- [x] Добавить кнопку "Змінити статус" рядом с `employment_status` в карточке
+- [x] Создать попап "Зміна статусу роботи":
   - Select со статусами (все `employment_status` options кроме `options[0]` — "Працює" не выбирается, это нормальное состояние)
   - Дата старта (обязательно, input type=date)
   - Дата завершення (опционально, input type=date)
   - Кнопки "Застосувати" и "Скасувати"
-- [ ] При применении: обновить `employment_status`, `status_start_date`, `status_end_date` через PUT API
-- [ ] Добавить кнопку "Скинути статус" — возвращает `options[0]`, очищает даты
-- [ ] Стилизация попапа в том же стиле что существующие модалки (notification modal)
+- [x] При применении: обновить `employment_status`, `status_start_date`, `status_end_date` через PUT API
+- [x] Добавить кнопку "Скинути статус" — возвращает `options[0]`, очищает даты
+- [x] Стилизация попапа в том же стиле что существующие модалки (notification modal)
 
 ### Task 4: Frontend — Universal checkStatusChanges()
 
