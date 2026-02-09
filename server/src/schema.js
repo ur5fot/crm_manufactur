@@ -51,9 +51,6 @@ const DEFAULT_EMPLOYEE_COLUMNS = [
 
 // Fallback список полей документов если fields_schema.csv недоступен
 const DEFAULT_DOCUMENT_FIELDS = [
-  "personal_matter_file",
-  "medical_commission_file",
-  "veterans_certificate_file",
   "driver_license_file",
   "id_certificate_file",
   "foreign_passport_file",

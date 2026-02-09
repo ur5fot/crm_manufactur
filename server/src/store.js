@@ -347,6 +347,7 @@ export async function getStatusReport(type) {
       if (start && start >= monthStart && start <= monthEnd) return true;
       if (end && end >= monthStart && end <= monthEnd) return true;
       if (start && end && start < monthStart && end > monthEnd) return true;
+      if (start && !end && start <= monthEnd) return true;
       return false;
     });
   } else {

@@ -157,7 +157,14 @@ app.get("/api/export", async (req, res) => {
 });
 
 app.get("/api/fields-schema", async (_req, res) => {
-  const schema = await loadFieldsSchema();
+  let schema;
+  try {
+    schema = await loadFieldsSchema();
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+    return;
+  }
 
   // Группируем поля по группам
   const groups = {};
@@ -198,14 +205,19 @@ app.get("/api/fields-schema", async (_req, res) => {
 });
 
 app.get("/api/logs", async (req, res) => {
-  const logs = await loadLogs();
-  // Сортировка по убыванию (новые сначала)
-  logs.sort((a, b) => {
-    const dateA = new Date(a.timestamp);
-    const dateB = new Date(b.timestamp);
-    return dateB - dateA;
-  });
-  res.json({ logs });
+  try {
+    const logs = await loadLogs();
+    // Сортировка по убыванию (новые сначала)
+    logs.sort((a, b) => {
+      const dateA = new Date(a.timestamp);
+      const dateB = new Date(b.timestamp);
+      return dateB - dateA;
+    });
+    res.json({ logs });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.post("/api/open-data-folder", async (req, res) => {
@@ -479,7 +491,7 @@ const upload = multer({
   storage,
   fileFilter: (_req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();
-    if (ALLOWED_FILE_EXTENSIONS.includes(ext) || ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+    if (ALLOWED_FILE_EXTENSIONS.includes(ext)) {
       cb(null, true);
     } else {
       cb(new Error("Дозволені лише файли PDF та зображення (jpg, png, gif, webp)"));
@@ -579,10 +591,14 @@ app.delete("/api/employees/:id/files/:fieldName", async (req, res) => {
     // Продолжаем даже если файл не удалось удалить
   }
 
-  // Очищаем поле в CSV
-  const updated = mergeRow(getEmployeeColumnsSync(), employee, {
-    [fieldName]: ""
-  });
+  // Очищаем поле и companion date-колонки в CSV
+  const clearData = { [fieldName]: "" };
+  const columns = getEmployeeColumnsSync();
+  const issueDateField = `${fieldName}_issue_date`;
+  const expiryDateField = `${fieldName}_expiry_date`;
+  if (columns.includes(issueDateField)) clearData[issueDateField] = "";
+  if (columns.includes(expiryDateField)) clearData[expiryDateField] = "";
+  const updated = mergeRow(columns, employee, clearData);
   updated.employee_id = id;
   employees[index] = updated;
   await saveEmployees(employees);

@@ -433,6 +433,7 @@ async function resetStatus() {
     await api.updateEmployee(form.employee_id, payload);
     await loadEmployees();
     await selectEmployee(form.employee_id);
+    closeStatusChangePopup();
   } catch (error) {
     errorMessage.value = error.message;
   } finally {
@@ -578,7 +579,7 @@ function isDocExpiringSoon(doc) {
   today.setHours(0, 0, 0, 0);
   const expiry = new Date(expiryDate + 'T00:00:00');
   const diffDays = Math.round((expiry - today) / 86400000);
-  return diffDays <= 7;
+  return diffDays >= 0 && diffDays <= 7;
 }
 
 function isDocExpired(doc) {
@@ -597,6 +598,11 @@ function emptyEmployee() {
   if (allFieldsSchema.value.length > 0) {
     for (const field of allFieldsSchema.value) {
       base[field.key] = "";
+      // Для file-полей добавляем companion date columns
+      if (field.type === 'file') {
+        base[`${field.key}_issue_date`] = "";
+        base[`${field.key}_expiry_date`] = "";
+      }
     }
   } else {
     // Fallback на статический список если schema еще не загружена
@@ -725,6 +731,8 @@ function daysFromNowLabel(dateStr) {
   today.setHours(0, 0, 0, 0);
   const target = new Date(dateStr + 'T00:00:00');
   const diff = Math.round((target - today) / 86400000);
+  if (diff === 0) return 'сьогодні';
+  if (diff < 0) return `${Math.abs(diff)} дн. тому`;
   if (diff === 1) return 'завтра';
   if (diff >= 2 && diff <= 4) return `через ${diff} дні`;
   return `через ${diff} днів`;
@@ -873,11 +881,11 @@ async function checkDocumentExpiry() {
     const todayItems = data.today || [];
     const weekItems = data.thisWeek || [];
 
+    docExpiryNotifiedDate = today;
     if (todayItems.length > 0 || weekItems.length > 0) {
       docExpiryToday.value = todayItems;
       docExpiryWeek.value = weekItems;
       showDocExpiryNotification.value = true;
-      docExpiryNotifiedDate = today;
     }
   } catch (error) {
     console.error('Failed to check document expiry:', error);
@@ -1003,6 +1011,8 @@ async function deleteDocument(doc) {
   try {
     await api.deleteEmployeeFile(form.employee_id, doc.key);
     form[doc.key] = "";
+    form[`${doc.key}_issue_date`] = "";
+    form[`${doc.key}_expiry_date`] = "";
     await loadEmployees();
   } catch (error) {
     errorMessage.value = error.message;
