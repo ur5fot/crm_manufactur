@@ -36,6 +36,8 @@ const DEFAULT_EMPLOYEE_COLUMNS = [
   "phone",
   "phone_note",
   "education",
+  "status_start_date",
+  "status_end_date",
   "notes"
 ];
 

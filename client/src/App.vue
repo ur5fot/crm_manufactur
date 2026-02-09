@@ -39,6 +39,8 @@ const employeeFields = [
   "phone",
   "phone_note",
   "education",
+  "status_start_date",
+  "status_end_date",
   "notes"
 ];
 
@@ -145,8 +147,6 @@ const employmentOptions = computed(() => {
 });
 
 const workingStatus = computed(() => employmentOptions.value[0] || '');
-// vacationStatus остаётся для определения эмодзи по позиции (options[2] = отпуск)
-const vacationStatus = computed(() => employmentOptions.value[2] || '');
 
 // Эмодзи по позиции статуса: options[2] (отпуск) — ✈️, options[3] (лікарняний) — 🏥, остальные — ℹ️
 function statusEmoji(statusValue) {
@@ -342,8 +342,9 @@ const statusChangeForm = reactive({
 });
 
 function openStatusChangePopup() {
-  // Заповнюємо поточними значеннями
-  statusChangeForm.status = form.employment_status || '';
+  // Заповнюємо поточними значеннями (якщо статус = робочий, скидаємо на порожній для вибору)
+  const currentStatus = form.employment_status || '';
+  statusChangeForm.status = currentStatus === workingStatus.value ? '' : currentStatus;
   statusChangeForm.startDate = form.status_start_date || '';
   statusChangeForm.endDate = form.status_end_date || '';
   showStatusChangePopup.value = true;
@@ -605,10 +606,7 @@ async function checkStatusChanges() {
       return;
     }
 
-    // Проверка 4: сейчас в статусе (start_date <= today, end_date > today или пуста)
-    if (startDate && startDate <= today && (!endDate || endDate > today)) {
-      // Статус уже должен быть установлен — ничего не делаем
-    }
+    // Проверка 4: сейчас в статусе (start_date <= today, end_date > today или пуста) — ничего не делаем
   });
 
   // Обновляем статусы сотрудников
@@ -791,7 +789,7 @@ async function loadFieldsSchema() {
     // Формируем группы полей для карточек (исключаем группу "Документы" - для нее отдельная таблица)
     const groups = data.groups || {};
     fieldGroups.value = Object.keys(groups)
-      .filter(groupName => groupName !== 'Документы')
+      .filter(groupName => groupName && groupName !== 'Документы')
       .map(groupName => ({
         title: groupName,
         fields: groups[groupName].map(field => ({
@@ -985,7 +983,7 @@ onUnmounted(() => {
         <div class="vacation-notification-body">
           <!-- Сьогодні змінюють статус -->
           <div v-if="statusStarting.length > 0" class="notification-section">
-            <p class="notification-message">{{ statusStarting.length > 0 ? statusEmoji(statusStarting[0].statusType) : 'ℹ️' }} Сьогодні змінюють статус:</p>
+            <p class="notification-message">📋 Сьогодні змінюють статус:</p>
             <ul class="vacation-employees-list">
               <li v-for="emp in statusStarting" :key="emp.id" class="vacation-employee starting">
                 <div class="employee-info">
@@ -1190,19 +1188,19 @@ onUnmounted(() => {
           </div>
         </div>
         </div>
-        <!-- Швидкі звіти по відпустках -->
+        <!-- Швидкі звіти по статусах -->
         <div class="report-section">
           <div class="report-buttons">
             <button class="report-btn" :class="{ active: activeReport === 'current' }" @click="toggleReport('current')">
-              Хто у відпустці зараз
+              Хто відсутній зараз
             </button>
             <button class="report-btn" :class="{ active: activeReport === 'month' }" @click="toggleReport('month')">
-              Відпустки цього місяця
+              Зміни статусів цього місяця
             </button>
           </div>
           <div v-if="activeReport && !reportLoading" class="report-result">
             <div v-if="reportData.length === 0" class="report-empty">
-              {{ activeReport === 'current' ? 'Наразі ніхто не у відпустці' : 'Немає відпусток цього місяця' }}
+              {{ activeReport === 'current' ? 'Наразі всі працюють' : 'Немає змін статусів цього місяця' }}
             </div>
             <table v-else class="report-table">
               <thead>

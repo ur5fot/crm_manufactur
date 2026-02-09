@@ -259,16 +259,15 @@ export async function getStatusReport(type) {
 
   let filtered;
   if (type === 'current') {
-    // Employees with any non-working status that have active date ranges
+    // Employees with active non-working status (start_date <= today, no end_date or end_date >= today)
     filtered = employees.filter(emp => {
-      if (workingOpt && emp.employment_status !== workingOpt && emp.employment_status) {
-        const start = emp.status_start_date;
-        if (start) return true;
-      }
+      if (!emp.employment_status || emp.employment_status === workingOpt) return false;
       const start = emp.status_start_date;
       const end = emp.status_end_date;
-      if (start && end && start <= today && end >= today) return true;
-      return false;
+      if (!start) return false;
+      if (start > today) return false;
+      if (end && end < today) return false;
+      return true;
     });
   } else if (type === 'month') {
     const monthStart = today.slice(0, 7) + '-01';

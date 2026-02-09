@@ -170,7 +170,7 @@ Open `http://localhost:5173` in your browser.
 
 ### Dashboard
 
-The Dashboard is the home screen showing employee statistics and upcoming vacation events.
+The Dashboard is the home screen showing employee statistics and upcoming status change events.
 
 **Stat Cards:**
 - 4-column grid displaying employee counts by employment status (Total, per-status, Other)
