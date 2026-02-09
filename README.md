@@ -10,8 +10,8 @@ Local CRM system that stores data in CSV files and PDF documents. CSV files can 
 - **Dynamic UI** - entire form and table structure controlled by `fields_schema.csv`
 - **Sequential numeric IDs** - simple employee IDs (1, 2, 3...)
 - **File management** - upload and store PDF documents per employee
-- **Dashboard** - stat cards with expandable employee lists, vacation timeline with clickable links
-- **Vacation tracking** - automatic status changes, notifications for vacation start/end dates
+- **Dashboard** - stat cards with expandable employee lists, status change timeline with clickable links
+- **Universal status tracking** - status change popup, automatic status management, notifications for all status types (vacation, sick leave, etc.)
 - **Summary table** - inline editing via double-click, multi-select filters with empty value support
 - **Automatic audit logging** - all changes tracked in `logs.csv` with field-level details
 - **CSV import** - bulk import employees from CSV files
@@ -135,8 +135,8 @@ Open `http://localhost:5173` in your browser.
   35. `phone_note` - Phone note
   36. `education` - Education
   37. `notes` - Notes
-  38. `vacation_start_date` - Vacation start date (YYYY-MM-DD)
-  39. `vacation_end_date` - Vacation end date (YYYY-MM-DD)
+  38. `status_start_date` - Status start date (YYYY-MM-DD)
+  39. `status_end_date` - Status end date (YYYY-MM-DD)
   40. Additional document and service fields
 
 - **fields_schema.csv** - **Meta-schema for UI control** (8 columns, local file in `.gitignore`):
@@ -178,9 +178,10 @@ The Dashboard is the home screen showing employee statistics and upcoming vacati
 - Only one card can be expanded at a time (accordion behavior)
 - Click an employee name to navigate directly to their card
 
-**Vacation Timeline:**
+**Status Timeline:**
 - Two-column layout with "Today" and "Next 7 days" cards
-- Shows employees starting or returning from vacation with date badges
+- Shows employees with upcoming status changes (vacation, sick leave, etc.) with date badges
+- Emoji indicators by status type: ✈️ vacation, 🏥 sick leave, ℹ️ other
 - Employee names are clickable links to their cards
 
 ### Summary Table
@@ -214,30 +215,30 @@ The summary table provides powerful filtering and editing capabilities:
 **Adding new document types:**
 Simply add a new row to `fields_schema.csv` with `field_type=file` - no code changes needed!
 
-### Vacation Tracking
+### Status Change System
 
-Automatic vacation management with status changes and notifications.
+Universal status management with popup, automatic status changes, and notifications for all status types.
 
-**How it works:**
-- Set `vacation_start_date` and `vacation_end_date` in employee card
-- On page load, the system automatically:
-  - Changes status to vacation value (found by searching "отпуск" in `employment_status` options from `fields_schema.csv`) when start date arrives
-  - Shows notification with employees starting vacation today (✈️ blue)
-  - Shows notification with employees returning from vacation today (🏢 green)
-  - Clears vacation dates and restores first value from `employment_status` (usually "Работает" / Working) after vacation ends
+**Status Change Popup:**
+- `employment_status` is read-only in the employee card
+- Click "Change Status" button to open the popup
+- Select any status (except the working/active status which is the default)
+- Set a start date (required) and optionally an end date
+- Click "Reset Status" to restore the working status and clear dates
 
-**Dynamic statuses:**
-- Status values are taken from `fields_schema.csv` → `employment_status` → `field_options`
-- On vacation return: first value (e.g., "Работает" / Working, "Активный" / Active)
-- On vacation start: value containing "отпуск" (e.g., "Отпуск" / Vacation, "В отпуске" / On vacation)
+**Automatic status management:**
+- On page load, the system automatically checks all employees with `status_start_date`/`status_end_date`:
+  - If `status_end_date` has passed — restores working status (first value from `employment_status` options) and clears dates
+  - Works for all statuses (vacation, sick leave, etc.), not just vacation
 
 **Notifications:**
-- Modal window with two sections: starting and returning employees
-- Color-coded indicators (blue for starting, green for returning)
+- Modal window with two sections: employees changing status today and employees returning
+- Emoji indicators by status type: ✈️ vacation, 🏥 sick leave, ℹ️ other statuses
+- Color-coded (blue for status change, green for returning)
 - Displays name, position, and end date for context
-- Appears automatically on page load when there are vacation events today
+- Appears automatically on page load when there are status events today
 
-**No manual intervention required** - all status changes happen automatically!
+**No manual intervention required** - expired statuses are restored automatically!
 
 ### CSV Import
 

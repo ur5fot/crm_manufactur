@@ -209,10 +209,11 @@ git pull origin master
   - Employee names are clickable — navigate to employee card via `openEmployeeCard()`
   - Each card + expand wrapped in `.stat-card-wrap` container
   - CSS transition 200ms for both expand and collapse animation
-- **Timeline Cards** - Two-column grid (`.timeline-grid`) showing vacation events:
+- **Timeline Cards** - Two-column grid (`.timeline-grid`) showing status change events (all statuses, not just vacation):
   - "Сьогодні" (today) and "Найближчі 7 днів" (next 7 days)
   - Card-style containers (`.timeline-card`) with white background and rounded corners
   - Employee names are clickable links (`.timeline-link`) to employee cards
+  - Events include emoji by status position: options[2] (vacation) — ✈️, options[3] (sick leave) — 🏥, others — ℹ️
 - **Auto-refresh** - Dashboard data refreshes automatically via interval
 - **Footer** - Shows last update timestamp
 
@@ -231,18 +232,26 @@ git pull origin master
 - **File actions** - Open document in browser, delete document
 - **Empty form reset** - Creating new employee clears all document fields to prevent copying file links
 
-**Vacation Tracking:**
-- **Automatic status management** - On page load, checks all employees and updates statuses:
-  - Changes `employment_status` to vacation value (found by searching "отпуск" in options) when `vacation_start_date` arrives
-  - Clears vacation dates and restores first value from `employment_status` options after `vacation_end_date` passes
+**Status Change System:**
+- **Status Change Popup** - `employment_status` is read-only in the employee card. A "Змінити статус" button opens a popup with:
+  - Select dropdown with all `employment_status` options except `options[0]` (working status is set via "Скинути статус" button)
+  - Start date (required, input type=date)
+  - End date (optional, input type=date)
+  - "Застосувати" and "Скасувати" buttons
+  - "Скинути статус" button — restores `options[0]` and clears both dates
+- **Automatic status management** - On page load, `checkStatusChanges()` checks all employees and updates statuses:
+  - If `status_start_date` <= today and `status_end_date` is empty or >= today — status remains as set
+  - If `status_end_date` < today — restores `options[0]`, clears `status_start_date` and `status_end_date`
+  - Works for ALL statuses with dates (vacation, sick leave, etc.), not just vacation
 - **Dynamic status values** - Computed from `fields_schema.csv`:
-  - `workingStatus`: First value from `employment_status` field_options (e.g., "Работает", "Активный")
-  - `vacationStatus`: Value containing "отпуск" from options (e.g., "Отпуск", "В отпуске")
-- **Notifications** - Modal window with two sections:
-  - ✈️ Employees starting vacation today (blue, shows end date)
-  - 🏢 Employees returning from vacation today (green)
-- **Implementation** - `checkVacations()` function in App.vue, called from `loadEmployees()`
-- **Logging** - Console output for debugging vacation checks and status changes
+  - `workingStatus`: First value from `employment_status` field_options (e.g., "Працює", "Активний")
+  - `vacationStatus`: `options[2]` from `employment_status` (e.g., "Відпустка") — used for emoji assignment
+- **Notifications** - Modal window "Сповіщення про зміну статусів" with two sections:
+  - Employees changing status today — emoji by position: ✈️ (vacation/options[2]), 🏥 (sick leave/options[3]), ℹ️ (others)
+  - Employees returning to `options[0]` today (🏢 green)
+- **Data fields** - `status_start_date` and `status_end_date` (renamed from vacation_start/end_date), hidden from employee card form (no field_group), managed only through the popup
+- **Implementation** - `checkStatusChanges()` function in App.vue, called from `loadEmployees()`
+- **Logging** - Console output for debugging status checks and changes
 
 **Vite proxy configuration** ([vite.config.js](client/vite.config.js)):
 - `/api`, `/files`, `/data` proxied to `http://localhost:3000`
@@ -291,8 +300,8 @@ Defined in [server/src/schema.js](server/src/schema.js):
 35. `phone_note` - Phone note
 36. `education` - Education
 37. `notes` - Notes
-38. `vacation_start_date` - Vacation start date (YYYY-MM-DD)
-39. `vacation_end_date` - Vacation end date (YYYY-MM-DD)
+38. `status_start_date` - Status start date (YYYY-MM-DD) — managed via Status Change popup
+39. `status_end_date` - Status end date (YYYY-MM-DD) — managed via Status Change popup
 40. `notes` - Notes (moved to position 40 in schema)
 
 ### Fields Schema (8 columns) - **Primary UI Configuration**
@@ -401,14 +410,16 @@ Template: `data/employees_import_sample.csv`
 The order of values in `field_options` for `employment_status` has semantic meaning:
 - `options[0]` = working/active status (e.g., "Працює")
 - `options[1]` = fired/dismissed status (e.g., "Звільнений")
-- `options[2]` = vacation status (e.g., "Відпустка") — used by vacation automation
-- `options[3]` = sick leave status (e.g., "Лікарняний")
-- `options[4+]` = other statuses
+- `options[2]` = vacation status (e.g., "Відпустка") — used for emoji assignment (✈️)
+- `options[3]` = sick leave status (e.g., "Лікарняний") — used for emoji assignment (🏥)
+- `options[4+]` = other statuses — emoji ℹ️
 
 This convention is used by:
 - `workingStatus` computed in App.vue — `employmentOptions[0]`
 - `vacationStatus` computed in App.vue — `employmentOptions[2]`
-- `checkVacations()` function — uses `workingStatus` and `vacationStatus`
+- `checkStatusChanges()` function — uses `workingStatus` to restore status after end date passes
+- Status Change Popup — shows all options except `options[0]` for selection
+- Notification emoji — assigned by position index (✈️, 🏥, ℹ️)
 - Dashboard stat cards — rendered dynamically via `v-for` over all options
 - `getDashboardStats()` in store.js — counts per each option dynamically
 - `expandedEmployees` computed — filters employees by clicked stat card status

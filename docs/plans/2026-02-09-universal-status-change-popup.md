@@ -116,10 +116,10 @@
 - Modify: `README.uk.md`
 
 **Steps:**
-- [ ] Обновить CLAUDE.md: секции про vacation tracking -> status change system, vacation_start/end_date -> status_start/end_date
-- [ ] Обновить CLAUDE.md: описание попапа, новая логика checkStatusChanges
-- [ ] Обновить README.md: описание функционала смены статусов
-- [ ] Обновить README.uk.md: то же самое на украинском
+- [x] Обновить CLAUDE.md: секции про vacation tracking -> status change system, vacation_start/end_date -> status_start/end_date
+- [x] Обновить CLAUDE.md: описание попапа, новая логика checkStatusChanges
+- [x] Обновить README.md: описание функционала смены статусов
+- [x] Обновить README.uk.md: то же самое на украинском
 
 ## Verification
 
