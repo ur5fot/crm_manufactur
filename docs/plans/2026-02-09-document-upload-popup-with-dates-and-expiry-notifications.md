@@ -62,11 +62,11 @@ These companion fields will be auto-generated in the schema loading logic (NOT m
 - Modify: `server/src/index.js`
 - Modify: `server/src/store.js`
 
-- [ ] Modify POST /api/employees/:id/files to accept `issue_date` and `expiry_date` in request body, save them to the employee record
-- [ ] Accept images in addition to PDFs (jpg, jpeg, png, gif, webp) - update multer config and default extension
-- [ ] Add GET /api/document-expiry endpoint in store.js: `getDocumentExpiryEvents()` - scans all employees for documents with expiry_date approaching (today or within 7 days), returns structured data with employee name, document label, expiry date
-- [ ] Wire up the new endpoint in index.js
-- [ ] Test: upload a file with dates via API, verify dates stored in employees.csv
+- [x] Modify POST /api/employees/:id/files to accept `issue_date` and `expiry_date` in request body, save them to the employee record
+- [x] Accept images in addition to PDFs (jpg, jpeg, png, gif, webp) - update multer config and default extension
+- [x] Add GET /api/document-expiry endpoint in store.js: `getDocumentExpiryEvents()` - scans all employees for documents with expiry_date approaching (today or within 7 days), returns structured data with employee name, document label, expiry date
+- [x] Wire up the new endpoint in index.js
+- [x] Test: upload a file with dates via API, verify dates stored in employees.csv
 
 ### Task 3: Frontend - Document upload popup with date fields
 

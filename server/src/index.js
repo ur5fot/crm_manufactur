@@ -17,6 +17,7 @@ import {
   loadFieldsSchema,
   getDashboardStats,
   getDashboardEvents,
+  getDocumentExpiryEvents,
   getStatusReport,
   exportEmployees,
   ROOT_DIR,
@@ -101,6 +102,16 @@ app.get("/api/dashboard/stats", async (_req, res) => {
 app.get("/api/dashboard/events", async (_req, res) => {
   try {
     const events = await getDashboardEvents();
+    res.json(events);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get("/api/document-expiry", async (_req, res) => {
+  try {
+    const events = await getDocumentExpiryEvents();
     res.json(events);
   } catch (err) {
     console.error(err);
@@ -439,6 +450,15 @@ app.delete("/api/employees/:id", async (req, res) => {
   res.status(204).end();
 });
 
+const ALLOWED_FILE_EXTENSIONS = ['.pdf', '.jpg', '.jpeg', '.png', '.gif', '.webp'];
+const ALLOWED_MIME_TYPES = [
+  'application/pdf',
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/webp'
+];
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const employeeId = req.params.id;
@@ -449,13 +469,23 @@ const storage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     // Используем временное имя, потому что req.body еще не доступен
-    const ext = path.extname(file.originalname) || ".pdf";
+    const ext = path.extname(file.originalname).toLowerCase() || ".pdf";
     const tempName = `temp_${Date.now()}${ext}`;
     cb(null, tempName);
   }
 });
 
-const upload = multer({ storage });
+const upload = multer({
+  storage,
+  fileFilter: (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (ALLOWED_FILE_EXTENSIONS.includes(ext) || ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error("Дозволені лише файли PDF та зображення (jpg, png, gif, webp)"));
+    }
+  }
+});
 
 app.post("/api/employees/:id/files", upload.single("file"), async (req, res) => {
   if (!req.file) {
@@ -494,9 +524,20 @@ app.post("/api/employees/:id/files", upload.single("file"), async (req, res) => 
     .split(path.sep)
     .join("/");
 
-  const updated = mergeRow(getEmployeeColumnsSync(), employees[index], {
-    [fileField]: relativePath
-  });
+  // Сохраняем файл и даты (issue_date, expiry_date)
+  const updateData = { [fileField]: relativePath };
+  const issueDate = String(req.body.issue_date || "").trim();
+  const expiryDate = String(req.body.expiry_date || "").trim();
+  const issueDateField = `${fileField}_issue_date`;
+  const expiryDateField = `${fileField}_expiry_date`;
+  if (getEmployeeColumnsSync().includes(issueDateField)) {
+    updateData[issueDateField] = issueDate;
+  }
+  if (getEmployeeColumnsSync().includes(expiryDateField)) {
+    updateData[expiryDateField] = expiryDate;
+  }
+
+  const updated = mergeRow(getEmployeeColumnsSync(), employees[index], updateData);
   updated.employee_id = req.params.id;
   employees[index] = updated;
   await saveEmployees(employees);

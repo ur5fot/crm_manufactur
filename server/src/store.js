@@ -266,6 +266,54 @@ export async function getDashboardEvents() {
   return { today: todayEvents, thisWeek: weekEvents };
 }
 
+export async function getDocumentExpiryEvents() {
+  const employees = await loadEmployees();
+  const schema = await loadFieldsSchema();
+  const now = new Date();
+  const today = localDateStr(now);
+
+  const in7days = new Date(now);
+  in7days.setDate(now.getDate() + 7);
+  const in7daysStr = localDateStr(in7days);
+
+  // Находим все поля типа file и их labels
+  const fileFields = schema.filter(f => f.field_type === 'file');
+
+  const todayEvents = [];
+  const weekEvents = [];
+
+  employees.forEach(emp => {
+    const name = [emp.last_name, emp.first_name, emp.middle_name].filter(Boolean).join(' ');
+
+    fileFields.forEach(field => {
+      const expiryDateField = `${field.field_name}_expiry_date`;
+      const expiryDate = emp[expiryDateField];
+      if (!expiryDate) return;
+
+      const event = {
+        employee_id: emp.employee_id,
+        name,
+        document_field: field.field_name,
+        document_label: field.field_label,
+        expiry_date: expiryDate,
+        has_file: !!emp[field.field_name]
+      };
+
+      if (expiryDate === today) {
+        todayEvents.push({ ...event, type: 'expired_today' });
+      } else if (expiryDate > today && expiryDate <= in7daysStr) {
+        weekEvents.push({ ...event, type: 'expiring_soon' });
+      } else if (expiryDate < today) {
+        todayEvents.push({ ...event, type: 'already_expired' });
+      }
+    });
+  });
+
+  weekEvents.sort((a, b) => a.expiry_date.localeCompare(b.expiry_date));
+
+  return { today: todayEvents, thisWeek: weekEvents };
+}
+
 export async function getStatusReport(type) {
   const employees = await loadEmployees();
   const schema = await loadFieldsSchema();
