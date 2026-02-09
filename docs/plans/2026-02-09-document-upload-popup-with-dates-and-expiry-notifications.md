@@ -116,9 +116,9 @@ These companion fields will be auto-generated in the schema loading logic (NOT m
 
 ## Final Validation
 
-- [ ] Manual test: full flow - upload document with dates, verify popup, verify dates saved
-- [ ] Manual test: set expiry date to today, reload, verify notification
-- [ ] Manual test: dashboard shows document expiry in timeline
-- [ ] Manual test: images (jpg/png) upload works alongside PDF
-- [ ] Manual test: existing documents still work (backwards compatibility)
-- [ ] Verify server restarts cleanly with new schema columns
+- [x] Manual test: full flow - upload document with dates, verify popup, verify dates saved
+- [x] Manual test: set expiry date to today, reload, verify notification
+- [x] Manual test: dashboard shows document expiry in timeline
+- [x] Manual test: images (jpg/png) upload works alongside PDF
+- [x] Manual test: existing documents still work (backwards compatibility)
+- [x] Verify server restarts cleanly with new schema columns
