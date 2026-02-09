@@ -139,7 +139,8 @@ git pull origin master
 - `data/employees.csv` - main employee records (40 columns) - single denormalized table (gitignored - user data)
 - `data/fields_schema.csv` - **meta-schema defining all fields, their types, labels, options, and UI configuration** (gitignored - local production config)
 - `data/fields_schema.template.csv` - template schema for new installations (tracked in git)
-- `data/logs.csv` - audit log of all CRUD operations (gitignored - user data)
+- `data/config.csv` - **system configuration** (key-value pairs: log cleanup threshold, etc.) (gitignored - local production config)
+- `data/logs.csv` - audit log of all CRUD operations with automatic cleanup (gitignored - user data)
 - `data/employees_import_sample.csv` - import template with UTF-8 BOM (tracked in git)
 - `data/dictionaries.csv` - (legacy, kept for compatibility) reference data
 - `files/employee_[ID]/` - uploaded documents: PDF and images (gitignored - user files)
@@ -171,8 +172,10 @@ git pull origin master
 - `POST /api/employees/import` - Bulk import from CSV file
 - `GET /api/fields-schema` - **Get dynamic UI schema** (field types, labels, options, groups, table configuration)
 - `GET /api/document-expiry` - Get document expiry events (today and next 7 days) for dashboard timeline and notifications
+- `GET /api/birthday-events` - Get birthday events (today and next 7 days) for dashboard timeline and notifications
+- `GET /api/config` - Get system configuration (key-value object from config.csv)
 - `GET /api/dictionaries` - Get all reference data grouped by type (legacy)
-- `GET /api/logs` - Get audit log sorted by timestamp descending
+- `GET /api/logs` - Get audit log sorted by timestamp descending (auto-cleaned when exceeds max_log_entries)
 - `POST /api/open-data-folder` - Open data folder in OS file explorer
 
 **Important patterns:**
@@ -201,6 +204,7 @@ git pull origin master
 - Form data mirrors employee object structure
 - **Dynamic UI generation**: Fields schema loaded on mount via `/api/fields-schema`
 - Form groups, table columns, and filters generated from schema
+- **Vue Router**: URL-based navigation with persistent state (/cards/:id, /table, /logs, /)
 - Four view modes: Dashboard (home), Cards (detail), Table (summary with inline editing), Logs (audit trail)
 
 **Dashboard UI** (full-width, no max-width constraint)**:**
@@ -208,14 +212,16 @@ git pull origin master
 - **Inline Expand** - Click any stat card to expand an accordion list of employee names filtered by that status
   - Single-expand behavior: only one card expanded at a time (`expandedCard` ref)
   - `toggleStatCard(cardKey)` function, `expandedEmployees` computed property
-  - Employee names are clickable — navigate to employee card via `openEmployeeCard()`
+  - Employee names are clickable — navigate to employee card via `router.push('/cards/' + id)`
   - Each card + expand wrapped in `.stat-card-wrap` container
   - CSS transition 200ms for both expand and collapse animation
-- **Timeline Cards** - Two-column grid (`.timeline-grid`) showing status change events (all statuses, not just vacation):
+- **Timeline Cards** - Two-column grid (`.timeline-grid`) showing events (status changes, document expiry, birthdays):
   - "Сьогодні" (today) and "Найближчі 7 днів" (next 7 days)
   - Card-style containers (`.timeline-card`) with white background and rounded corners
-  - Employee names are clickable links (`.timeline-link`) to employee cards
-  - Events include emoji by status position: options[2] (vacation) — ✈️, options[3] (sick leave) — 🏥, others — ℹ️
+  - Employee names are clickable links (`.timeline-link`) to employee cards via router
+  - Status events: emoji by status position — ✈️ (vacation/options[2]), 🏥 (sick leave/options[3]), ℹ️ (others)
+  - Document expiry events: ⚠️ (expiring today), 📄 (expiring within 7 days)
+  - Birthday events: 🎂 (birthday today), 🎉 (birthday within 7 days)
 - **Auto-refresh** - Dashboard data refreshes automatically via interval
 - **Footer** - Shows last update timestamp
 
@@ -250,6 +256,16 @@ git pull origin master
 - **Dashboard timeline integration** - Document expiry events appear in the dashboard timeline alongside status change events
 - **Auto-check on load** - `checkDocumentExpiry()` function called from `loadEmployees()`, similar to `checkStatusChanges()`
 
+**Birthday Notifications:**
+- **API endpoint** - `GET /api/birthday-events` returns birthday events (today and next 7 days)
+- **Notification popup** - "Сповіщення про дні народження" modal with:
+  - Birthdays today - cake emoji (🎂), shows employee name, age, birth date
+  - Birthdays within 7 days - party emoji (🎉), shows employee name, upcoming age, birth date
+  - Each entry shows employee name and age
+- **Dashboard timeline integration** - Birthday events appear in the dashboard timeline alongside status and document events
+- **Auto-check on load** - `checkBirthdayEvents()` function called from `loadEmployees()`
+- **birth_date field** - Added to fields_schema.csv (field_type=date, field_group="Личные данные", show_in_table=no)
+
 **Status Change System:**
 - **Status Change Popup** - `employment_status` is read-only in the employee card. A "Змінити статус" button opens a popup with:
   - Select dropdown with all `employment_status` options except `options[0]` (working status is set via "Скинути статус" button)
@@ -270,6 +286,18 @@ git pull origin master
 - **Data fields** - `status_start_date` and `status_end_date` (renamed from vacation_start/end_date), hidden from employee card form (no field_group), managed only through the popup
 - **Implementation** - `checkStatusChanges()` function in App.vue, called from `loadEmployees()`
 - **Logging** - Console output for debugging status checks and changes
+
+**Vue Router:**
+- **URL-based navigation** - All views accessible via URLs for bookmarking and direct linking
+- **Routes:**
+  - `/` - Dashboard (home page)
+  - `/cards` - Employee cards view (auto-loads first employee if available)
+  - `/cards/:id` - Employee cards view with specific employee loaded (e.g., `/cards/5`)
+  - `/table` - Summary table view
+  - `/logs` - Audit logs view
+- **Persistent state** - Refresh page at `/cards/5` restores the employee card for ID 5
+- **Auto-load first employee** - Navigating to `/cards` without ID automatically loads first employee from list
+- **Router navigation** - All view switches use `router.push()` instead of reactive `currentView` variable
 
 **Vite proxy configuration** ([vite.config.js](client/vite.config.js)):
 - `/api`, `/files`, `/data` proxied to `http://localhost:3000`
@@ -345,9 +373,10 @@ Defined in [server/src/schema.js](server/src/schema.js). The column list is dyna
 61. `phone` - Phone number
 62. `phone_note` - Phone note
 63. `education` - Education
-64. `status_start_date` - Status start date (YYYY-MM-DD) — managed via Status Change popup
-65. `status_end_date` - Status end date (YYYY-MM-DD) — managed via Status Change popup
-66. `notes` - Notes
+64. `birth_date` - Birth date (YYYY-MM-DD) — for birthday notifications and age calculation
+65. `status_start_date` - Status start date (YYYY-MM-DD) — managed via Status Change popup
+66. `status_end_date` - Status end date (YYYY-MM-DD) — managed via Status Change popup
+67. `notes` - Notes
 
 **Auto-generated date columns convention:**
 - For every `field_type=file` field in `fields_schema.csv`, the system auto-generates two companion columns in `employees.csv`:
@@ -400,6 +429,24 @@ Reference data file [data/dictionaries.csv](data/dictionaries.csv) is kept for b
 
 All dropdown options are now defined directly in `fields_schema.csv` via the `field_options` column.
 
+### System Configuration (3 columns)
+
+System-wide settings in [data/config.csv](data/config.csv):
+
+**Columns:**
+- `config_key` - Configuration parameter name
+- `config_value` - Parameter value
+- `config_description` - Human-readable description
+
+**Current configuration:**
+- `max_log_entries` - Maximum number of log entries before automatic cleanup (default: 1000)
+
+**Features:**
+- CSV-based configuration (no hardcoded values)
+- UTF-8 with BOM encoding for Excel compatibility
+- Loaded via `GET /api/config` endpoint
+- Used by server for automatic log cleanup and other system behaviors
+
 ### Audit Logs (9 columns)
 
 Automatic change tracking in [data/logs.csv](data/logs.csv):
@@ -418,6 +465,8 @@ Automatic change tracking in [data/logs.csv](data/logs.csv):
 **Features:**
 - All CRUD operations automatically logged
 - Field-level change tracking for updates
+- **Automatic cleanup** - When log count exceeds `max_log_entries` from config.csv, oldest entries are removed
+- Cleanup triggered after each log write operation
 - Searchable logs view in UI
 - Sorted by timestamp descending (newest first)
 - Human-readable field labels: "Пригодность (fit_status)"

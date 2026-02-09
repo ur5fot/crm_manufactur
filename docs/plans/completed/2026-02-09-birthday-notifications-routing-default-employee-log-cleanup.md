@@ -124,7 +124,7 @@ Add birthday notifications, routing with URL params, default employee card, and 
 
 ## DOCUMENTATION
 
-- [ ] Update CLAUDE.md: document birth_date field, config.csv structure, routing behavior, birthday notifications
-- [ ] Update README.md: mention birthday notifications feature, config.csv for system configuration
-- [ ] Update README.uk.md: same as README.md in Ukrainian
-- [ ] Move this plan to docs/plans/completed/
+- [x] Update CLAUDE.md: document birth_date field, config.csv structure, routing behavior, birthday notifications
+- [x] Update README.md: mention birthday notifications feature, config.csv for system configuration
+- [x] Update README.uk.md: same as README.md in Ukrainian
+- [x] Move this plan to docs/plans/completed/
