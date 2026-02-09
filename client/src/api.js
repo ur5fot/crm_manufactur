@@ -74,10 +74,15 @@ export const api = {
   getVacationReport(type) {
     return request(`/reports/vacations?type=${type}`);
   },
-  async exportCSV(filters) {
-    const params = filters && Object.keys(filters).length > 0
-      ? `?filters=${encodeURIComponent(JSON.stringify(filters))}`
-      : '';
+  async exportCSV(filters, searchTerm = '') {
+    const queryParams = new URLSearchParams();
+    if (filters && Object.keys(filters).length > 0) {
+      queryParams.set('filters', JSON.stringify(filters));
+    }
+    if (searchTerm && searchTerm.trim()) {
+      queryParams.set('search', searchTerm.trim());
+    }
+    const params = queryParams.toString() ? `?${queryParams.toString()}` : '';
     const response = await fetch(`${BASE_URL}/export${params}`);
     if (!response.ok) {
       throw new Error(`Export failed: ${response.status}`);

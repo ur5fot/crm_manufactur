@@ -56,7 +56,7 @@ development_status:
 
   # Epic 3: Звіти та експорт даних
   epic-3: in-progress
-  3-1-vacation-reports: review
-  3-2-csv-export-filters: review
-  3-3-vacation-days-calculation: backlog
+  3-1-vacation-reports: done
+  3-2-csv-export-filters: done
+  3-3-vacation-days-calculation: ready-for-dev
   epic-3-retrospective: optional

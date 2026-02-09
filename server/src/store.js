@@ -284,14 +284,14 @@ export async function getVacationReport(type) {
     const end = emp.vacation_end_date;
     let days = 0;
     if (start && end) {
-      days = Math.ceil((new Date(end) - new Date(start)) / 86400000);
+      days = Math.floor((new Date(end) - new Date(start)) / 86400000) + 1;
       if (days < 0) days = 0;
     }
     return { employee_id: emp.employee_id, name, vacation_start_date: start, vacation_end_date: end, days };
   });
 }
 
-export async function exportEmployees(filters) {
+export async function exportEmployees(filters, searchTerm = '') {
   const employees = await loadEmployees();
   const schema = await loadFieldsSchema();
 
@@ -301,18 +301,58 @@ export async function exportEmployees(filters) {
     .sort((a, b) => parseInt(a.field_order) - parseInt(b.field_order))
     .map(f => ({ key: f.field_name, label: f.field_label }));
 
-  // Фільтрація employees (AND між полями, OR всередині значень)
+  // Створити whitelist для валідації фільтрів
+  const allFieldNames = schema.map(f => f.field_name);
+
+  // Текстовий пошук (як в App.vue filteredEmployees)
   let filtered = employees;
+  const query = searchTerm.trim().toLowerCase();
+  if (query) {
+    filtered = filtered.filter(emp => {
+      const displayName = [emp.last_name, emp.first_name, emp.middle_name]
+        .filter(Boolean)
+        .join(' ');
+      const haystack = [
+        displayName,
+        emp.department,
+        emp.position,
+        emp.employee_id
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(query);
+    });
+  }
+
+  // Фільтрація за колонками (AND між полями, OR всередині значень)
   if (filters && typeof filters === 'object') {
     Object.keys(filters).forEach(fieldName => {
+      // Problem #1 fix: Валідація fieldName по whitelist
+      if (!allFieldNames.includes(fieldName)) {
+        return; // Ігнорувати невалідні поля
+      }
+
       const filterValues = filters[fieldName];
       if (Array.isArray(filterValues) && filterValues.length > 0) {
         filtered = filtered.filter(emp => {
           const value = emp[fieldName];
-          if (filterValues.includes('__EMPTY__')) {
-            if (!value || value.trim() === '') return true;
+
+          // Problem #2 fix: Явна логіка для __EMPTY__
+          const hasEmptyFilter = filterValues.includes('__EMPTY__');
+          const isEmpty = !value || value.trim() === '';
+
+          if (hasEmptyFilter && isEmpty) {
+            return true;
           }
-          return filterValues.includes(value);
+
+          // Перевірка на конкретні значення (виключаючи __EMPTY__ sentinel)
+          const actualValues = filterValues.filter(v => v !== '__EMPTY__');
+          if (actualValues.length > 0) {
+            return actualValues.includes(value);
+          }
+
+          return false;
         });
       }
     });

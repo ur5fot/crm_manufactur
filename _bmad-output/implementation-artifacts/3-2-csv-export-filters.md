@@ -1,6 +1,6 @@
 # Story 3.2: Експорт фільтрації в CSV
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -312,6 +312,41 @@ Claude Opus 4.6 (claude-opus-4-6)
 - Button placed in Table view `.actions` div, always visible
 - Filters serialized as JSON in query parameter, matching `columnFilters` reactive object format
 
+### Code Review Fixes Applied
+
+**Code Review Date:** 2026-02-09
+**Reviewer:** Claude Sonnet 4.5 (claude-sonnet-4-5)
+**Issues Fixed:** 5 (1 High, 4 Medium)
+
+1. **[HIGH] Problem #3 Fixed:** Added `searchTerm` text search to export
+   - Frontend: `exportTableData()` now passes `searchTerm.value` to API
+   - API: `exportCSV()` accepts `searchTerm` parameter and adds to query string
+   - Backend: `GET /api/export` accepts `?search=` parameter
+   - Backend: `exportEmployees()` filters by text search (name, department, position, ID)
+   - **Impact:** Export now matches user's visible filtered table including text search
+
+2. **[MEDIUM] Problem #1 Fixed:** Filter field validation against schema
+   - Backend: `exportEmployees()` validates `fieldName` against schema whitelist
+   - Prevents side-channel data exfiltration via hidden columns
+   - Invalid filter fields are silently ignored
+
+3. **[MEDIUM] Problem #2 Fixed:** `__EMPTY__` filter logic corrected
+   - Explicit conditional logic instead of fallthrough pattern
+   - Filters `__EMPTY__` sentinel separately from actual values
+   - Improved maintainability and correctness
+
+4. **[MEDIUM] Problem #8 Fixed:** Error message handling improved
+   - `exportTableData()` now clears `errorMessage.value = ''` at start
+   - Error message includes specific details: `Помилка експорту: ${e.message}`
+   - Consistent with other async functions in App.vue
+
+5. **[KNOWN LIMITATION] Problem #9:** URL length limit risk remains
+   - Large filter sets (10+ columns, many Cyrillic values) may exceed 2KB URL limit
+   - Architectural change (GET → POST) deferred to avoid scope creep
+   - Risk: Low for typical usage (~120 employees, <10 active filters)
+
+**Production Build:** 473ms, 0 errors ✅
+
 ### File List
 
 - `server/src/store.js` — Added `exportEmployees(filters)` function
@@ -329,3 +364,7 @@ Claude Opus 4.6 (claude-opus-4-6)
 | Added `exportCSV(filters)` | client/src/api.js | Blob-based CSV download via fetch (not request wrapper) |
 | Added `exportTableData()` + button | client/src/App.vue | Export function + "Експорт" Primary button in Table view |
 | Added `.export-btn` styles | client/src/styles.css | Primary button style (#1976D2) with hover state |
+| **[Code Review Fix]** Updated `exportEmployees()` signature | server/src/store.js | Added `searchTerm` parameter, text search filtering, field validation, fixed `__EMPTY__` logic |
+| **[Code Review Fix]** Updated `GET /api/export` route | server/src/index.js | Added `req.query.search` parameter handling |
+| **[Code Review Fix]** Updated `exportCSV()` signature | client/src/api.js | Added `searchTerm` parameter, improved query string building with URLSearchParams |
+| **[Code Review Fix]** Updated `exportTableData()` | client/src/App.vue | Pass `searchTerm.value`, clear error message at start, detailed error feedback |

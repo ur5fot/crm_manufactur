@@ -134,7 +134,8 @@ app.get("/api/export", async (req, res) => {
         return;
       }
     }
-    const csvString = await exportEmployees(filters);
+    const searchTerm = req.query.search || '';
+    const csvString = await exportEmployees(filters, searchTerm);
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', 'attachment; filename="employees_export.csv"');
     res.send(csvString);

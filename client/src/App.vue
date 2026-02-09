@@ -184,11 +184,12 @@ const expandedEmployees = computed(() => {
 });
 
 async function exportTableData() {
+  errorMessage.value = '';
   try {
-    await api.exportCSV(columnFilters);
+    await api.exportCSV(columnFilters, searchTerm.value);
   } catch (e) {
     console.error('Export error:', e);
-    errorMessage.value = 'Помилка експорту';
+    errorMessage.value = `Помилка експорту: ${e.message}`;
   }
 }
 
@@ -203,9 +204,10 @@ async function toggleReport(type) {
   try {
     const data = await api.getVacationReport(type);
     reportData.value = data;
+    errorMessage.value = '';
   } catch (e) {
-    console.error('Report error:', e);
     reportData.value = [];
+    errorMessage.value = 'Помилка завантаження звіту';
   } finally {
     reportLoading.value = false;
   }
@@ -461,8 +463,6 @@ async function loadDashboardEvents() {
 async function checkVacations() {
   const now = new Date();
   const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-  console.log('🔍 Проверка отпусков, сегодня:', today);
-
   const returningToday = [];
   const startingToday = [];
   const needsUpdate = [];
@@ -474,11 +474,8 @@ async function checkVacations() {
     // Пропускаем если нет дат отпуска
     if (!startDate && !endDate) return;
 
-    console.log(`👤 ${displayName(employee)}: start=${startDate}, end=${endDate}, status=${employee.employment_status}`);
-
     // Проверка 1: сегодня заканчивается отпуск (приоритет)
     if (endDate === today) {
-      console.log(`  ✅ Возвращается сегодня!`);
       returningToday.push({
         id: employee.employee_id,
         name: displayName(employee),
@@ -496,7 +493,6 @@ async function checkVacations() {
 
     // Проверка 2: отпуск уже прошел - очистить даты
     if (endDate && endDate < today) {
-      console.log(`  🧹 Отпуск прошел, очищаем даты`);
       needsUpdate.push({
         ...employee,
         vacation_start_date: '',
@@ -508,7 +504,6 @@ async function checkVacations() {
 
     // Проверка 3: сегодня начинается отпуск
     if (startDate === today && employee.employment_status !== vacationStatus.value) {
-      console.log(`  🏖️ Отпуск начинается сегодня!`);
       startingToday.push({
         id: employee.employee_id,
         name: displayName(employee),
@@ -525,7 +520,6 @@ async function checkVacations() {
 
     // Проверка 4: сейчас в отпуске (между датами)
     if (startDate && endDate && startDate < today && endDate > today && employee.employment_status !== vacationStatus.value) {
-      console.log(`  🏖️ Сейчас в отпуске (между датами)`);
       needsUpdate.push({
         ...employee,
         employment_status: vacationStatus.value
@@ -910,7 +904,7 @@ onUnmounted(() => {
                   <span class="employee-name">{{ emp.name }}</span>
                   <span v-if="emp.position" class="employee-position">{{ emp.position }}</span>
                 </div>
-                <span v-if="emp.endDate" class="vacation-end-date">до {{ emp.endDate }}</span>
+                <span v-if="emp.endDate" class="vacation-end-date">до {{ formatEventDate(emp.endDate) }}</span>
               </li>
             </ul>
           </div>
@@ -1094,8 +1088,8 @@ onUnmounted(() => {
               <tbody>
                 <tr v-for="row in reportData" :key="row.employee_id">
                   <td>{{ row.name }}</td>
-                  <td>{{ row.vacation_start_date }}</td>
-                  <td>{{ row.vacation_end_date }}</td>
+                  <td>{{ formatEventDate(row.vacation_start_date) }}</td>
+                  <td>{{ formatEventDate(row.vacation_end_date) }}</td>
                   <td>{{ row.days }}</td>
                 </tr>
               </tbody>
