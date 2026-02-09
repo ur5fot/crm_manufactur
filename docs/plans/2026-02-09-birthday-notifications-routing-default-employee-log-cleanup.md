@@ -50,17 +50,17 @@ Add birthday notifications, routing with URL params, default employee card, and 
 - Modify: `server/src/index.js`
 
 **Steps:**
-- [ ] Add loadConfig() function to store.js (read config.csv, return key-value object)
-- [ ] Add getBirthdayEvents() function to store.js (similar to getDocumentExpiryEvents pattern)
-- [ ] getBirthdayEvents returns {today: [], next7Days: []} with employee_id, employee_name, birth_date, age
-- [ ] Calculate age based on current year minus birth year
-- [ ] Add cleanupLogsIfNeeded() function to store.js (check log count, remove oldest entries if exceeds max_log_entries from config)
-- [ ] Add GET /api/birthday-events endpoint to index.js
-- [ ] Call cleanupLogsIfNeeded() after each log write operation in store.js
-- [ ] Add GET /api/config endpoint to index.js (returns config key-value object)
-- [ ] Manual test: curl http://localhost:3000/api/birthday-events
-- [ ] Manual test: curl http://localhost:3000/api/config
-- [ ] Manual test: add 1001 log entries, verify cleanup triggers
+- [x] Add loadConfig() function to store.js (read config.csv, return key-value object)
+- [x] Add getBirthdayEvents() function to store.js (similar to getDocumentExpiryEvents pattern)
+- [x] getBirthdayEvents returns {today: [], next7Days: []} with employee_id, employee_name, birth_date, age
+- [x] Calculate age based on current year minus birth year
+- [x] Add cleanupLogsIfNeeded() function to store.js (check log count, remove oldest entries if exceeds max_log_entries from config)
+- [x] Add GET /api/birthday-events endpoint to index.js
+- [x] Call cleanupLogsIfNeeded() after each log write operation in store.js
+- [x] Add GET /api/config endpoint to index.js (returns config key-value object)
+- [x] Manual test: curl http://localhost:3000/api/birthday-events
+- [x] Manual test: curl http://localhost:3000/api/config
+- [x] Manual test: add 1001 log entries, verify cleanup triggers
 
 ## TASK 3: Add Vue Router with URL parameter persistence
 

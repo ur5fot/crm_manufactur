@@ -14,6 +14,7 @@ export const FILES_DIR = path.join(ROOT_DIR, "files");
 const EMPLOYEES_PATH = path.join(DATA_DIR, "employees.csv");
 const LOGS_PATH = path.join(DATA_DIR, "logs.csv");
 const FIELD_SCHEMA_PATH = path.join(DATA_DIR, "fields_schema.csv");
+const CONFIG_PATH = path.join(DATA_DIR, "config.csv");
 
 export async function ensureDataDirs() {
   await fs.mkdir(DATA_DIR, { recursive: true });
@@ -491,5 +492,122 @@ export async function addLog(action, employeeId, employeeName, fieldName = "", o
 
   logs.push(newLog);
   await saveLogs(logs);
+
+  // Автоматическая очистка логов после записи
+  await cleanupLogsIfNeeded();
+
   return newLog;
+}
+
+/**
+ * Загружает конфигурацию из config.csv
+ * @returns {Promise<Object>} Объект с парами config_key: config_value
+ */
+export async function loadConfig() {
+  try {
+    const CONFIG_COLUMNS = ['config_key', 'config_value', 'config_description'];
+    const configRows = await readCsv(CONFIG_PATH, CONFIG_COLUMNS);
+
+    const config = {};
+    configRows.forEach(row => {
+      if (row.config_key) {
+        config[row.config_key] = row.config_value;
+      }
+    });
+
+    return config;
+  } catch (error) {
+    console.error('Ошибка загрузки config.csv:', error.message);
+    // Возвращаем значения по умолчанию
+    return { max_log_entries: '1000' };
+  }
+}
+
+/**
+ * Очистка старых логов если превышен лимит
+ */
+export async function cleanupLogsIfNeeded() {
+  try {
+    const config = await loadConfig();
+    const maxEntries = parseInt(config.max_log_entries, 10) || 1000;
+
+    const logs = await loadLogs();
+
+    if (logs.length > maxEntries) {
+      // Сортируем по timestamp (новые сначала)
+      logs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+      // Оставляем только maxEntries последних записей
+      const trimmedLogs = logs.slice(0, maxEntries);
+
+      await saveLogs(trimmedLogs);
+
+      console.log(`✂️  Логи очищены: ${logs.length} → ${trimmedLogs.length} записей (лимит: ${maxEntries})`);
+    }
+  } catch (error) {
+    console.error('Ошибка очистки логов:', error.message);
+  }
+}
+
+/**
+ * Получить события дней рождения (сегодня и следующие 7 дней)
+ * @returns {Promise<{today: Array, next7Days: Array}>}
+ */
+export async function getBirthdayEvents() {
+  const employees = await loadEmployees();
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const today = localDateStr(now);
+
+  const in7days = new Date(now);
+  in7days.setDate(now.getDate() + 7);
+
+  const todayEvents = [];
+  const next7DaysEvents = [];
+
+  employees.forEach(emp => {
+    const birthDate = emp.birth_date;
+    if (!birthDate) return;
+
+    // Парсим дату рождения
+    const birthParts = birthDate.split('-');
+    if (birthParts.length !== 3) return;
+
+    const birthYear = parseInt(birthParts[0], 10);
+    const birthMonth = parseInt(birthParts[1], 10);
+    const birthDay = parseInt(birthParts[2], 10);
+
+    if (isNaN(birthYear) || isNaN(birthMonth) || isNaN(birthDay)) return;
+
+    // Проверяем день рождения в текущем году
+    const thisYearBirthday = new Date(currentYear, birthMonth - 1, birthDay);
+    const birthdayStr = localDateStr(thisYearBirthday);
+
+    // Вычисляем возраст
+    const age = currentYear - birthYear;
+
+    const name = [emp.last_name, emp.first_name, emp.middle_name].filter(Boolean).join(' ');
+
+    const event = {
+      employee_id: emp.employee_id,
+      employee_name: name,
+      birth_date: birthDate,
+      age: age
+    };
+
+    if (birthdayStr === today) {
+      todayEvents.push(event);
+    } else if (thisYearBirthday > now && thisYearBirthday <= in7days) {
+      next7DaysEvents.push(event);
+    }
+  });
+
+  // Сортируем события следующих 7 дней по дате
+  next7DaysEvents.sort((a, b) => {
+    const dateA = a.birth_date.substring(5); // MM-DD
+    const dateB = b.birth_date.substring(5);
+    return dateA.localeCompare(dateB);
+  });
+
+  return { today: todayEvents, next7Days: next7DaysEvents };
 }

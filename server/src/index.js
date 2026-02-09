@@ -23,7 +23,9 @@ import {
   ROOT_DIR,
   initializeEmployeeColumns,
   getEmployeeColumnsSync,
-  getDocumentFieldsSync
+  getDocumentFieldsSync,
+  getBirthdayEvents,
+  loadConfig
 } from "./store.js";
 import { mergeRow, normalizeRows } from "./csv.js";
 
@@ -113,6 +115,26 @@ app.get("/api/document-expiry", async (_req, res) => {
   try {
     const events = await getDocumentExpiryEvents();
     res.json(events);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get("/api/birthday-events", async (_req, res) => {
+  try {
+    const events = await getBirthdayEvents();
+    res.json(events);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get("/api/config", async (_req, res) => {
+  try {
+    const config = await loadConfig();
+    res.json(config);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
