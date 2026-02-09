@@ -111,8 +111,8 @@ These companion fields will be auto-generated in the schema loading logic (NOT m
 
 ### Task 6: Documentation update
 
-- [ ] Update CLAUDE.md with document dates architecture, new columns convention, document expiry notifications
-- [ ] Update README.md and README.uk.md with new document management features
+- [x] Update CLAUDE.md with document dates architecture, new columns convention, document expiry notifications
+- [x] Update README.md and README.uk.md with new document management features
 
 ## Final Validation
 

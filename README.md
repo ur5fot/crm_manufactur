@@ -9,8 +9,8 @@ Local CRM system that stores data in CSV files and PDF documents. CSV files can 
 - **CSV-based storage** - no database required, edit data directly in Excel
 - **Dynamic UI** - entire form and table structure controlled by `fields_schema.csv`
 - **Sequential numeric IDs** - simple employee IDs (1, 2, 3...)
-- **File management** - upload and store PDF documents per employee
-- **Dashboard** - stat cards with expandable employee lists, status change timeline with clickable links
+- **Document management** - upload PDF and image documents with issue/expiry dates, document expiry notifications
+- **Dashboard** - stat cards with expandable employee lists, status change and document expiry timeline with clickable links
 - **Universal status tracking** - status change popup, automatic status management, notifications for all status types (vacation, sick leave, etc.)
 - **Summary table** - inline editing via double-click, multi-select filters with empty value support
 - **Automatic audit logging** - all changes tracked in `logs.csv` with field-level details
@@ -35,7 +35,7 @@ crm_manufactur/
 │   ├── logs.csv                   # Audit log of all changes - gitignored
 │   ├── employees_import_sample.csv # Import template with UTF-8 BOM
 │   └── dictionaries.csv           # (legacy, kept for compatibility)
-├── files/                         # Uploaded PDF documents - gitignored
+├── files/                         # Uploaded documents (PDF/images) - gitignored
 │   └── employee_[ID]/
 ├── server/                        # Express.js backend
 └── client/                        # Vue.js frontend
@@ -181,6 +181,7 @@ The Dashboard is the home screen showing employee statistics and upcoming status
 **Status Timeline:**
 - Two-column layout with "Today" and "Next 7 days" cards
 - Shows employees with upcoming status changes (vacation, sick leave, etc.) with date badges
+- Shows document expiry events (📄 expiring soon, ⚠️ expiring today)
 - Emoji indicators by status type: ✈️ vacation, 🏥 sick leave, ℹ️ other
 - Employee names are clickable links to their cards
 
@@ -201,19 +202,31 @@ The summary table provides powerful filtering and editing capabilities:
 - Multiple selections work with OR logic
 - Active filter count displayed in clear button
 
-### File Uploads
+### Document Management
 
 **Dynamic document types:** All fields with type `file` in `fields_schema.csv` automatically become available for upload in the Documents section.
 
+**Upload popup:**
+- Click "Завантажити" button to open an upload popup modal
+- Select a file (PDF or images: jpg, jpeg, png, gif, webp)
+- Optionally set issue/registration date and expiry date
+- Dates are stored in auto-generated companion columns (`{field}_issue_date`, `{field}_expiry_date`)
+
 **Features:**
-- Upload PDF documents per employee
-- Files saved with proper names based on field type (e.g., `driver_license_file.pdf`, `id_certificate_file.pdf`)
+- Upload PDF and image documents per employee
+- Files saved with proper names and original extensions (e.g., `driver_license_file.pdf`, `id_certificate_file.jpg`)
+- Issue and expiry dates displayed in the documents table
+- Dates can be edited for existing documents without re-uploading the file
 - "Open Folder" button in Documents section opens employee's folder in OS file explorer
 - File paths automatically written to corresponding columns in `employees.csv`
-- Temporary file handling ensures correct naming even when form data is delayed
+
+**Document expiry notifications:**
+- Automatic notification popup when documents expire today or within 7 days
+- Document expiry events shown in the dashboard timeline
+- Emoji indicators: ⚠️ expired today, 📄 expiring within 7 days
 
 **Adding new document types:**
-Simply add a new row to `fields_schema.csv` with `field_type=file` - no code changes needed!
+Simply add a new row to `fields_schema.csv` with `field_type=file` and restart the server - date columns are auto-generated, no code changes needed!
 
 ### Status Change System
 
@@ -278,8 +291,9 @@ All dropdown values in forms are managed via `data/dictionaries.csv`:
 - `POST /api/employees` - Create employee (accepts single employee object)
 - `PUT /api/employees/:id` - Update employee (accepts single employee object)
 - `DELETE /api/employees/:id` - Delete employee
-- `POST /api/employees/:id/files` - Upload PDF document
+- `POST /api/employees/:id/files` - Upload document (PDF/images) with optional issue_date and expiry_date
 - `DELETE /api/employees/:id/files/:fieldName` - Delete employee document
+- `GET /api/document-expiry` - Get document expiry events (today and next 7 days)
 - `POST /api/employees/:id/open-folder` - Open employee's document folder in OS file explorer
 - `POST /api/employees/import` - Bulk import from CSV
 - `GET /api/dictionaries` - Get all reference data

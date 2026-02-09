@@ -60,7 +60,7 @@ When user explicitly requests a commit, follow these steps:
 
 ## Project Overview
 
-Local CRM system for managing employee data using CSV files as the database and PDF documents stored in local folders. The system uses a client-server architecture with Vue.js frontend and Express.js backend.
+Local CRM system for managing employee data using CSV files as the database and documents (PDF and images) stored in local folders. The system uses a client-server architecture with Vue.js frontend and Express.js backend.
 
 **Key Characteristic:** CSV files can be edited directly in Excel and changes reload automatically when the UI is refreshed.
 
@@ -142,7 +142,7 @@ git pull origin master
 - `data/logs.csv` - audit log of all CRUD operations (gitignored - user data)
 - `data/employees_import_sample.csv` - import template with UTF-8 BOM (tracked in git)
 - `data/dictionaries.csv` - (legacy, kept for compatibility) reference data
-- `files/employee_[ID]/` - uploaded PDF documents (gitignored - user files)
+- `files/employee_[ID]/` - uploaded documents: PDF and images (gitignored - user files)
 
 **CSV Format:**
 - Delimiter: `;` (semicolon) for Excel compatibility
@@ -165,11 +165,12 @@ git pull origin master
 - `POST /api/employees` - Create employee (accepts employee object, auto-generates numeric ID if not provided)
 - `PUT /api/employees/:id` - Update employee (accepts employee object, logs changes automatically)
 - `DELETE /api/employees/:id` - Delete employee and associated files (logs deletion)
-- `POST /api/employees/:id/files` - Upload PDF documents (multer with temporary filename, then renamed based on file_field)
+- `POST /api/employees/:id/files` - Upload documents (PDF/images) with optional `issue_date` and `expiry_date` in request body (multer with temporary filename, then renamed based on file_field)
 - `DELETE /api/employees/:id/files/:fieldName` - Delete employee document
 - `POST /api/employees/:id/open-folder` - Open employee's document folder in OS file explorer
 - `POST /api/employees/import` - Bulk import from CSV file
 - `GET /api/fields-schema` - **Get dynamic UI schema** (field types, labels, options, groups, table configuration)
+- `GET /api/document-expiry` - Get document expiry events (today and next 7 days) for dashboard timeline and notifications
 - `GET /api/dictionaries` - Get all reference data grouped by type (legacy)
 - `GET /api/logs` - Get audit log sorted by timestamp descending
 - `POST /api/open-data-folder` - Open data folder in OS file explorer
@@ -180,10 +181,11 @@ git pull origin master
 - IDs are sequential numeric strings (e.g., "1", "2", "3")
 - Auto-incremented IDs calculated by finding max existing ID + 1
 - Deleting an employee removes associated file directory
-- File uploads use multer with 10MB limit for PDFs:
-  - Files initially saved with temporary names (`temp_{timestamp}.pdf`)
-  - After upload completes, renamed based on `file_field` parameter (e.g., `driver_license_file.pdf`)
+- File uploads use multer with 10MB limit for PDFs and images (jpg, jpeg, png, gif, webp):
+  - Files initially saved with temporary names (`temp_{timestamp}.*`)
+  - After upload completes, renamed based on `file_field` parameter with original extension preserved (e.g., `driver_license_file.pdf`, `id_certificate_file.jpg`)
   - This ensures correct naming even though multer processes files before body fields are available
+  - Upload endpoint also accepts optional `issue_date` and `expiry_date` fields, saved to `{field_name}_issue_date` and `{field_name}_expiry_date` columns
   - Document fields dynamically loaded from `fields_schema.csv` at server startup
 
 ### Frontend Architecture ([client/src/](client/src/))
@@ -228,9 +230,25 @@ git pull origin master
 **Documents Section UI:**
 - **Dynamic document fields** - All fields with `field_type=file` from fields_schema automatically displayed
 - **Open Folder button** - Opens employee's document folder (`files/employee_{id}/`) in OS file explorer
-- **File upload** - Select file, then upload (saves with proper field-based naming)
+- **Document upload popup** - Click "Завантажити" button to open a modal popup with:
+  - Document name in header
+  - File picker (accepts PDF and images: jpg, jpeg, png, gif, webp)
+  - Issue/registration date input (type=date, optional)
+  - Expiry date input (type=date, optional)
+  - "Завантажити" and "Скасувати" buttons
+- **Document dates display** - Issue date and expiry date shown in the documents table for uploaded documents
+- **Date editing** - Dates can be edited for already-uploaded documents without re-uploading the file
 - **File actions** - Open document in browser, delete document
 - **Empty form reset** - Creating new employee clears all document fields to prevent copying file links
+
+**Document Expiry Notifications:**
+- **API endpoint** - `GET /api/document-expiry` returns expiry events (today and next 7 days)
+- **Notification popup** - "Сповіщення про закінчення терміну дії документів" modal with:
+  - Documents expiring today - warning emoji (⚠️)
+  - Documents expiring within 7 days - document emoji (📄)
+  - Each entry shows employee name, document type label, and expiry date
+- **Dashboard timeline integration** - Document expiry events appear in the dashboard timeline alongside status change events
+- **Auto-check on load** - `checkDocumentExpiry()` function called from `loadEmployees()`, similar to `checkStatusChanges()`
 
 **Status Change System:**
 - **Status Change Popup** - `employment_status` is read-only in the employee card. A "Змінити статус" button opens a popup with:
@@ -259,10 +277,11 @@ git pull origin master
 
 ## Data Model
 
-### Employee Fields (40 columns)
+### Employee Fields (dynamic column count)
 
-Defined in [server/src/schema.js](server/src/schema.js):
+Defined in [server/src/schema.js](server/src/schema.js). The column list is dynamically generated from `fields_schema.csv`. For each field with `field_type=file`, two companion date columns are auto-appended: `{field_name}_issue_date` and `{field_name}_expiry_date`.
 
+**Core fields from schema:**
 1. `employee_id` - Employee ID (auto-increment, sequential numeric)
 2. `last_name` - Last name
 3. `first_name` - First name
@@ -291,18 +310,32 @@ Defined in [server/src/schema.js](server/src/schema.js):
 26. `residence_place` - Residence place
 27. `registration_place` - Registration place
 28. `driver_license_file` - Driver's license file path
-29. `id_certificate_file` - ID certificate file path
-30. `foreign_passport_number` - Foreign passport number
-31. `foreign_passport_issue_date` - Foreign passport issue date (YYYY-MM-DD)
-32. `foreign_passport_file` - Foreign passport file path
-33. `criminal_record_file` - Criminal record certificate file path
-34. `phone` - Phone number
-35. `phone_note` - Phone note
-36. `education` - Education
-37. `notes` - Notes
-38. `status_start_date` - Status start date (YYYY-MM-DD) — managed via Status Change popup
-39. `status_end_date` - Status end date (YYYY-MM-DD) — managed via Status Change popup
-40. `notes` - Notes (moved to position 40 in schema)
+29. + `driver_license_file_issue_date` - auto-generated
+30. + `driver_license_file_expiry_date` - auto-generated
+31. `id_certificate_file` - ID certificate file path
+32. + `id_certificate_file_issue_date` - auto-generated
+33. + `id_certificate_file_expiry_date` - auto-generated
+34. `foreign_passport_number` - Foreign passport number
+35. `foreign_passport_issue_date` - Foreign passport issue date (YYYY-MM-DD)
+36. `foreign_passport_file` - Foreign passport file path
+37. + `foreign_passport_file_issue_date` - auto-generated
+38. + `foreign_passport_file_expiry_date` - auto-generated
+39. `criminal_record_file` - Criminal record certificate file path
+40. + `criminal_record_file_issue_date` - auto-generated
+41. + `criminal_record_file_expiry_date` - auto-generated
+42. `phone` - Phone number
+43. `phone_note` - Phone note
+44. `education` - Education
+45. `status_start_date` - Status start date (YYYY-MM-DD) — managed via Status Change popup
+46. `status_end_date` - Status end date (YYYY-MM-DD) — managed via Status Change popup
+47. `notes` - Notes
+
+**Auto-generated date columns convention:**
+- For every `field_type=file` field in `fields_schema.csv`, the system auto-generates two companion columns in `employees.csv`:
+  - `{field_name}_issue_date` - Document registration/issue date (YYYY-MM-DD)
+  - `{field_name}_expiry_date` - Document expiry date (YYYY-MM-DD)
+- These columns are NOT defined in `fields_schema.csv` — they are derived automatically in `schema.js`
+- On server startup, `initializeEmployeeColumns()` in `store.js` auto-migrates `employees.csv` to include any missing columns
 
 ### Fields Schema (8 columns) - **Primary UI Configuration**
 
@@ -313,7 +346,7 @@ This file defines the entire UI structure - **edit this file to change form layo
 **Important:** `fields_schema.csv` is in `.gitignore` to allow production-specific customization. For new installations, copy from `fields_schema.template.csv`.
 
 **Columns:**
-- `field_order` - Sequential order (1-37)
+- `field_order` - Sequential order (1-41+)
 - `field_name` - Technical field name (matches employees.csv column)
 - `field_label` - Display label in Russian
 - `field_type` - Input type: `text`, `select`, `textarea`, `number`, `email`, `tel`, `date`, `file`
@@ -447,10 +480,10 @@ This convention is used by:
 
 When adding new document types:
 1. Add new row to [data/fields_schema.csv](data/fields_schema.csv) with `field_type=file`
-2. Add column to CSV header row in `data/employees.csv`
-3. Reload page - document field appears automatically in Documents section!
+2. Restart server - it auto-migrates `employees.csv` to add the file column plus `_issue_date` and `_expiry_date` companion columns
+3. Reload page - document field appears automatically in Documents section with upload popup, date fields, and expiry tracking!
 
-**Note:** `DOCUMENT_FIELDS` is now dynamically loaded from `fields_schema.csv` at server startup - no code changes needed!
+**Note:** `DOCUMENT_FIELDS` is now dynamically loaded from `fields_schema.csv` at server startup - no code changes needed! Date companion columns are auto-generated by `schema.js`.
 
 When adding new dictionary types:
 1. Add entries to [data/dictionaries.csv](data/dictionaries.csv)
