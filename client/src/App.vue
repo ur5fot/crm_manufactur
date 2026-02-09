@@ -604,20 +604,14 @@ async function checkStatusChanges() {
     const firedStatus = employmentOptions.value[1] || '';
     const isFired = firedStatus && employee.employment_status === firedStatus;
 
-    // Проверка 1: сегодня заканчивается статус (приоритет) — возврат к options[0]
+    // Проверка 1: сегодня последний день статуса — уведомить (но НЕ сбрасывать,
+    // end_date включительна, сброс произойдёт завтра в проверке 2: end_date < today)
     if (endDate === today && !isFired) {
       returningToday.push({
         id: employee.employee_id,
         name: displayName(employee),
         position: employee.position || '',
         statusType: employee.employment_status
-      });
-
-      needsUpdate.push({
-        ...employee,
-        status_start_date: '',
-        status_end_date: '',
-        employment_status: workingStatus.value
       });
       return;
     }
@@ -725,6 +719,11 @@ async function saveEmployee() {
       delete payload.employment_status;
       delete payload.status_start_date;
       delete payload.status_end_date;
+    }
+
+    // Новому сотруднику устанавливаем статус по умолчанию — options[0] (рабочий)
+    if (isNew.value && !payload.employment_status && workingStatus.value) {
+      payload.employment_status = workingStatus.value;
     }
 
     // Очищаем пустые поля документов при создании нового сотрудника
@@ -917,6 +916,10 @@ async function saveCell(employee, fieldName) {
   errorMessage.value = "";
   try {
     const updatedEmployee = { ...employee, [fieldName]: newValue };
+    // Статусные поля управляются только через попап — не перезаписываем их при inline-редактировании
+    delete updatedEmployee.employment_status;
+    delete updatedEmployee.status_start_date;
+    delete updatedEmployee.status_end_date;
     await api.updateEmployee(employee.employee_id, updatedEmployee);
 
     // Обновляем локальные данные
