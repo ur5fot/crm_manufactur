@@ -531,6 +531,21 @@ app.post("/api/employees/:id/files", (req, res, next) => {
     return;
   }
 
+  // Валідація формату дат до збереження файлу
+  const issueDate = String(req.body.issue_date || "").trim();
+  const expiryDate = String(req.body.expiry_date || "").trim();
+  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+  if (issueDate && !dateRegex.test(issueDate)) {
+    await fsPromises.unlink(req.file.path).catch(() => {});
+    res.status(400).json({ error: "Невірний формат дати видачі (очікується YYYY-MM-DD)" });
+    return;
+  }
+  if (expiryDate && !dateRegex.test(expiryDate)) {
+    await fsPromises.unlink(req.file.path).catch(() => {});
+    res.status(400).json({ error: "Невірний формат дати закінчення (очікується YYYY-MM-DD)" });
+    return;
+  }
+
   // Удаляем старый файл если он существует (предотвращаем orphaned files при смене расширения)
   const oldFilePath = employees[index][fileField];
   if (oldFilePath) {
@@ -553,8 +568,6 @@ app.post("/api/employees/:id/files", (req, res, next) => {
 
   // Сохраняем файл и даты (issue_date, expiry_date)
   const updateData = { [fileField]: relativePath };
-  const issueDate = String(req.body.issue_date || "").trim();
-  const expiryDate = String(req.body.expiry_date || "").trim();
   const issueDateField = `${fileField}_issue_date`;
   const expiryDateField = `${fileField}_expiry_date`;
   if (getEmployeeColumnsSync().includes(issueDateField)) {

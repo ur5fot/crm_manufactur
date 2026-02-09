@@ -346,6 +346,7 @@ export async function getStatusReport(type) {
     const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
     const monthEnd = today.slice(0, 7) + '-' + String(lastDay).padStart(2, '0');
     filtered = employees.filter(emp => {
+      if (!emp.employment_status || emp.employment_status === workingOpt) return false;
       const start = emp.status_start_date;
       const end = emp.status_end_date;
       if (!start && !end) return false;

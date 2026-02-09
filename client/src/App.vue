@@ -499,8 +499,11 @@ function openDocUploadPopup(doc) {
   docUploadForm.fieldKey = doc.key;
   docUploadForm.fieldLabel = doc.label;
   docUploadForm.file = null;
-  docUploadForm.issueDate = '';
-  docUploadForm.expiryDate = '';
+  // Якщо документ вже завантажений — підставляємо існуючі дати
+  const issueDateField = `${doc.key}_issue_date`;
+  const expiryDateField = `${doc.key}_expiry_date`;
+  docUploadForm.issueDate = form[issueDateField] || '';
+  docUploadForm.expiryDate = form[expiryDateField] || '';
   showDocUploadPopup.value = true;
 }
 
@@ -1828,6 +1831,14 @@ onUnmounted(() => {
                             title="Відкрити документ"
                           >
                             Відкрити
+                          </button>
+                          <button
+                            class="secondary small"
+                            type="button"
+                            @click="openDocUploadPopup(doc)"
+                            title="Замінити документ"
+                          >
+                            Замінити
                           </button>
                           <button
                             class="secondary small"
