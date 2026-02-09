@@ -277,7 +277,7 @@ function timelineEventDesc(event) {
     return `— день народження (${event.age} років)`;
   }
   if (event.type === 'birthday_upcoming') {
-    return `— день народження (${event.age} років, ${formatEventDate(event.birth_date)})`;
+    return `— день народження (${event.age} років, ${formatEventDate(event.date)})`;
   }
   const label = event.status_type || 'статус';
   if (event.end_date) {
@@ -1521,7 +1521,7 @@ onUnmounted(() => {
                 </div>
                 <div class="status-details">
                   <span class="status-badge">{{ evt.age }} років</span>
-                  <span class="vacation-end-date">{{ formatEventDate(evt.birth_date) }}</span>
+                  <span class="vacation-end-date">{{ formatEventDate(evt.current_year_birthday) }}</span>
                 </div>
               </li>
             </ul>
@@ -1535,7 +1535,7 @@ onUnmounted(() => {
                 </div>
                 <div class="status-details">
                   <span class="status-badge">{{ evt.age }} років</span>
-                  <span class="vacation-end-date">{{ formatEventDate(evt.birth_date) }}</span>
+                  <span class="vacation-end-date">{{ formatEventDate(evt.current_year_birthday) }}</span>
                 </div>
               </li>
             </ul>

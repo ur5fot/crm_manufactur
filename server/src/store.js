@@ -605,9 +605,7 @@ export async function getBirthdayEvents() {
 
   // Сортируем события следующих 7 дней по дате
   next7DaysEvents.sort((a, b) => {
-    const dateA = a.birth_date.substring(5); // MM-DD
-    const dateB = b.birth_date.substring(5);
-    return dateA.localeCompare(dateB);
+    return a.current_year_birthday.localeCompare(b.current_year_birthday);
   });
 
   return { today: todayEvents, next7Days: next7DaysEvents };
