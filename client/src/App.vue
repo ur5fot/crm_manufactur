@@ -98,6 +98,7 @@ const csvLinks = [
 const employees = ref([]);
 const selectedId = ref("");
 const searchTerm = ref("");
+const isCreatingNew = ref(false); // Flag to prevent auto-load when creating new employee
 const loading = ref(false);
 const saving = ref(false);
 const errorMessage = ref("");
@@ -168,7 +169,7 @@ function stopDashboardRefresh() {
   }
 }
 
-watch(() => route.name, (newRoute, oldRoute) => {
+watch(() => route.name, async (newRoute, oldRoute) => {
   const newView = currentView.value;
   const oldView = oldRoute === 'dashboard' ? 'dashboard' :
                    oldRoute === 'cards' ? 'cards' :
@@ -186,7 +187,28 @@ watch(() => route.name, (newRoute, oldRoute) => {
   if (newView === 'logs') {
     loadLogs();
   }
+
+  // Auto-load first employee when navigating to cards view without ID
+  // (but not if user explicitly wants to create new employee)
+  if (newView === 'cards' && !route.params.id && !isCreatingNew.value) {
+    await loadEmployeesIfNeeded();
+    if (employees.value.length > 0 && !form.employee_id) {
+      openEmployeeCard(employees.value[0].employee_id);
+    }
+  }
+
+  // Reset the creating new flag when navigating away from cards
+  if (oldView === 'cards' && newView !== 'cards') {
+    isCreatingNew.value = false;
+  }
 });
+
+// Helper function to ensure employees are loaded
+async function loadEmployeesIfNeeded() {
+  if (employees.value.length === 0) {
+    await loadEmployees();
+  }
+}
 const editingCells = reactive({}); // { employeeId_fieldName: value }
 const columnFilters = reactive({}); // { fieldName: selectedValue }
 const logs = ref([]);
@@ -986,6 +1008,11 @@ async function selectEmployee(id) {
 function startNew() {
   selectedId.value = "";
   resetForm();
+  isCreatingNew.value = true;
+  // Stay on cards view, but ensure URL doesn't have an ID
+  if (route.name === 'cards' && route.params.id) {
+    router.push({ name: 'cards' });
+  }
 }
 
 async function saveEmployee() {
@@ -1212,6 +1239,7 @@ async function saveCell(employee, fieldName) {
 }
 
 function openEmployeeCard(employeeId) {
+  isCreatingNew.value = false;
   router.push({ name: 'cards', params: { id: employeeId } });
   selectEmployee(employeeId);
 }
@@ -1304,8 +1332,13 @@ onMounted(async () => {
   await loadEmployees();
 
   // Restore view state from route params
-  if (route.name === 'cards' && route.params.id) {
-    selectEmployee(route.params.id);
+  if (route.name === 'cards') {
+    if (route.params.id) {
+      selectEmployee(route.params.id);
+    } else if (employees.value.length > 0) {
+      // Auto-load first employee if navigating to cards without ID
+      openEmployeeCard(employees.value[0].employee_id);
+    }
   } else if (route.name === 'logs') {
     await loadLogs();
   }

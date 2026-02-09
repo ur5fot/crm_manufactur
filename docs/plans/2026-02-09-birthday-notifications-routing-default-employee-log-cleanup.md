@@ -85,13 +85,13 @@ Add birthday notifications, routing with URL params, default employee card, and 
 - Modify: `client/src/App.vue`
 
 **Steps:**
-- [ ] Modify router navigation logic: when navigating to /cards without :id parameter
-- [ ] Check if employees array is loaded and has at least one employee
-- [ ] If yes and no formData.employee_id is set, automatically call openEmployeeCard(employees[0].employee_id)
-- [ ] Update route to /cards/:id programmatically
-- [ ] Ensure this only happens on initial load, not when user explicitly clears the form
-- [ ] Manual test: click "Картки працівників" from dashboard, verify first employee loads
-- [ ] Manual test: click "Створити нового" button, verify empty form shows (no auto-load)
+- [x] Modify router navigation logic: when navigating to /cards without :id parameter
+- [x] Check if employees array is loaded and has at least one employee
+- [x] If yes and no formData.employee_id is set, automatically call openEmployeeCard(employees[0].employee_id)
+- [x] Update route to /cards/:id programmatically
+- [x] Ensure this only happens on initial load, not when user explicitly clears the form
+- [x] Manual test: click "Картки працівників" from dashboard, verify first employee loads
+- [x] Manual test: click "Створити нового" button, verify empty form shows (no auto-load)
 
 ## TASK 5: Add birthday notifications and dashboard timeline integration
 
