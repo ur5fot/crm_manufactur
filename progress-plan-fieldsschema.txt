@@ -1,0 +1,219 @@
+# Ralphex Progress Log
+Plan: (no plan - review only)
+Branch: feature/ralphex
+Mode: plan
+Started: 2026-02-09 18:56:23
+------------------------------------------------------------
+
+starting interactive plan creation
+[26-02-09 18:56:23] plan request: в разделе Картка співробітника Документи добавить возможность загрузки еще фото и для загрузке открывать попап и в котором можно загрузить документ и указать дату его регистрайии и дату когда истикает срок этого документа и добавить также оповижение как с Статус роботи о об окончании срока действия документа. какие документы загружать беруться с fields_schema предложи несколько варианто своих
+
+--- plan iteration 1 ---
+[26-02-09 18:56:28] Let me start by reading the progress file and checking for existing plans.
+[26-02-09 18:56:33] No existing plan found, and this is the first iteration with no Q&A yet. Let me
+[26-02-09 18:56:33] explore the codebase to understand the current document handling, status
+[26-02-09 18:56:33] notification system, and fields_schema structure.
+[26-02-09 18:58:26] Now I have a thorough understanding of the codebase. Let me analyze the request:
+[26-02-09 18:58:26] The user wants:
+[26-02-09 18:58:26]   1. Add ability to upload photos (images) in the Documents section of the employee
+[26-02-09 18:58:26] card
+[26-02-09 18:58:26]   2. Open a popup for upload where you can specify: document file, registration
+[26-02-09 18:58:26] date, expiry date
+[26-02-09 18:58:26]   3. Add notifications about document expiry (similar to status change
+[26-02-09 18:58:26] notifications)
+[26-02-09 18:58:26]   4. Document types come from fields_schema - and suggest some additional document
+[26-02-09 18:58:26] types
+[26-02-09 18:58:26] I need to ask the user about the approach for storing document metadata (dates).
+[26-02-09 18:58:26] Let me formulate a question.
+[26-02-09 18:58:26] <<<RALPHEX:QUESTION>>>
+[26-02-09 18:58:26] {"question": "Сейчас каждый документ хранится как
+[26-02-09 18:58:26] одно поле в employees.csv (например driver_license_file =
+[26-02-09 18:58:26] путь к файлу). Для дат регистрации и
+[26-02-09 18:58:26] истечения нужны дополнительные поля. Какой
+[26-02-09 18:58:26] подход предпочитаете?", "options": ["Добавить доп.
+[26-02-09 18:58:26] колонки в employees.csv — для каждого документа 2
+[26-02-09 18:58:26] новые колонки: {field}_issue_date и {field}_expiry_date
+[26-02-09 18:58:26] (простой, но +14 колонок)", "Создать отдельный CSV
+[26-02-09 18:58:26] файл document_metadata.csv с колонками: employee_id, field_name,
+[26-02-09 18:58:26] issue_date, expiry_date (чище, не раздувает основную
+[26-02-09 18:58:26] таблицу)", "Хранить даты в JSON-строке в самом
+[26-02-09 18:58:26] поле документа, например: path|issue_date|expiry_date
+[26-02-09 18:58:26] (минимум изменений, но менее читабельно в
+[26-02-09 18:58:26] Excel)"]}
+[26-02-09 18:58:26] <<<RALPHEX:END>>>
+[26-02-09 18:58:27] QUESTION: Сейчас каждый документ хранится как одно поле в employees.csv (например driver_license_file = путь к файлу). Для дат регистрации и истечения нужны дополнительные поля. Какой подход предпочитаете?
+[26-02-09 18:58:27] OPTIONS: Добавить доп. колонки в employees.csv — для каждого документа 2 новые колонки: {field}_issue_date и {field}_expiry_date (простой, но +14 колонок), Создать отдельный CSV файл document_metadata.csv с колонками: employee_id, field_name, issue_date, expiry_date (чище, не раздувает основную таблицу), Хранить даты в JSON-строке в самом поле документа, например: path|issue_date|expiry_date (минимум изменений, но менее читабельно в Excel)
+[26-02-09 18:59:18] ANSWER: Добавить доп. колонки в employees.csv — для каждого документа 2 новые колонки: {field}_issue_date и {field}_expiry_date (простой, но +14 колонок)
+
+--- plan iteration 2 ---
+[26-02-09 18:59:26] Let me start by reading the progress file and checking for existing plans.
+[26-02-09 18:59:33] Good. I have the progress file. This is iteration 2. The user already answered my
+[26-02-09 18:59:33] question:
+[26-02-09 18:59:33]   - Approach for storing document dates: Add extra columns to employees.csv - for
+[26-02-09 18:59:33] each document 2 new columns: {field}_issue_date and {field}_expiry_date
+[26-02-09 18:59:33] No existing plan file found. Now I have enough context from the previous
+[26-02-09 18:59:33] iteration's exploration. Let me also review the current fields_schema template to
+[26-02-09 18:59:33] understand existing document fields and propose new ones.
+[26-02-09 18:59:38] Now let me look at the relevant parts of the codebase - the document upload popup
+[26-02-09 18:59:38] logic, notification system, and store.js to understand the current patterns.
+[26-02-09 18:59:46] Let me see the notification system more fully, and the document upload section of
+[26-02-09 18:59:46] the template.
+[26-02-09 18:59:55] Now let me also check the notification modal template and the status change popup
+[26-02-09 18:59:55] to understand the UI pattern.
+[26-02-09 19:00:02] Now let me look at how the file upload function works in the client and how the
+[26-02-09 19:00:02] accept attribute is set (currently "application/pdf" only - needs to support
+[26-02-09 19:00:02] images too).
+[26-02-09 19:00:06] Now let me check the multer configuration for file type restrictions on the
+[26-02-09 19:00:06] server.
+[26-02-09 19:00:12] Now let me check the getDashboardStats and timeline events to understand if we
+[26-02-09 19:00:12] need to add document expiry events there too.
+[26-02-09 19:01:00] I now have a complete understanding of the codebase. I have enough information
+[26-02-09 19:01:00] from the user's answer to create the plan. Let me formulate it.
+[26-02-09 19:01:00] The current document fields in fields_schema.template.csv are:
+[26-02-09 19:01:00]   - personal_matter_file (Особова справа)
+[26-02-09 19:01:00]   - medical_commission_file (Медична комісія)
+[26-02-09 19:01:00]   - veterans_certificate_file (Посвідчення ветерана)
+[26-02-09 19:01:00]   - driver_license_file (Водійське посвідчення)
+[26-02-09 19:01:00]   - id_certificate_file (Посвідчення особи)
+[26-02-09 19:01:00]   - foreign_passport_file (Закордонний паспорт)
+[26-02-09 19:01:00]   - criminal_record_file (Довідка про несудимість)
+[26-02-09 19:01:00] That's 7 document types = 14 new date columns ({field}_issue_date +
+[26-02-09 19:01:00] {field}_expiry_date).
+[26-02-09 19:01:00] The user also asked to propose some new document types. I'll suggest a few
+[26-02-09 19:01:00] practical ones for a manufacturing/military-style CRM.
+[26-02-09 19:01:00] <<<RALPHEX:PLAN_DRAFT>>>
+[26-02-09 19:01:00] # Document Management Enhancement: Upload Popup with Dates and Expiry
+[26-02-09 19:01:00] Notifications
+[26-02-09 19:01:00] ## Summary
+[26-02-09 19:01:00] Add document upload popup with registration/expiry dates, document expiry
+[26-02-09 19:01:00] notifications (similar to status change notifications), accept images in addition
+[26-02-09 19:01:00] to PDFs, and suggest new document types.
+[26-02-09 19:01:00] ## Proposed New Document Types for fields_schema
+[26-02-09 19:01:00]   - `military_id_file` - Військовий квиток (Military ID)
+[26-02-09 19:01:00]   - `medical_certificate_file` - Медична довідка (Medical certificate)
+[26-02-09 19:01:00]   - `insurance_file` - Страховий поліс (Insurance policy)
+[26-02-09 19:01:00]   - `education_diploma_file` - Диплом про освіту (Education diploma)
+[26-02-09 19:01:00] (User can accept, modify, or reject any of these during implementation)
+[26-02-09 19:01:00] ## Architecture
+[26-02-09 19:01:00] ### Data Storage
+[26-02-09 19:01:00] For each `field_type=file` field, add 2 companion columns to employees.csv:
+[26-02-09 19:01:00]   - `{field_name}_issue_date` (date) - Registration/issue date
+[26-02-09 19:01:00]   - `{field_name}_expiry_date` (date) - Expiry date
+[26-02-09 19:01:00] These companion fields will be auto-generated in the schema loading logic (NOT
+[26-02-09 19:01:00] manually added to fields_schema.csv) - they are derived from file fields. This
+[26-02-09 19:01:00] keeps fields_schema clean and avoids 14+ manual rows.
+[26-02-09 19:01:00] ### Files Involved
+[26-02-09 19:01:00]   - `server/src/schema.js` - Auto-generate date companion columns for file fields
+[26-02-09 19:01:00]   - `server/src/store.js` - Add getDashboardDocumentExpiryEvents(), migrate
+[26-02-09 19:01:00] employees.csv to add new columns
+[26-02-09 19:01:00]   - `server/src/index.js` - Extend file upload endpoint to accept
+[26-02-09 19:01:00] issue_date/expiry_date, add document expiry API endpoint, accept images
+[26-02-09 19:01:00]   - `client/src/App.vue` - Upload popup with date fields, document expiry
+[26-02-09 19:01:00] notifications, accept images
+[26-02-09 19:01:00]   - `data/fields_schema.template.csv` - Add proposed new document types
+[26-02-09 19:01:00] ### Related Patterns
+[26-02-09 19:01:00]   - Status change popup (showStatusChangePopup) - reuse modal pattern
+[26-02-09 19:01:00]   - Status notifications (checkStatusChanges) - reuse notification pattern
+[26-02-09 19:01:00]   - Dynamic document fields from fields_schema - existing convention
+[26-02-09 19:01:00] ## Implementation Strategy
+[26-02-09 19:01:00]   - Testing approach: Manual testing (this is a monolithic Vue app with no test
+[26-02-09 19:01:00] framework set up)
+[26-02-09 19:01:00]   - Follow existing patterns: popup modals, notification system, dynamic schema
+[26-02-09 19:01:00]   - Keep changes minimal - reuse existing CSS classes and modal patterns
+[26-02-09 19:01:00] ## Tasks
+[26-02-09 19:01:00] ### Task 1: Backend - Auto-generate document date columns
+[26-02-09 19:01:00] **Files:**
+[26-02-09 19:01:00]   - Modify: `server/src/schema.js`
+[26-02-09 19:01:00]   - Modify: `server/src/store.js`
+[26-02-09 19:01:00]   - [ ] In schema.js, when loading EMPLOYEE_COLUMNS from fields_schema, for each
+[26-02-09 19:01:00] field with field_type=file, auto-append `{field_name}_issue_date` and
+[26-02-09 19:01:00] `{field_name}_expiry_date` to the columns list
+[26-02-09 19:01:00]   - [ ] In store.js `initializeEmployeeColumns()`, ensure the auto-migration adds
+[26-02-09 19:01:00] these new columns to employees.csv header
+[26-02-09 19:01:00]   - [ ] Test: restart server, verify employees.csv gets new date columns added to
+[26-02-09 19:01:00] header
+[26-02-09 19:01:00] ### Task 2: Backend - Extend file upload endpoint and add document expiry API
+[26-02-09 19:01:00] **Files:**
+[26-02-09 19:01:00]   - Modify: `server/src/index.js`
+[26-02-09 19:01:00]   - Modify: `server/src/store.js`
+[26-02-09 19:01:00]   - [ ] Modify POST /api/employees/:id/files to accept `issue_date` and
+[26-02-09 19:01:00] `expiry_date` in request body, save them to the employee record
+[26-02-09 19:01:00]   - [ ] Accept images in addition to PDFs (jpg, jpeg, png, gif, webp) - update
+[26-02-09 19:01:00] multer config and default extension
+[26-02-09 19:01:00]   - [ ] Add GET /api/document-expiry endpoint in store.js:
+[26-02-09 19:01:00] `getDocumentExpiryEvents()` - scans all employees for documents with expiry_date
+[26-02-09 19:01:00] approaching (today or within 7 days), returns structured data with employee name,
+[26-02-09 19:01:00] document label, expiry date
+[26-02-09 19:01:00]   - [ ] Wire up the new endpoint in index.js
+[26-02-09 19:01:00]   - [ ] Test: upload a file with dates via API, verify dates stored in employees.csv
+[26-02-09 19:01:00] ### Task 3: Frontend - Document upload popup with date fields
+[26-02-09 19:01:00] **Files:**
+[26-02-09 19:01:00]   - Modify: `client/src/App.vue`
+[26-02-09 19:01:00]   - [ ] Replace inline file input with "Завантажити" button that opens a
+[26-02-09 19:01:00] popup modal
+[26-02-09 19:01:00]   - [ ] Create document upload popup (reuse vacation-notification-modal CSS pattern)
+[26-02-09 19:01:00] with:
+[26-02-09 19:01:00]   - Document name shown in header
+[26-02-09 19:01:00]   - File picker (accept PDF + images)
+[26-02-09 19:01:00]   - Issue date input (type=date, optional)
+[26-02-09 19:01:00]   - Expiry date input (type=date, optional)
+[26-02-09 19:01:00]   - "Завантажити" and "Скасувати" buttons
+[26-02-09 19:01:00]   - [ ] On upload, send file + issue_date + expiry_date to the existing file upload
+[26-02-09 19:01:00] endpoint
+[26-02-09 19:01:00]   - [ ] Show issue_date and expiry_date in the documents table for uploaded
+[26-02-09 19:01:00] documents (add columns or show below filename)
+[26-02-09 19:01:00]   - [ ] Allow editing dates for already-uploaded documents without re-uploading the
+[26-02-09 19:01:00] file
+[26-02-09 19:01:00]   - [ ] Test: open popup, select file, fill dates, upload, verify dates shown in
+[26-02-09 19:01:00] table
+[26-02-09 19:01:00] ### Task 4: Frontend - Document expiry notifications
+[26-02-09 19:01:00] **Files:**
+[26-02-09 19:01:00]   - Modify: `client/src/App.vue`
+[26-02-09 19:01:00]   - Modify: `client/src/api.js`
+[26-02-09 19:01:00]   - [ ] Add api.getDocumentExpiry() in api.js
+[26-02-09 19:01:00]   - [ ] Add checkDocumentExpiry() function similar to checkStatusChanges() - called
+[26-02-09 19:01:00] on loadEmployees()
+[26-02-09 19:01:00]   - [ ] Show notification popup when documents expire today or within 7 days:
+[26-02-09 19:01:00]   - Title: "Сповіщення про закінчення терміну дії
+[26-02-09 19:01:00] документів"
+[26-02-09 19:01:00]   - List: employee name, document type, expiry date
+[26-02-09 19:01:00]   - Emoji: document emoji (📄) for expiring, warning (⚠️) for expired today
+[26-02-09 19:01:00]   - [ ] Add document expiry events to dashboard timeline (getDashboardEvents
+[26-02-09 19:01:00] extended or separate section)
+[26-02-09 19:01:00]   - [ ] Test: set a document expiry_date to today, reload page, verify notification
+[26-02-09 19:01:00] appears
+[26-02-09 19:01:00] ### Task 5: Update fields_schema template with new document types
+[26-02-09 19:01:00] **Files:**
+[26-02-09 19:01:00]   - Modify: `data/fields_schema.template.csv`
+[26-02-09 19:01:00]   - [ ] Add proposed document types (military_id_file, medical_certificate_file,
+[26-02-09 19:01:00] insurance_file, education_diploma_file) to fields_schema.template.csv with
+[26-02-09 19:01:00] field_type=file, field_group=Документи
+[26-02-09 19:01:00]   - [ ] Update field_order numbers accordingly
+[26-02-09 19:01:00]   - [ ] Test: copy template to fields_schema.csv, verify new document types appear
+[26-02-09 19:01:00] in UI
+[26-02-09 19:01:00] ### Task 6: Documentation update
+[26-02-09 19:01:00]   - [ ] Update CLAUDE.md with document dates architecture, new columns convention,
+[26-02-09 19:01:00] document expiry notifications
+[26-02-09 19:01:00]   - [ ] Update README.md and README.uk.md with new document management features
+[26-02-09 19:01:00] ## Final Validation
+[26-02-09 19:01:00]   - [ ] Manual test: full flow - upload document with dates, verify popup, verify
+[26-02-09 19:01:00] dates saved
+[26-02-09 19:01:00]   - [ ] Manual test: set expiry date to today, reload, verify notification
+[26-02-09 19:01:00]   - [ ] Manual test: dashboard shows document expiry in timeline
+[26-02-09 19:01:00]   - [ ] Manual test: images (jpg/png) upload works alongside PDF
+[26-02-09 19:01:00]   - [ ] Manual test: existing documents still work (backwards compatibility)
+[26-02-09 19:01:00]   - [ ] Verify server restarts cleanly with new schema columns
+[26-02-09 19:01:00] <<<RALPHEX:END>>>
+[26-02-09 19:01:01] plan draft ready for review
+[26-02-09 19:01:18] DRAFT REVIEW: accept
+[26-02-09 19:01:18] draft accepted, continuing to write plan file...
+
+--- plan iteration 3 ---
+[26-02-09 19:01:25] Let me start by reading the progress file and checking for existing plans.
+[26-02-09 19:01:29] The user accepted the draft in the previous iteration. Now I need to write the
+[26-02-09 19:01:29] plan file to disk. Let me create the docs/plans directory and write the plan.
+[26-02-09 19:02:09] <<<RALPHEX:PLAN_READY>>>
+[26-02-09 19:02:10] plan creation completed
+
+------------------------------------------------------------
+Completed: 2026-02-09 21:02:53 (2 hours )
