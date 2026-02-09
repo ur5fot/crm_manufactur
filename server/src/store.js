@@ -592,6 +592,7 @@ export async function getBirthdayEvents() {
       employee_id: emp.employee_id,
       employee_name: name,
       birth_date: birthDate,
+      current_year_birthday: birthdayStr,  // Birthday in current year for display/sorting
       age: age
     };
 

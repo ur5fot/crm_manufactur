@@ -870,7 +870,7 @@ async function loadDashboardEvents() {
       type: isToday ? 'birthday_today' : 'birthday_upcoming',
       birth_date: evt.birth_date,
       age: evt.age,
-      date: evt.birth_date
+      date: evt.current_year_birthday  // Use current year date for timeline display/sorting
     });
 
     // На дашборд виводимо лише сьогоднішні події (не прострочені за минулі 30 днів)
