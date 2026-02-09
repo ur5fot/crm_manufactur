@@ -105,9 +105,9 @@ These companion fields will be auto-generated in the schema loading logic (NOT m
 **Files:**
 - Modify: `data/fields_schema.template.csv`
 
-- [ ] Add proposed document types (military_id_file, medical_certificate_file, insurance_file, education_diploma_file) to fields_schema.template.csv with field_type=file, field_group=Документи
-- [ ] Update field_order numbers accordingly
-- [ ] Test: copy template to fields_schema.csv, verify new document types appear in UI
+- [x] Add proposed document types (military_id_file, medical_certificate_file, insurance_file, education_diploma_file) to fields_schema.template.csv with field_type=file, field_group=Документи
+- [x] Update field_order numbers accordingly
+- [x] Test: copy template to fields_schema.csv, verify new document types appear in UI
 
 ### Task 6: Documentation update
 

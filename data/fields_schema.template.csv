@@ -36,6 +36,10 @@
 35;foreign_passport_number;Номер закордонного паспорта;text;;no;Документи;no
 36;foreign_passport_file;Закордонний паспорт;file;;no;Документи;no
 37;criminal_record_file;Довідка про несудимість;file;;no;Документи;no
-38;status_start_date;Дата початку статусу;date;;no;;no
-39;status_end_date;Дата завершення статусу;date;;no;;no
-40;notes;Примітка;textarea;;yes;Інше;yes
+38;military_id_file;Військовий квиток;file;;no;Документи;no
+39;medical_certificate_file;Медична довідка;file;;no;Документи;no
+40;insurance_file;Страховий поліс;file;;no;Документи;no
+41;education_diploma_file;Диплом про освіту;file;;no;Документи;no
+42;status_start_date;Дата початку статусу;date;;no;;no
+43;status_end_date;Дата завершення статусу;date;;no;;no
+44;notes;Примітка;textarea;;yes;Інше;yes
