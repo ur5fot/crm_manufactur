@@ -308,6 +308,28 @@ const formattedLastUpdated = computed(() => {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 });
 
+// Розрахунок кількості календарних днів відпустки (Story 3.3)
+const vacationDays = computed(() => {
+  const start = form.vacation_start_date;
+  const end = form.vacation_end_date;
+
+  // Валідація: обидві дати обов'язкові
+  if (!start || !end) return null;
+
+  // Парсинг дат (формат YYYY-MM-DD з CSV)
+  const startDate = new Date(start + 'T00:00:00');
+  const endDate = new Date(end + 'T00:00:00');
+
+  // Валідація: end >= start
+  if (endDate < startDate) return null;
+
+  // Розрахунок включаючи обидві граничні дати
+  // Формула виправлена після code review Story 3.1: +1 для включення end date
+  const days = Math.floor((endDate - startDate) / 86400000) + 1;
+
+  return days > 0 ? days : null;
+});
+
 function emptyEmployee() {
   const base = {};
   // Используем динамический список полей из schema
@@ -1087,7 +1109,7 @@ onUnmounted(() => {
               </thead>
               <tbody>
                 <tr v-for="row in reportData" :key="row.employee_id">
-                  <td>{{ row.name }}</td>
+                  <td><span class="report-name-link" @click="openEmployeeCard(row.employee_id)">{{ row.name }}</span></td>
                   <td>{{ formatEventDate(row.vacation_start_date) }}</td>
                   <td>{{ formatEventDate(row.vacation_end_date) }}</td>
                   <td>{{ row.days }}</td>
@@ -1205,6 +1227,10 @@ onUnmounted(() => {
                     :required="field.key === 'first_name' || field.key === 'last_name'"
                   />
                 </div>
+              </div>
+              <!-- Vacation days calculation display (Story 3.3) -->
+              <div v-if="group.title === 'Відпустка' && vacationDays !== null" class="vacation-days-display">
+                {{ vacationDays }} календарних днів
               </div>
             </div>
 

@@ -1387,3 +1387,25 @@ button.small {
 .export-btn:hover {
   background: #1565C0;
 }
+
+/* Vacation days calculation display (Story 3.3) */
+.vacation-days-display {
+  margin-top: 12px;
+  font-size: 0.85em;
+  color: #666;
+  font-style: italic;
+}
+
+/* Clickable employee names in reports (Story 3.3 enhancement) */
+.report-name-link {
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 2px 4px;
+  margin: -2px -4px;
+  font-weight: 500;
+}
+
+.report-name-link:hover {
+  background: rgba(15, 118, 110, 0.08);
+  color: var(--accent-strong);
+}
