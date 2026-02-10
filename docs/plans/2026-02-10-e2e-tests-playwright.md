@@ -87,33 +87,33 @@
 - Create: `tests/e2e/employee-crud.spec.js`
 
 **Steps:**
-- [ ] Test: "Создать нового сотрудника"
+- [x] Test: "Создать нового сотрудника"
   - Navigate to `/cards`
   - Click "Новий працівник" button
   - Fill form fields (last_name, first_name, employment_status)
   - Click "Зберегти"
   - Assert employee appears in sidebar list
   - Assert API created employee (`GET /api/employees/:id`)
-- [ ] Test: "Редактировать существующего сотрудника"
+- [x] Test: "Редактировать существующего сотрудника"
   - Load employee from sidebar
   - Edit field (position = "Инженер")
   - Click "Зберегти"
   - Assert field updated in UI
   - Assert API saved change (`GET /api/employees/:id`)
   - Assert audit log entry created (`GET /api/logs`)
-- [ ] Test: "Удалить сотрудника с подтверждением"
+- [x] Test: "Удалить сотрудника с подтверждением"
   - Load employee
   - Click delete button (trash icon)
   - Assert confirmation dialog appears
   - Click "Так, видалити"
   - Assert employee removed from list
   - Assert API deleted employee (`GET /api/employees` returns 404)
-- [ ] Test: "Отменить удаление сотрудника"
+- [x] Test: "Отменить удаление сотрудника"
   - Load employee
   - Click delete button
   - Click "Скасувати" in dialog
   - Assert employee still exists
-- [ ] `npm run test:e2e tests/e2e/employee-crud.spec.js` (все тесты должны пройти)
+- [x] `npm run test:e2e tests/e2e/employee-crud.spec.js` (все тесты должны пройти)
 
 ---
 

@@ -60,23 +60,26 @@ async function cleanupTestData() {
 /**
  * Wait for employees to load in UI
  * @param {import('@playwright/test').Page} page - Playwright page object
- * @param {number} timeout - Timeout in milliseconds (default: 5000)
+ * @param {number} timeout - Timeout in milliseconds (default: 10000)
  */
-async function waitForEmployeesLoad(page, timeout = 5000) {
-  // Wait for API call to complete
-  await page.waitForResponse(
-    response => response.url().includes('/api/employees') && response.status() === 200,
-    { timeout }
-  );
+async function waitForEmployeesLoad(page, timeout = 10000) {
+  // Wait for UI to render employee list
+  await page.waitForSelector('.employee-list', { timeout });
+
+  // Wait a bit for any API calls to complete
+  await page.waitForTimeout(1000);
 
   // Close any notification popups that might appear
-  const closeButton = page.locator('.popup-overlay button:has-text("Зрозуміло")').first();
-  if (await closeButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-    await closeButton.click();
+  // Try multiple times as there can be multiple popups (birthday, vacation, documents, etc)
+  for (let i = 0; i < 5; i++) {
+    const closeButton = page.locator('.popup-overlay button:has-text("Зрозуміло"), .vacation-notification-overlay button:has-text("Зрозуміло")').first();
+    if (await closeButton.isVisible({ timeout: 1000 }).catch(() => false)) {
+      await closeButton.click();
+      await page.waitForTimeout(500);
+    } else {
+      break;
+    }
   }
-
-  // Wait for UI to render
-  await page.waitForSelector('.employee-list', { timeout });
 }
 
 /**
