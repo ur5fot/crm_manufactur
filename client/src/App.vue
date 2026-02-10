@@ -2125,6 +2125,14 @@ onUnmounted(() => {
         <aside class="panel">
           <div class="panel-header">
             <div class="panel-title">Співробітники</div>
+            <button
+              class="tab-icon-btn"
+              type="button"
+              @click="startNew"
+              title="Новий працівник"
+            >
+              ➕
+            </button>
             <div class="status-bar">
               <span v-if="loading">Завантаження...</span>
               <span v-else>{{ employees.length }} всього</span>

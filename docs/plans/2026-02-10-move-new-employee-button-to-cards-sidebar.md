@@ -41,11 +41,11 @@ Move the "New Employee" button (➕) from the global header tab bar to the left 
 **Files:**
 - Modify: `client/src/App.vue`
 
-- [ ] Add "New Employee" button to Cards view left sidebar panel-header (after "Співробітники" title, before status-bar)
-- [ ] Keep same `@click="startNew"` handler and `title` attribute for accessibility
-- [ ] Ensure button only renders when in Cards view context
-- [ ] Manual test: Button appears in /cards left sidebar
-- [ ] Manual test: Button does NOT appear in /table, /reports, /dashboard, /import, /logs
+- [x] Add "New Employee" button to Cards view left sidebar panel-header (after "Співробітники" title, before status-bar)
+- [x] Keep same `@click="startNew"` handler and `title` attribute for accessibility
+- [x] Ensure button only renders when in Cards view context
+- [x] Manual test: Button appears in /cards left sidebar
+- [x] Manual test: Button does NOT appear in /table, /reports, /dashboard, /import, /logs
 
 ### Task 3: Style adjustments
 
