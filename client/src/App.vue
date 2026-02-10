@@ -1271,6 +1271,12 @@ async function reloadEmployeePreservingDirty(employeeId) {
 }
 
 function startNew() {
+  // Check for unsaved changes before clearing form
+  if (isFormDirty.value) {
+    openClearConfirmPopup();
+    return;
+  }
+
   selectedId.value = "";
   resetForm();
   isCreatingNew.value = true;
