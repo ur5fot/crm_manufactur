@@ -91,6 +91,51 @@ const documentFields = computed(() => {
     }));
 });
 
+// Get field type by field name
+const getFieldType = (fieldName) => {
+  const field = allFieldsSchema.value.find(f => f.key === fieldName);
+  return field?.type || 'text';
+};
+
+// Get filter condition options based on field type
+const filterConditionOptions = (filter) => {
+  if (!filter || !filter.field) {
+    return [
+      { value: 'contains', label: 'Містить' },
+      { value: 'empty', label: 'Порожнє' },
+      { value: 'not_empty', label: 'Не порожнє' }
+    ];
+  }
+
+  const fieldType = getFieldType(filter.field);
+
+  if (fieldType === 'number' || filter.field === 'salary_amount') {
+    return [
+      { value: 'greater_than', label: 'Більше ніж' },
+      { value: 'less_than', label: 'Менше ніж' },
+      { value: 'equals', label: 'Дорівнює' },
+      { value: 'empty', label: 'Порожнє' },
+      { value: 'not_empty', label: 'Не порожнє' }
+    ];
+  }
+
+  if (fieldType === 'date') {
+    return [
+      { value: 'date_range', label: 'Період від-до' },
+      { value: 'empty', label: 'Порожнє' },
+      { value: 'not_empty', label: 'Не порожнє' }
+    ];
+  }
+
+  // Default for text, select, textarea, etc.
+  return [
+    { value: 'contains', label: 'Містить' },
+    { value: 'not_contains', label: 'Не містить' },
+    { value: 'empty', label: 'Порожнє' },
+    { value: 'not_empty', label: 'Не порожнє' }
+  ];
+};
+
 // CSV links removed - data directory not publicly accessible for security reasons
 
 const employees = ref([]);
@@ -387,7 +432,9 @@ function addCustomFilter() {
   customFilters.value.push({
     field: '',
     condition: 'contains',
-    value: ''
+    value: '',
+    valueFrom: '',
+    valueTo: ''
   });
 }
 
@@ -2601,15 +2648,39 @@ onUnmounted(() => {
                 </select>
 
                 <select v-model="filter.condition" class="filter-condition">
-                  <option value="contains">Містить</option>
-                  <option value="equals">Дорівнює</option>
-                  <option value="not_equals">Не дорівнює</option>
-                  <option value="empty">Порожнє</option>
-                  <option value="not_empty">Не порожнє</option>
+                  <option v-for="opt in filterConditionOptions(filter)" :key="opt.value" :value="opt.value">
+                    {{ opt.label }}
+                  </option>
                 </select>
 
+                <!-- Date range: show two date inputs -->
+                <template v-if="filter.condition === 'date_range'">
+                  <input
+                    v-model="filter.valueFrom"
+                    type="date"
+                    class="filter-value"
+                    placeholder="Від"
+                  />
+                  <input
+                    v-model="filter.valueTo"
+                    type="date"
+                    class="filter-value"
+                    placeholder="До"
+                  />
+                </template>
+
+                <!-- Number field: show number input -->
                 <input
-                  v-if="filter.condition !== 'empty' && filter.condition !== 'not_empty'"
+                  v-else-if="filter.condition && !['empty', 'not_empty'].includes(filter.condition) && (getFieldType(filter.field) === 'number' || filter.field === 'salary_amount')"
+                  v-model="filter.value"
+                  type="number"
+                  class="filter-value"
+                  placeholder="Значення"
+                />
+
+                <!-- Text field: show text input -->
+                <input
+                  v-else-if="filter.condition && !['empty', 'not_empty', 'date_range'].includes(filter.condition)"
                   v-model="filter.value"
                   type="text"
                   class="filter-value"

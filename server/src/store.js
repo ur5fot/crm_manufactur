@@ -753,7 +753,7 @@ export async function getCustomReport(filters = [], columns = null) {
     filtered = filtered.filter(emp => {
       // AND logic: employee must match ALL filters
       return filters.every(filter => {
-        const { field, condition, value } = filter;
+        const { field, condition, value, valueFrom, valueTo } = filter;
 
         // Validate field name
         if (!allFieldNames.includes(field)) {
@@ -767,10 +767,26 @@ export async function getCustomReport(filters = [], columns = null) {
         switch (condition) {
           case 'contains':
             return empValueStr.includes(filterValueStr);
+          case 'not_contains':
+            return !empValueStr.includes(filterValueStr);
           case 'equals':
+            // For number fields, use numeric comparison
+            if (typeof value === 'number' || !isNaN(parseFloat(value))) {
+              return parseFloat(empValue) === parseFloat(value);
+            }
             return empValue === value || empValueStr === filterValueStr;
           case 'not_equals':
             return empValue !== value && empValueStr !== filterValueStr;
+          case 'greater_than':
+            return parseFloat(empValue || 0) > parseFloat(value || 0);
+          case 'less_than':
+            return parseFloat(empValue || 0) < parseFloat(value || 0);
+          case 'date_range':
+            // Date range: check if empValue is between valueFrom and valueTo (inclusive)
+            if (!empValue) return false;
+            if (valueFrom && empValue < valueFrom) return false;
+            if (valueTo && empValue > valueTo) return false;
+            return true;
           case 'empty':
             return !empValue || empValue === '';
           case 'not_empty':

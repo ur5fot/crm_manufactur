@@ -51,30 +51,30 @@
 - Modify: `server/src/store.js`
 - Modify: `server/src/index.js`
 
-- [ ] Add getFieldType(fieldName) computed function in App.vue returning field type from allFieldsSchema
-- [ ] Add computed property filterConditionOptions(filter) that returns condition options based on filter.field type:
+- [x] Add getFieldType(fieldName) computed function in App.vue returning field type from allFieldsSchema
+- [x] Add computed property filterConditionOptions(filter) that returns condition options based on filter.field type:
   - text: contains (default), not_contains
   - number/salary: greater_than, less_than, equals
   - date: date_range (requires two inputs: from and to)
   - all types: empty, not_empty
-- [ ] Update filter-condition select to use v-for with filterConditionOptions(filter)
-- [ ] Update filter-value input rendering logic:
+- [x] Update filter-condition select to use v-for with filterConditionOptions(filter)
+- [x] Update filter-value input rendering logic:
   - Show single text input for text conditions (contains, not_contains)
   - Show single number input (type=number) for number conditions
   - Show TWO date inputs (type=date) for date_range condition (filter.valueFrom, filter.valueTo)
   - Hide inputs for empty/not_empty conditions
-- [ ] Update customFilters data structure to support valueFrom/valueTo for date ranges
-- [ ] Update backend exportEmployees() in store.js to handle new condition types:
+- [x] Update customFilters data structure to support valueFrom/valueTo for date ranges
+- [x] Update backend exportEmployees() in store.js to handle new condition types:
   - not_contains: check !haystack.includes(value)
   - greater_than: parseFloat(emp[field]) > parseFloat(value)
   - less_than: parseFloat(emp[field]) < parseFloat(value)
   - equals (number): parseFloat(emp[field]) === parseFloat(value)
   - date_range: emp[field] >= valueFrom && emp[field] <= valueTo
-- [ ] Update GET /api/reports/custom endpoint to pass new filter conditions to exportEmployees
-- [ ] Test: text field with contains/not_contains filters correctly
-- [ ] Test: number field with >/</= filters correctly
-- [ ] Test: date field with period from-to filters correctly
-- [ ] run npm test - must pass before task 3
+- [x] Update GET /api/reports/custom endpoint to pass new filter conditions to exportEmployees
+- [x] Test: text field with contains/not_contains filters correctly
+- [x] Test: number field with >/</= filters correctly
+- [x] Test: date field with period from-to filters correctly
+- [x] run npm test - must pass before task 3
 
 ### TASK 3: Move max file upload size to config.csv
 
