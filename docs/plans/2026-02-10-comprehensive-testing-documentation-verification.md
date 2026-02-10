@@ -415,21 +415,21 @@ This plan uses multiple AI agents to systematically test all features documented
 - Verify: Dev mode, prod mode, port configuration, proxy
 
 **Steps:**
-- [ ] Run ./stop.sh, verify stops all services
-- [ ] Run ./run.sh (dev mode), verify backend on :3000, frontend on :5173
-- [ ] Verify npm install runs automatically if node_modules missing
-- [ ] Verify sync-template.js runs before starting services
-- [ ] Test ./run.sh prod mode, verify backend on :3001, frontend on :5174
-- [ ] Verify both modes work concurrently
-- [ ] Check vite.config.js, verify proxy for /api, /files, /data to :3000
-- [ ] Test API calls from frontend, verify proxy works
-- [ ] Test hot module replacement (HMR) in dev mode
-- [ ] Edit App.vue, verify changes reflect without full reload
-- [ ] Kill backend process, verify frontend shows connection errors
-- [ ] Restart backend, verify frontend reconnects
-- [ ] Run npm run build in client/, verify production build succeeds
-- [ ] Run npm run preview in client/, verify preview server works
-- [ ] Document any configuration or startup issues
+- [x] Run ./stop.sh, verify stops all services
+- [x] Run ./run.sh (dev mode), verify backend on :3000, frontend on :5173
+- [x] Verify npm install runs automatically if node_modules missing
+- [x] Verify sync-template.js runs before starting services
+- [x] Test ./run.sh prod mode, verify backend on :3001, frontend on :5174
+- [x] Verify both modes work concurrently
+- [x] Check vite.config.js, verify proxy for /api, /files, /data to :3000
+- [x] Test API calls from frontend, verify proxy works
+- [x] Test hot module replacement (HMR) in dev mode
+- [x] Edit App.vue, verify changes reflect without full reload
+- [x] Kill backend process, verify frontend shows connection errors
+- [x] Restart backend, verify frontend reconnects
+- [x] Run npm run build in client/, verify production build succeeds
+- [x] Run npm run preview in client/, verify preview server works
+- [x] Document any configuration or startup issues
 
 ### TASK 17: Cross-Feature Integration Testing
 
