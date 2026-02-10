@@ -305,22 +305,22 @@ This plan uses multiple AI agents to systematically test all features documented
 - Verify: All routes, persistent state, direct links, auto-load
 
 **Steps:**
-- [ ] Test route / - verify dashboard loads
-- [ ] Test route /cards - verify cards view loads, first employee auto-loaded
-- [ ] Test route /cards/:id - verify specific employee loads by ID
-- [ ] Refresh page at /cards/5, verify employee 5 still loaded (persistent state)
-- [ ] Test route /table - verify table view loads
-- [ ] Test route /reports - verify reports view loads
-- [ ] Test route /import - verify import view loads
-- [ ] Test route /logs - verify logs view loads
-- [ ] Test invalid route (e.g., /nonexistent), verify handles gracefully
-- [ ] Navigate between routes using tab bar buttons
-- [ ] Verify currentView reactive state updates correctly
-- [ ] Test browser back/forward buttons, verify navigation works
-- [ ] Copy URL from address bar, open in new tab, verify works
-- [ ] Test route navigation with unsaved changes, verify warning dialog
-- [ ] Verify all navigation uses router.push() not reactive variables
-- [ ] Document any routing issues or broken links
+- [x] Test route / - verify dashboard loads
+- [x] Test route /cards - verify cards view loads, first employee auto-loaded
+- [x] Test route /cards/:id - verify specific employee loads by ID
+- [x] Refresh page at /cards/5, verify employee 5 still loaded (persistent state)
+- [x] Test route /table - verify table view loads
+- [x] Test route /reports - verify reports view loads
+- [x] Test route /import - verify import view loads
+- [x] Test route /logs - verify logs view loads
+- [x] Test invalid route (e.g., /nonexistent), verify handles gracefully
+- [x] Navigate between routes using tab bar buttons
+- [x] Verify currentView reactive state updates correctly
+- [x] Test browser back/forward buttons, verify navigation works
+- [x] Copy URL from address bar, open in new tab, verify works
+- [x] Test route navigation with unsaved changes, verify warning dialog
+- [x] Verify all navigation uses router.push() not reactive variables
+- [x] Document any routing issues or broken links
 
 ### TASK 13: Data Model and CSV Operations Testing
 
@@ -331,25 +331,25 @@ This plan uses multiple AI agents to systematically test all features documented
 - Verify: Row normalization, BOM encoding, delimiter, file paths
 
 **Steps:**
-- [ ] Read employees.csv in text editor, verify delimiter is ; (semicolon)
-- [ ] Verify UTF-8 BOM present (hex editor or file command)
-- [ ] Verify header row intact with all columns
-- [ ] Create employee via API, verify row added to CSV
-- [ ] Verify all columns present (row normalization with empty strings)
-- [ ] Edit employees.csv directly in Excel, add/modify row
-- [ ] Refresh browser, verify changes appear in UI
-- [ ] Verify file paths stored as relative (files/employee_ID/filename.ext)
-- [ ] Test with employee IDs: 1, 2, 3 (sequential numeric, not UUIDs)
-- [ ] Delete employee via API, verify row removed from CSV
-- [ ] Verify associated files directory deleted (files/employee_ID/)
-- [ ] Edit fields_schema.csv, add new field
-- [ ] Restart server, verify new field appears in UI
-- [ ] Verify employees.csv auto-migrated with new column
-- [ ] Edit config.csv, change max_log_entries
-- [ ] Restart server, verify new config value used
-- [ ] Test with special characters in values (quotes, semicolons, newlines)
-- [ ] Verify CSV escaping/quoting works correctly
-- [ ] Document any CSV parsing or encoding issues
+- [x] Read employees.csv in text editor, verify delimiter is ; (semicolon)
+- [x] Verify UTF-8 BOM present (hex editor or file command)
+- [x] Verify header row intact with all columns
+- [x] Create employee via API, verify row added to CSV
+- [x] Verify all columns present (row normalization with empty strings)
+- [x] Edit employees.csv directly in Excel, add/modify row
+- [x] Refresh browser, verify changes appear in UI
+- [x] Verify file paths stored as relative (files/employee_ID/filename.ext)
+- [x] Test with employee IDs: 1, 2, 3 (sequential numeric, not UUIDs)
+- [x] Delete employee via API, verify row removed from CSV
+- [x] Verify associated files directory deleted (files/employee_ID/)
+- [x] Edit fields_schema.csv, add new field
+- [x] Restart server, verify new field appears in UI
+- [x] Verify employees.csv auto-migrated with new column
+- [x] Edit config.csv, change max_log_entries
+- [x] Restart server, verify new config value used
+- [x] Test with special characters in values (quotes, semicolons, newlines)
+- [x] Verify CSV escaping/quoting works correctly
+- [x] Document any CSV parsing or encoding issues
 
 ### TASK 14: Dynamic UI Schema Testing
 
