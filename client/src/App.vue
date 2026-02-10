@@ -1802,15 +1802,24 @@ onUnmounted(() => {
           <div class="brand-title">CRM на CSV</div>
           <div class="brand-sub">Vue + Node, локальні CSV файли</div>
         </div>
-        <div class="topbar-actions">
-          <button class="secondary" type="button" @click="refreshManually">
-            Оновити
-          </button>
-          <button class="primary" type="button" @click="startNew" v-if="currentView === 'cards'">
-            Новий співробітник
-          </button>
-        </div>
         <div class="tab-bar">
+          <button
+            class="tab-icon-btn refresh-btn"
+            type="button"
+            @click="refreshManually"
+            title="Оновити дані"
+          >
+            🔄
+          </button>
+          <button
+            class="tab-icon-btn new-employee-btn"
+            type="button"
+            @click="startNew"
+            title="Новий співробітник"
+          >
+            ➕
+          </button>
+          <div class="tab-divider"></div>
           <button
             v-for="tab in tabs"
             :key="tab.key"

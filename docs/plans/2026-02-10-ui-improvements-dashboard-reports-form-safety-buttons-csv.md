@@ -142,17 +142,17 @@ This plan implements 8 improvements to the CRM UI:
 - Modify: `client/src/styles.css`
 
 **Subtasks:**
-- [ ] Move "Оновити" button from top-right to tab bar (leftmost or rightmost position)
-- [ ] Change "Оновити" to icon-only (🔄 refresh icon)
-- [ ] Change "Новий працівник" button to icon-only (➕ plus icon or 👤➕ person-plus)
-- [ ] Reposition "Новий працівник" button:
+- [x] Move "Оновити" button from top-right to tab bar (leftmost or rightmost position)
+- [x] Change "Оновити" to icon-only (🔄 refresh icon)
+- [x] Change "Новий працівник" button to icon-only (➕ plus icon or 👤➕ person-plus)
+- [x] Reposition "Новий працівник" button:
   - Place next to navigation tabs (not at top-right)
   - Visually separate from view tabs (different color or divider)
-- [ ] Ensure tab bar remains horizontal flexbox with proper spacing
-- [ ] Add title attributes for accessibility
-- [ ] Test refresh button reloads data correctly
-- [ ] Test "Новий працівник" button clears form and navigates to /cards
-- [ ] Test tab bar layout works on different screen sizes
+- [x] Ensure tab bar remains horizontal flexbox with proper spacing
+- [x] Add title attributes for accessibility
+- [x] Test refresh button reloads data correctly
+- [x] Test "Новий працівник" button clears form and navigates to /cards
+- [x] Test tab bar layout works on different screen sizes
 
 ---
 
