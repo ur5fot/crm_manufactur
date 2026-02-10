@@ -1621,3 +1621,51 @@ button.small {
   font-size: 14px;
   color: var(--text);
 }
+
+/* Destructive actions container - icon-only buttons */
+.destructive-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Icon-only buttons for clear and delete */
+.icon-btn {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--muted);
+  font-size: 18px;
+  cursor: pointer;
+  opacity: 0.5;
+  transition: opacity 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, transform 0.1s ease;
+  box-shadow: none;
+}
+
+.icon-btn:hover:not(:disabled) {
+  opacity: 1;
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.clear-btn:hover:not(:disabled) {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+.delete-btn:hover:not(:disabled) {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  color: #991b1b;
+}
+
+.icon-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}

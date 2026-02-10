@@ -1977,9 +1977,6 @@ onUnmounted(() => {
               {{ isNew ? "Новий співробітник" : "Картка співробітника" }}
             </div>
             <div class="actions">
-              <button class="secondary" type="button" @click="startNew">
-                Очистити форму
-              </button>
               <button
                 class="primary"
                 type="button"
@@ -1988,15 +1985,26 @@ onUnmounted(() => {
               >
                 {{ saving ? "Збереження..." : "Зберегти" }}
               </button>
-              <button
-                v-if="!isNew"
-                class="danger"
-                type="button"
-                :disabled="saving"
-                @click="deleteEmployee"
-              >
-                Видалити
-              </button>
+              <div class="destructive-actions">
+                <button
+                  class="icon-btn clear-btn"
+                  type="button"
+                  @click="startNew"
+                  title="Очистити форму"
+                >
+                  ✖️
+                </button>
+                <button
+                  v-if="!isNew"
+                  class="icon-btn delete-btn"
+                  type="button"
+                  :disabled="saving"
+                  @click="deleteEmployee"
+                  title="Видалити співробітника"
+                >
+                  🗑️
+                </button>
+              </div>
             </div>
           </div>
 

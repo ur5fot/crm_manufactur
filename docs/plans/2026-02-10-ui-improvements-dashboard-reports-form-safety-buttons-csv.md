@@ -103,18 +103,18 @@ This plan implements 8 improvements to the CRM UI:
 - Modify: `client/src/styles.css`
 
 **Subtasks:**
-- [ ] Change "Видалити співробітника" button to icon-only (🗑️ trash icon)
-- [ ] Change "Очистити форму" button to icon-only (🧹 broom icon or ✖️ X icon)
-- [ ] Position buttons side-by-side (flexbox row with gap)
-- [ ] Add title attribute to buttons for tooltip on hover (preserves accessibility)
-- [ ] Add visual separation between these buttons and other action buttons
-- [ ] Add subtle styling to prevent accidental clicks:
+- [x] Change "Видалити співробітника" button to icon-only (🗑️ trash icon)
+- [x] Change "Очистити форму" button to icon-only (🧹 broom icon or ✖️ X icon)
+- [x] Position buttons side-by-side (flexbox row with gap)
+- [x] Add title attribute to buttons for tooltip on hover (preserves accessibility)
+- [x] Add visual separation between these buttons and other action buttons
+- [x] Add subtle styling to prevent accidental clicks:
   - Smaller size than primary action buttons
   - Less prominent color (gray instead of blue)
   - Require hover state before full opacity
-- [ ] Test buttons display correctly in Cards view
-- [ ] Test tooltips appear on hover
-- [ ] Test buttons are not easily clicked by accident
+- [x] Test buttons display correctly in Cards view
+- [x] Test tooltips appear on hover
+- [x] Test buttons are not easily clicked by accident
 
 ---
 
