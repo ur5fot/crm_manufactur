@@ -413,9 +413,12 @@ All dropdown values in forms are managed via `data/dictionaries.csv`:
 - `POST /api/employees/:id/files` - Upload document (PDF/images) with optional issue_date and expiry_date
 - `DELETE /api/employees/:id/files/:fieldName` - Delete employee document
 - `GET /api/document-expiry` - Get document expiry events (today and next 7 days)
+- `GET /api/document-overdue` - Get overdue document events (past expiry date)
 - `GET /api/birthday-events` - Get birthday events (today and next 7 days)
+- `GET /api/retirement-events` - Get retirement events (employees reaching retirement age)
 - `GET /api/config` - Get system configuration (key-value object from config.csv)
 - `GET /api/reports/custom` - Generate custom filtered report (accepts filter parameters)
+- `GET /api/reports/statuses?type=current|month` - Get status report data (current or month)
 - `POST /api/employees/:id/open-folder` - Open employee's document folder in OS file explorer
 - `POST /api/employees/import` - Bulk import from CSV
 - `GET /api/dictionaries` - Get all reference data

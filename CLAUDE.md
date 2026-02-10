@@ -172,9 +172,12 @@ git pull origin master
 - `POST /api/employees/import` - Bulk import from CSV file
 - `GET /api/fields-schema` - **Get dynamic UI schema** (field types, labels, options, groups, table configuration)
 - `GET /api/document-expiry` - Get document expiry events (today and next 7 days) for dashboard timeline and notifications
+- `GET /api/document-overdue` - Get overdue document events (documents past expiry date) for dashboard overdue block
 - `GET /api/birthday-events` - Get birthday events (today and next 7 days) for dashboard timeline and notifications
+- `GET /api/retirement-events` - Get retirement events (employees reaching retirement age today or this month)
 - `GET /api/config` - Get system configuration (key-value object from config.csv)
 - `GET /api/reports/custom` - **Generate custom filtered report** (accepts filter parameters: field, condition, value; returns filtered employee data)
+- `GET /api/reports/statuses?type=current|month` - Get status report data for dashboard (current: non-working employees, month: status changes this month)
 - `GET /api/dictionaries` - Get all reference data grouped by type (legacy)
 - `GET /api/logs` - Get audit log sorted by timestamp descending (auto-cleaned when exceeds max_log_entries)
 - `POST /api/open-data-folder` - Open data folder in OS file explorer

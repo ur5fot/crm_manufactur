@@ -215,9 +215,13 @@ function switchView(view) {
 function startDashboardRefresh() {
   stopDashboardRefresh();
   refreshIntervalId.value = setInterval(async () => {
-    await loadEmployees(true);
-    await loadDashboardEvents();
-    await loadOverdueDocuments();
+    try {
+      await loadEmployees(true);
+      await loadDashboardEvents();
+      await loadOverdueDocuments();
+    } catch (error) {
+      console.error('Dashboard auto-refresh failed:', error);
+    }
   }, 300000);
 }
 

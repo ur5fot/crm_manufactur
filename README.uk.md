@@ -412,9 +412,12 @@ Dashboard — це головний екран, що показує статис
 - `POST /api/employees/:id/files` - Завантажити документ (PDF/зображення) з опціональними issue_date та expiry_date
 - `DELETE /api/employees/:id/files/:fieldName` - Видалити документ співробітника
 - `GET /api/document-expiry` - Отримати події закінчення терміну дії документів (сьогодні та 7 днів)
+- `GET /api/document-overdue` - Отримати прострочені документи (після дати закінчення)
 - `GET /api/birthday-events` - Отримати події днів народження (сьогодні та 7 днів)
+- `GET /api/retirement-events` - Отримати події виходу на пенсію (працівники, які досягають пенсійного віку)
 - `GET /api/config` - Отримати системну конфігурацію (об'єкт ключ-значення з config.csv)
 - `GET /api/reports/custom` - Згенерувати користувацький фільтрований звіт (приймає параметри фільтрації)
+- `GET /api/reports/statuses?type=current|month` - Отримати дані звіту про статуси (поточний або за місяць)
 - `POST /api/employees/:id/open-folder` - Відкрити папку з документами співробітника в провіднику ОС
 - `POST /api/employees/import` - Масовий імпорт з CSV
 - `GET /api/dictionaries` - Отримати всі довідкові дані
