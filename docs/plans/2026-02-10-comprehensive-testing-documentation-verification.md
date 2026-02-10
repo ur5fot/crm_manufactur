@@ -92,27 +92,27 @@ This plan uses multiple AI agents to systematically test all features documented
 - Verify: Form fields, document uploads, status popup, validation
 
 **Steps:**
-- [ ] Navigate to /cards, verify auto-loads first employee
-- [ ] Navigate to /cards/:id with specific ID, verify correct employee loads
-- [ ] Verify all form fields render according to field_group from schema
-- [ ] Verify field types match schema (text, select, textarea, date, email, tel, number)
-- [ ] Verify dropdown options come from field_options in schema (no hardcoded values)
-- [ ] Test "Новий працівник" (➕) button, verify creates new empty form
-- [ ] Fill all fields for new employee, click "Зберегти", verify creates employee
-- [ ] Verify auto-generated sequential numeric ID (not UUID)
-- [ ] Edit existing employee fields, click "Зберегти", verify updates persist
-- [ ] Verify changes logged to logs.csv with field-level tracking
-- [ ] Test "Очистити форму" (🧹) button, verify confirmation dialog appears
-- [ ] Confirm clear, verify form resets
-- [ ] Test "Видалити співробітника" (🗑️) button, verify confirmation dialog
-- [ ] Confirm delete, verify employee deleted and files removed
-- [ ] Verify delete logged to logs.csv
-- [ ] Test unsaved changes warning: edit field, try to navigate, verify dialog shows
-- [ ] Verify dialog lists changed fields with labels
-- [ ] Test all three dialog buttons: "Скасувати", "Продовжити без збереження", "Зберегти і продовжити"
-- [ ] Edit field, refresh browser, verify browser beforeunload warning
-- [ ] Verify ESC key closes dialogs
-- [ ] Document any form issues or validation problems
+- [x] Navigate to /cards, verify auto-loads first employee
+- [x] Navigate to /cards/:id with specific ID, verify correct employee loads
+- [x] Verify all form fields render according to field_group from schema
+- [x] Verify field types match schema (text, select, textarea, date, email, tel, number)
+- [x] Verify dropdown options come from field_options in schema (no hardcoded values)
+- [x] Test "Новий працівник" (➕) button, verify creates new empty form
+- [x] Fill all fields for new employee, click "Зберегти", verify creates employee
+- [x] Verify auto-generated sequential numeric ID (not UUID)
+- [x] Edit existing employee fields, click "Зберегти", verify updates persist
+- [x] Verify changes logged to logs.csv with field-level tracking
+- [x] Test "Очистити форму" (🧹) button, verify confirmation dialog appears
+- [x] Confirm clear, verify form resets
+- [x] Test "Видалити співробітника" (🗑️) button, verify confirmation dialog
+- [x] Confirm delete, verify employee deleted and files removed
+- [x] Verify delete logged to logs.csv
+- [x] Test unsaved changes warning: edit field, try to navigate, verify dialog shows
+- [x] Verify dialog lists changed fields with labels
+- [x] Test all three dialog buttons: "Скасувати", "Продовжити без збереження", "Зберегти і продовжити"
+- [x] Edit field, refresh browser, verify browser beforeunload warning
+- [x] Verify ESC key closes dialogs
+- [x] Document any form issues or validation problems
 
 ### TASK 5: Document Management Testing
 
