@@ -892,9 +892,11 @@ export async function getCustomReport(filters = [], columns = null) {
           }
           case 'date_range':
             // Date range: check if empValue is between valueFrom and valueTo (inclusive)
+            // Both dates are required for date_range condition
             if (!empValue) return false;
-            if (valueFrom && empValue < valueFrom) return false;
-            if (valueTo && empValue > valueTo) return false;
+            if (!valueFrom || !valueTo) return false; // Require both dates
+            if (empValue < valueFrom) return false;
+            if (empValue > valueTo) return false;
             return true;
           case 'empty':
             return !empValue || empValue === '';

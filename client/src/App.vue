@@ -1829,6 +1829,31 @@ function handleGlobalKeydown(e) {
   }
 }
 
+// Watch for filter field changes and reset condition when field type changes
+watch(() => customFilters.value, (newFilters, oldFilters) => {
+  if (!oldFilters) return;
+
+  newFilters.forEach((filter, index) => {
+    const oldFilter = oldFilters[index];
+    if (!oldFilter || !filter.field || !oldFilter.field) return;
+
+    // If field changed, check if current condition is still valid
+    if (filter.field !== oldFilter.field) {
+      const newFieldType = getFieldType(filter.field);
+      const oldFieldType = getFieldType(oldFilter.field);
+
+      // If field type changed, reset condition to first available option
+      if (newFieldType !== oldFieldType) {
+        const availableOptions = filterConditionOptions(filter);
+        filter.condition = availableOptions[0]?.value || 'contains';
+        filter.value = '';
+        filter.valueFrom = '';
+        filter.valueTo = '';
+      }
+    }
+  });
+}, { deep: true });
+
 onMounted(async () => {
   document.addEventListener('keydown', handleGlobalKeydown);
 
@@ -2958,11 +2983,8 @@ onUnmounted(() => {
                 <table class="summary-table">
                   <thead>
                     <tr>
-                      <th style="cursor: pointer;" @click="sortReportPreview('_rowNum')">
+                      <th>
                         №
-                        <span v-if="reportSortColumn === '_rowNum'">
-                          {{ reportSortDirection === 'asc' ? '↑' : '↓' }}
-                        </span>
                       </th>
                       <th v-for="field in (selectedColumns.length > 0 ? selectedColumns : allFieldsSchema.filter(f => f.showInTable).map(f => f.key))" :key="field" style="cursor: pointer;" @click="sortReportPreview(field)">
                         {{ filteredColumnsForSelector.find(f => f.key === field)?.label || allFieldsSchema.find(f => f.key === field)?.label || field }}
