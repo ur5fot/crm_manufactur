@@ -59,12 +59,12 @@ Move the "New Employee" button (➕) from the global header tab bar to the left 
 
 ## Validation
 
-- [ ] Manual test: Navigate to /cards - button appears in left sidebar
-- [ ] Manual test: Navigate to /table, /reports, /dashboard - button does NOT appear
-- [ ] Manual test: Click button in /cards - creates new employee form correctly
-- [ ] Manual test: Verify button styling matches design (icon-only, proper spacing)
-- [ ] Manual test: Verify button hover tooltip shows "Новий працівник"
-- [ ] Verify refresh button (🔄) still works independently in header
+- [x] Manual test: Navigate to /cards - button appears in left sidebar
+- [x] Manual test: Navigate to /table, /reports, /dashboard - button does NOT appear
+- [x] Manual test: Click button in /cards - creates new employee form correctly
+- [x] Manual test: Verify button styling matches design (icon-only, proper spacing)
+- [x] Manual test: Verify button hover tooltip shows "Новий працівник"
+- [x] Verify refresh button (🔄) still works independently in header
 
 ## Completion
 
