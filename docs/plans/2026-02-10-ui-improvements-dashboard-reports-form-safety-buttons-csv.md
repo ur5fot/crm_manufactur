@@ -239,18 +239,18 @@ This plan implements 8 improvements to the CRM UI:
 
 ## Final Validation
 
-- [ ] Manual test: Dashboard loads with "Хто відсутній зараз" report auto-expanded
-- [ ] Manual test: Navigate between all views (Dashboard, Cards, Table, Reports, Import, Logs)
-- [ ] Manual test: Create employee, edit, save, verify no unsaved warning
-- [ ] Manual test: Edit employee, navigate away, verify unsaved warning appears
-- [ ] Manual test: Clear form button shows confirmation dialog
-- [ ] Manual test: Delete button icon works correctly
-- [ ] Manual test: Custom reports filtering and CSV export work correctly
-- [ ] Manual test: Import page CSV upload works
-- [ ] Manual test: Template download contains current schema columns
-- [ ] Run full test suite (if automated tests exist)
-- [ ] Verify all UI text in Russian
-- [ ] Verify icon buttons have tooltips
+- [x] Manual test: Dashboard loads with "Хто відсутній зараз" report auto-expanded
+- [x] Manual test: Navigate between all views (Dashboard, Cards, Table, Reports, Import, Logs)
+- [x] Manual test: Create employee, edit, save, verify no unsaved warning
+- [x] Manual test: Edit employee, navigate away, verify unsaved warning appears
+- [x] Manual test: Clear form button shows confirmation dialog
+- [x] Manual test: Delete button icon works correctly
+- [x] Manual test: Custom reports filtering and CSV export work correctly
+- [x] Manual test: Import page CSV upload works
+- [x] Manual test: Template download contains current schema columns
+- [x] Run full test suite (if automated tests exist)
+- [x] Verify all UI text in Russian
+- [x] Verify icon buttons have tooltips
 
 ## Documentation
 
