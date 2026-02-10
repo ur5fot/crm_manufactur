@@ -28,6 +28,7 @@ import {
   getEmployeeColumnsSync,
   getDocumentFieldsSync,
   getBirthdayEvents,
+  getRetirementEvents,
   loadConfig
 } from "./store.js";
 import { mergeRow, normalizeRows } from "./csv.js";
@@ -150,6 +151,18 @@ app.get("/api/document-overdue", async (_req, res) => {
 app.get("/api/birthday-events", async (_req, res) => {
   try {
     const events = await getBirthdayEvents();
+    res.json(events);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get("/api/retirement-events", async (_req, res) => {
+  try {
+    const config = await loadConfig();
+    const retirementAge = parseInt(config.retirement_age_years || 60, 10);
+    const events = await getRetirementEvents(retirementAge);
     res.json(events);
   } catch (err) {
     console.error(err);

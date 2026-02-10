@@ -80,6 +80,9 @@ export const api = {
   getBirthdayEvents() {
     return request("/birthday-events");
   },
+  getRetirementEvents() {
+    return request("/retirement-events");
+  },
   getStatusReport(type) {
     return request(`/reports/statuses?type=${type}`);
   },

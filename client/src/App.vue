@@ -307,6 +307,11 @@ const birthdayNext7Days = ref([]);
 const showBirthdayNotification = ref(false);
 let birthdayNotifiedDate = '';
 
+const retirementToday = ref([]);
+const retirementThisMonth = ref([]);
+const showRetirementNotification = ref(false);
+let retirementNotifiedDate = '';
+
 // Динамические значения статусов из fields_schema (по позиции в field_options)
 // Конвенция: options[0] = рабочий, options[1] = уволен, options[2] = отпуск, options[3] = больничный
 const employmentOptions = computed(() => {
@@ -1051,6 +1056,7 @@ async function loadEmployees(silent = false) {
     await checkStatusChanges();
     await checkDocumentExpiry();
     await checkBirthdayEvents();
+    await checkRetirementEvents();
     lastUpdated.value = new Date();
 
     // Auto-expand "Who is absent now" report on Dashboard load
@@ -1300,6 +1306,54 @@ async function checkBirthdayEvents() {
 
 function closeBirthdayNotification() {
   showBirthdayNotification.value = false;
+}
+
+async function checkRetirementEvents() {
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+  // Показываем уведомления один раз в день
+  if (retirementNotifiedDate === today) return;
+
+  try {
+    const data = await api.getRetirementEvents();
+    const todayItems = data.today || [];
+    const thisMonthItems = data.thisMonth || [];
+
+    // Auto-dismiss employees reaching retirement age today
+    if (todayItems.length > 0) {
+      const firedStatus = employmentOptions.value[1] || 'Уволен';
+      for (const event of todayItems) {
+        const emp = employees.value.find(e => e.employee_id === event.employee_id);
+        if (emp && emp.employment_status !== firedStatus) {
+          try {
+            await api.updateEmployee(event.employee_id, {
+              ...emp,
+              employment_status: firedStatus
+            });
+            console.log(`Auto-dismissed employee ${event.employee_name} (ID: ${event.employee_id}) due to retirement`);
+          } catch (error) {
+            console.error(`Failed to auto-dismiss employee ${event.employee_id}:`, error);
+          }
+        }
+      }
+      // Перезагружаем список сотрудников после изменений
+      await loadEmployees();
+    }
+
+    retirementNotifiedDate = today;
+    if (todayItems.length > 0 || thisMonthItems.length > 0) {
+      retirementToday.value = todayItems;
+      retirementThisMonth.value = thisMonthItems;
+      showRetirementNotification.value = true;
+    }
+  } catch (error) {
+    console.error('Failed to check retirement events:', error);
+  }
+}
+
+function closeRetirementNotification() {
+  showRetirementNotification.value = false;
 }
 
 async function selectEmployee(id) {
@@ -1855,6 +1909,49 @@ onUnmounted(() => {
         </div>
         <div class="vacation-notification-footer">
           <button class="primary" @click="closeBirthdayNotification">Зрозуміло</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Уведомление про вихід на пенсію -->
+    <div v-if="showRetirementNotification" class="vacation-notification-overlay" @click="closeRetirementNotification">
+      <div class="vacation-notification-modal" @click.stop>
+        <div class="vacation-notification-header">
+          <h3>👴 Сповіщення про вихід на пенсію</h3>
+          <button class="close-btn" @click="closeRetirementNotification">&times;</button>
+        </div>
+        <div class="vacation-notification-body">
+          <div v-if="retirementToday.length > 0" class="notification-section">
+            <p class="notification-message">👴 Виходять на пенсію сьогодні:</p>
+            <ul class="vacation-employees-list">
+              <li v-for="(evt, idx) in retirementToday" :key="'retire-today-' + idx" class="vacation-employee starting">
+                <div class="employee-info">
+                  <span class="employee-name">👴 {{ evt.employee_name }}</span>
+                </div>
+                <div class="status-details">
+                  <span class="status-badge">{{ evt.age }} років</span>
+                  <span class="vacation-end-date">{{ formatEventDate(evt.retirement_date) }}</span>
+                </div>
+              </li>
+            </ul>
+          </div>
+          <div v-if="retirementThisMonth.length > 0" class="notification-section">
+            <p class="notification-message">ℹ️ Виходять на пенсію цього місяця:</p>
+            <ul class="vacation-employees-list">
+              <li v-for="(evt, idx) in retirementThisMonth" :key="'retire-month-' + idx" class="vacation-employee returning">
+                <div class="employee-info">
+                  <span class="employee-name">ℹ️ {{ evt.employee_name }}</span>
+                </div>
+                <div class="status-details">
+                  <span class="status-badge">{{ evt.age }} років</span>
+                  <span class="vacation-end-date">{{ formatEventDate(evt.retirement_date) }}</span>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </div>
+        <div class="vacation-notification-footer">
+          <button class="primary" @click="closeRetirementNotification">Зрозуміло</button>
         </div>
       </div>
     </div>

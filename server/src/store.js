@@ -734,6 +734,96 @@ export async function getBirthdayEvents() {
 }
 
 /**
+ * Получить события выхода на пенсию (сегодня и в этом месяце)
+ * @param {number} retirementAge - Возраст выхода на пенсию
+ * @returns {Promise<{today: Array, thisMonth: Array}>}
+ */
+export async function getRetirementEvents(retirementAge = 60) {
+  const employees = await loadEmployees();
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const today = localDateStr(now);
+
+  // Normalize now to midnight for date-only comparison
+  const nowDateOnly = new Date(currentYear, now.getMonth(), now.getDate());
+
+  // Calculate month start and end
+  const monthStart = new Date(currentYear, now.getMonth(), 1);
+  const monthEnd = new Date(currentYear, now.getMonth() + 1, 0);
+
+  const todayEvents = [];
+  const thisMonthEvents = [];
+
+  employees.forEach(emp => {
+    const birthDate = emp.birth_date;
+    if (!birthDate) return;
+
+    // Парсим дату рождения
+    const birthParts = birthDate.split('-');
+    if (birthParts.length !== 3) return;
+
+    const birthYear = parseInt(birthParts[0], 10);
+    const birthMonth = parseInt(birthParts[1], 10);
+    const birthDay = parseInt(birthParts[2], 10);
+
+    if (isNaN(birthYear) || isNaN(birthMonth) || isNaN(birthDay)) return;
+
+    // Проверяем день рождения в текущем году и следующем (для случая перехода через Новый год)
+    const thisYearBirthday = new Date(currentYear, birthMonth - 1, birthDay);
+    const nextYearBirthday = new Date(currentYear + 1, birthMonth - 1, birthDay);
+
+    const name = [emp.last_name, emp.first_name, emp.middle_name].filter(Boolean).join(' ');
+
+    // Проверяем день рождения в текущем году
+    const age = currentYear - birthYear;
+    if (age === retirementAge && thisYearBirthday >= monthStart && thisYearBirthday <= monthEnd) {
+      const retirementDateStr = localDateStr(thisYearBirthday);
+
+      const event = {
+        employee_id: emp.employee_id,
+        employee_name: name,
+        birth_date: birthDate,
+        retirement_date: retirementDateStr,
+        age: age
+      };
+
+      if (retirementDateStr === today) {
+        todayEvents.push(event);
+      } else if (thisYearBirthday > nowDateOnly) {
+        thisMonthEvents.push(event);
+      }
+    }
+
+    // Проверяем день рождения в следующем году (для случая перехода через Новый год)
+    const nextYearAge = (currentYear + 1) - birthYear;
+    if (nextYearAge === retirementAge && nextYearBirthday >= monthStart && nextYearBirthday <= monthEnd) {
+      const retirementDateStr = localDateStr(nextYearBirthday);
+
+      const event = {
+        employee_id: emp.employee_id,
+        employee_name: name,
+        birth_date: birthDate,
+        retirement_date: retirementDateStr,
+        age: nextYearAge
+      };
+
+      if (retirementDateStr === today) {
+        todayEvents.push(event);
+      } else if (nextYearBirthday > nowDateOnly) {
+        thisMonthEvents.push(event);
+      }
+    }
+  });
+
+  // Сортируем события месяца по дате
+  thisMonthEvents.sort((a, b) => {
+    return a.retirement_date.localeCompare(b.retirement_date);
+  });
+
+  return { today: todayEvents, thisMonth: thisMonthEvents };
+}
+
+/**
  * Get custom report with advanced filtering
  * @param {Array} filters - Array of filter objects: [{field, condition, value}]
  * @param {Array|null} columns - Array of column names to include (null = all)

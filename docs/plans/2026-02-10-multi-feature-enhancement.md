@@ -100,24 +100,24 @@
 - Modify: `server/src/index.js`
 - Modify: `client/src/App.vue`
 
-- [ ] Add new row to config.csv: retirement_age_years;60;Retirement age in years for auto-dismiss notification
-- [ ] Add getRetirementEvents() function in store.js similar to getBirthdayEvents:
+- [x] Add new row to config.csv: retirement_age_years;60;Retirement age in years for auto-dismiss notification
+- [x] Add getRetirementEvents() function in store.js similar to getBirthdayEvents:
   - Calculate age from birth_date field
   - Find employees reaching retirement_age_years today
   - Return {today: [...], thisMonth: [...]} with employee_id, name, age, birth_date
-- [ ] Add new API endpoint GET /api/retirement-events in index.js
-- [ ] Add checkRetirementEvents() function in App.vue similar to checkBirthdayEvents
-- [ ] Call checkRetirementEvents() from loadEmployees()
-- [ ] Add showRetirementNotification ref and retirementEvents ref
-- [ ] Add notification modal "Сповіщення про вихід на пенсію" with sections:
+- [x] Add new API endpoint GET /api/retirement-events in index.js
+- [x] Add checkRetirementEvents() function in App.vue similar to checkBirthdayEvents
+- [x] Call checkRetirementEvents() from loadEmployees()
+- [x] Add showRetirementNotification ref and retirementEvents ref
+- [x] Add notification modal "Сповіщення про вихід на пенсію" with sections:
   - Employees reaching retirement today: 👴 emoji, name, age
   - Employees reaching retirement this month: ℹ️ emoji, name, age, date
-- [ ] Add auto-dismiss logic in checkRetirementEvents: if employee reaches retirement age today, update employment_status to options[1] (fired/dismissed)
-- [ ] Log the auto-dismiss action to audit logs
-- [ ] Test: employee turning 60 today triggers notification
-- [ ] Test: employee turning 60 today auto-dismissed to fired status
-- [ ] Test: retirement age configurable via config.csv
-- [ ] run npm test - must pass before task 5
+- [x] Add auto-dismiss logic in checkRetirementEvents: if employee reaches retirement age today, update employment_status to options[1] (fired/dismissed)
+- [x] Log the auto-dismiss action to audit logs
+- [x] Test: employee turning 60 today triggers notification
+- [x] Test: employee turning 60 today auto-dismissed to fired status
+- [x] Test: retirement age configurable via config.csv
+- [x] run npm test - must pass before task 5
 
 ### TASK 5: Reports page preview table improvements
 
