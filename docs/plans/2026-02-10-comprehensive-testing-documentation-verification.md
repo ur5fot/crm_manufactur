@@ -177,19 +177,19 @@ This plan uses multiple AI agents to systematically test all features documented
 - Verify: Notification popup, timeline integration, age calculation
 
 **Steps:**
-- [ ] Create/edit employee with birth_date set to today
-- [ ] Reload page, verify birthday notification popup appears
-- [ ] Verify popup shows 🎂 emoji for today's birthday
-- [ ] Verify popup shows employee name and calculated age
-- [ ] Create employee with birth_date set to tomorrow
-- [ ] Reload page, verify birthday appears in timeline "Сьогодні" section (if today)
-- [ ] Create employee with birth_date in 5 days
-- [ ] Verify appears in timeline "Найближчі 7 днів" section with 🎉 emoji
-- [ ] Click employee name in timeline, verify navigates to card
-- [ ] Verify birthday events appear alongside status and document events
-- [ ] Test age calculation with various birth years
-- [ ] Test leap year birthdays (Feb 29)
-- [ ] Document any birthday tracking issues
+- [x] Create/edit employee with birth_date set to today
+- [x] Reload page, verify birthday notification popup appears
+- [x] Verify popup shows 🎂 emoji for today's birthday
+- [x] Verify popup shows employee name and calculated age
+- [x] Create employee with birth_date set to tomorrow
+- [x] Reload page, verify birthday appears in timeline "Сьогодні" section (if today)
+- [x] Create employee with birth_date in 5 days
+- [x] Verify appears in timeline "Найближчі 7 днів" section with 🎉 emoji
+- [x] Click employee name in timeline, verify navigates to card
+- [x] Verify birthday events appear alongside status and document events
+- [x] Test age calculation with various birth years
+- [x] Test leap year birthdays (Feb 29)
+- [x] Document any birthday tracking issues
 
 ### TASK 8: Summary Table View Testing
 
