@@ -281,21 +281,21 @@ This plan uses multiple AI agents to systematically test all features documented
 - Verify: Log entries, auto-cleanup, sorting, field labels
 
 **Steps:**
-- [ ] Navigate to /logs
-- [ ] Verify logs displayed sorted by timestamp descending (newest first)
-- [ ] Create employee, verify CREATE log entry with employee_id and name
-- [ ] Update employee field, verify UPDATE log entry with field_name, old_value, new_value
-- [ ] Verify field_name shows human-readable label (e.g., "Пригодность (fit_status)")
-- [ ] Delete employee, verify DELETE log entry
-- [ ] Upload document, verify UPDATE log for file field
-- [ ] Verify log_id is sequential
-- [ ] Check data/config.csv for max_log_entries value
-- [ ] Count rows in logs.csv, verify auto-cleanup when exceeds max_log_entries
-- [ ] Trigger cleanup by creating many log entries (update employee 1000+ times)
-- [ ] Verify oldest entries removed, newest preserved
-- [ ] Verify logs.csv maintains UTF-8 BOM encoding
-- [ ] Test log search/filter if implemented
-- [ ] Document any logging issues or missing entries
+- [x] Navigate to /logs
+- [x] Verify logs displayed sorted by timestamp descending (newest first)
+- [x] Create employee, verify CREATE log entry with employee_id and name
+- [x] Update employee field, verify UPDATE log entry with field_name, old_value, new_value
+- [x] Verify field_name shows human-readable label (e.g., "Пригодность (fit_status)")
+- [x] Delete employee, verify DELETE log entry
+- [x] Upload document, verify UPDATE log for file field
+- [x] Verify log_id is sequential
+- [x] Check data/config.csv for max_log_entries value
+- [x] Count rows in logs.csv, verify auto-cleanup when exceeds max_log_entries
+- [x] Trigger cleanup by creating many log entries (update employee 1000+ times)
+- [x] Verify oldest entries removed, newest preserved
+- [x] Verify logs.csv maintains UTF-8 BOM encoding
+- [x] Test log search/filter if implemented
+- [x] Document any logging issues or missing entries
 
 ### TASK 12: URL Routing and Navigation Testing
 
