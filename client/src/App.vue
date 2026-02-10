@@ -1962,14 +1962,6 @@ onUnmounted(() => {
           >
             🔄
           </button>
-          <button
-            class="tab-icon-btn new-employee-btn"
-            type="button"
-            @click="startNew"
-            title="Новий співробітник"
-          >
-            ➕
-          </button>
           <div class="tab-divider"></div>
           <button
             v-for="tab in tabs"
