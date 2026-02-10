@@ -69,21 +69,21 @@ This plan uses multiple AI agents to systematically test all features documented
 - Verify: Dashboard stat cards, timeline, auto-refresh, reports
 
 **Steps:**
-- [ ] Navigate to / (home/dashboard)
-- [ ] Verify stat cards display (Total, per-status counts)
-- [ ] Click each stat card, verify inline expand shows filtered employee list
-- [ ] Verify only one card expanded at a time (accordion behavior)
-- [ ] Click employee name in expanded list, verify navigates to /cards/:id
-- [ ] Verify "Хто відсутній зараз" report auto-expands on mount
-- [ ] Verify timeline has two columns: "Сьогодні" and "Найближчі 7 днів"
-- [ ] Verify timeline shows status change events with correct emoji (✈️, 🏥, ℹ️)
-- [ ] Verify timeline shows document expiry events (⚠️ today, 📄 within 7 days)
-- [ ] Verify timeline shows birthday events (🎂 today, 🎉 upcoming)
-- [ ] Click employee name in timeline, verify navigates to card
-- [ ] Verify auto-refresh interval updates data
-- [ ] Verify footer shows last update timestamp
-- [ ] Verify no hardcoded status values (all from schema)
-- [ ] Document any UI issues or missing features
+- [x] Navigate to / (home/dashboard)
+- [x] Verify stat cards display (Total, per-status counts)
+- [x] Click each stat card, verify inline expand shows filtered employee list
+- [x] Verify only one card expanded at a time (accordion behavior)
+- [x] Click employee name in expanded list, verify navigates to /cards/:id
+- [x] Verify "Хто відсутній зараз" report auto-expands on mount
+- [x] Verify timeline has two columns: "Сьогодні" and "Найближчі 7 днів"
+- [x] Verify timeline shows status change events with correct emoji (✈️, 🏥, ℹ️)
+- [x] Verify timeline shows document expiry events (⚠️ today, 📄 within 7 days)
+- [x] Verify timeline shows birthday events (🎂 today, 🎉 upcoming)
+- [x] Click employee name in timeline, verify navigates to card
+- [x] Verify auto-refresh interval updates data
+- [x] Verify footer shows last update timestamp
+- [x] Verify no hardcoded status values (all from schema)
+- [x] Document any UI issues or missing features
 
 ### TASK 4: Employee Cards View Testing
 
