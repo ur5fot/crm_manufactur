@@ -82,15 +82,15 @@
 - Modify: `data/config.csv`
 - Modify: `server/src/index.js`
 
-- [ ] Add new row to config.csv: max_file_upload_mb;10;Maximum file upload size in megabytes
-- [ ] Load config in index.js at startup (after ensureDataDirs, before defining multer)
-- [ ] Store config in module-level variable: const appConfig = await loadConfig()
-- [ ] Update upload multer limits to use: fileSize: parseInt(appConfig.max_file_upload_mb || 10) * 1024 * 1024
-- [ ] Update importUpload multer limits similarly (or reuse same config value)
-- [ ] Add console.log on startup: "Max file upload size: {value}MB"
-- [ ] Test: upload file larger than configured limit fails with appropriate error
-- [ ] Test: upload file smaller than limit succeeds
-- [ ] run npm test - must pass before task 4
+- [x] Add new row to config.csv: max_file_upload_mb;10;Maximum file upload size in megabytes
+- [x] Load config in index.js at startup (after ensureDataDirs, before defining multer)
+- [x] Store config in module-level variable: const appConfig = await loadConfig()
+- [x] Update upload multer limits to use: fileSize: parseInt(appConfig.max_file_upload_mb || 10) * 1024 * 1024
+- [x] Update importUpload multer limits similarly (or reuse same config value)
+- [x] Add console.log on startup: "Max file upload size: {value}MB"
+- [x] Test: upload file larger than configured limit fails with appropriate error
+- [x] Test: upload file smaller than limit succeeds
+- [x] run npm test - must pass before task 4
 
 ### TASK 4: Retirement age notification and auto-dismiss
 

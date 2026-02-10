@@ -38,6 +38,10 @@ const port = process.env.PORT || 3000;
 await ensureDataDirs();
 await initializeEmployeeColumns();
 
+// Load configuration
+const appConfig = await loadConfig();
+console.log(`Max file upload size: ${appConfig.max_file_upload_mb || 10}MB`);
+
 app.use(cors());
 app.use(express.json({ limit: "10mb" }));
 app.use("/files", express.static(FILES_DIR));
@@ -46,7 +50,7 @@ app.use("/files", express.static(FILES_DIR));
 
 const importUpload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 }
+  limits: { fileSize: parseInt(appConfig.max_file_upload_mb || 10) * 1024 * 1024 }
 });
 
 function getOpenCommand() {
@@ -666,7 +670,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 },
+  limits: { fileSize: parseInt(appConfig.max_file_upload_mb || 10) * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();
     if (ALLOWED_FILE_EXTENSIONS.includes(ext)) {
