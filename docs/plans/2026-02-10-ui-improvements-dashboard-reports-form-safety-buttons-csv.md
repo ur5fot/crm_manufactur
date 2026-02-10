@@ -162,19 +162,19 @@ This plan implements 8 improvements to the CRM UI:
 - Modify: `client/src/App.vue`
 
 **Subtasks:**
-- [ ] Add /import route to Vue Router configuration
-- [ ] Create Import view section in template
-- [ ] Add "Імпорт" tab button to navigation bar
-- [ ] Move CSV file upload input and import button from employee card to Import page
-- [ ] Move import instructions text to Import page
-- [ ] Add "Завантажити шаблон CSV" button to download employees_import_sample.csv
-- [ ] Keep import logic in same methods (importCSV, etc.)
-- [ ] Update API call to use relative path /data/employees_import_sample.csv
-- [ ] Remove CSV import section from employee card template
-- [ ] Test navigation to /import page
-- [ ] Test CSV file upload works from Import page
-- [ ] Test template download works
-- [ ] Test import validation and error messages
+- [x] Add /import route to Vue Router configuration
+- [x] Create Import view section in template
+- [x] Add "Імпорт" tab button to navigation bar
+- [x] Move CSV file upload input and import button from employee card to Import page
+- [x] Move import instructions text to Import page
+- [x] Add "Завантажити шаблон CSV" button to download employees_import_sample.csv
+- [x] Keep import logic in same methods (importCSV, etc.)
+- [x] Update API call to use relative path /data/employees_import_sample.csv
+- [x] Remove CSV import section from employee card template
+- [x] Test navigation to /import page
+- [x] Test CSV file upload works from Import page
+- [x] Test template download works
+- [x] Test import validation and error messages
 
 ---
 

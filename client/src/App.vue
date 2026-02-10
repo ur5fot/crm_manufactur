@@ -131,6 +131,7 @@ const currentView = computed(() => {
   if (name === 'cards') return 'cards';
   if (name === 'table') return 'table';
   if (name === 'reports') return 'reports';
+  if (name === 'import') return 'import';
   if (name === 'logs') return 'logs';
   return 'dashboard';
 });
@@ -140,6 +141,7 @@ const tabs = [
   { key: 'cards', label: 'Картки' },
   { key: 'table', label: 'Таблиця' },
   { key: 'reports', label: 'Звіти' },
+  { key: 'import', label: 'Імпорт' },
   { key: 'logs', label: 'Логи' },
 ];
 
@@ -152,6 +154,8 @@ function switchView(view) {
     router.push({ name: 'table' });
   } else if (view === 'reports') {
     router.push({ name: 'reports' });
+  } else if (view === 'import') {
+    router.push({ name: 'import' });
   } else if (view === 'logs') {
     router.push({ name: 'logs' });
   }
@@ -2243,64 +2247,6 @@ onUnmounted(() => {
                 </div>
               </div>
             </div>
-
-            <div class="section">
-              <div class="panel-header">
-                <div class="section-title">Імпорт нових співробітників</div>
-                <a class="file-link" href="/data/employees_import_sample.csv" download>
-                  Завантажити шаблон
-                </a>
-              </div>
-              <div class="field">
-                <label>CSV файл</label>
-                <input type="file" accept=".csv,text/csv" @change="onImportFileChange" />
-              </div>
-              <div class="actions">
-                <button
-                  class="primary"
-                  type="button"
-                  :disabled="!importFile || importing"
-                  @click="importEmployees"
-                >
-                  {{ importing ? "Імпортуємо..." : "Імпортувати" }}
-                </button>
-                <button
-                  class="secondary"
-                  type="button"
-                  :disabled="!importFile && !importResult"
-                  @click="resetImport"
-                >
-                  Очистити
-                </button>
-              </div>
-              <div class="inline-note">
-                CSV: UTF-8, роздільник ;, заголовки як у employees.csv. Прізвище або ім'я
-                обов'язкові.
-              </div>
-              <div v-if="importFile" class="inline-note">Файл: {{ importFile.name }}</div>
-              <div v-if="importResult" class="status-bar">
-                Додано: {{ importResult.added }} · Пропущено: {{ importResult.skipped }}
-              </div>
-              <div
-                v-if="importResult && importResult.errors && importResult.errors.length"
-                class="inline-note"
-              >
-                Помилки (перші {{ importResult.errors.length }}):
-              </div>
-              <div
-                v-if="importResult && importResult.errors && importResult.errors.length"
-                class="table-list"
-              >
-                <div
-                  v-for="error in importResult.errors"
-                  :key="`${error.row}-${error.reason}`"
-                  class="error-row"
-                >
-                  <div class="employee-name">Рядок {{ error.row }}</div>
-                  <div class="inline-note">{{ error.reason }}</div>
-                </div>
-              </div>
-            </div>
           </div>
         </section>
       </div>
@@ -2568,6 +2514,77 @@ onUnmounted(() => {
             <div v-if="errorMessage" class="alert">
               {{ errorMessage }}
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Режим імпорту -->
+      <div v-else-if="currentView === 'import'" class="layout-cards">
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title">Імпорт співробітників з CSV</div>
+          </div>
+
+          <div class="section">
+            <div class="panel-header">
+              <div class="section-title">Завантажити CSV файл</div>
+              <a class="file-link" href="/data/employees_import_sample.csv" download>
+                Завантажити шаблон
+              </a>
+            </div>
+            <div class="field">
+              <label>CSV файл</label>
+              <input type="file" accept=".csv,text/csv" @change="onImportFileChange" />
+            </div>
+            <div class="actions">
+              <button
+                class="primary"
+                type="button"
+                :disabled="!importFile || importing"
+                @click="importEmployees"
+              >
+                {{ importing ? "Імпортуємо..." : "Імпортувати" }}
+              </button>
+              <button
+                class="secondary"
+                type="button"
+                :disabled="!importFile && !importResult"
+                @click="resetImport"
+              >
+                Очистити
+              </button>
+            </div>
+            <div class="inline-note">
+              CSV: UTF-8, роздільник ;, заголовки як у employees.csv. Прізвище або ім'я
+              обов'язкові.
+            </div>
+            <div v-if="importFile" class="inline-note">Файл: {{ importFile.name }}</div>
+            <div v-if="importResult" class="status-bar">
+              Додано: {{ importResult.added }} · Пропущено: {{ importResult.skipped }}
+            </div>
+            <div
+              v-if="importResult && importResult.errors && importResult.errors.length"
+              class="inline-note"
+            >
+              Помилки (перші {{ importResult.errors.length }}):
+            </div>
+            <div
+              v-if="importResult && importResult.errors && importResult.errors.length"
+              class="table-list"
+            >
+              <div
+                v-for="error in importResult.errors"
+                :key="`${error.row}-${error.reason}`"
+                class="error-row"
+              >
+                <div class="employee-name">Рядок {{ error.row }}</div>
+                <div class="inline-note">{{ error.reason }}</div>
+              </div>
+            </div>
+          </div>
+
+          <div v-if="errorMessage" class="alert">
+            {{ errorMessage }}
           </div>
         </div>
       </div>
