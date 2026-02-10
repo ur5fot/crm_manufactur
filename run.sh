@@ -47,15 +47,17 @@ start_service() {
   pids+=("$!")
 }
 
+# Ensure server dependencies are installed before syncing template
+if [ ! -d "$root_dir/server/node_modules" ]; then
+  echo "Installing server dependencies..."
+  (cd "$root_dir/server" && npm install)
+fi
+
 # Sync CSV template before starting services
 echo "Синхронізація шаблону CSV..."
-if [ -d "$root_dir/server/node_modules" ]; then
-  (cd "$root_dir/server" && node src/sync-template.js) || {
-    echo "⚠️  Попередження: синхронізація шаблону не вдалася, продовжуємо запуск..."
-  }
-else
-  echo "⚠️  Попередження: пропускаємо синхронізацію (server/node_modules не знайдено)"
-fi
+(cd "$root_dir/server" && node src/sync-template.js) || {
+  echo "⚠️  Попередження: синхронізація шаблону не вдалася, продовжуємо запуск..."
+}
 
 start_service "server" "$root_dir/server" "npm run dev"
 start_service "client" "$root_dir/client" "npm run dev"

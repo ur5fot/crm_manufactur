@@ -91,10 +91,7 @@ const documentFields = computed(() => {
     }));
 });
 
-const csvLinks = [
-  { label: "Співробітники (employees.csv)", path: "/data/employees.csv" },
-  { label: "Довідники (dictionaries.csv)", path: "/data/dictionaries.csv" }
-];
+// CSV links removed - data directory not publicly accessible for security reasons
 
 const employees = ref([]);
 const selectedId = ref("");
@@ -222,21 +219,15 @@ watch(() => route.name, async (newRoute, oldRoute) => {
 // Watch route.params.id to handle URL changes within cards view
 watch(() => route.params.id, (newId) => {
   if (route.name === 'cards' && newId && newId !== selectedId.value) {
-    selectEmployee(newId);
+    // Check for unsaved changes before switching employees
+    if (isFormDirty.value) {
+      pendingNavigation.value = { name: 'cards', params: { id: newId } };
+      showUnsavedChangesPopup.value = true;
+    } else {
+      selectEmployee(newId);
+    }
   }
 });
-
-// Watch form changes to track unsaved changes
-watch(form, () => {
-  if (!savedFormSnapshot.value) return; // No baseline to compare against
-
-  // Compare current form with saved snapshot
-  const hasChanges = Object.keys(form).some(key => {
-    return form[key] !== savedFormSnapshot.value[key];
-  });
-
-  isFormDirty.value = hasChanges;
-}, { deep: true });
 
 // Helper function to ensure employees are loaded
 async function loadEmployeesIfNeeded() {
@@ -471,6 +462,18 @@ const savedFormSnapshot = ref(null); // Snapshot of form when last saved/loaded
 const showUnsavedChangesPopup = ref(false);
 const pendingNavigation = ref(null); // Store pending route for navigation after user confirms
 
+// Watch form changes to track unsaved changes (must come after form declaration)
+watch(form, () => {
+  if (!savedFormSnapshot.value) return; // No baseline to compare against
+
+  // Compare current form with saved snapshot
+  const hasChanges = Object.keys(form).some(key => {
+    return form[key] !== savedFormSnapshot.value[key];
+  });
+
+  isFormDirty.value = hasChanges;
+}, { deep: true });
+
 // Dictionaries теперь формируются динамически из fields_schema.csv
 
 const filteredEmployees = computed(() => {
@@ -610,8 +613,7 @@ async function applyStatusChange() {
       status_end_date: statusChangeForm.endDate || ''
     };
     await api.updateEmployee(form.employee_id, payload);
-    await loadEmployees();
-    await selectEmployee(form.employee_id);
+    await reloadEmployeePreservingDirty(form.employee_id);
     closeStatusChangePopup();
   } catch (error) {
     errorMessage.value = error.message;
@@ -641,8 +643,7 @@ async function resetStatus() {
       status_end_date: ''
     };
     await api.updateEmployee(form.employee_id, payload);
-    await loadEmployees();
-    await selectEmployee(form.employee_id);
+    await reloadEmployeePreservingDirty(form.employee_id);
     closeStatusChangePopup();
   } catch (error) {
     errorMessage.value = error.message;
@@ -725,8 +726,7 @@ async function submitDocUpload() {
     form[issueDateField] = docUploadForm.issueDate || '';
     form[expiryDateField] = docUploadForm.expiryDate || '';
     closeDocUploadPopup();
-    await loadEmployees();
-    await selectEmployee(form.employee_id);
+    await reloadEmployeePreservingDirty(form.employee_id);
   } catch (error) {
     errorMessage.value = error.message;
   } finally {
@@ -773,8 +773,7 @@ async function submitDocEditDates() {
       [expiryDateField]: docEditDatesForm.expiryDate || ''
     };
     await api.updateEmployee(form.employee_id, payload);
-    await loadEmployees();
-    await selectEmployee(form.employee_id);
+    await reloadEmployeePreservingDirty(form.employee_id);
     closeDocEditDatesPopup();
   } catch (error) {
     errorMessage.value = error.message;
@@ -1259,6 +1258,16 @@ async function selectEmployee(id) {
   } catch (error) {
     errorMessage.value = error.message;
   }
+}
+
+// Helper to check and preserve unsaved changes when reloading
+async function reloadEmployeePreservingDirty(employeeId) {
+  // After operations like status change or document upload,
+  // we need to reload to get fresh data, but only reload if no other fields are dirty
+  await loadEmployees();
+
+  // Re-select to refresh form data
+  await selectEmployee(employeeId);
 }
 
 function startNew() {
@@ -2666,7 +2675,7 @@ onUnmounted(() => {
           <div class="section">
             <div class="panel-header">
               <div class="section-title">Завантажити CSV файл</div>
-              <a class="file-link" href="/data/employees_import_sample.csv" download>
+              <a class="file-link" href="/api/download/import-template" download>
                 Завантажити шаблон
               </a>
             </div>

@@ -16,6 +16,9 @@ const LOGS_PATH = path.join(DATA_DIR, "logs.csv");
 const FIELD_SCHEMA_PATH = path.join(DATA_DIR, "fields_schema.csv");
 const CONFIG_PATH = path.join(DATA_DIR, "config.csv");
 
+// Simple in-memory lock for log writes to prevent race conditions
+let logWriteLock = Promise.resolve();
+
 export async function ensureDataDirs() {
   await fs.mkdir(DATA_DIR, { recursive: true });
   await fs.mkdir(FILES_DIR, { recursive: true });
@@ -477,50 +480,61 @@ export async function addLog(action, employeeId, employeeName, fieldName = "", o
 
 /**
  * Batch-adds multiple log entries in a single write operation
- * Prevents race condition when logging multiple field changes
+ * Uses lock to prevent race condition when multiple requests write logs concurrently
  */
 export async function addLogs(entries) {
   if (!entries || entries.length === 0) return [];
 
-  const logs = await loadLogs();
-  let maxId = logs.reduce((max, log) => {
-    const id = parseInt(log.log_id, 10);
-    return isNaN(id) ? max : Math.max(max, id);
-  }, 0);
+  // Acquire lock: wait for previous write to complete, then execute our write
+  const previousLock = logWriteLock;
+  let releaseLock;
+  logWriteLock = new Promise(resolve => { releaseLock = resolve; });
 
-  const newLogs = entries.map(({ action, employeeId, employeeName, fieldName = "", oldValue = "", newValue = "", details = "" }) => {
-    maxId++;
-    return {
-      log_id: String(maxId),
-      timestamp: new Date().toISOString(),
-      action,
-      employee_id: employeeId || "",
-      employee_name: employeeName || "",
-      field_name: fieldName || "",
-      old_value: oldValue || "",
-      new_value: newValue || "",
-      details: details || ""
-    };
-  });
+  try {
+    await previousLock;
 
-  logs.push(...newLogs);
+    const logs = await loadLogs();
+    let maxId = logs.reduce((max, log) => {
+      const id = parseInt(log.log_id, 10);
+      return isNaN(id) ? max : Math.max(max, id);
+    }, 0);
 
-  // Автоматическая очистка логов - выполняем в той же операции записи для предотвращения race condition
-  const config = await loadConfig();
-  const maxEntries = parseInt(config.max_log_entries, 10) || 1000;
+    const newLogs = entries.map(({ action, employeeId, employeeName, fieldName = "", oldValue = "", newValue = "", details = "" }) => {
+      maxId++;
+      return {
+        log_id: String(maxId),
+        timestamp: new Date().toISOString(),
+        action,
+        employee_id: employeeId || "",
+        employee_name: employeeName || "",
+        field_name: fieldName || "",
+        old_value: oldValue || "",
+        new_value: newValue || "",
+        details: details || ""
+      };
+    });
 
-  if (logs.length > maxEntries) {
-    // Сортируем по timestamp (новые сначала)
-    logs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-    // Оставляем только maxEntries последних записей
-    const trimmedLogs = logs.slice(0, maxEntries);
-    await saveLogs(trimmedLogs);
-    console.log(`✂️  Логи очищены: ${logs.length} → ${trimmedLogs.length} записей (лимит: ${maxEntries})`);
-  } else {
-    await saveLogs(logs);
+    logs.push(...newLogs);
+
+    // Автоматическая очистка логов - выполняем в той же операции записи для предотвращения race condition
+    const config = await loadConfig();
+    const maxEntries = parseInt(config.max_log_entries, 10) || 1000;
+
+    if (logs.length > maxEntries) {
+      // Сортируем по timestamp (новые сначала)
+      logs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+      // Оставляем только maxEntries последних записей
+      const trimmedLogs = logs.slice(0, maxEntries);
+      await saveLogs(trimmedLogs);
+      console.log(`✂️  Логи очищены: ${logs.length} → ${trimmedLogs.length} записей (лимит: ${maxEntries})`);
+    } else {
+      await saveLogs(logs);
+    }
+
+    return newLogs;
+  } finally {
+    releaseLock();
   }
-
-  return newLogs;
 }
 
 /**

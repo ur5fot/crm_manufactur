@@ -308,6 +308,16 @@ app.post("/api/employees/:id/open-folder", async (req, res) => {
   }
 });
 
+// API endpoint for downloading CSV import template
+app.get("/api/download/import-template", async (req, res) => {
+  try {
+    const templatePath = path.join(DATA_DIR, "employees_import_sample.csv");
+    res.download(templatePath, "employees_import_sample.csv");
+  } catch (error) {
+    res.status(500).json({ error: "Не удалось загрузить шаблон CSV" });
+  }
+});
+
 app.post("/api/employees/import", importUpload.single("file"), async (req, res) => {
   if (!req.file) {
     res.status(400).json({ error: "Файл CSV не найден" });
@@ -518,8 +528,9 @@ app.put("/api/employees/:id", async (req, res) => {
           return;
         }
         // Validate calendar date: check that parsed date matches input (prevents Feb 30, Apr 31, etc.)
-        const parsed = new Date(dateValue);
-        const roundtrip = `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, '0')}-${String(parsed.getDate()).padStart(2, '0')}`;
+        // Use UTC methods to avoid timezone issues with YYYY-MM-DD dates
+        const parsed = new Date(dateValue + 'T00:00:00Z');
+        const roundtrip = `${parsed.getUTCFullYear()}-${String(parsed.getUTCMonth() + 1).padStart(2, '0')}-${String(parsed.getUTCDate()).padStart(2, '0')}`;
         if (roundtrip !== dateValue) {
           res.status(400).json({ error: `Невірна календарна дата для поля ${dateField}: ${dateValue}` });
           return;
@@ -684,9 +695,10 @@ app.post("/api/employees/:id/files", (req, res, next) => {
       return;
     }
     // Validate calendar date for issue_date
+    // Use UTC methods to avoid timezone issues with YYYY-MM-DD dates
     if (issueDate) {
-      const parsed = new Date(issueDate);
-      const roundtrip = `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, '0')}-${String(parsed.getDate()).padStart(2, '0')}`;
+      const parsed = new Date(issueDate + 'T00:00:00Z');
+      const roundtrip = `${parsed.getUTCFullYear()}-${String(parsed.getUTCMonth() + 1).padStart(2, '0')}-${String(parsed.getUTCDate()).padStart(2, '0')}`;
       if (roundtrip !== issueDate) {
         await fsPromises.unlink(req.file.path).catch(() => {});
         res.status(400).json({ error: `Невірна календарна дата видачі: ${issueDate}` });
@@ -705,9 +717,10 @@ app.post("/api/employees/:id/files", (req, res, next) => {
       return;
     }
     // Validate calendar date for expiry_date
+    // Use UTC methods to avoid timezone issues with YYYY-MM-DD dates
     if (expiryDate) {
-      const parsed = new Date(expiryDate);
-      const roundtrip = `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, '0')}-${String(parsed.getDate()).padStart(2, '0')}`;
+      const parsed = new Date(expiryDate + 'T00:00:00Z');
+      const roundtrip = `${parsed.getUTCFullYear()}-${String(parsed.getUTCMonth() + 1).padStart(2, '0')}-${String(parsed.getUTCDate()).padStart(2, '0')}`;
       if (roundtrip !== expiryDate) {
         await fsPromises.unlink(req.file.path).catch(() => {});
         res.status(400).json({ error: `Невірна календарна дата закінчення: ${expiryDate}` });
