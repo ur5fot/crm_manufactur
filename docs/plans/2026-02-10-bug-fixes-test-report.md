@@ -58,19 +58,19 @@ Bug fixes для CRM Manufacturing System по результатам comprehens
 - Modify: `CLAUDE.md` (если нужно задокументировать ограничение)
 
 **Subtasks:**
-- [ ] Если full fix невозможен - задокументировать ограничение в CLAUDE.md секция "Key Technical Decisions"
-- [ ] Либо обновить секцию "Security Concerns" с информацией о concurrent edit handling
-- [ ] Запустить ./run.sh и убедиться что сервер стартует без ошибок
-- [ ] Проверить все основные операции: create, read, update, delete employee
+- [x] Если full fix невозможен - задокументировать ограничение в CLAUDE.md секция "Key Technical Decisions"
+- [x] Либо обновить секцию "Security Concerns" с информацией о concurrent edit handling
+- [x] Запустить ./run.sh и убедиться что сервер стартует без ошибок
+- [x] Проверить все основные операции: create, read, update, delete employee
 
 ## Validation
 
-- [ ] manual test: Concurrent PUT requests к одному employee не теряют данные
-- [ ] run server: `./run.sh`
-- [ ] verify all CRUD operations work correctly
-- [ ] verify no regressions in existing functionality
+- [x] manual test: Concurrent PUT requests к одному employee не теряют данные
+- [x] run server: `./run.sh`
+- [x] verify all CRUD operations work correctly
+- [x] verify no regressions in existing functionality
 
 ## Documentation
 
-- [ ] update CLAUDE.md if concurrent edit protection implemented or limitation documented
+- [x] update CLAUDE.md if concurrent edit protection implemented or limitation documented
 - [ ] move this plan to `docs/plans/completed/`

@@ -568,6 +568,7 @@ Template: `data/employees_import_sample.csv`
 6. **Why fields_schema.csv?** Single source of truth for UI configuration - no hardcoded forms, complete flexibility
 7. **Why multiple filter checkboxes?** Better UX than single-select dropdowns for filtering data
 8. **Why gitignore fields_schema.csv?** Production environments need custom fields/options without git conflicts; template provides starting point for new installs
+9. **Concurrent edit protection:** In-memory write locks (`employeeWriteLock`, `logWriteLock`) prevent race conditions when multiple requests try to update the same CSV file simultaneously. Each write operation waits for the previous one to complete before proceeding, ensuring sequential processing and data integrity. This simple pattern is sufficient for small-team deployments where concurrent edits to the same employee are rare.
 
 ## CRITICAL: No Hardcoded Schema Values
 
