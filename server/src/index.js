@@ -39,7 +39,8 @@ await initializeEmployeeColumns();
 app.use(cors());
 app.use(express.json({ limit: "10mb" }));
 app.use("/files", express.static(FILES_DIR));
-app.use("/data", express.static(DATA_DIR));
+// SECURITY: DATA_DIR static serving removed - sensitive CSV files should not be publicly accessible
+// app.use("/data", express.static(DATA_DIR));
 
 const importUpload = multer({
   storage: multer.memoryStorage(),
@@ -57,9 +58,17 @@ function getOpenCommand() {
 }
 
 function openFolder(targetPath) {
+  // SECURITY: Validate path is within allowed directories to prevent command injection
+  const resolvedPath = path.resolve(targetPath);
+  const allowedDirs = [path.resolve(FILES_DIR), path.resolve(DATA_DIR)];
+
+  if (!allowedDirs.some(dir => resolvedPath.startsWith(dir + path.sep) || resolvedPath === dir)) {
+    throw new Error('Path outside allowed directories');
+  }
+
   const command = getOpenCommand();
   return new Promise((resolve, reject) => {
-    execFile(command, [targetPath], (error) => {
+    execFile(command, [resolvedPath], (error) => {
       if (error) {
         reject(error);
         return;
@@ -823,10 +832,13 @@ app.delete("/api/employees/:id/files/:fieldName", async (req, res) => {
     }
 
     // Удаляем физический файл (только если путь внутри FILES_DIR)
+    // SECURITY: Normalize paths before comparison to prevent path traversal
     const fullPath = path.resolve(ROOT_DIR, filePath);
-    if (fullPath.startsWith(FILES_DIR + path.sep)) {
+    const normalizedFullPath = path.resolve(fullPath);
+    const normalizedFilesDir = path.resolve(FILES_DIR);
+    if (normalizedFullPath.startsWith(normalizedFilesDir + path.sep)) {
       try {
-        await fs.promises.unlink(fullPath);
+        await fs.promises.unlink(normalizedFullPath);
       } catch (error) {
         console.error("Failed to delete file:", error);
         // Продолжаем даже если файл не удалось удалить

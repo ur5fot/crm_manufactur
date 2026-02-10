@@ -430,11 +430,11 @@ function exportCustomReportCSV() {
   const schema = allFieldsSchema.value;
   const columns = selectedColumns.value.length > 0
     ? selectedColumns.value
-    : schema.filter(f => f.show_in_table === 'yes').map(f => f.field_name);
+    : schema.filter(f => f.showInTable).map(f => f.key);
 
   const headers = columns.map(col => {
-    const field = schema.find(f => f.field_name === col);
-    return field ? field.field_label : col;
+    const field = schema.find(f => f.key === col);
+    return field ? field.label : col;
   });
 
   const rows = customReportResults.value.map(emp => {
@@ -1354,8 +1354,14 @@ async function deleteEmployee() {
 }
 
 function openDocument(fieldKey) {
-  if (!form[fieldKey]) return;
-  const url = `${import.meta.env.VITE_API_URL || ""}/${form[fieldKey]}`;
+  const filePath = form[fieldKey];
+  if (!filePath) return;
+  // SECURITY: Validate file path starts with expected prefix to prevent XSS
+  if (!filePath.startsWith('files/')) {
+    console.error('Invalid file path:', filePath);
+    return;
+  }
+  const url = `${import.meta.env.VITE_API_URL || ""}/${filePath}`;
   window.open(url, "_blank");
 }
 
@@ -2546,8 +2552,8 @@ onUnmounted(() => {
               <div v-for="(filter, index) in customFilters" :key="index" class="filter-row">
                 <select v-model="filter.field" class="filter-field">
                   <option value="">-- Виберіть поле --</option>
-                  <option v-for="field in allFieldsSchema" :key="field.field_name" :value="field.field_name">
-                    {{ field.field_label }}
+                  <option v-for="field in allFieldsSchema" :key="field.key" :value="field.key">
+                    {{ field.label }}
                   </option>
                 </select>
 
@@ -2587,13 +2593,13 @@ onUnmounted(() => {
               <h3>Колонки для експорту</h3>
               <p class="help-text">Не вибрано жодної колонки = експортуються всі колонки з таблиці</p>
               <div class="column-checkboxes">
-                <label v-for="field in allFieldsSchema" :key="field.field_name" class="column-checkbox">
+                <label v-for="field in allFieldsSchema" :key="field.key" class="column-checkbox">
                   <input
                     type="checkbox"
-                    :value="field.field_name"
+                    :value="field.key"
                     v-model="selectedColumns"
                   />
-                  {{ field.field_label }}
+                  {{ field.label }}
                 </label>
               </div>
             </div>
@@ -2623,14 +2629,14 @@ onUnmounted(() => {
                 <table class="summary-table">
                   <thead>
                     <tr>
-                      <th v-for="field in (selectedColumns.length > 0 ? selectedColumns : allFieldsSchema.filter(f => f.show_in_table === 'yes').map(f => f.field_name))" :key="field">
-                        {{ allFieldsSchema.find(f => f.field_name === field)?.field_label || field }}
+                      <th v-for="field in (selectedColumns.length > 0 ? selectedColumns : allFieldsSchema.filter(f => f.showInTable).map(f => f.key))" :key="field">
+                        {{ allFieldsSchema.find(f => f.key === field)?.label || field }}
                       </th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr v-for="(emp, idx) in customReportResults.slice(0, 100)" :key="emp.employee_id || idx">
-                      <td v-for="field in (selectedColumns.length > 0 ? selectedColumns : allFieldsSchema.filter(f => f.show_in_table === 'yes').map(f => f.field_name))" :key="field">
+                      <td v-for="field in (selectedColumns.length > 0 ? selectedColumns : allFieldsSchema.filter(f => f.showInTable).map(f => f.key))" :key="field">
                         {{ emp[field] || '' }}
                       </td>
                     </tr>
