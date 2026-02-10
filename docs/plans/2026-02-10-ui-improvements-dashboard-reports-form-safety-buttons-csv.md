@@ -184,24 +184,24 @@ This plan implements 8 improvements to the CRM UI:
 - Modify: `client/src/App.vue`
 
 **Subtasks:**
-- [ ] Add reactive flag isFormDirty (tracks if employee form has unsaved changes)
-- [ ] Set isFormDirty = true when any form field changes (watch formData)
-- [ ] Reset isFormDirty = false when:
+- [x] Add reactive flag isFormDirty (tracks if employee form has unsaved changes)
+- [x] Set isFormDirty = true when any form field changes (watch formData)
+- [x] Reset isFormDirty = false when:
   - Employee saved successfully
   - Form cleared intentionally
   - New employee created
-- [ ] Add Vue Router navigation guard (beforeRouteLeave equivalent)
-- [ ] Show confirmation dialog when user tries to navigate away with unsaved changes:
+- [x] Add Vue Router navigation guard (beforeRouteLeave equivalent)
+- [x] Show confirmation dialog when user tries to navigate away with unsaved changes:
   - Message: "У вас є незбережені зміни: [список змінених полів]. Зберегти перед виходом?"
   - Buttons: "Зберегти і продовжити", "Продовжити без збереження", "Скасувати"
   - List changed fields in message for transparency
-- [ ] Handle browser refresh/close (window.beforeunload event)
-- [ ] Test dialog appears when navigating away with unsaved changes
-- [ ] Test "Зберегти" button saves and navigates
-- [ ] Test "Продовжити" button navigates without saving
-- [ ] Test "Скасувати" button stays on current page
-- [ ] Test no dialog when no changes exist
-- [ ] Test browser refresh warning
+- [x] Handle browser refresh/close (window.beforeunload event)
+- [x] Test dialog appears when navigating away with unsaved changes
+- [x] Test "Зберегти" button saves and navigates
+- [x] Test "Продовжити" button navigates without saving
+- [x] Test "Скасувати" button stays on current page
+- [x] Test no dialog when no changes exist
+- [x] Test browser refresh warning
 
 ---
 

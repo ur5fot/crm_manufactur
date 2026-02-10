@@ -11,6 +11,26 @@
  * - [ ] Import functionality (importEmployees, resetImport) still works
  */
 
+/**
+ * Task 7 Tests: Unsaved Changes Warning
+ *
+ * Manual test checklist:
+ * - [ ] Edit employee form (change any field), verify isFormDirty becomes true
+ * - [ ] Try to navigate to another view (Dashboard, Table, etc.), verify dialog appears
+ * - [ ] Dialog shows list of changed fields with human-readable labels
+ * - [ ] Click "Скасувати" button, verify navigation is cancelled and stays on form
+ * - [ ] Click "Продовжити без збереження", verify navigates without saving changes
+ * - [ ] Edit form again, try to navigate, click "Зберегти і продовжити"
+ * - [ ] Verify changes are saved and navigation proceeds
+ * - [ ] Edit form, click Save button manually, verify isFormDirty becomes false
+ * - [ ] Try to navigate after saving, verify no dialog appears
+ * - [ ] Edit form, click Clear Form button (after confirming), verify no unsaved changes warning
+ * - [ ] Create new employee, fill form, verify no unsaved warning on navigation (new records)
+ * - [ ] Edit form, try browser refresh (Ctrl+R), verify browser shows "leave site?" warning
+ * - [ ] Navigate between different employees in cards view without editing, verify no warnings
+ * - [ ] Test ESC key closes unsaved changes dialog
+ */
+
 import { describe, it, expect } from 'vitest';
 
 describe('Task 6: Import Page', () => {
@@ -24,6 +44,22 @@ describe('Task 6: Import Page', () => {
     // 5. Verify import section is NOT on employee card
     // 6. Test CSV upload functionality
     // 7. Test template download button
+    expect(true).toBe(true);
+  });
+});
+
+describe('Task 7: Unsaved Changes Warning', () => {
+  it('placeholder test - manual testing required', () => {
+    // This project doesn't have automated testing infrastructure yet
+    // All tests must be performed manually according to the plan (see checklist above)
+    // Key scenarios:
+    // 1. Form change detection and dirty flag tracking
+    // 2. Navigation guard triggers dialog on unsaved changes
+    // 3. Dialog shows changed fields list
+    // 4. Three action buttons work correctly (Cancel, Continue, Save)
+    // 5. Dialog resets dirty flag appropriately
+    // 6. Browser refresh warning
+    // 7. ESC key handler
     expect(true).toBe(true);
   });
 });

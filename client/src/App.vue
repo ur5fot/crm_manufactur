@@ -226,6 +226,18 @@ watch(() => route.params.id, (newId) => {
   }
 });
 
+// Watch form changes to track unsaved changes
+watch(form, () => {
+  if (!savedFormSnapshot.value) return; // No baseline to compare against
+
+  // Compare current form with saved snapshot
+  const hasChanges = Object.keys(form).some(key => {
+    return form[key] !== savedFormSnapshot.value[key];
+  });
+
+  isFormDirty.value = hasChanges;
+}, { deep: true });
+
 // Helper function to ensure employees are loaded
 async function loadEmployeesIfNeeded() {
   if (employees.value.length === 0) {
@@ -452,6 +464,12 @@ function exportCustomReportCSV() {
 }
 
 const form = reactive(emptyEmployee());
+
+// Unsaved changes tracking
+const isFormDirty = ref(false);
+const savedFormSnapshot = ref(null); // Snapshot of form when last saved/loaded
+const showUnsavedChangesPopup = ref(false);
+const pendingNavigation = ref(null); // Store pending route for navigation after user confirms
 
 // Dictionaries теперь формируются динамически из fields_schema.csv
 
@@ -781,6 +799,40 @@ function confirmClearForm() {
   startNew();
 }
 
+// Unsaved changes popup handlers
+function closeUnsavedChangesPopup() {
+  showUnsavedChangesPopup.value = false;
+  pendingNavigation.value = null;
+}
+
+async function saveAndContinue() {
+  if (saving.value) return;
+
+  // Save the employee first
+  await saveEmployee();
+
+  // If save was successful (no error), proceed with navigation
+  if (!errorMessage.value && pendingNavigation.value) {
+    isFormDirty.value = false; // Force clean state
+    const target = pendingNavigation.value;
+    closeUnsavedChangesPopup();
+    router.push(target);
+  }
+}
+
+function continueWithoutSaving() {
+  if (pendingNavigation.value) {
+    isFormDirty.value = false; // Force clean state to allow navigation
+    const target = pendingNavigation.value;
+    closeUnsavedChangesPopup();
+    router.push(target);
+  }
+}
+
+function cancelNavigation() {
+  closeUnsavedChangesPopup();
+}
+
 function formatDocDate(dateStr) {
   if (!dateStr) return '';
   const d = new Date(dateStr + 'T00:00:00');
@@ -839,7 +891,31 @@ function resetForm() {
   }
   // Заполняем пустыми значениями
   Object.assign(form, emptyEmployee());
+
+  // Reset dirty tracking
+  updateFormSnapshot();
+  isFormDirty.value = false;
 }
+
+// Helper function to update the form snapshot
+function updateFormSnapshot() {
+  savedFormSnapshot.value = { ...form };
+}
+
+// Compute changed fields for display in unsaved changes dialog
+const changedFields = computed(() => {
+  if (!savedFormSnapshot.value || !isFormDirty.value) return [];
+
+  const changes = [];
+  Object.keys(form).forEach(key => {
+    if (form[key] !== savedFormSnapshot.value[key]) {
+      const label = fieldLabels.value[key] || key;
+      changes.push(label);
+    }
+  });
+
+  return changes;
+});
 
 function displayName(employee) {
   const parts = [employee.last_name, employee.first_name, employee.middle_name].filter(Boolean);
@@ -1176,6 +1252,10 @@ async function selectEmployee(id) {
   try {
     const data = await api.getEmployee(id);
     Object.assign(form, emptyEmployee(), data.employee || {});
+
+    // Create snapshot after loading employee
+    updateFormSnapshot();
+    isFormDirty.value = false;
   } catch (error) {
     errorMessage.value = error.message;
   }
@@ -1241,6 +1321,10 @@ async function saveEmployee() {
       await loadEmployees();
       await selectEmployee(form.employee_id);
     }
+
+    // Reset dirty flag after successful save
+    updateFormSnapshot();
+    isFormDirty.value = false;
   } catch (error) {
     errorMessage.value = error.message;
   } finally {
@@ -1488,7 +1572,9 @@ function getDetailLabel(detail) {
 
 function handleGlobalKeydown(e) {
   if (e.key === 'Escape') {
-    if (showClearConfirmPopup.value) {
+    if (showUnsavedChangesPopup.value) {
+      cancelNavigation();
+    } else if (showClearConfirmPopup.value) {
       closeClearConfirmPopup();
     } else if (showDocUploadPopup.value) {
       closeDocUploadPopup();
@@ -1508,6 +1594,28 @@ function handleGlobalKeydown(e) {
 
 onMounted(async () => {
   document.addEventListener('keydown', handleGlobalKeydown);
+
+  // Setup navigation guard for unsaved changes
+  router.beforeEach((to, from, next) => {
+    // Check if leaving cards view with unsaved changes
+    if (from.name === 'cards' && to.name !== 'cards' && isFormDirty.value) {
+      // Store pending navigation and show confirmation dialog
+      pendingNavigation.value = to;
+      showUnsavedChangesPopup.value = true;
+      next(false); // Cancel navigation - we'll manually navigate after user confirms
+    } else {
+      next(); // Allow navigation
+    }
+  });
+
+  // Setup beforeunload handler for browser refresh/close
+  window.addEventListener('beforeunload', (e) => {
+    if (isFormDirty.value && route.name === 'cards') {
+      e.preventDefault();
+      e.returnValue = ''; // Chrome requires returnValue to be set
+    }
+  });
+
   await loadFieldsSchema();
   await loadEmployees();
 
@@ -1796,6 +1904,30 @@ onUnmounted(() => {
         <div class="vacation-notification-footer status-change-footer">
           <button class="secondary" type="button" @click="closeClearConfirmPopup">Скасувати</button>
           <button class="primary" type="button" @click="confirmClearForm">Так, очистити</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Unsaved changes warning popup -->
+    <div v-if="showUnsavedChangesPopup" class="vacation-notification-overlay" @click="cancelNavigation">
+      <div class="vacation-notification-modal" @click.stop style="max-width: 600px;">
+        <div class="vacation-notification-header">
+          <h3>Незбережені зміни</h3>
+          <button class="close-btn" @click="cancelNavigation">&times;</button>
+        </div>
+        <div class="vacation-notification-body">
+          <p style="margin: 0 0 12px 0;">У вас є незбережені зміни в наступних полях:</p>
+          <ul style="margin: 0 0 16px 20px; padding: 0;">
+            <li v-for="field in changedFields" :key="field" style="margin: 4px 0;">{{ field }}</li>
+          </ul>
+          <p style="margin: 0; font-weight: 500;">Зберегти перед виходом?</p>
+        </div>
+        <div class="vacation-notification-footer status-change-footer">
+          <button class="secondary" type="button" @click="cancelNavigation">Скасувати</button>
+          <button class="secondary" type="button" @click="continueWithoutSaving">Продовжити без збереження</button>
+          <button class="primary" type="button" @click="saveAndContinue" :disabled="saving">
+            {{ saving ? 'Збереження...' : 'Зберегти і продовжити' }}
+          </button>
         </div>
       </div>
     </div>
