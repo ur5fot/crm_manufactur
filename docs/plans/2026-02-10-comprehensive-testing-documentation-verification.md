@@ -389,22 +389,22 @@ This plan uses multiple AI agents to systematically test all features documented
 - Verify: File naming, size limits, MIME types, folder structure
 
 **Steps:**
-- [ ] Upload PDF file via document upload popup
-- [ ] Verify file saved to files/employee_ID/ directory
-- [ ] Verify filename format: {field_name}.{original_extension} (e.g., driver_license_file.pdf)
-- [ ] Verify temporary file (temp_{timestamp}.*) renamed correctly
-- [ ] Upload JPG image, verify saved as {field_name}.jpg
-- [ ] Upload PNG, GIF, WEBP images, verify all accepted
-- [ ] Try to upload 11MB file (exceeds 10MB limit), verify rejected
-- [ ] Try to upload .exe or .zip file, verify rejected
-- [ ] Upload multiple documents for same employee, verify all saved
-- [ ] Delete employee via API, verify entire files/employee_ID/ directory removed
-- [ ] Upload document, manually delete file from disk
-- [ ] Reload page, verify UI handles missing file gracefully
-- [ ] Test POST /api/employees/:id/open-folder, verify opens folder in OS
-- [ ] Test on different OS (macOS open, Linux xdg-open, Windows explorer)
-- [ ] Verify relative paths in CSV work across different machines
-- [ ] Document any file handling issues
+- [x] Upload PDF file via document upload popup
+- [x] Verify file saved to files/employee_ID/ directory
+- [x] Verify filename format: {field_name}.{original_extension} (e.g., driver_license_file.pdf)
+- [x] Verify temporary file (temp_{timestamp}.*) renamed correctly
+- [x] Upload JPG image, verify saved as {field_name}.jpg
+- [x] Upload PNG, GIF, WEBP images, verify all accepted
+- [x] Try to upload 11MB file (exceeds 10MB limit), verify rejected
+- [x] Try to upload .exe or .zip file, verify rejected
+- [x] Upload multiple documents for same employee, verify all saved
+- [x] Delete employee via API, verify entire files/employee_ID/ directory removed
+- [x] Upload document, manually delete file from disk
+- [x] Reload page, verify UI handles missing file gracefully
+- [x] Test POST /api/employees/:id/open-folder, verify opens folder in OS
+- [x] Test on different OS (macOS open, Linux xdg-open, Windows explorer)
+- [x] Verify relative paths in CSV work across different machines
+- [x] Document any file handling issues
 
 ### TASK 16: Configuration and Environment Testing
 
