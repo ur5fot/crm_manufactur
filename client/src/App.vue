@@ -323,6 +323,7 @@ const retirementToday = ref([]);
 const retirementThisMonth = ref([]);
 const showRetirementNotification = ref(false);
 let retirementNotifiedDate = '';
+const retirementNotifiedIds = new Set(); // Track which employees we've already processed for retirement
 
 // Динамические значения статусов из fields_schema (по позиции в field_options)
 // Конвенция: options[0] = рабочий, options[1] = уволен, options[2] = отпуск, options[3] = больничный
@@ -1266,6 +1267,12 @@ async function checkStatusChanges() {
   const now = new Date();
   const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
+  // Проверяем что схема полей загружена (workingStatus должен быть доступен)
+  if (!workingStatus.value) {
+    console.warn('checkStatusChanges: workingStatus not available yet, skipping');
+    return;
+  }
+
   // Сбрасываем уведомления при смене дня (для длительных сессий)
   if (notifiedDate !== today) {
     notifiedEmployeeIds.clear();
@@ -1414,19 +1421,32 @@ async function checkRetirementEvents() {
   const now = new Date();
   const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
-  // Показываем уведомления один раз в день
-  if (retirementNotifiedDate === today) return;
+  // Проверяем что схема полей загружена
+  if (!workingStatus.value || !employmentOptions.value[1]) {
+    console.warn('checkRetirementEvents: employment options not available yet, skipping');
+    return;
+  }
+
+  // Сбрасываем Set при смене дня
+  if (retirementNotifiedDate !== today) {
+    retirementNotifiedIds.clear();
+    retirementNotifiedDate = today;
+  }
 
   try {
     const data = await api.getRetirementEvents();
     const todayItems = data.today || [];
     const thisMonthItems = data.thisMonth || [];
 
-    // Auto-dismiss employees reaching retirement age today
+    // Filter out employees we've already processed today
+    const newTodayItems = todayItems.filter(item => !retirementNotifiedIds.has(item.employee_id));
+    const newThisMonthItems = thisMonthItems.filter(item => !retirementNotifiedIds.has(item.employee_id));
+
+    // Auto-dismiss employees reaching retirement age today (only new ones)
     // Only auto-dismiss employees with working status (options[0]) to avoid overwriting other statuses
-    if (todayItems.length > 0) {
-      const firedStatus = employmentOptions.value[1] || 'Уволен';
-      for (const event of todayItems) {
+    if (newTodayItems.length > 0) {
+      const firedStatus = employmentOptions.value[1];
+      for (const event of newTodayItems) {
         const emp = employees.value.find(e => e.employee_id === event.employee_id);
         // Only auto-dismiss if employee is currently in working status
         if (emp && emp.employment_status === workingStatus.value) {
@@ -1436,9 +1456,13 @@ async function checkRetirementEvents() {
               employment_status: firedStatus
             });
             console.log(`Auto-dismissed employee ${event.employee_name} (ID: ${event.employee_id}) due to retirement`);
+            retirementNotifiedIds.add(event.employee_id); // Mark as processed
           } catch (error) {
             console.error(`Failed to auto-dismiss employee ${event.employee_id}:`, error);
           }
+        } else {
+          // Even if not dismissed (e.g., already fired), mark as processed to avoid re-showing notification
+          retirementNotifiedIds.add(event.employee_id);
         }
       }
       // Reload employees without triggering check functions again (prevent infinite loop)
@@ -1447,10 +1471,13 @@ async function checkRetirementEvents() {
       lastUpdated.value = new Date();
     }
 
-    retirementNotifiedDate = today;
-    if (todayItems.length > 0 || thisMonthItems.length > 0) {
-      retirementToday.value = todayItems;
-      retirementThisMonth.value = thisMonthItems;
+    // Mark all month items as processed (even if only showing notification, not auto-dismissing)
+    newThisMonthItems.forEach(item => retirementNotifiedIds.add(item.employee_id));
+
+    // Show notification only for new items
+    if (newTodayItems.length > 0 || newThisMonthItems.length > 0) {
+      retirementToday.value = newTodayItems;
+      retirementThisMonth.value = newThisMonthItems;
       showRetirementNotification.value = true;
     }
   } catch (error) {

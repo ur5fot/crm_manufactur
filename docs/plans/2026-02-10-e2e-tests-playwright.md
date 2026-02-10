@@ -272,7 +272,7 @@
 - Create: `tests/e2e/status-retirement.spec.js`
 
 **Steps:**
-- [ ] Test: "Изменить статус сотрудника (отпуск)"
+- [x] Test: "Изменить статус сотрудника (отпуск)"
   - Load employee (status = "Працює")
   - Click "Змінити статус"
   - Select "Відпустка" from dropdown
@@ -280,18 +280,18 @@
   - Click "Застосувати"
   - Assert status updated in UI
   - Assert status_start_date and status_end_date saved (API check)
-- [ ] Test: "Автовосстановление статуса после end_date"
+- [x] Test: "Автовосстановление статуса после end_date"
   - Create employee with status="Відпустка", end_date = yesterday
   - Call `GET /api/employees` (triggers checkStatusChanges)
   - Assert status restored to "Працює" (options[0])
   - Assert dates cleared
-- [ ] Test: "Уведомление о выходе на пенсию"
+- [x] Test: "Уведомление о выходе на пенсию"
   - Create employee with birth_date = retirement_age_years ago today
   - Reload page
   - Assert retirement notification appears
   - Assert employee status auto-changed to "Звільнений" (options[1])
   - Assert audit log entry for auto-dismiss
-- [ ] `npm run test:e2e tests/e2e/status-retirement.spec.js` (все тесты должны пройти)
+- [x] `npm run test:e2e tests/e2e/status-retirement.spec.js` (все тесты должны пройти)
 
 ---
 
