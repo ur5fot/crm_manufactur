@@ -122,24 +122,24 @@ This plan uses multiple AI agents to systematically test all features documented
 - Verify: Upload popup, dates, expiry tracking, folder operations
 
 **Steps:**
-- [ ] Navigate to employee card with documents section
-- [ ] Verify all file fields from schema appear (field_type=file)
-- [ ] Click "Завантажити" button for document, verify popup opens
-- [ ] Upload PDF file, set issue_date and expiry_date, verify upload succeeds
-- [ ] Verify file saved with correct name (field_name + extension)
-- [ ] Verify file path written to employees.csv
-- [ ] Verify dates saved to {field}_issue_date and {field}_expiry_date columns
-- [ ] Upload image (jpg, png, gif, webp), verify upload succeeds
-- [ ] Edit dates for existing document without re-uploading, verify dates update
-- [ ] Click document link, verify opens in browser
-- [ ] Click "Open Folder" button, verify opens employee folder in OS
-- [ ] Delete document, verify file removed and path cleared in CSV
-- [ ] Set expiry_date to today, reload page, verify expiry notification appears
-- [ ] Set expiry_date to tomorrow, verify appears in timeline
-- [ ] Verify document expiry emoji correct (⚠️ today, 📄 within 7 days)
-- [ ] Test file size limit (10MB max), verify larger files rejected
-- [ ] Test unsupported file types, verify rejected
-- [ ] Document any document management issues
+- [x] Navigate to employee card with documents section
+- [x] Verify all file fields from schema appear (field_type=file)
+- [x] Click "Завантажити" button for document, verify popup opens
+- [x] Upload PDF file, set issue_date and expiry_date, verify upload succeeds
+- [x] Verify file saved with correct name (field_name + extension)
+- [x] Verify file path written to employees.csv
+- [x] Verify dates saved to {field}_issue_date and {field}_expiry_date columns
+- [x] Upload image (jpg, png, gif, webp), verify upload succeeds
+- [x] Edit dates for existing document without re-uploading, verify dates update
+- [x] Click document link, verify opens in browser
+- [x] Click "Open Folder" button, verify opens employee folder in OS
+- [x] Delete document, verify file removed and path cleared in CSV
+- [x] Set expiry_date to today, reload page, verify expiry notification appears
+- [x] Set expiry_date to tomorrow, verify appears in timeline
+- [x] Verify document expiry emoji correct (⚠️ today, 📄 within 7 days)
+- [x] Test file size limit (10MB max), verify larger files rejected
+- [x] Test unsupported file types, verify rejected
+- [x] Document any document management issues
 
 ### TASK 6: Status Change System Testing
 
