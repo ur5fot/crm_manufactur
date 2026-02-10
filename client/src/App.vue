@@ -1229,7 +1229,7 @@ async function loadDashboardEvents() {
 
     // На дашборд виводимо лише сьогоднішні події (не прострочені за минулі 30 днів)
     const todayDocEvents = (docData.today || [])
-      .filter(evt => evt.type !== 'already_expired')
+      .filter(evt => evt.type !== 'recently_expired')
       .map(mapDocEvent);
     const todayBirthdayEvents = (birthdayData.today || []).map(evt => mapBirthdayEvent(evt, true));
     const todayEvents = [
@@ -1365,7 +1365,7 @@ async function checkDocumentExpiry() {
 
   try {
     const data = await api.getDocumentExpiry();
-    const todayItems = (data.today || []).filter(evt => evt.type !== 'already_expired');
+    const todayItems = (data.today || []).filter(evt => evt.type !== 'recently_expired');
     const weekItems = data.thisWeek || [];
 
     docExpiryNotifiedDate = today;
