@@ -2124,15 +2124,17 @@ onUnmounted(() => {
       <div v-else-if="currentView === 'cards'" class="layout">
         <aside class="panel">
           <div class="panel-header">
-            <div class="panel-title">Співробітники</div>
-            <button
-              class="tab-icon-btn"
-              type="button"
-              @click="startNew"
-              title="Новий працівник"
-            >
-              ➕
-            </button>
+            <div class="panel-title-group">
+              <div class="panel-title">Співробітники</div>
+              <button
+                class="tab-icon-btn"
+                type="button"
+                @click="startNew"
+                title="Новий працівник"
+              >
+                ➕
+              </button>
+            </div>
             <div class="status-bar">
               <span v-if="loading">Завантаження...</span>
               <span v-else>{{ employees.length }} всього</span>

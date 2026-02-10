@@ -52,10 +52,10 @@ Move the "New Employee" button (➕) from the global header tab bar to the left 
 **Files:**
 - Modify: `client/src/styles.css`
 
-- [ ] Verify existing `.tab-icon-btn` styles work for panel-header placement
-- [ ] Add specific styles if needed for sidebar button positioning
-- [ ] Ensure button aligns properly with "Співробітники" title and status count
-- [ ] Manual test: Button styling matches design (icon-only, proper spacing, hover effects)
+- [x] Verify existing `.tab-icon-btn` styles work for panel-header placement
+- [x] Add specific styles if needed for sidebar button positioning
+- [x] Ensure button aligns properly with "Співробітники" title and status count
+- [x] Manual test: Button styling matches design (icon-only, proper spacing, hover effects)
 
 ## Validation
 

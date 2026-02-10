@@ -218,6 +218,12 @@ a {
   letter-spacing: -0.3px;
 }
 
+.panel-title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .search-input {
   width: 100%;
   padding: 10px 14px;
