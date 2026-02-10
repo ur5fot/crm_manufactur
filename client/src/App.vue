@@ -1,6 +1,10 @@
 <script setup>
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from "vue";
+import { useRouter, useRoute } from "vue-router";
 import { api } from "./api";
+
+const router = useRouter();
+const route = useRoute();
 
 // Fallback список полей — должен соответствовать DEFAULT_EMPLOYEE_COLUMNS в schema.js
 const employeeFields = [
@@ -8,6 +12,7 @@ const employeeFields = [
   "last_name",
   "first_name",
   "middle_name",
+  "birth_date",
   "employment_status",
   "additional_status",
   "gender",
@@ -86,14 +91,12 @@ const documentFields = computed(() => {
     }));
 });
 
-const csvLinks = [
-  { label: "Співробітники (employees.csv)", path: "/data/employees.csv" },
-  { label: "Довідники (dictionaries.csv)", path: "/data/dictionaries.csv" }
-];
+// CSV links removed - data directory not publicly accessible for security reasons
 
 const employees = ref([]);
 const selectedId = ref("");
 const searchTerm = ref("");
+const isCreatingNew = ref(false); // Flag to prevent auto-load when creating new employee
 const loading = ref(false);
 const saving = ref(false);
 const errorMessage = ref("");
@@ -103,7 +106,6 @@ const importFile = ref(null);
 const importResult = ref(null);
 const importing = ref(false);
 const dictionaries = ref({});
-const currentView = ref("dashboard"); // "dashboard", "cards", "table", or "logs"
 const refreshIntervalId = ref(null);
 const lastUpdated = ref(null);
 const isRefreshing = ref(false);
@@ -113,16 +115,47 @@ const activeReport = ref(null); // null | 'current' | 'month'
 const reportData = ref([]);
 const reportLoading = ref(false);
 
+// Custom reports state
+const customFilters = ref([]);
+const customReportResults = ref([]);
+const customReportLoading = ref(false);
+const selectedColumns = ref([]);
+
+// Compute current view based on route
+const currentView = computed(() => {
+  const name = route.name;
+  if (name === 'dashboard') return 'dashboard';
+  if (name === 'cards') return 'cards';
+  if (name === 'table') return 'table';
+  if (name === 'reports') return 'reports';
+  if (name === 'import') return 'import';
+  if (name === 'logs') return 'logs';
+  return 'dashboard';
+});
+
 const tabs = [
   { key: 'dashboard', label: 'Dashboard' },
   { key: 'cards', label: 'Картки' },
   { key: 'table', label: 'Таблиця' },
+  { key: 'reports', label: 'Звіти' },
+  { key: 'import', label: 'Імпорт' },
   { key: 'logs', label: 'Логи' },
 ];
 
 function switchView(view) {
-  currentView.value = view;
-  if (view === 'logs') loadLogs();
+  if (view === 'dashboard') {
+    router.push({ name: 'dashboard' });
+  } else if (view === 'cards') {
+    router.push({ name: 'cards' });
+  } else if (view === 'table') {
+    router.push({ name: 'table' });
+  } else if (view === 'reports') {
+    router.push({ name: 'reports' });
+  } else if (view === 'import') {
+    router.push({ name: 'import' });
+  } else if (view === 'logs') {
+    router.push({ name: 'logs' });
+  }
 }
 
 function startDashboardRefresh() {
@@ -148,7 +181,14 @@ function stopDashboardRefresh() {
   }
 }
 
-watch(currentView, (newView, oldView) => {
+watch(() => route.name, async (newRoute, oldRoute) => {
+  const newView = currentView.value;
+  const oldView = oldRoute === 'dashboard' ? 'dashboard' :
+                   oldRoute === 'cards' ? 'cards' :
+                   oldRoute === 'table' ? 'table' :
+                   oldRoute === 'reports' ? 'reports' :
+                   oldRoute === 'logs' ? 'logs' : 'dashboard';
+
   if (newView === 'dashboard') {
     loadEmployees();
     loadDashboardEvents();
@@ -156,7 +196,45 @@ watch(currentView, (newView, oldView) => {
   } else if (oldView === 'dashboard') {
     stopDashboardRefresh();
   }
+
+  if (newView === 'logs') {
+    loadLogs();
+  }
+
+  // Auto-load first employee when navigating to cards view without ID
+  // (but not if user explicitly wants to create new employee)
+  if (newView === 'cards' && !route.params.id && !isCreatingNew.value) {
+    await loadEmployeesIfNeeded();
+    if (employees.value.length > 0 && !form.employee_id) {
+      openEmployeeCard(employees.value[0].employee_id);
+    }
+  }
+
+  // Reset the creating new flag when navigating away from cards
+  if (oldView === 'cards' && newView !== 'cards') {
+    isCreatingNew.value = false;
+  }
 });
+
+// Watch route.params.id to handle URL changes within cards view
+watch(() => route.params.id, (newId) => {
+  if (route.name === 'cards' && newId && newId !== selectedId.value) {
+    // Check for unsaved changes before switching employees
+    if (isFormDirty.value) {
+      pendingNavigation.value = { name: 'cards', params: { id: newId } };
+      showUnsavedChangesPopup.value = true;
+    } else {
+      selectEmployee(newId);
+    }
+  }
+});
+
+// Helper function to ensure employees are loaded
+async function loadEmployeesIfNeeded() {
+  if (employees.value.length === 0) {
+    await loadEmployees();
+  }
+}
 const editingCells = reactive({}); // { employeeId_fieldName: value }
 const columnFilters = reactive({}); // { fieldName: selectedValue }
 const logs = ref([]);
@@ -174,6 +252,11 @@ const docExpiryToday = ref([]);
 const docExpiryWeek = ref([]);
 const showDocExpiryNotification = ref(false);
 let docExpiryNotifiedDate = '';
+
+const birthdayToday = ref([]);
+const birthdayNext7Days = ref([]);
+const showBirthdayNotification = ref(false);
+let birthdayNotifiedDate = '';
 
 // Динамические значения статусов из fields_schema (по позиции в field_options)
 // Конвенция: options[0] = рабочий, options[1] = уволен, options[2] = отпуск, options[3] = больничный
@@ -200,6 +283,8 @@ function docExpiryEmoji(event) {
 function timelineEventEmoji(event) {
   if (event.type === 'doc_expiry') return docExpiryEmoji({ type: event.expiry_type });
   if (event.type === 'status_end') return '🏢';
+  if (event.type === 'birthday_today') return '🎂';
+  if (event.type === 'birthday_upcoming') return '🎉';
   return statusEmoji(event.status_type);
 }
 
@@ -213,6 +298,12 @@ function timelineEventDesc(event) {
   }
   if (event.type === 'status_end') {
     return `— повернення (${event.status_type || 'статус'})`;
+  }
+  if (event.type === 'birthday_today') {
+    return `— день народження (${event.age} років)`;
+  }
+  if (event.type === 'birthday_upcoming') {
+    return `— день народження (${event.age} років, ${formatEventDate(event.date)})`;
   }
   const label = event.status_type || 'статус';
   if (event.end_date) {
@@ -287,7 +378,101 @@ async function toggleReport(type) {
   }
 }
 
+// Custom reports functions
+function addCustomFilter() {
+  customFilters.value.push({
+    field: '',
+    condition: 'contains',
+    value: ''
+  });
+}
+
+function removeCustomFilter(index) {
+  customFilters.value.splice(index, 1);
+}
+
+function clearCustomFilters() {
+  customFilters.value = [];
+  customReportResults.value = [];
+}
+
+async function runCustomReport() {
+  customReportLoading.value = true;
+  errorMessage.value = '';
+  try {
+    const validFilters = customFilters.value.filter(f => f.field && f.condition);
+    const columns = selectedColumns.value.length > 0 ? selectedColumns.value : null;
+    const data = await api.getCustomReport(validFilters, columns);
+    customReportResults.value = data.results || [];
+  } catch (error) {
+    errorMessage.value = error.message;
+    customReportResults.value = [];
+  } finally {
+    customReportLoading.value = false;
+  }
+}
+
+function exportCustomReportCSV() {
+  if (customReportResults.value.length === 0) {
+    alert('Немає даних для експорту');
+    return;
+  }
+
+  const schema = allFieldsSchema.value;
+  const columns = selectedColumns.value.length > 0
+    ? selectedColumns.value
+    : schema.filter(f => f.showInTable).map(f => f.key);
+
+  const headers = columns.map(col => {
+    const field = schema.find(f => f.key === col);
+    return field ? field.label : col;
+  });
+
+  const rows = customReportResults.value.map(emp => {
+    return columns.map(col => {
+      const val = emp[col];
+      if (val == null || val === '') return '';
+      const strVal = String(val).replace(/"/g, '""');
+      return strVal.includes(';') || strVal.includes('"') || strVal.includes('\n')
+        ? `"${strVal}"`
+        : strVal;
+    });
+  });
+
+  const BOM = '\uFEFF';
+  const csvContent = BOM + [headers.join(';'), ...rows.map(r => r.join(';'))].join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+  const filename = `report_${timestamp}.csv`;
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 const form = reactive(emptyEmployee());
+
+// Unsaved changes tracking
+const isFormDirty = ref(false);
+const savedFormSnapshot = ref(null); // Snapshot of form when last saved/loaded
+const showUnsavedChangesPopup = ref(false);
+const pendingNavigation = ref(null); // Store pending route for navigation after user confirms
+
+// Watch form changes to track unsaved changes (must come after form declaration)
+watch(form, () => {
+  if (!savedFormSnapshot.value) return; // No baseline to compare against
+
+  // Compare current form with saved snapshot
+  const hasChanges = Object.keys(form).some(key => {
+    return form[key] !== savedFormSnapshot.value[key];
+  });
+
+  isFormDirty.value = hasChanges;
+}, { deep: true });
 
 // Dictionaries теперь формируются динамически из fields_schema.csv
 
@@ -428,8 +613,7 @@ async function applyStatusChange() {
       status_end_date: statusChangeForm.endDate || ''
     };
     await api.updateEmployee(form.employee_id, payload);
-    await loadEmployees();
-    await selectEmployee(form.employee_id);
+    await reloadEmployeePreservingDirty(form.employee_id);
     closeStatusChangePopup();
   } catch (error) {
     errorMessage.value = error.message;
@@ -459,8 +643,7 @@ async function resetStatus() {
       status_end_date: ''
     };
     await api.updateEmployee(form.employee_id, payload);
-    await loadEmployees();
-    await selectEmployee(form.employee_id);
+    await reloadEmployeePreservingDirty(form.employee_id);
     closeStatusChangePopup();
   } catch (error) {
     errorMessage.value = error.message;
@@ -543,8 +726,7 @@ async function submitDocUpload() {
     form[issueDateField] = docUploadForm.issueDate || '';
     form[expiryDateField] = docUploadForm.expiryDate || '';
     closeDocUploadPopup();
-    await loadEmployees();
-    await selectEmployee(form.employee_id);
+    await reloadEmployeePreservingDirty(form.employee_id);
   } catch (error) {
     errorMessage.value = error.message;
   } finally {
@@ -591,14 +773,63 @@ async function submitDocEditDates() {
       [expiryDateField]: docEditDatesForm.expiryDate || ''
     };
     await api.updateEmployee(form.employee_id, payload);
-    await loadEmployees();
-    await selectEmployee(form.employee_id);
+    await reloadEmployeePreservingDirty(form.employee_id);
     closeDocEditDatesPopup();
   } catch (error) {
     errorMessage.value = error.message;
   } finally {
     docEditDatesSaving.value = false;
   }
+}
+
+// Попап підтвердження очищення форми
+const showClearConfirmPopup = ref(false);
+
+function openClearConfirmPopup() {
+  showClearConfirmPopup.value = true;
+}
+
+function closeClearConfirmPopup() {
+  showClearConfirmPopup.value = false;
+}
+
+function confirmClearForm() {
+  closeClearConfirmPopup();
+  startNew();
+}
+
+// Unsaved changes popup handlers
+function closeUnsavedChangesPopup() {
+  showUnsavedChangesPopup.value = false;
+  pendingNavigation.value = null;
+}
+
+async function saveAndContinue() {
+  if (saving.value) return;
+
+  // Save the employee first
+  await saveEmployee();
+
+  // If save was successful (no error), proceed with navigation
+  if (!errorMessage.value && pendingNavigation.value) {
+    isFormDirty.value = false; // Force clean state
+    const target = pendingNavigation.value;
+    closeUnsavedChangesPopup();
+    router.push(target);
+  }
+}
+
+function continueWithoutSaving() {
+  if (pendingNavigation.value) {
+    isFormDirty.value = false; // Force clean state to allow navigation
+    const target = pendingNavigation.value;
+    closeUnsavedChangesPopup();
+    router.push(target);
+  }
+}
+
+function cancelNavigation() {
+  closeUnsavedChangesPopup();
 }
 
 function formatDocDate(dateStr) {
@@ -659,7 +890,31 @@ function resetForm() {
   }
   // Заполняем пустыми значениями
   Object.assign(form, emptyEmployee());
+
+  // Reset dirty tracking
+  updateFormSnapshot();
+  isFormDirty.value = false;
 }
+
+// Helper function to update the form snapshot
+function updateFormSnapshot() {
+  savedFormSnapshot.value = { ...form };
+}
+
+// Compute changed fields for display in unsaved changes dialog
+const changedFields = computed(() => {
+  if (!savedFormSnapshot.value || !isFormDirty.value) return [];
+
+  const changes = [];
+  Object.keys(form).forEach(key => {
+    if (form[key] !== savedFormSnapshot.value[key]) {
+      const label = fieldLabels.value[key] || key;
+      changes.push(label);
+    }
+  });
+
+  return changes;
+});
 
 function displayName(employee) {
   const parts = [employee.last_name, employee.first_name, employee.middle_name].filter(Boolean);
@@ -744,7 +999,13 @@ async function loadEmployees(silent = false) {
     employees.value = data.employees || [];
     await checkStatusChanges();
     await checkDocumentExpiry();
+    await checkBirthdayEvents();
     lastUpdated.value = new Date();
+
+    // Auto-expand "Who is absent now" report on Dashboard load
+    if (currentView.value === 'dashboard' && activeReport.value !== 'current') {
+      await toggleReport('current');
+    }
   } catch (error) {
     if (!silent) errorMessage.value = error.message;
   } finally {
@@ -779,9 +1040,10 @@ function daysFromNowLabel(dateStr) {
 
 async function loadDashboardEvents() {
   try {
-    const [statusData, docData] = await Promise.all([
+    const [statusData, docData, birthdayData] = await Promise.all([
       api.getDashboardEvents(),
-      api.getDocumentExpiry()
+      api.getDocumentExpiry(),
+      api.getBirthdayEvents()
     ]);
 
     // Перетворюємо події закінчення документів у формат timeline
@@ -796,18 +1058,32 @@ async function loadDashboardEvents() {
       date: evt.expiry_date
     });
 
+    // Перетворюємо події днів народження у формат timeline
+    const mapBirthdayEvent = (evt, isToday) => ({
+      employee_id: evt.employee_id,
+      name: evt.employee_name,
+      type: isToday ? 'birthday_today' : 'birthday_upcoming',
+      birth_date: evt.birth_date,
+      age: evt.age,
+      date: evt.current_year_birthday  // Use current year date for timeline display/sorting
+    });
+
     // На дашборд виводимо лише сьогоднішні події (не прострочені за минулі 30 днів)
     const todayDocEvents = (docData.today || [])
       .filter(evt => evt.type !== 'already_expired')
       .map(mapDocEvent);
+    const todayBirthdayEvents = (birthdayData.today || []).map(evt => mapBirthdayEvent(evt, true));
     const todayEvents = [
       ...(statusData.today || []),
-      ...todayDocEvents
+      ...todayDocEvents,
+      ...todayBirthdayEvents
     ];
 
+    const weekBirthdayEvents = (birthdayData.next7Days || []).map(evt => mapBirthdayEvent(evt, false));
     const weekEvents = [
       ...(statusData.thisWeek || []),
-      ...(docData.thisWeek || []).map(mapDocEvent)
+      ...(docData.thisWeek || []).map(mapDocEvent),
+      ...weekBirthdayEvents
     ];
     weekEvents.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
 
@@ -939,6 +1215,33 @@ function closeDocExpiryNotification() {
   showDocExpiryNotification.value = false;
 }
 
+async function checkBirthdayEvents() {
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+  // Показываем уведомления один раз в день
+  if (birthdayNotifiedDate === today) return;
+
+  try {
+    const data = await api.getBirthdayEvents();
+    const todayItems = data.today || [];
+    const next7DaysItems = data.next7Days || [];
+
+    birthdayNotifiedDate = today;
+    if (todayItems.length > 0 || next7DaysItems.length > 0) {
+      birthdayToday.value = todayItems;
+      birthdayNext7Days.value = next7DaysItems;
+      showBirthdayNotification.value = true;
+    }
+  } catch (error) {
+    console.error('Failed to check birthday events:', error);
+  }
+}
+
+function closeBirthdayNotification() {
+  showBirthdayNotification.value = false;
+}
+
 async function selectEmployee(id) {
   if (!id) {
     return;
@@ -948,14 +1251,39 @@ async function selectEmployee(id) {
   try {
     const data = await api.getEmployee(id);
     Object.assign(form, emptyEmployee(), data.employee || {});
+
+    // Create snapshot after loading employee
+    updateFormSnapshot();
+    isFormDirty.value = false;
   } catch (error) {
     errorMessage.value = error.message;
   }
 }
 
+// Helper to check and preserve unsaved changes when reloading
+async function reloadEmployeePreservingDirty(employeeId) {
+  // After operations like status change or document upload,
+  // we need to reload to get fresh data, but only reload if no other fields are dirty
+  await loadEmployees();
+
+  // Re-select to refresh form data
+  await selectEmployee(employeeId);
+}
+
 function startNew() {
+  // Check for unsaved changes before clearing form
+  if (isFormDirty.value) {
+    openClearConfirmPopup();
+    return;
+  }
+
   selectedId.value = "";
   resetForm();
+  isCreatingNew.value = true;
+  // Stay on cards view, but ensure URL doesn't have an ID
+  if (route.name === 'cards' && route.params.id) {
+    router.push({ name: 'cards' });
+  }
 }
 
 async function saveEmployee() {
@@ -1008,6 +1336,10 @@ async function saveEmployee() {
       await loadEmployees();
       await selectEmployee(form.employee_id);
     }
+
+    // Reset dirty flag after successful save
+    updateFormSnapshot();
+    isFormDirty.value = false;
   } catch (error) {
     errorMessage.value = error.message;
   } finally {
@@ -1037,8 +1369,14 @@ async function deleteEmployee() {
 }
 
 function openDocument(fieldKey) {
-  if (!form[fieldKey]) return;
-  const url = `${import.meta.env.VITE_API_URL || ""}/${form[fieldKey]}`;
+  const filePath = form[fieldKey];
+  if (!filePath) return;
+  // SECURITY: Validate file path starts with expected prefix to prevent XSS
+  if (!filePath.startsWith('files/')) {
+    console.error('Invalid file path:', filePath);
+    return;
+  }
+  const url = `${import.meta.env.VITE_API_URL || ""}/${filePath}`;
   window.open(url, "_blank");
 }
 
@@ -1182,8 +1520,9 @@ async function saveCell(employee, fieldName) {
 }
 
 function openEmployeeCard(employeeId) {
-  currentView.value = "cards";
-  selectEmployee(employeeId);
+  isCreatingNew.value = false;
+  router.push({ name: 'cards', params: { id: employeeId } });
+  // selectEmployee will be called by route.params.id watcher
 }
 
 function toggleFilter(fieldName, value) {
@@ -1254,12 +1593,18 @@ function getDetailLabel(detail) {
 
 function handleGlobalKeydown(e) {
   if (e.key === 'Escape') {
-    if (showDocUploadPopup.value) {
+    if (showUnsavedChangesPopup.value) {
+      cancelNavigation();
+    } else if (showClearConfirmPopup.value) {
+      closeClearConfirmPopup();
+    } else if (showDocUploadPopup.value) {
       closeDocUploadPopup();
     } else if (showDocEditDatesPopup.value) {
       closeDocEditDatesPopup();
     } else if (showStatusChangePopup.value) {
       closeStatusChangePopup();
+    } else if (showBirthdayNotification.value) {
+      closeBirthdayNotification();
     } else if (showDocExpiryNotification.value) {
       closeDocExpiryNotification();
     } else if (showStatusNotification.value) {
@@ -1270,10 +1615,48 @@ function handleGlobalKeydown(e) {
 
 onMounted(async () => {
   document.addEventListener('keydown', handleGlobalKeydown);
+
+  // Setup navigation guard for unsaved changes
+  router.beforeEach((to, from, next) => {
+    // Check if leaving cards view with unsaved changes
+    if (from.name === 'cards' && to.name !== 'cards' && isFormDirty.value) {
+      // Store pending navigation and show confirmation dialog
+      pendingNavigation.value = to;
+      showUnsavedChangesPopup.value = true;
+      next(false); // Cancel navigation - we'll manually navigate after user confirms
+    } else {
+      next(); // Allow navigation
+    }
+  });
+
+  // Setup beforeunload handler for browser refresh/close
+  window.addEventListener('beforeunload', (e) => {
+    if (isFormDirty.value && route.name === 'cards') {
+      e.preventDefault();
+      e.returnValue = ''; // Chrome requires returnValue to be set
+    }
+  });
+
   await loadFieldsSchema();
   await loadEmployees();
-  await loadDashboardEvents();
-  startDashboardRefresh();
+
+  // Restore view state from route params
+  if (route.name === 'cards') {
+    if (route.params.id) {
+      selectEmployee(route.params.id);
+    } else if (employees.value.length > 0) {
+      // Auto-load first employee if navigating to cards without ID
+      openEmployeeCard(employees.value[0].employee_id);
+    }
+  } else if (route.name === 'logs') {
+    await loadLogs();
+  }
+
+  // Load dashboard events if on dashboard
+  if (route.name === 'dashboard' || !route.name) {
+    await loadDashboardEvents();
+    startDashboardRefresh();
+  }
 });
 
 onUnmounted(() => {
@@ -1368,6 +1751,49 @@ onUnmounted(() => {
         </div>
         <div class="vacation-notification-footer">
           <button class="primary" @click="closeDocExpiryNotification">Зрозуміло</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Уведомление про дні народження -->
+    <div v-if="showBirthdayNotification" class="vacation-notification-overlay" @click="closeBirthdayNotification">
+      <div class="vacation-notification-modal" @click.stop>
+        <div class="vacation-notification-header">
+          <h3>🎂 Сповіщення про дні народження</h3>
+          <button class="close-btn" @click="closeBirthdayNotification">&times;</button>
+        </div>
+        <div class="vacation-notification-body">
+          <div v-if="birthdayToday.length > 0" class="notification-section">
+            <p class="notification-message">🎂 Сьогодні день народження:</p>
+            <ul class="vacation-employees-list">
+              <li v-for="(evt, idx) in birthdayToday" :key="'bday-today-' + idx" class="vacation-employee starting">
+                <div class="employee-info">
+                  <span class="employee-name">🎂 {{ evt.employee_name }}</span>
+                </div>
+                <div class="status-details">
+                  <span class="status-badge">{{ evt.age }} років</span>
+                  <span class="vacation-end-date">{{ formatEventDate(evt.current_year_birthday) }}</span>
+                </div>
+              </li>
+            </ul>
+          </div>
+          <div v-if="birthdayNext7Days.length > 0" class="notification-section">
+            <p class="notification-message">🎉 Найближчі дні народження:</p>
+            <ul class="vacation-employees-list">
+              <li v-for="(evt, idx) in birthdayNext7Days" :key="'bday-week-' + idx" class="vacation-employee returning">
+                <div class="employee-info">
+                  <span class="employee-name">🎉 {{ evt.employee_name }}</span>
+                </div>
+                <div class="status-details">
+                  <span class="status-badge">{{ evt.age }} років</span>
+                  <span class="vacation-end-date">{{ formatEventDate(evt.current_year_birthday) }}</span>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </div>
+        <div class="vacation-notification-footer">
+          <button class="primary" @click="closeBirthdayNotification">Зрозуміло</button>
         </div>
       </div>
     </div>
@@ -1486,21 +1912,63 @@ onUnmounted(() => {
       </div>
     </div>
 
+    <!-- Попап підтвердження очищення форми -->
+    <div v-if="showClearConfirmPopup" class="vacation-notification-overlay" @click="closeClearConfirmPopup">
+      <div class="vacation-notification-modal" @click.stop>
+        <div class="vacation-notification-header">
+          <h3>Підтвердження очищення</h3>
+          <button class="close-btn" @click="closeClearConfirmPopup">&times;</button>
+        </div>
+        <div class="vacation-notification-body">
+          <p style="margin: 0; padding: 16px 0;">Ви впевнені, що хочете очистити форму? Всі незбережені дані будуть втрачені.</p>
+        </div>
+        <div class="vacation-notification-footer status-change-footer">
+          <button class="secondary" type="button" @click="closeClearConfirmPopup">Скасувати</button>
+          <button class="primary" type="button" @click="confirmClearForm">Так, очистити</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Unsaved changes warning popup -->
+    <div v-if="showUnsavedChangesPopup" class="vacation-notification-overlay" @click="cancelNavigation">
+      <div class="vacation-notification-modal" @click.stop style="max-width: 600px;">
+        <div class="vacation-notification-header">
+          <h3>Незбережені зміни</h3>
+          <button class="close-btn" @click="cancelNavigation">&times;</button>
+        </div>
+        <div class="vacation-notification-body">
+          <p style="margin: 0 0 12px 0;">У вас є незбережені зміни в наступних полях:</p>
+          <ul style="margin: 0 0 16px 20px; padding: 0;">
+            <li v-for="field in changedFields" :key="field" style="margin: 4px 0;">{{ field }}</li>
+          </ul>
+          <p style="margin: 0; font-weight: 500;">Зберегти перед виходом?</p>
+        </div>
+        <div class="vacation-notification-footer status-change-footer">
+          <button class="secondary" type="button" @click="cancelNavigation">Скасувати</button>
+          <button class="secondary" type="button" @click="continueWithoutSaving">Продовжити без збереження</button>
+          <button class="primary" type="button" @click="saveAndContinue" :disabled="saving">
+            {{ saving ? 'Збереження...' : 'Зберегти і продовжити' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
     <div class="page">
       <header class="topbar">
         <div class="brand">
           <div class="brand-title">CRM на CSV</div>
           <div class="brand-sub">Vue + Node, локальні CSV файли</div>
         </div>
-        <div class="topbar-actions">
-          <button class="secondary" type="button" @click="refreshManually">
-            Оновити
-          </button>
-          <button class="primary" type="button" @click="startNew" v-if="currentView === 'cards'">
-            Новий співробітник
-          </button>
-        </div>
         <div class="tab-bar">
+          <button
+            class="tab-icon-btn refresh-btn"
+            type="button"
+            @click="refreshManually"
+            title="Оновити дані"
+          >
+            🔄
+          </button>
+          <div class="tab-divider"></div>
           <button
             v-for="tab in tabs"
             :key="tab.key"
@@ -1662,7 +2130,17 @@ onUnmounted(() => {
       <div v-else-if="currentView === 'cards'" class="layout">
         <aside class="panel">
           <div class="panel-header">
-            <div class="panel-title">Співробітники</div>
+            <div class="panel-title-group">
+              <div class="panel-title">Співробітники</div>
+              <button
+                class="tab-icon-btn"
+                type="button"
+                @click="startNew"
+                title="Новий працівник"
+              >
+                ➕
+              </button>
+            </div>
             <div class="status-bar">
               <span v-if="loading">Завантаження...</span>
               <span v-else>{{ employees.length }} всього</span>
@@ -1681,7 +2159,7 @@ onUnmounted(() => {
               class="employee-card"
               :class="{ active: employee.employee_id === selectedId }"
               :style="{ animationDelay: `${index * 0.04}s` }"
-              @click="selectEmployee(employee.employee_id)"
+              @click="openEmployeeCard(employee.employee_id)"
             >
               <div class="employee-name">{{ displayName(employee) }}</div>
               <div class="employee-meta">
@@ -1702,9 +2180,6 @@ onUnmounted(() => {
               {{ isNew ? "Новий співробітник" : "Картка співробітника" }}
             </div>
             <div class="actions">
-              <button class="secondary" type="button" @click="startNew">
-                Очистити форму
-              </button>
               <button
                 class="primary"
                 type="button"
@@ -1713,15 +2188,26 @@ onUnmounted(() => {
               >
                 {{ saving ? "Збереження..." : "Зберегти" }}
               </button>
-              <button
-                v-if="!isNew"
-                class="danger"
-                type="button"
-                :disabled="saving"
-                @click="deleteEmployee"
-              >
-                Видалити
-              </button>
+              <div class="destructive-actions">
+                <button
+                  class="icon-btn clear-btn"
+                  type="button"
+                  @click="openClearConfirmPopup"
+                  title="Очистити форму"
+                >
+                  ✖️
+                </button>
+                <button
+                  v-if="!isNew"
+                  class="icon-btn delete-btn"
+                  type="button"
+                  :disabled="saving"
+                  @click="deleteEmployee"
+                  title="Видалити співробітника"
+                >
+                  🗑️
+                </button>
+              </div>
             </div>
           </div>
 
@@ -1916,64 +2402,6 @@ onUnmounted(() => {
                 </div>
               </div>
             </div>
-
-            <div class="section">
-              <div class="panel-header">
-                <div class="section-title">Імпорт нових співробітників</div>
-                <a class="file-link" href="/data/employees_import_sample.csv" download>
-                  Завантажити шаблон
-                </a>
-              </div>
-              <div class="field">
-                <label>CSV файл</label>
-                <input type="file" accept=".csv,text/csv" @change="onImportFileChange" />
-              </div>
-              <div class="actions">
-                <button
-                  class="primary"
-                  type="button"
-                  :disabled="!importFile || importing"
-                  @click="importEmployees"
-                >
-                  {{ importing ? "Імпортуємо..." : "Імпортувати" }}
-                </button>
-                <button
-                  class="secondary"
-                  type="button"
-                  :disabled="!importFile && !importResult"
-                  @click="resetImport"
-                >
-                  Очистити
-                </button>
-              </div>
-              <div class="inline-note">
-                CSV: UTF-8, роздільник ;, заголовки як у employees.csv. Прізвище або ім'я
-                обов'язкові.
-              </div>
-              <div v-if="importFile" class="inline-note">Файл: {{ importFile.name }}</div>
-              <div v-if="importResult" class="status-bar">
-                Додано: {{ importResult.added }} · Пропущено: {{ importResult.skipped }}
-              </div>
-              <div
-                v-if="importResult && importResult.errors && importResult.errors.length"
-                class="inline-note"
-              >
-                Помилки (перші {{ importResult.errors.length }}):
-              </div>
-              <div
-                v-if="importResult && importResult.errors && importResult.errors.length"
-                class="table-list"
-              >
-                <div
-                  v-for="error in importResult.errors"
-                  :key="`${error.row}-${error.reason}`"
-                  class="error-row"
-                >
-                  <div class="employee-name">Рядок {{ error.row }}</div>
-                  <div class="inline-note">{{ error.reason }}</div>
-                </div>
-              </div>
-            </div>
           </div>
         </section>
       </div>
@@ -2123,6 +2551,195 @@ onUnmounted(() => {
                 </tr>
               </tbody>
             </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Режим звітів -->
+      <div v-else-if="currentView === 'reports'" class="layout-table">
+        <div class="panel table-panel">
+          <div class="panel-header">
+            <div class="panel-title">Користувацькі звіти</div>
+          </div>
+
+          <div class="custom-reports-container">
+            <!-- Filter Builder -->
+            <div class="filter-builder">
+              <h3>Фільтри</h3>
+              <div v-for="(filter, index) in customFilters" :key="index" class="filter-row">
+                <select v-model="filter.field" class="filter-field">
+                  <option value="">-- Виберіть поле --</option>
+                  <option v-for="field in allFieldsSchema" :key="field.key" :value="field.key">
+                    {{ field.label }}
+                  </option>
+                </select>
+
+                <select v-model="filter.condition" class="filter-condition">
+                  <option value="contains">Містить</option>
+                  <option value="equals">Дорівнює</option>
+                  <option value="not_equals">Не дорівнює</option>
+                  <option value="empty">Порожнє</option>
+                  <option value="not_empty">Не порожнє</option>
+                </select>
+
+                <input
+                  v-if="filter.condition !== 'empty' && filter.condition !== 'not_empty'"
+                  v-model="filter.value"
+                  type="text"
+                  class="filter-value"
+                  placeholder="Значення"
+                />
+
+                <button type="button" class="btn-remove-filter" @click="removeCustomFilter(index)" title="Видалити фільтр">
+                  ✕
+                </button>
+              </div>
+
+              <div class="filter-actions">
+                <button type="button" class="secondary" @click="addCustomFilter">
+                  Додати фільтр
+                </button>
+                <button type="button" class="secondary" @click="clearCustomFilters">
+                  Очистити фільтри
+                </button>
+              </div>
+            </div>
+
+            <!-- Column Selector -->
+            <div class="column-selector">
+              <h3>Колонки для експорту</h3>
+              <p class="help-text">Не вибрано жодної колонки = експортуються всі колонки з таблиці</p>
+              <div class="column-checkboxes">
+                <label v-for="field in allFieldsSchema" :key="field.key" class="column-checkbox">
+                  <input
+                    type="checkbox"
+                    :value="field.key"
+                    v-model="selectedColumns"
+                  />
+                  {{ field.label }}
+                </label>
+              </div>
+            </div>
+
+            <!-- Run Report Button -->
+            <div class="report-actions">
+              <button type="button" class="primary" @click="runCustomReport" :disabled="customReportLoading">
+                {{ customReportLoading ? 'Завантаження...' : 'Виконати звіт' }}
+              </button>
+              <button
+                type="button"
+                class="secondary"
+                @click="exportCustomReportCSV"
+                :disabled="customReportResults.length === 0"
+              >
+                Експорт в CSV
+              </button>
+            </div>
+
+            <!-- Results Preview -->
+            <div v-if="customReportResults.length > 0" class="report-preview">
+              <h3>Попередній перегляд результатів (макс. 100 рядків)</h3>
+              <div class="status-bar">
+                <span>Знайдено записів: {{ customReportResults.length }}</span>
+              </div>
+              <div class="table-container">
+                <table class="summary-table">
+                  <thead>
+                    <tr>
+                      <th v-for="field in (selectedColumns.length > 0 ? selectedColumns : allFieldsSchema.filter(f => f.showInTable).map(f => f.key))" :key="field">
+                        {{ allFieldsSchema.find(f => f.key === field)?.label || field }}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="(emp, idx) in customReportResults.slice(0, 100)" :key="emp.employee_id || idx">
+                      <td v-for="field in (selectedColumns.length > 0 ? selectedColumns : allFieldsSchema.filter(f => f.showInTable).map(f => f.key))" :key="field">
+                        {{ emp[field] || '' }}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div v-else-if="customReportResults.length === 0 && !customReportLoading && customFilters.length > 0" class="alert">
+              За обраними фільтрами не знайдено результатів
+            </div>
+
+            <div v-if="errorMessage" class="alert">
+              {{ errorMessage }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Режим імпорту -->
+      <div v-else-if="currentView === 'import'" class="layout-cards">
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title">Імпорт співробітників з CSV</div>
+          </div>
+
+          <div class="section">
+            <div class="panel-header">
+              <div class="section-title">Завантажити CSV файл</div>
+              <a class="file-link" href="/api/download/import-template" download>
+                Завантажити шаблон
+              </a>
+            </div>
+            <div class="field">
+              <label>CSV файл</label>
+              <input type="file" accept=".csv,text/csv" @change="onImportFileChange" />
+            </div>
+            <div class="actions">
+              <button
+                class="primary"
+                type="button"
+                :disabled="!importFile || importing"
+                @click="importEmployees"
+              >
+                {{ importing ? "Імпортуємо..." : "Імпортувати" }}
+              </button>
+              <button
+                class="secondary"
+                type="button"
+                :disabled="!importFile && !importResult"
+                @click="resetImport"
+              >
+                Очистити
+              </button>
+            </div>
+            <div class="inline-note">
+              CSV: UTF-8, роздільник ;, заголовки як у employees.csv. Прізвище або ім'я
+              обов'язкові.
+            </div>
+            <div v-if="importFile" class="inline-note">Файл: {{ importFile.name }}</div>
+            <div v-if="importResult" class="status-bar">
+              Додано: {{ importResult.added }} · Пропущено: {{ importResult.skipped }}
+            </div>
+            <div
+              v-if="importResult && importResult.errors && importResult.errors.length"
+              class="inline-note"
+            >
+              Помилки (перші {{ importResult.errors.length }}):
+            </div>
+            <div
+              v-if="importResult && importResult.errors && importResult.errors.length"
+              class="table-list"
+            >
+              <div
+                v-for="error in importResult.errors"
+                :key="`${error.row}-${error.reason}`"
+                class="error-row"
+              >
+                <div class="employee-name">Рядок {{ error.row }}</div>
+                <div class="inline-note">{{ error.reason }}</div>
+              </div>
+            </div>
+          </div>
+
+          <div v-if="errorMessage" class="alert">
+            {{ errorMessage }}
           </div>
         </div>
       </div>

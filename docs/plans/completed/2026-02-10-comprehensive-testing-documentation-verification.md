@@ -1,0 +1,510 @@
+# Comprehensive Project Testing - Verify CRM System Against Documentation
+
+This plan uses multiple AI agents to systematically test all features documented in CLAUDE.md and README.md to ensure the application works as specified.
+
+## Context
+
+- Files involved: All files (server/src/*, client/src/*, data/*, run.sh, stop.sh)
+- Related patterns: Manual testing with AI verification
+- Dependencies: Running application (./run.sh), test data in data/ directory
+
+## Approach
+
+- Testing approach: Manual testing with AI agent verification (no automated test suite exists)
+- Each task will be verified by running the application and testing features systematically
+- Document all findings in a test report
+
+## Tasks
+
+### TASK 1: Environment Setup and Initial Verification
+
+**Files:**
+- Verify: run.sh, stop.sh
+- Verify: server/package.json, client/package.json
+- Verify: data/fields_schema.csv, data/config.csv
+
+**Steps:**
+- [x] Stop any running instances with ./stop.sh
+- [x] Clean start with ./run.sh in DEV mode
+- [x] Verify backend starts on port 3000
+- [x] Verify frontend starts on port 5173
+- [x] Verify http://localhost:5173 loads successfully
+- [x] Check browser console for errors
+- [x] Verify data files exist: employees.csv, fields_schema.csv, config.csv, logs.csv
+- [x] Document any startup issues or warnings
+
+### TASK 2: Backend API Endpoints Testing
+
+**Files:**
+- Test: server/src/index.js (all API endpoints)
+- Test: server/src/store.js (data operations)
+- Test: server/src/csv.js (CSV operations)
+- Test: server/src/schema.js (schema validation)
+
+**Steps:**
+- [x] Test GET /api/employees - verify returns employee array
+- [x] Test GET /api/employees/:id - verify returns single employee
+- [x] Test POST /api/employees - create test employee, verify ID generation
+- [x] Test PUT /api/employees/:id - update test employee, verify changes persist
+- [x] Test DELETE /api/employees/:id - delete test employee, verify file cleanup
+- [x] Test GET /api/fields-schema - verify returns schema with groups, tableFields, allFields
+- [x] Test GET /api/config - verify returns config object from config.csv
+- [x] Test GET /api/logs - verify returns audit log entries sorted by timestamp desc
+- [x] Test GET /api/document-expiry - verify returns expiry events (today + 7 days)
+- [x] Test GET /api/birthday-events - verify returns birthday events (today + 7 days)
+- [x] Test GET /api/reports/custom - verify filtering with conditions (contains, equals, empty, etc.)
+- [x] Test POST /api/employees/:id/files - upload PDF and image files with dates
+- [x] Test DELETE /api/employees/:id/files/:fieldName - delete document
+- [x] Test POST /api/employees/:id/open-folder - verify folder opens in OS
+- [x] Test POST /api/open-data-folder - verify data folder opens in OS
+- [x] Test POST /api/employees/import - import CSV with valid and invalid data
+- [x] Verify all responses have correct status codes
+- [x] Verify all operations log to logs.csv
+- [x] Document any API failures or unexpected behaviors
+
+### TASK 3: Dashboard View Testing
+
+**Files:**
+- Test: client/src/App.vue (Dashboard section)
+- Verify: Dashboard stat cards, timeline, auto-refresh, reports
+
+**Steps:**
+- [x] Navigate to / (home/dashboard)
+- [x] Verify stat cards display (Total, per-status counts)
+- [x] Click each stat card, verify inline expand shows filtered employee list
+- [x] Verify only one card expanded at a time (accordion behavior)
+- [x] Click employee name in expanded list, verify navigates to /cards/:id
+- [x] Verify "Хто відсутній зараз" report auto-expands on mount
+- [x] Verify timeline has two columns: "Сьогодні" and "Найближчі 7 днів"
+- [x] Verify timeline shows status change events with correct emoji (✈️, 🏥, ℹ️)
+- [x] Verify timeline shows document expiry events (⚠️ today, 📄 within 7 days)
+- [x] Verify timeline shows birthday events (🎂 today, 🎉 upcoming)
+- [x] Click employee name in timeline, verify navigates to card
+- [x] Verify auto-refresh interval updates data
+- [x] Verify footer shows last update timestamp
+- [x] Verify no hardcoded status values (all from schema)
+- [x] Document any UI issues or missing features
+
+### TASK 4: Employee Cards View Testing
+
+**Files:**
+- Test: client/src/App.vue (Cards view)
+- Verify: Form fields, document uploads, status popup, validation
+
+**Steps:**
+- [x] Navigate to /cards, verify auto-loads first employee
+- [x] Navigate to /cards/:id with specific ID, verify correct employee loads
+- [x] Verify all form fields render according to field_group from schema
+- [x] Verify field types match schema (text, select, textarea, date, email, tel, number)
+- [x] Verify dropdown options come from field_options in schema (no hardcoded values)
+- [x] Test "Новий працівник" (➕) button, verify creates new empty form
+- [x] Fill all fields for new employee, click "Зберегти", verify creates employee
+- [x] Verify auto-generated sequential numeric ID (not UUID)
+- [x] Edit existing employee fields, click "Зберегти", verify updates persist
+- [x] Verify changes logged to logs.csv with field-level tracking
+- [x] Test "Очистити форму" (🧹) button, verify confirmation dialog appears
+- [x] Confirm clear, verify form resets
+- [x] Test "Видалити співробітника" (🗑️) button, verify confirmation dialog
+- [x] Confirm delete, verify employee deleted and files removed
+- [x] Verify delete logged to logs.csv
+- [x] Test unsaved changes warning: edit field, try to navigate, verify dialog shows
+- [x] Verify dialog lists changed fields with labels
+- [x] Test all three dialog buttons: "Скасувати", "Продовжити без збереження", "Зберегти і продовжити"
+- [x] Edit field, refresh browser, verify browser beforeunload warning
+- [x] Verify ESC key closes dialogs
+- [x] Document any form issues or validation problems
+
+### TASK 5: Document Management Testing
+
+**Files:**
+- Test: client/src/App.vue (Documents section)
+- Test: server/src/index.js (file upload endpoints)
+- Verify: Upload popup, dates, expiry tracking, folder operations
+
+**Steps:**
+- [x] Navigate to employee card with documents section
+- [x] Verify all file fields from schema appear (field_type=file)
+- [x] Click "Завантажити" button for document, verify popup opens
+- [x] Upload PDF file, set issue_date and expiry_date, verify upload succeeds
+- [x] Verify file saved with correct name (field_name + extension)
+- [x] Verify file path written to employees.csv
+- [x] Verify dates saved to {field}_issue_date and {field}_expiry_date columns
+- [x] Upload image (jpg, png, gif, webp), verify upload succeeds
+- [x] Edit dates for existing document without re-uploading, verify dates update
+- [x] Click document link, verify opens in browser
+- [x] Click "Open Folder" button, verify opens employee folder in OS
+- [x] Delete document, verify file removed and path cleared in CSV
+- [x] Set expiry_date to today, reload page, verify expiry notification appears
+- [x] Set expiry_date to tomorrow, verify appears in timeline
+- [x] Verify document expiry emoji correct (⚠️ today, 📄 within 7 days)
+- [x] Test file size limit (10MB max), verify larger files rejected
+- [x] Test unsupported file types, verify rejected
+- [x] Document any document management issues
+
+### TASK 6: Status Change System Testing
+
+**Files:**
+- Test: client/src/App.vue (Status change popup and checkStatusChanges)
+- Test: server/src/store.js (status field updates)
+- Verify: Popup, automatic status restore, notifications, positional convention
+
+**Steps:**
+- [x] Navigate to employee card
+- [x] Verify employment_status field is read-only
+- [x] Click "Змінити статус" button, verify popup opens
+- [x] Verify popup shows all status options EXCEPT options[0] (working status)
+- [x] Select status (e.g., vacation/options[2]), set start_date and end_date
+- [x] Click "Застосувати", verify status updates
+- [x] Verify status_start_date and status_end_date saved to CSV
+- [x] Verify status field hidden from form (no field_group)
+- [x] Set end_date to yesterday, reload page
+- [x] Verify checkStatusChanges() auto-restores options[0] (working status)
+- [x] Verify status_start_date and status_end_date cleared
+- [x] Set status change for today, reload page
+- [x] Verify notification popup appears with correct emoji (✈️ vacation, 🏥 sick leave, ℹ️ other)
+- [x] Verify notification shows two sections: "changing today" and "returning today"
+- [x] Verify timeline shows status events with correct dates
+- [x] Click "Скинути статус" button, verify restores options[0] and clears dates
+- [x] Verify all status values come from schema (no hardcoded strings)
+- [x] Test with different status types (sick leave, vacation, custom)
+- [x] Document any status management issues
+
+### TASK 7: Birthday Notifications Testing
+
+**Files:**
+- Test: client/src/App.vue (checkBirthdayEvents function)
+- Test: server/src/index.js (GET /api/birthday-events)
+- Verify: Notification popup, timeline integration, age calculation
+
+**Steps:**
+- [x] Create/edit employee with birth_date set to today
+- [x] Reload page, verify birthday notification popup appears
+- [x] Verify popup shows 🎂 emoji for today's birthday
+- [x] Verify popup shows employee name and calculated age
+- [x] Create employee with birth_date set to tomorrow
+- [x] Reload page, verify birthday appears in timeline "Сьогодні" section (if today)
+- [x] Create employee with birth_date in 5 days
+- [x] Verify appears in timeline "Найближчі 7 днів" section with 🎉 emoji
+- [x] Click employee name in timeline, verify navigates to card
+- [x] Verify birthday events appear alongside status and document events
+- [x] Test age calculation with various birth years
+- [x] Test leap year birthdays (Feb 29)
+- [x] Document any birthday tracking issues
+
+### TASK 8: Summary Table View Testing
+
+**Files:**
+- Test: client/src/App.vue (Table view)
+- Verify: Inline editing, filters, empty value filter, ID navigation
+
+**Steps:**
+- [x] Navigate to /table
+- [x] Verify table shows only columns with show_in_table=yes from schema
+- [x] Verify ID column center-aligned with title attribute
+- [x] Double-click on cell with editable_in_table=yes, verify inline editing activates
+- [x] Edit value, press Enter or click outside, verify saves and updates CSV
+- [x] Double-click on ID cell, verify navigates to /cards/:id
+- [x] Test multi-select filters for select fields
+- [x] Check multiple values in one filter, verify OR logic (shows rows matching any)
+- [x] Test "(Пусто)" empty value checkbox, verify filters rows with empty values
+- [x] Apply multiple column filters, verify AND logic (all filters must match)
+- [x] Click "Clear Filters" button, verify all filters reset
+- [x] Verify filter state persists when navigating away and back
+- [x] Verify columnFilters uses __EMPTY__ sentinel for empty checks
+- [x] Test table with 100+ employees, verify performance
+- [x] Document any table issues or filter bugs
+
+### TASK 9: Custom Reports Testing
+
+**Files:**
+- Test: client/src/App.vue (Reports view)
+- Test: server/src/index.js (GET /api/reports/custom)
+- Verify: Filter builder, preview, CSV export, column selection
+
+**Steps:**
+- [x] Navigate to /reports
+- [x] Verify filter builder shows all fields from schema
+- [x] Add filter: select field, select condition (contains, equals, not_equals, empty, not_empty)
+- [x] For text field, select "contains", enter value, click "Додати фільтр"
+- [x] Verify filter appears in active filters list with ✖️ remove button
+- [x] For select field, verify condition dropdown shows field options
+- [x] For date field, verify date picker appears for value input
+- [x] Add multiple filters, verify preview table shows results (max 100 rows)
+- [x] Verify AND logic (all filters must match)
+- [x] Test "empty" and "not_empty" conditions (value input should be disabled)
+- [x] Remove filter by clicking ✖️, verify preview updates
+- [x] Click "Очистити фільтри", verify all filters cleared
+- [x] Select/deselect columns in column selector
+- [x] Click "Експорт в CSV", verify downloads file
+- [x] Verify filename format: report_YYYY-MM-DD_HH-mm-ss.csv
+- [x] Open exported CSV in Excel, verify UTF-8 BOM encoding (no garbled Cyrillic)
+- [x] Verify only selected columns included
+- [x] Verify filtered data matches preview
+- [x] Test with complex filters (5+ conditions), verify performance
+- [x] Document any report generation issues
+
+### TASK 10: CSV Import Testing
+
+**Files:**
+- Test: client/src/App.vue (Import view)
+- Test: server/src/index.js (POST /api/employees/import)
+- Test: server/src/sync-template.js (template sync)
+- Verify: Template download, upload, validation, error handling
+
+**Steps:**
+- [x] Navigate to /import
+- [x] Verify "Імпорт" tab appears in navigation
+- [x] Click "Завантажити шаблон CSV", verify downloads employees_import_sample.csv
+- [x] Open template in Excel, verify UTF-8 BOM encoding (no garbled text)
+- [x] Verify template headers match current schema (all fields from fields_schema.csv)
+- [x] Verify template auto-synced on server startup (run.sh calls sync-template.js)
+- [x] Create valid CSV: fill last_name, first_name, leave employee_id empty
+- [x] Upload CSV, verify import succeeds
+- [x] Verify auto-generated sequential IDs
+- [x] Verify all fields imported correctly (check employees.csv)
+- [x] Create CSV with existing employee_id, verify row skipped
+- [x] Create CSV with invalid data (wrong date format, invalid select value)
+- [x] Upload, verify validation errors shown with clear messages
+- [x] Create CSV with partial columns (only required fields)
+- [x] Upload, verify succeeds with empty values for missing fields
+- [x] Create CSV with wrong encoding (no BOM), verify handles correctly or shows error
+- [x] Verify import results show: rows added, rows skipped, errors
+- [x] Check logs.csv, verify CREATE entries for imported employees
+- [x] Document any import issues or validation problems
+
+### TASK 11: Audit Logs Testing
+
+**Files:**
+- Test: client/src/App.vue (Logs view)
+- Test: server/src/store.js (writeLog, cleanupLogs)
+- Test: data/logs.csv
+- Verify: Log entries, auto-cleanup, sorting, field labels
+
+**Steps:**
+- [x] Navigate to /logs
+- [x] Verify logs displayed sorted by timestamp descending (newest first)
+- [x] Create employee, verify CREATE log entry with employee_id and name
+- [x] Update employee field, verify UPDATE log entry with field_name, old_value, new_value
+- [x] Verify field_name shows human-readable label (e.g., "Пригодность (fit_status)")
+- [x] Delete employee, verify DELETE log entry
+- [x] Upload document, verify UPDATE log for file field
+- [x] Verify log_id is sequential
+- [x] Check data/config.csv for max_log_entries value
+- [x] Count rows in logs.csv, verify auto-cleanup when exceeds max_log_entries
+- [x] Trigger cleanup by creating many log entries (update employee 1000+ times)
+- [x] Verify oldest entries removed, newest preserved
+- [x] Verify logs.csv maintains UTF-8 BOM encoding
+- [x] Test log search/filter if implemented
+- [x] Document any logging issues or missing entries
+
+### TASK 12: URL Routing and Navigation Testing
+
+**Files:**
+- Test: client/src/main.js (Vue Router setup)
+- Test: client/src/App.vue (route handling)
+- Verify: All routes, persistent state, direct links, auto-load
+
+**Steps:**
+- [x] Test route / - verify dashboard loads
+- [x] Test route /cards - verify cards view loads, first employee auto-loaded
+- [x] Test route /cards/:id - verify specific employee loads by ID
+- [x] Refresh page at /cards/5, verify employee 5 still loaded (persistent state)
+- [x] Test route /table - verify table view loads
+- [x] Test route /reports - verify reports view loads
+- [x] Test route /import - verify import view loads
+- [x] Test route /logs - verify logs view loads
+- [x] Test invalid route (e.g., /nonexistent), verify handles gracefully
+- [x] Navigate between routes using tab bar buttons
+- [x] Verify currentView reactive state updates correctly
+- [x] Test browser back/forward buttons, verify navigation works
+- [x] Copy URL from address bar, open in new tab, verify works
+- [x] Test route navigation with unsaved changes, verify warning dialog
+- [x] Verify all navigation uses router.push() not reactive variables
+- [x] Document any routing issues or broken links
+
+### TASK 13: Data Model and CSV Operations Testing
+
+**Files:**
+- Test: server/src/csv.js (readCSV, writeCSV)
+- Test: server/src/store.js (all CRUD operations)
+- Test: data/employees.csv, data/fields_schema.csv, data/config.csv
+- Verify: Row normalization, BOM encoding, delimiter, file paths
+
+**Steps:**
+- [x] Read employees.csv in text editor, verify delimiter is ; (semicolon)
+- [x] Verify UTF-8 BOM present (hex editor or file command)
+- [x] Verify header row intact with all columns
+- [x] Create employee via API, verify row added to CSV
+- [x] Verify all columns present (row normalization with empty strings)
+- [x] Edit employees.csv directly in Excel, add/modify row
+- [x] Refresh browser, verify changes appear in UI
+- [x] Verify file paths stored as relative (files/employee_ID/filename.ext)
+- [x] Test with employee IDs: 1, 2, 3 (sequential numeric, not UUIDs)
+- [x] Delete employee via API, verify row removed from CSV
+- [x] Verify associated files directory deleted (files/employee_ID/)
+- [x] Edit fields_schema.csv, add new field
+- [x] Restart server, verify new field appears in UI
+- [x] Verify employees.csv auto-migrated with new column
+- [x] Edit config.csv, change max_log_entries
+- [x] Restart server, verify new config value used
+- [x] Test with special characters in values (quotes, semicolons, newlines)
+- [x] Verify CSV escaping/quoting works correctly
+- [x] Document any CSV parsing or encoding issues
+
+### TASK 14: Dynamic UI Schema Testing
+
+**Files:**
+- Test: server/src/schema.js (loadFieldsSchema)
+- Test: client/src/App.vue (schema-driven UI generation)
+- Test: data/fields_schema.csv
+- Verify: No hardcoded values, dynamic form groups, table columns, filters
+
+**Steps:**
+- [x] Read fields_schema.csv, verify 8 columns: field_order, field_name, field_label, field_type, field_options, show_in_table, field_group, editable_in_table
+- [x] Verify GET /api/fields-schema returns structured data (groups, tableFields, allFields)
+- [x] Verify form groups in cards view match field_group from schema
+- [x] Verify field labels match field_label from schema (no hardcoded labels)
+- [x] Verify dropdown options match field_options from schema (pipe-separated)
+- [x] Verify table columns match show_in_table=yes fields
+- [x] Verify inline editing enabled only for editable_in_table=yes fields
+- [x] Verify field types rendered correctly (text, select, textarea, date, email, tel, number, file)
+- [x] Test positional convention for employment_status options:
+  - options[0] = working status (e.g., "Працює")
+  - options[1] = fired status
+  - options[2] = vacation status (✈️ emoji)
+  - options[3] = sick leave status (🏥 emoji)
+- [x] Verify dashboard stat cards use all employment_status options dynamically
+- [x] Verify no hardcoded status strings in code (search for "Працює", "Відпустка", etc.)
+- [x] Change field_label in schema, verify UI updates after reload
+- [x] Add new option to field_options, verify appears in dropdown
+- [x] Change show_in_table from yes to no, verify column hidden
+- [x] Verify file fields (field_type=file) auto-generate _issue_date and _expiry_date columns
+- [x] Document any hardcoded values or schema violations
+
+### TASK 15: File Upload and Storage Testing
+
+**Files:**
+- Test: server/src/index.js (multer configuration)
+- Test: files/ directory
+- Verify: File naming, size limits, MIME types, folder structure
+
+**Steps:**
+- [x] Upload PDF file via document upload popup
+- [x] Verify file saved to files/employee_ID/ directory
+- [x] Verify filename format: {field_name}.{original_extension} (e.g., driver_license_file.pdf)
+- [x] Verify temporary file (temp_{timestamp}.*) renamed correctly
+- [x] Upload JPG image, verify saved as {field_name}.jpg
+- [x] Upload PNG, GIF, WEBP images, verify all accepted
+- [x] Try to upload 11MB file (exceeds 10MB limit), verify rejected
+- [x] Try to upload .exe or .zip file, verify rejected
+- [x] Upload multiple documents for same employee, verify all saved
+- [x] Delete employee via API, verify entire files/employee_ID/ directory removed
+- [x] Upload document, manually delete file from disk
+- [x] Reload page, verify UI handles missing file gracefully
+- [x] Test POST /api/employees/:id/open-folder, verify opens folder in OS
+- [x] Test on different OS (macOS open, Linux xdg-open, Windows explorer)
+- [x] Verify relative paths in CSV work across different machines
+- [x] Document any file handling issues
+
+### TASK 16: Configuration and Environment Testing
+
+**Files:**
+- Test: run.sh, stop.sh
+- Test: server/package.json, client/package.json
+- Test: client/vite.config.js
+- Verify: Dev mode, prod mode, port configuration, proxy
+
+**Steps:**
+- [x] Run ./stop.sh, verify stops all services
+- [x] Run ./run.sh (dev mode), verify backend on :3000, frontend on :5173
+- [x] Verify npm install runs automatically if node_modules missing
+- [x] Verify sync-template.js runs before starting services
+- [x] Test ./run.sh prod mode, verify backend on :3001, frontend on :5174
+- [x] Verify both modes work concurrently
+- [x] Check vite.config.js, verify proxy for /api, /files, /data to :3000
+- [x] Test API calls from frontend, verify proxy works
+- [x] Test hot module replacement (HMR) in dev mode
+- [x] Edit App.vue, verify changes reflect without full reload
+- [x] Kill backend process, verify frontend shows connection errors
+- [x] Restart backend, verify frontend reconnects
+- [x] Run npm run build in client/, verify production build succeeds
+- [x] Run npm run preview in client/, verify preview server works
+- [x] Document any configuration or startup issues
+
+### TASK 17: Cross-Feature Integration Testing
+
+**Files:**
+- Test: All components together
+- Verify: Data consistency, workflow completeness, edge cases
+
+**Steps:**
+- [x] Complete workflow: Create employee → Upload documents → Set status → Verify logs
+- [x] Create employee on one view (cards), verify appears in table and dashboard
+- [x] Update employee in table (inline edit), verify reflected in cards view
+- [x] Set vacation status with end_date in 2 days, verify timeline shows correctly
+- [x] Wait/modify end_date to yesterday, reload, verify auto-restores working status
+- [x] Upload document with expiry_date today, verify appears in notifications and timeline
+- [x] Create employee with birthday today, verify birthday notification and timeline entry
+- [x] Delete employee with documents, verify all data removed (CSV row, files, logs)
+- [x] Import CSV with 50 employees, verify dashboard stats update
+- [x] Filter table by multiple criteria, verify report matches
+- [x] Export filtered report to CSV, reimport, verify data consistency
+- [x] Edit fields_schema.csv (add field), restart, verify UI updates without data loss
+- [x] Test with empty database (no employees), verify UI handles gracefully
+- [x] Test with 500+ employees, verify performance acceptable
+- [x] Test concurrent edits (two browser tabs), verify no data corruption
+- [x] Test browser refresh during unsaved edits, verify warning works
+- [x] Document any integration issues or data inconsistencies
+
+### TASK 18: Documentation Verification
+
+**Files:**
+- Verify: CLAUDE.md, README.md, README.uk.md
+- Check: All documented features exist and work as described
+
+**Steps:**
+- [x] Read CLAUDE.md section by section
+- [x] For each documented feature, verify exists and works correctly
+- [x] Check API endpoints list against actual server/src/index.js routes
+- [x] Verify data model matches employees.csv columns
+- [x] Check CSV format notes against actual CSV files
+- [x] Verify startup commands work as documented
+- [x] Test all code examples in documentation
+- [x] Check README.md Quick Start section, verify steps work
+- [x] Verify README.uk.md matches README.md (same features)
+- [x] Check for outdated information or missing features
+- [x] Verify screenshots/examples (if any) are current
+- [x] Check .docs-sync.md checklist, verify sync status
+- [x] Document any discrepancies between docs and implementation
+
+### FINAL TASK: Test Report Generation
+
+**Files:**
+- Create: docs/test-reports/2026-02-10-comprehensive-test-report.md
+
+**Steps:**
+- [x] Compile all test results from Tasks 1-18
+- [x] Categorize findings: Working as documented, Issues found, Recommendations
+- [x] List all verified features with checkmarks
+- [x] List all bugs or issues with severity (Critical, High, Medium, Low)
+- [x] Provide reproduction steps for each issue
+- [x] Include screenshots or logs where relevant
+- [x] Suggest fixes or improvements
+- [x] Summarize overall project health
+- [x] Document test coverage: what was tested, what wasn't
+- [x] Create action items for any critical issues
+- [x] Save report to docs/test-reports/ directory
+- [x] Add summary to progress file
+
+## Validation
+
+- [x] All 18 tasks completed
+- [x] All documented features tested
+- [x] Test report created with findings
+- [x] Any critical issues documented with reproduction steps
+
+## Documentation
+
+- [x] Test report added to docs/test-reports/
+- [x] Update CLAUDE.md if testing reveals documentation errors
+- [x] Move this plan to docs/plans/completed/

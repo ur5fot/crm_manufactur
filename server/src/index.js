@@ -14,7 +14,9 @@ import {
   saveEmployees,
   loadLogs,
   addLog,
+  addLogs,
   loadFieldsSchema,
+  formatFieldNameWithLabel,
   getDashboardStats,
   getDashboardEvents,
   getDocumentExpiryEvents,
@@ -23,7 +25,9 @@ import {
   ROOT_DIR,
   initializeEmployeeColumns,
   getEmployeeColumnsSync,
-  getDocumentFieldsSync
+  getDocumentFieldsSync,
+  getBirthdayEvents,
+  loadConfig
 } from "./store.js";
 import { mergeRow, normalizeRows } from "./csv.js";
 
@@ -36,7 +40,8 @@ await initializeEmployeeColumns();
 app.use(cors());
 app.use(express.json({ limit: "10mb" }));
 app.use("/files", express.static(FILES_DIR));
-app.use("/data", express.static(DATA_DIR));
+// SECURITY: DATA_DIR static serving removed - sensitive CSV files should not be publicly accessible
+// app.use("/data", express.static(DATA_DIR));
 
 const importUpload = multer({
   storage: multer.memoryStorage(),
@@ -54,9 +59,17 @@ function getOpenCommand() {
 }
 
 function openFolder(targetPath) {
+  // SECURITY: Validate path is within allowed directories to prevent command injection
+  const resolvedPath = path.resolve(targetPath);
+  const allowedDirs = [path.resolve(FILES_DIR), path.resolve(DATA_DIR)];
+
+  if (!allowedDirs.some(dir => resolvedPath.startsWith(dir + path.sep) || resolvedPath === dir)) {
+    throw new Error('Path outside allowed directories');
+  }
+
   const command = getOpenCommand();
   return new Promise((resolve, reject) => {
-    execFile(command, [targetPath], (error) => {
+    execFile(command, [resolvedPath], (error) => {
       if (error) {
         reject(error);
         return;
@@ -119,6 +132,26 @@ app.get("/api/document-expiry", async (_req, res) => {
   }
 });
 
+app.get("/api/birthday-events", async (_req, res) => {
+  try {
+    const events = await getBirthdayEvents();
+    res.json(events);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get("/api/config", async (_req, res) => {
+  try {
+    const config = await loadConfig();
+    res.json(config);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get("/api/reports/statuses", async (req, res) => {
   const type = req.query.type;
   if (type !== 'current' && type !== 'month') {
@@ -128,6 +161,38 @@ app.get("/api/reports/statuses", async (req, res) => {
   try {
     const report = await getStatusReport(type);
     res.json(report);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get("/api/reports/custom", async (req, res) => {
+  try {
+    let filters = [];
+    let columns = null;
+
+    if (req.query.filters) {
+      try {
+        filters = JSON.parse(req.query.filters);
+      } catch {
+        res.status(400).json({ error: 'Invalid filters JSON' });
+        return;
+      }
+    }
+
+    if (req.query.columns) {
+      try {
+        columns = JSON.parse(req.query.columns);
+      } catch {
+        res.status(400).json({ error: 'Invalid columns JSON' });
+        return;
+      }
+    }
+
+    const { getCustomReport } = await import('./store.js');
+    const results = await getCustomReport(filters, columns);
+    res.json({ results });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
@@ -244,6 +309,16 @@ app.post("/api/employees/:id/open-folder", async (req, res) => {
   }
 });
 
+// API endpoint for downloading CSV import template
+app.get("/api/download/import-template", async (req, res) => {
+  try {
+    const templatePath = path.join(DATA_DIR, "employees_import_sample.csv");
+    res.download(templatePath, "employees_import_sample.csv");
+  } catch (error) {
+    res.status(500).json({ error: "Не удалось загрузить шаблон CSV" });
+  }
+});
+
 app.post("/api/employees/import", importUpload.single("file"), async (req, res) => {
   if (!req.file) {
     res.status(400).json({ error: "Файл CSV не найден" });
@@ -331,6 +406,15 @@ app.post("/api/employees/import", importUpload.single("file"), async (req, res) 
   });
 
   await saveEmployees(nextEmployees);
+
+  // Логирование импортированных сотрудников
+  for (let i = employees.length; i < nextEmployees.length; i++) {
+    const employee = nextEmployees[i];
+    const employeeName = [employee.last_name, employee.first_name, employee.middle_name]
+      .filter(Boolean)
+      .join(" ");
+    await addLog("CREATE", employee.employee_id, employeeName, "", "", "", "Створено співробітника (імпорт)");
+  }
 
   res.json({ added, skipped, errors });
 });
@@ -435,6 +519,49 @@ app.put("/api/employees/:id", async (req, res) => {
       res.status(400).json({ error: "Фамилия обязательна для заполнения" });
       return;
     }
+
+    // Валидация дат (формат и корректность)
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    const dateFields = getEmployeeColumnsSync().filter(col =>
+      col.includes('_date') || col === 'birth_date'
+    );
+
+    for (const dateField of dateFields) {
+      const dateValue = String(next[dateField] || "").trim();
+      if (dateValue) {
+        if (!dateRegex.test(dateValue)) {
+          res.status(400).json({ error: `Невірний формат дати для поля ${dateField} (очікується YYYY-MM-DD)` });
+          return;
+        }
+        if (isNaN(Date.parse(dateValue))) {
+          res.status(400).json({ error: `Невірна дата для поля ${dateField} (неіснуюча дата)` });
+          return;
+        }
+        // Validate calendar date: check that parsed date matches input (prevents Feb 30, Apr 31, etc.)
+        // Use UTC methods to avoid timezone issues with YYYY-MM-DD dates
+        const parsed = new Date(dateValue + 'T00:00:00Z');
+        const roundtrip = `${parsed.getUTCFullYear()}-${String(parsed.getUTCMonth() + 1).padStart(2, '0')}-${String(parsed.getUTCDate()).padStart(2, '0')}`;
+        if (roundtrip !== dateValue) {
+          res.status(400).json({ error: `Невірна календарна дата для поля ${dateField}: ${dateValue}` });
+          return;
+        }
+      }
+    }
+
+    // Валидация пар issue_date/expiry_date для документів
+    for (const docField of getDocumentFieldsSync()) {
+      const issueDateField = `${docField}_issue_date`;
+      const expiryDateField = `${docField}_expiry_date`;
+      const issueDate = String(next[issueDateField] || "").trim();
+      const expiryDate = String(next[expiryDateField] || "").trim();
+
+      if (issueDate && expiryDate && new Date(expiryDate) < new Date(issueDate)) {
+        res.status(400).json({
+          error: `Дата закінчення не може бути раніше дати видачі для документа ${docField}`
+        });
+        return;
+      }
+    }
     employees[index] = next;
 
     await saveEmployees(employees);
@@ -452,17 +579,21 @@ app.put("/api/employees/:id", async (req, res) => {
       }
     });
 
-    // Логируем каждое изменение
-    for (const field of changedFields) {
-      await addLog(
-        "UPDATE",
-        req.params.id,
-        employeeName,
-        field,
-        current[field] || "",
-        next[field] || "",
-        `Изменено поле: ${field}`
-      );
+    // Логируем все изменения одной batch-операцией для предотвращения race condition
+    if (changedFields.length > 0) {
+      const logEntries = await Promise.all(changedFields.map(async (field) => {
+        const formattedFieldName = await formatFieldNameWithLabel(field);
+        return {
+          action: "UPDATE",
+          employeeId: req.params.id,
+          employeeName: employeeName,
+          fieldName: formattedFieldName,
+          oldValue: current[field] || "",
+          newValue: next[field] || "",
+          details: `Изменено поле: ${formattedFieldName}`
+        };
+      }));
+      await addLogs(logEntries);
     }
 
     res.json({ employee: next });
@@ -492,6 +623,10 @@ app.delete("/api/employees/:id", async (req, res) => {
         .join(" ");
       await addLog("DELETE", req.params.id, employeeName, "", "", "", "Сотрудник удален");
     }
+
+    // Удаляем директорию с файлами сотрудника
+    const employeeDir = path.join(FILES_DIR, `employee_${req.params.id}`);
+    await fsPromises.rm(employeeDir, { recursive: true, force: true }).catch(() => {});
 
     res.status(204).end();
   } catch (err) {
@@ -561,18 +696,59 @@ app.post("/api/employees/:id/files", (req, res, next) => {
       return;
     }
 
-    // Валідація формату дат до збереження файлу
+    // Валідація формату та коректності дат до збереження файлу
     const issueDate = String(req.body.issue_date || "").trim();
     const expiryDate = String(req.body.expiry_date || "").trim();
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+
     if (issueDate && !dateRegex.test(issueDate)) {
       await fsPromises.unlink(req.file.path).catch(() => {});
       res.status(400).json({ error: "Невірний формат дати видачі (очікується YYYY-MM-DD)" });
       return;
     }
+    if (issueDate && isNaN(Date.parse(issueDate))) {
+      await fsPromises.unlink(req.file.path).catch(() => {});
+      res.status(400).json({ error: "Невірна дата видачі (неіснуюча дата)" });
+      return;
+    }
+    // Validate calendar date for issue_date
+    // Use UTC methods to avoid timezone issues with YYYY-MM-DD dates
+    if (issueDate) {
+      const parsed = new Date(issueDate + 'T00:00:00Z');
+      const roundtrip = `${parsed.getUTCFullYear()}-${String(parsed.getUTCMonth() + 1).padStart(2, '0')}-${String(parsed.getUTCDate()).padStart(2, '0')}`;
+      if (roundtrip !== issueDate) {
+        await fsPromises.unlink(req.file.path).catch(() => {});
+        res.status(400).json({ error: `Невірна календарна дата видачі: ${issueDate}` });
+        return;
+      }
+    }
+
     if (expiryDate && !dateRegex.test(expiryDate)) {
       await fsPromises.unlink(req.file.path).catch(() => {});
       res.status(400).json({ error: "Невірний формат дати закінчення (очікується YYYY-MM-DD)" });
+      return;
+    }
+    if (expiryDate && isNaN(Date.parse(expiryDate))) {
+      await fsPromises.unlink(req.file.path).catch(() => {});
+      res.status(400).json({ error: "Невірна дата закінчення (неіснуюча дата)" });
+      return;
+    }
+    // Validate calendar date for expiry_date
+    // Use UTC methods to avoid timezone issues with YYYY-MM-DD dates
+    if (expiryDate) {
+      const parsed = new Date(expiryDate + 'T00:00:00Z');
+      const roundtrip = `${parsed.getUTCFullYear()}-${String(parsed.getUTCMonth() + 1).padStart(2, '0')}-${String(parsed.getUTCDate()).padStart(2, '0')}`;
+      if (roundtrip !== expiryDate) {
+        await fsPromises.unlink(req.file.path).catch(() => {});
+        res.status(400).json({ error: `Невірна календарна дата закінчення: ${expiryDate}` });
+        return;
+      }
+    }
+
+    // Перевіряємо що дата закінчення не раніше дати видачі
+    if (issueDate && expiryDate && new Date(expiryDate) < new Date(issueDate)) {
+      await fsPromises.unlink(req.file.path).catch(() => {});
+      res.status(400).json({ error: "Дата закінчення не може бути раніше дати видачі" });
       return;
     }
 
@@ -648,6 +824,13 @@ app.post("/api/employees/:id/files", (req, res, next) => {
       }
     }
 
+    // Логирование загрузки файла
+    const employeeName = [employees[index].last_name, employees[index].first_name, employees[index].middle_name]
+      .filter(Boolean)
+      .join(" ");
+    const formattedFieldName = await formatFieldNameWithLabel(fileField);
+    await addLog("UPDATE", req.params.id, employeeName, formattedFieldName, oldFilePath || "", relativePath, `Завантажено документ: ${formattedFieldName}`);
+
     res.json({ path: relativePath });
   } catch (err) {
     // Очищаем временный файл при непредвиденной ошибке
@@ -686,10 +869,13 @@ app.delete("/api/employees/:id/files/:fieldName", async (req, res) => {
     }
 
     // Удаляем физический файл (только если путь внутри FILES_DIR)
+    // SECURITY: Normalize paths before comparison to prevent path traversal
     const fullPath = path.resolve(ROOT_DIR, filePath);
-    if (fullPath.startsWith(FILES_DIR + path.sep)) {
+    const normalizedFullPath = path.resolve(fullPath);
+    const normalizedFilesDir = path.resolve(FILES_DIR);
+    if (normalizedFullPath.startsWith(normalizedFilesDir + path.sep)) {
       try {
-        await fs.promises.unlink(fullPath);
+        await fs.promises.unlink(normalizedFullPath);
       } catch (error) {
         console.error("Failed to delete file:", error);
         // Продолжаем даже если файл не удалось удалить
@@ -712,14 +898,15 @@ app.delete("/api/employees/:id/files/:fieldName", async (req, res) => {
     const employeeName = [employee.last_name, employee.first_name, employee.middle_name]
       .filter(Boolean)
       .join(" ");
+    const formattedFieldName = await formatFieldNameWithLabel(fieldName);
     await addLog(
       "UPDATE",
       id,
       employeeName,
-      fieldName,
+      formattedFieldName,
       filePath,
       "",
-      `Удален документ: ${fieldName}`
+      `Удален документ: ${formattedFieldName}`
     );
 
     res.status(204).end();

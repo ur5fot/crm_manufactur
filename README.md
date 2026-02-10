@@ -2,6 +2,23 @@
 
 **[Українська версія / Ukrainian version](README.uk.md)**
 
+---
+
+> ⚠️ **VIBE CODING PROJECT WARNING** ⚠️
+>
+> This project was created using AI-assisted "vibe coding" methodology - rapid development prioritizing working features over strict code quality standards. While functional and tested, the codebase may contain:
+> - Unconventional architectural choices (monolithic components, in-memory CSV operations)
+> - Known limitations documented throughout (see "Known Limitations" section)
+> - Trade-offs favoring simplicity over scalability
+>
+> **Intended for:** Small teams (5-10 users), rapid prototyping, learning projects
+>
+> **Not recommended for:** Large-scale deployments, mission-critical systems, high-concurrency scenarios
+>
+> Use at your own risk. Review documentation carefully before deploying to production.
+
+---
+
 Local CRM system that stores data in CSV files and PDF documents. CSV files can be safely edited in Excel and changes reload automatically when you refresh the UI.
 
 ## Features
@@ -10,11 +27,19 @@ Local CRM system that stores data in CSV files and PDF documents. CSV files can 
 - **Dynamic UI** - entire form and table structure controlled by `fields_schema.csv`
 - **Sequential numeric IDs** - simple employee IDs (1, 2, 3...)
 - **Document management** - upload PDF and image documents with issue/expiry dates, document expiry notifications
-- **Dashboard** - stat cards with expandable employee lists, status change and document expiry timeline with clickable links
+- **Dashboard** - stat cards with expandable employee lists, timeline with status changes, document expiry, and birthday events
+- **Birthday notifications** - automatic birthday reminders (today and next 7 days) with dashboard timeline integration
 - **Universal status tracking** - status change popup, automatic status management, notifications for all status types (vacation, sick leave, etc.)
+- **URL-based routing** - bookmarkable URLs with persistent state (/cards/:id for direct employee access)
+- **Auto-load first employee** - cards view automatically loads first employee when opened
 - **Summary table** - inline editing via double-click, multi-select filters with empty value support
-- **Automatic audit logging** - all changes tracked in `logs.csv` with field-level details
+- **Custom Reports** - advanced filtering and CSV export with column selection
+- **Unsaved changes warning** - navigation guard prevents accidental data loss when leaving employee card with unsaved changes
+- **Icon-only buttons** - redesigned Delete and Clear buttons with tooltips for better UX and accident prevention; New Employee button (➕) located in Cards view sidebar, Refresh button (🔄) in global header
+- **Confirmation dialogs** - confirm before clearing form or deleting employee
+- **Automatic audit logging** - all changes tracked in `logs.csv` with automatic cleanup when threshold exceeded
 - **CSV import** - bulk import employees from CSV files
+- **System configuration** - CSV-based config file for log cleanup threshold and other settings
 - **UTF-8 with BOM** - proper Cyrillic support in Excel
 
 ## Tech Stack
@@ -29,10 +54,11 @@ Local CRM system that stores data in CSV files and PDF documents. CSV files can 
 ```
 crm_manufactur/
 ├── data/
-│   ├── employees.csv              # Core employee data (40 fields) - gitignored
+│   ├── employees.csv              # Core employee data (40+ fields) - gitignored
 │   ├── fields_schema.csv          # Meta-schema: field types, labels, options, UI config - gitignored
 │   ├── fields_schema.template.csv # Schema template for new installations (tracked in git)
-│   ├── logs.csv                   # Audit log of all changes - gitignored
+│   ├── config.csv                 # System configuration (log cleanup, etc.) - gitignored
+│   ├── logs.csv                   # Audit log with auto-cleanup - gitignored
 │   ├── employees_import_sample.csv # Import template with UTF-8 BOM
 │   └── dictionaries.csv           # (legacy, kept for compatibility)
 ├── files/                         # Uploaded documents (PDF/images) - gitignored
@@ -139,10 +165,11 @@ Open `http://localhost:5173` in your browser.
   39. `phone` - Phone number
   40. `phone_note` - Phone note
   41. `education` - Education
-  42. `notes` - Notes
-  43. `status_start_date` - Status start date (YYYY-MM-DD)
-  44. `status_end_date` - Status end date (YYYY-MM-DD)
-  40. Additional document and service fields
+  42. `birth_date` - Birth date (YYYY-MM-DD)
+  43. `notes` - Notes
+  44. `status_start_date` - Status start date (YYYY-MM-DD)
+  45. `status_end_date` - Status end date (YYYY-MM-DD)
+  46. Additional document and service fields
 
 - **fields_schema.csv** - **Meta-schema for UI control** (8 columns, local file in `.gitignore`):
   - `field_order` - Sequential number (1-40)
@@ -156,7 +183,13 @@ Open `http://localhost:5173` in your browser.
   - **To change UI, simply edit this file and reload the page!**
   - **Note:** File is in `.gitignore` for production independence from development. Create from `fields_schema.template.csv` on first install
 
-- **logs.csv** - Audit log of all changes (9 columns):
+- **config.csv** - System configuration (3 columns):
+  - `config_key` - Configuration parameter name
+  - `config_value` - Parameter value
+  - `config_description` - Human-readable description
+  - Current settings: `max_log_entries` (default: 1000) for automatic log cleanup
+
+- **logs.csv** - Audit log of all changes with automatic cleanup (9 columns):
   - `log_id` - Log entry ID
   - `timestamp` - Timestamp (ISO 8601)
   - `action` - Operation type: `CREATE`, `UPDATE`, `DELETE`
@@ -166,6 +199,7 @@ Open `http://localhost:5173` in your browser.
   - `old_value` - Old value
   - `new_value` - New value
   - `details` - Change description
+  - **Auto-cleanup:** When log count exceeds `max_log_entries` from config.csv, oldest entries are automatically removed
 
 - **dictionaries.csv** - (legacy, replaced by `fields_schema.csv`):
   - Kept for backward compatibility but not used
@@ -175,7 +209,7 @@ Open `http://localhost:5173` in your browser.
 
 ### Dashboard
 
-The Dashboard is the home screen showing employee statistics and upcoming status change events.
+The Dashboard is the home screen showing employee statistics, upcoming status change events, and auto-expanded reports.
 
 **Stat Cards:**
 - 4-column grid displaying employee counts by employment status (Total, per-status, Other)
@@ -183,12 +217,21 @@ The Dashboard is the home screen showing employee statistics and upcoming status
 - Only one card can be expanded at a time (accordion behavior)
 - Click an employee name to navigate directly to their card
 
-**Status Timeline:**
+**Auto-expanded Reports:**
+- "Who is absent now" report automatically expands on Dashboard load
+- Shows all employees with non-working status (vacation, sick leave, etc.)
+- Employee names are clickable links to their cards
+
+**Timeline:**
 - Two-column layout with "Today" and "Next 7 days" cards
 - Shows employees with upcoming status changes (vacation, sick leave, etc.) with date badges
 - Shows document expiry events (📄 expiring soon, ⚠️ expiring today)
-- Emoji indicators by status type: ✈️ vacation, 🏥 sick leave, ℹ️ other
-- Employee names are clickable links to their cards
+- Shows birthday events (🎂 birthday today, 🎉 upcoming birthday)
+- Emoji indicators by event type:
+  - Status changes: ✈️ vacation, 🏥 sick leave, ℹ️ other
+  - Document expiry: ⚠️ expiring today, 📄 expiring within 7 days
+  - Birthdays: 🎂 today, 🎉 upcoming
+- Employee names are clickable links to their cards via router
 
 ### Summary Table
 
@@ -258,9 +301,76 @@ Universal status management with popup, automatic status changes, and notificati
 
 **No manual intervention required** - expired statuses are restored automatically!
 
+### Birthday Notifications
+
+Automatic birthday tracking and notifications for employee birthdays.
+
+**Birthday Events:**
+- Notification popup "Birthday Notifications" with two sections
+- Birthdays today: 🎂 cake emoji, shows employee name and age
+- Birthdays within next 7 days: 🎉 party emoji, shows employee name and upcoming age
+- Appears automatically on page load when there are birthdays today or upcoming
+
+**Dashboard Timeline Integration:**
+- Birthday events appear in the timeline alongside status changes and document expiry
+- Today's birthdays in "Today" card, upcoming birthdays in "Next 7 days" card
+- Employee names are clickable links to their cards
+
+**birth_date Field:**
+- Added to employee data model as date field (YYYY-MM-DD)
+- Located in "Personal Data" section on employee cards
+- Used for age calculation and birthday event detection
+- Not shown in summary table by default
+
+### URL-Based Routing
+
+All views are accessible via bookmarkable URLs with persistent state:
+
+**Routes:**
+- `/` - Dashboard (home page)
+- `/cards` - Employee cards view (auto-loads first employee)
+- `/cards/:id` - Employee cards view with specific employee (e.g., `/cards/5`)
+- `/table` - Summary table view
+- `/reports` - Custom reports with advanced filtering and CSV export
+- `/import` - CSV import page with template download
+- `/logs` - Audit logs view
+
+**Features:**
+- Refresh page at `/cards/5` automatically restores employee ID 5
+- Direct links work for sharing specific employee cards
+- First employee auto-loads when navigating to `/cards` without ID
+- All navigation uses Vue Router for smooth transitions
+
+### Custom Reports
+
+Create custom filtered reports with advanced filtering and CSV export capabilities.
+
+**Features:**
+- **Advanced filtering** - Filter by any field with multiple conditions (contains, equals, not equals, empty, not empty)
+- **Multiple filters** - Combine multiple filters with AND logic
+- **Date range filtering** - Filter date fields by range
+- **Column selection** - Choose which fields to include in export
+- **Preview table** - See filtered results before export (max 100 rows preview)
+- **CSV export** - Export filtered data with proper UTF-8 BOM encoding
+- **Filename format** - `report_YYYY-MM-DD_HH-mm-ss.csv` with timestamp
+
+**Filter builder:**
+- Dynamic field selector dropdown (all fields from schema)
+- Condition selector: contains, equals, not equals, empty, not empty
+- Value input adapts to field type (text, select, date)
+- "Add Filter" and "Clear Filters" buttons
+
 ### CSV Import
 
-Template available in UI or at `data/employees_import_sample.csv`.
+CSV import has been moved to a dedicated Import page (`/import` route) with improved UX.
+
+**Import page features:**
+- Upload CSV files for bulk import
+- Download current template with all schema fields
+- Template auto-syncs with `fields_schema.csv` on server startup
+- Import instructions and validation
+
+Template available at `/import` page or `data/employees_import_sample.csv`.
 
 **Important:** The template file includes UTF-8 BOM and correct encoding for Excel compatibility. Use it as a reference for proper formatting.
 
@@ -299,6 +409,9 @@ All dropdown values in forms are managed via `data/dictionaries.csv`:
 - `POST /api/employees/:id/files` - Upload document (PDF/images) with optional issue_date and expiry_date
 - `DELETE /api/employees/:id/files/:fieldName` - Delete employee document
 - `GET /api/document-expiry` - Get document expiry events (today and next 7 days)
+- `GET /api/birthday-events` - Get birthday events (today and next 7 days)
+- `GET /api/config` - Get system configuration (key-value object from config.csv)
+- `GET /api/reports/custom` - Generate custom filtered report (accepts filter parameters)
 - `POST /api/employees/:id/open-folder` - Open employee's document folder in OS file explorer
 - `POST /api/employees/import` - Bulk import from CSV
 - `GET /api/dictionaries` - Get all reference data
@@ -346,6 +459,38 @@ nano data/fields_schema.csv
 ## Development
 
 For detailed architecture and development guidelines, see [CLAUDE.md](CLAUDE.md).
+
+## Known Limitations
+
+### Concurrent Editing
+
+**Issue:** If two users edit the same employee simultaneously, one update may be lost (last-write-wins).
+
+**Why it happens:**
+- The system uses write locks to prevent CSV file corruption
+- However, locks only protect the write operation, not the full read-modify-write cycle
+- Both users can read the same data, make different changes, and the last save overwrites the first
+
+**Example:**
+```
+User A: Opens employee card, changes salary from $1000 to $1500
+User B: Opens same employee card (also sees salary $1000), changes position
+User A: Saves changes → salary becomes $1500
+User B: Saves changes → salary reverts to $1000 (overwrites A's change)
+```
+
+**How to avoid this:**
+
+1. **Coordinate with your team** - avoid editing the same employee at the same time
+2. **Refresh before editing** - click the refresh button (🔄) to get latest data
+3. **Verify after saving** - check that your changes were applied correctly
+4. **Check audit logs** - if changes are missing, review the Logs tab to diagnose
+
+**Current design rationale:** This system is designed for small teams (5-10 users) where concurrent edits to the same employee are rare. The simple CSV-based approach prioritizes ease of use and Excel compatibility over advanced concurrency control.
+
+**For larger teams:** Consider implementing transaction-level locking or migrating to a relational database with proper ACID guarantees.
+
+See [CLAUDE.md](CLAUDE.md) for detailed technical explanation and improvement options.
 
 ## License
 

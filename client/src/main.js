@@ -1,5 +1,22 @@
 import { createApp } from "vue";
+import { createRouter, createWebHistory } from "vue-router";
 import App from "./App.vue";
 import "./styles.css";
 
-createApp(App).mount("#app");
+const routes = [
+  { path: "/", name: "dashboard", component: App },
+  { path: "/cards/:id?", name: "cards", component: App },
+  { path: "/table", name: "table", component: App },
+  { path: "/reports", name: "reports", component: App },
+  { path: "/import", name: "import", component: App },
+  { path: "/logs", name: "logs", component: App }
+];
+
+const router = createRouter({
+  history: createWebHistory(),
+  routes
+});
+
+const app = createApp(App);
+app.use(router);
+app.mount("#app");

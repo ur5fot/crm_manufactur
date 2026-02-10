@@ -14,6 +14,14 @@ export const FILES_DIR = path.join(ROOT_DIR, "files");
 const EMPLOYEES_PATH = path.join(DATA_DIR, "employees.csv");
 const LOGS_PATH = path.join(DATA_DIR, "logs.csv");
 const FIELD_SCHEMA_PATH = path.join(DATA_DIR, "fields_schema.csv");
+const CONFIG_PATH = path.join(DATA_DIR, "config.csv");
+
+// Simple in-memory lock for log writes to prevent race conditions
+let logWriteLock = Promise.resolve();
+
+// Simple in-memory lock for employee writes to prevent race conditions
+// when multiple requests try to update employees.csv concurrently
+let employeeWriteLock = Promise.resolve();
 
 export async function ensureDataDirs() {
   await fs.mkdir(DATA_DIR, { recursive: true });
@@ -143,9 +151,34 @@ export async function loadEmployees() {
   return readCsv(EMPLOYEES_PATH, columns);
 }
 
+/**
+ * Saves employee data to employees.csv with write lock to prevent race conditions
+ * Uses lock to ensure only one write operation at a time - prevents concurrent edits
+ * from overwriting each other's changes
+ *
+ * Lock mechanism:
+ * 1. Wait for previous write to complete (await previousLock)
+ * 2. Acquire new lock (other requests will wait for this)
+ * 3. Perform write operation
+ * 4. Release lock (allow next request to proceed)
+ *
+ * @param {Array} rows - Employee records to save
+ * @returns {Promise<void>}
+ */
 export async function saveEmployees(rows) {
-  const columns = await getEmployeeColumns();
-  return writeCsv(EMPLOYEES_PATH, columns, rows);
+  // Acquire lock: wait for previous write to complete, then execute our write
+  const previousLock = employeeWriteLock;
+  let releaseLock;
+  employeeWriteLock = new Promise(resolve => { releaseLock = resolve; });
+
+  try {
+    await previousLock;
+
+    const columns = await getEmployeeColumns();
+    await writeCsv(EMPLOYEES_PATH, columns, rows);
+  } finally {
+    releaseLock();
+  }
 }
 
 export async function loadFieldsSchema() {
@@ -154,6 +187,20 @@ export async function loadFieldsSchema() {
 
 export async function saveFieldsSchema(rows) {
   return writeCsv(FIELD_SCHEMA_PATH, FIELD_SCHEMA_COLUMNS, rows);
+}
+
+/**
+ * Форматує назву поля з людинозрозумілою міткою: "Мітка (field_name)"
+ * @param {string} fieldName - технічна назва поля
+ * @returns {Promise<string>} - форматована назва "Мітка (field_name)" або просто "field_name" якщо мітка не знайдена
+ */
+export async function formatFieldNameWithLabel(fieldName) {
+  const schema = await loadFieldsSchema();
+  const field = schema.find(f => f.field_name === fieldName);
+  if (field && field.field_label) {
+    return `${field.field_label} (${fieldName})`;
+  }
+  return fieldName;
 }
 
 /**
@@ -471,25 +518,322 @@ export async function saveLogs(rows) {
 }
 
 export async function addLog(action, employeeId, employeeName, fieldName = "", oldValue = "", newValue = "", details = "") {
-  const logs = await loadLogs();
-  const maxId = logs.reduce((max, log) => {
-    const id = parseInt(log.log_id, 10);
-    return isNaN(id) ? max : Math.max(max, id);
-  }, 0);
+  return addLogs([{ action, employeeId, employeeName, fieldName, oldValue, newValue, details }]);
+}
 
-  const newLog = {
-    log_id: String(maxId + 1),
-    timestamp: new Date().toISOString(),
-    action,
-    employee_id: employeeId || "",
-    employee_name: employeeName || "",
-    field_name: fieldName || "",
-    old_value: oldValue || "",
-    new_value: newValue || "",
-    details: details || ""
-  };
+/**
+ * Batch-adds multiple log entries in a single write operation
+ * Uses lock to prevent race condition when multiple requests write logs concurrently
+ */
+export async function addLogs(entries) {
+  if (!entries || entries.length === 0) return [];
 
-  logs.push(newLog);
-  await saveLogs(logs);
-  return newLog;
+  // Acquire lock: wait for previous write to complete, then execute our write
+  const previousLock = logWriteLock;
+  let releaseLock;
+  logWriteLock = new Promise(resolve => { releaseLock = resolve; });
+
+  try {
+    await previousLock;
+
+    const logs = await loadLogs();
+    let maxId = logs.reduce((max, log) => {
+      const id = parseInt(log.log_id, 10);
+      return isNaN(id) ? max : Math.max(max, id);
+    }, 0);
+
+    const newLogs = entries.map(({ action, employeeId, employeeName, fieldName = "", oldValue = "", newValue = "", details = "" }) => {
+      maxId++;
+      return {
+        log_id: String(maxId),
+        timestamp: new Date().toISOString(),
+        action,
+        employee_id: employeeId || "",
+        employee_name: employeeName || "",
+        field_name: fieldName || "",
+        old_value: oldValue || "",
+        new_value: newValue || "",
+        details: details || ""
+      };
+    });
+
+    logs.push(...newLogs);
+
+    // Автоматическая очистка логов - выполняем в той же операции записи для предотвращения race condition
+    const config = await loadConfig();
+    const maxEntries = parseInt(config.max_log_entries, 10) || 1000;
+
+    if (logs.length > maxEntries) {
+      // Сортируем по timestamp (новые сначала)
+      logs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+      // Оставляем только maxEntries последних записей
+      const trimmedLogs = logs.slice(0, maxEntries);
+      await saveLogs(trimmedLogs);
+      console.log(`✂️  Логи очищены: ${logs.length} → ${trimmedLogs.length} записей (лимит: ${maxEntries})`);
+    } else {
+      await saveLogs(logs);
+    }
+
+    return newLogs;
+  } finally {
+    releaseLock();
+  }
+}
+
+/**
+ * Загружает конфигурацию из config.csv
+ * @returns {Promise<Object>} Объект с парами config_key: config_value
+ */
+export async function loadConfig() {
+  try {
+    const CONFIG_COLUMNS = ['config_key', 'config_value', 'config_description'];
+    const configRows = await readCsv(CONFIG_PATH, CONFIG_COLUMNS);
+
+    const config = {};
+    configRows.forEach(row => {
+      if (row.config_key) {
+        config[row.config_key] = row.config_value;
+      }
+    });
+
+    return config;
+  } catch (error) {
+    console.error('Ошибка загрузки config.csv:', error.message);
+    // Возвращаем значения по умолчанию
+    return { max_log_entries: '1000' };
+  }
+}
+
+
+/**
+ * Получить события дней рождения (сегодня и следующие 7 дней)
+ * @returns {Promise<{today: Array, next7Days: Array}>}
+ */
+export async function getBirthdayEvents() {
+  const employees = await loadEmployees();
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const today = localDateStr(now);
+
+  // Normalize now to midnight for date-only comparison
+  const nowDateOnly = new Date(currentYear, now.getMonth(), now.getDate());
+
+  const in7days = new Date(now);
+  in7days.setDate(now.getDate() + 7);
+
+  const todayEvents = [];
+  const next7DaysEvents = [];
+
+  employees.forEach(emp => {
+    const birthDate = emp.birth_date;
+    if (!birthDate) return;
+
+    // Парсим дату рождения
+    const birthParts = birthDate.split('-');
+    if (birthParts.length !== 3) return;
+
+    const birthYear = parseInt(birthParts[0], 10);
+    const birthMonth = parseInt(birthParts[1], 10);
+    const birthDay = parseInt(birthParts[2], 10);
+
+    if (isNaN(birthYear) || isNaN(birthMonth) || isNaN(birthDay)) return;
+
+    // Проверяем день рождения в текущем году и следующем (для случая перехода через Новый год)
+    const thisYearBirthday = new Date(currentYear, birthMonth - 1, birthDay);
+    const nextYearBirthday = new Date(currentYear + 1, birthMonth - 1, birthDay);
+
+    const name = [emp.last_name, emp.first_name, emp.middle_name].filter(Boolean).join(' ');
+
+    // Проверяем день рождения в текущем году
+    if (thisYearBirthday >= nowDateOnly && thisYearBirthday <= in7days) {
+      const birthdayStr = localDateStr(thisYearBirthday);
+      const age = currentYear - birthYear;
+
+      const event = {
+        employee_id: emp.employee_id,
+        employee_name: name,
+        birth_date: birthDate,
+        current_year_birthday: birthdayStr,
+        age: age
+      };
+
+      if (birthdayStr === today) {
+        todayEvents.push(event);
+      } else {
+        next7DaysEvents.push(event);
+      }
+    }
+    // Проверяем день рождения в следующем году (для случаев типа 29 декабря -> 2 января)
+    else if (nextYearBirthday >= nowDateOnly && nextYearBirthday <= in7days) {
+      const birthdayStr = localDateStr(nextYearBirthday);
+      const age = (currentYear + 1) - birthYear;
+
+      const event = {
+        employee_id: emp.employee_id,
+        employee_name: name,
+        birth_date: birthDate,
+        current_year_birthday: birthdayStr,
+        age: age
+      };
+
+      if (birthdayStr === today) {
+        todayEvents.push(event);
+      } else {
+        next7DaysEvents.push(event);
+      }
+    }
+  });
+
+  // Сортируем события следующих 7 дней по дате
+  next7DaysEvents.sort((a, b) => {
+    return a.current_year_birthday.localeCompare(b.current_year_birthday);
+  });
+
+  return { today: todayEvents, next7Days: next7DaysEvents };
+}
+
+/**
+ * Get custom report with advanced filtering
+ * @param {Array} filters - Array of filter objects: [{field, condition, value}]
+ * @param {Array|null} columns - Array of column names to include (null = all)
+ * @returns {Promise<Array>} Filtered employee records
+ */
+export async function getCustomReport(filters = [], columns = null) {
+  const employees = await loadEmployees();
+  const schema = await loadFieldsSchema();
+
+  // Create whitelist for field validation
+  const allFieldNames = schema.map(f => f.field_name);
+
+  // Apply filters
+  let filtered = employees;
+
+  if (filters && Array.isArray(filters) && filters.length > 0) {
+    filtered = filtered.filter(emp => {
+      // AND logic: employee must match ALL filters
+      return filters.every(filter => {
+        const { field, condition, value } = filter;
+
+        // Validate field name
+        if (!allFieldNames.includes(field)) {
+          return true; // Skip invalid fields
+        }
+
+        const empValue = emp[field];
+        const empValueStr = String(empValue || '').toLowerCase();
+        const filterValueStr = String(value || '').toLowerCase();
+
+        switch (condition) {
+          case 'contains':
+            return empValueStr.includes(filterValueStr);
+          case 'equals':
+            return empValue === value || empValueStr === filterValueStr;
+          case 'not_equals':
+            return empValue !== value && empValueStr !== filterValueStr;
+          case 'empty':
+            return !empValue || empValue === '';
+          case 'not_empty':
+            return empValue && empValue !== '';
+          default:
+            return true;
+        }
+      });
+    });
+  }
+
+  // If columns specified, project only those columns
+  if (columns && Array.isArray(columns) && columns.length > 0) {
+    const validColumns = columns.filter(col => allFieldNames.includes(col));
+    filtered = filtered.map(emp => {
+      const projected = {};
+      validColumns.forEach(col => {
+        projected[col] = emp[col];
+      });
+      // Always include employee_id for identification
+      if (!projected.employee_id) {
+        projected.employee_id = emp.employee_id;
+      }
+      return projected;
+    });
+  }
+
+  return filtered;
+}
+
+/**
+ * Synchronizes employees_import_sample.csv with fields_schema.csv
+ * Adds missing columns from schema, removes obsolete columns
+ * Preserves UTF-8 BOM encoding for Excel compatibility
+ * @returns {Promise<{added: string[], removed: string[], status: string}>}
+ */
+export async function syncCSVTemplate() {
+  const TEMPLATE_PATH = path.join(DATA_DIR, "employees_import_sample.csv");
+
+  try {
+    // Get current schema columns
+    const schemaColumns = await getEmployeeColumns();
+
+    // Check if template file exists
+    let templateExists = true;
+    try {
+      await fs.access(TEMPLATE_PATH);
+    } catch {
+      templateExists = false;
+    }
+
+    if (!templateExists) {
+      // Create new template with current schema
+      const headerRow = schemaColumns.join(";");
+      const content = "\uFEFF" + headerRow + "\r\n";
+      await fs.writeFile(TEMPLATE_PATH, content, "utf-8");
+      console.log("✓ Создан новый шаблон CSV с текущей схемой");
+      return { added: schemaColumns, removed: [], status: "created" };
+    }
+
+    // Read existing template
+    const fileContent = await fs.readFile(TEMPLATE_PATH, "utf-8");
+    const lines = fileContent.split("\n").filter(line => line.trim());
+
+    if (lines.length === 0) {
+      // Empty file, create header
+      const headerRow = schemaColumns.join(";");
+      const content = "\uFEFF" + headerRow + "\r\n";
+      await fs.writeFile(TEMPLATE_PATH, content, "utf-8");
+      console.log("✓ Шаблон CSV был пуст, создан заголовок");
+      return { added: schemaColumns, removed: [], status: "created" };
+    }
+
+    // Parse current header
+    const headerLine = lines[0].replace(/^\uFEFF/, '');
+    const currentColumns = headerLine.split(";").map(col => col.trim().replace(/^"|"$/g, ''));
+
+    // Find differences
+    const missingColumns = schemaColumns.filter(col => !currentColumns.includes(col));
+    const obsoleteColumns = currentColumns.filter(col => !schemaColumns.includes(col));
+
+    // If no changes needed
+    if (missingColumns.length === 0 && obsoleteColumns.length === 0) {
+      console.log("✓ Шаблон CSV актуален, синхронизация не требуется");
+      return { added: [], removed: [], status: "up_to_date" };
+    }
+
+    // Reconstruct template with updated columns
+    // Keep only current schema columns in correct order
+    const newHeaderRow = schemaColumns.join(";");
+    const content = "\uFEFF" + newHeaderRow + "\r\n";
+    await fs.writeFile(TEMPLATE_PATH, content, "utf-8");
+
+    // Log changes
+    if (missingColumns.length > 0) {
+      console.log(`✓ Добавлено колонок в шаблон CSV: ${missingColumns.join(", ")}`);
+    }
+    if (obsoleteColumns.length > 0) {
+      console.log(`✓ Удалено устаревших колонок из шаблона CSV: ${obsoleteColumns.join(", ")}`);
+    }
+
+    return { added: missingColumns, removed: obsoleteColumns, status: "updated" };
+  } catch (error) {
+    console.error("❌ Ошибка синхронизации шаблона CSV:", error.message);
+    throw error;
+  }
 }

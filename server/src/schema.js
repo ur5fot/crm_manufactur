@@ -5,6 +5,7 @@ const DEFAULT_EMPLOYEE_COLUMNS = [
   "last_name",
   "first_name",
   "middle_name",
+  "birth_date",
   "employment_status",
   "additional_status",
   "gender",

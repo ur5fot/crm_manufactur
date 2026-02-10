@@ -1,0 +1,2 @@
+﻿config_key;config_value;config_description
+max_log_entries;1000;Maximum number of log entries before auto-cleanup triggers

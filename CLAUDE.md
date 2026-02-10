@@ -139,7 +139,8 @@ git pull origin master
 - `data/employees.csv` - main employee records (40 columns) - single denormalized table (gitignored - user data)
 - `data/fields_schema.csv` - **meta-schema defining all fields, their types, labels, options, and UI configuration** (gitignored - local production config)
 - `data/fields_schema.template.csv` - template schema for new installations (tracked in git)
-- `data/logs.csv` - audit log of all CRUD operations (gitignored - user data)
+- `data/config.csv` - **system configuration** (key-value pairs: log cleanup threshold, etc.) (gitignored - local production config)
+- `data/logs.csv` - audit log of all CRUD operations with automatic cleanup (gitignored - user data)
 - `data/employees_import_sample.csv` - import template with UTF-8 BOM (tracked in git)
 - `data/dictionaries.csv` - (legacy, kept for compatibility) reference data
 - `files/employee_[ID]/` - uploaded documents: PDF and images (gitignored - user files)
@@ -171,8 +172,11 @@ git pull origin master
 - `POST /api/employees/import` - Bulk import from CSV file
 - `GET /api/fields-schema` - **Get dynamic UI schema** (field types, labels, options, groups, table configuration)
 - `GET /api/document-expiry` - Get document expiry events (today and next 7 days) for dashboard timeline and notifications
+- `GET /api/birthday-events` - Get birthday events (today and next 7 days) for dashboard timeline and notifications
+- `GET /api/config` - Get system configuration (key-value object from config.csv)
+- `GET /api/reports/custom` - **Generate custom filtered report** (accepts filter parameters: field, condition, value; returns filtered employee data)
 - `GET /api/dictionaries` - Get all reference data grouped by type (legacy)
-- `GET /api/logs` - Get audit log sorted by timestamp descending
+- `GET /api/logs` - Get audit log sorted by timestamp descending (auto-cleaned when exceeds max_log_entries)
 - `POST /api/open-data-folder` - Open data folder in OS file explorer
 
 **Important patterns:**
@@ -201,21 +205,28 @@ git pull origin master
 - Form data mirrors employee object structure
 - **Dynamic UI generation**: Fields schema loaded on mount via `/api/fields-schema`
 - Form groups, table columns, and filters generated from schema
-- Four view modes: Dashboard (home), Cards (detail), Table (summary with inline editing), Logs (audit trail)
+- **Vue Router**: URL-based navigation with persistent state (/cards/:id, /table, /reports, /import, /logs, /)
+- Six view modes: Dashboard (home), Cards (detail), Table (summary with inline editing), Reports (custom filtering), Import (CSV upload), Logs (audit trail)
 
 **Dashboard UI** (full-width, no max-width constraint)**:**
 - **Stat Cards** - 4-column grid showing employee counts by `employment_status` (total, per-status, other)
 - **Inline Expand** - Click any stat card to expand an accordion list of employee names filtered by that status
   - Single-expand behavior: only one card expanded at a time (`expandedCard` ref)
   - `toggleStatCard(cardKey)` function, `expandedEmployees` computed property
-  - Employee names are clickable — navigate to employee card via `openEmployeeCard()`
+  - Employee names are clickable — navigate to employee card via `router.push('/cards/' + id)`
   - Each card + expand wrapped in `.stat-card-wrap` container
   - CSS transition 200ms for both expand and collapse animation
-- **Timeline Cards** - Two-column grid (`.timeline-grid`) showing status change events (all statuses, not just vacation):
+- **Auto-expand Reports** - "Хто відсутній зараз" report automatically expands on Dashboard mount
+  - `toggleReport('current')` called after employees loaded
+  - Shows all employees with non-working status (not `options[0]`)
+  - Only auto-expands on Dashboard, not on other views
+- **Timeline Cards** - Two-column grid (`.timeline-grid`) showing events (status changes, document expiry, birthdays):
   - "Сьогодні" (today) and "Найближчі 7 днів" (next 7 days)
   - Card-style containers (`.timeline-card`) with white background and rounded corners
-  - Employee names are clickable links (`.timeline-link`) to employee cards
-  - Events include emoji by status position: options[2] (vacation) — ✈️, options[3] (sick leave) — 🏥, others — ℹ️
+  - Employee names are clickable links (`.timeline-link`) to employee cards via router
+  - Status events: emoji by status position — ✈️ (vacation/options[2]), 🏥 (sick leave/options[3]), ℹ️ (others)
+  - Document expiry events: ⚠️ (expiring today), 📄 (expiring within 7 days)
+  - Birthday events: 🎂 (birthday today), 🎉 (birthday within 7 days)
 - **Auto-refresh** - Dashboard data refreshes automatically via interval
 - **Footer** - Shows last update timestamp
 
@@ -226,6 +237,34 @@ git pull origin master
 - **Empty value filter** - Special "(Пусто)" checkbox to filter rows with empty values
 - **ID column** - Center-aligned with title attribute for accessibility
 - **Filter state** - Reactive columnFilters object with `__EMPTY__` sentinel value for empty checks
+
+**Custom Reports UI:**
+- **Filter Builder** - Dynamic form for building complex filters:
+  - Field selector dropdown (all fields from `fields_schema.csv`)
+  - Condition selector: `contains`, `equals`, `not_equals`, `empty`, `not_empty`
+  - Value input adapts to field type (text, select dropdown, date picker)
+  - "Додати фільтр" button to add filter to active list
+  - "Очистити фільтри" button to reset all filters
+- **Active Filters Display** - Shows applied filters with remove (✖️) button per filter
+- **Column Selector** - Checkboxes to choose which fields to include in CSV export
+- **Preview Table** - Shows filtered results (max 100 rows preview, paginated)
+- **CSV Export** - "Експорт в CSV" button generates and downloads filtered data
+  - Filename format: `report_YYYY-MM-DD_HH-mm-ss.csv`
+  - UTF-8 with BOM encoding for Excel compatibility
+  - Only selected columns included
+- **Backend filtering** - `GET /api/reports/custom` accepts filter array: `[{field, condition, value}, ...]`
+- **Multiple filters logic** - AND logic (all filters must match)
+
+**CSV Import UI:**
+- **Dedicated Import Page** - Moved from employee card to separate `/import` route
+- **Template Download** - "Завантажити шаблон CSV" button downloads `employees_import_sample.csv`
+  - Template auto-synced with `fields_schema.csv` on server startup via `run.sh`
+  - `syncCSVTemplate()` function in `store.js` adds/removes columns to match current schema
+  - Standalone script `server/src/sync-template.js` executed by `run.sh` before starting servers
+- **File Upload** - File picker for CSV upload
+- **Import Instructions** - Clear instructions on CSV format, required fields, encoding
+- **Validation** - Server-side validation with error messages for invalid data
+- **Success/Error Feedback** - Shows import results (rows added, rows skipped, errors)
 
 **Documents Section UI:**
 - **Dynamic document fields** - All fields with `field_type=file` from fields_schema automatically displayed
@@ -241,6 +280,43 @@ git pull origin master
 - **File actions** - Open document in browser, delete document
 - **Empty form reset** - Creating new employee clears all document fields to prevent copying file links
 
+**Icon-Only Buttons Pattern:**
+- **Delete and Clear buttons** - Redesigned in employee cards view:
+  - "Видалити співробітника" → 🗑️ icon only (trash icon)
+  - "Очистити форму" → 🧹 icon only (broom icon)
+  - Positioned side-by-side with flexbox row layout
+  - `title` attribute for tooltip on hover (accessibility)
+  - Smaller size and less prominent color (gray) than primary action buttons
+  - Reduced opacity until hover (prevents accidental clicks)
+- **Global header buttons** - Refresh button in tab bar:
+  - "Оновити" → 🔄 icon only (refresh icon)
+  - Located in global header tab bar (visible on all views)
+  - `title` attribute for accessibility
+- **Cards view sidebar buttons** - New employee button in left panel:
+  - "Новий працівник" → ➕ icon only (plus icon)
+  - Located in Cards view left sidebar panel-header (after "Співробітники" title)
+  - Only visible when `currentView === 'cards'`
+  - Uses `.tab-icon-btn` class for consistent styling with refresh button
+  - `title` attribute for accessibility
+
+**Confirmation Dialogs Pattern:**
+- **Clear Form Dialog** - Shows when "Очистити форму" button clicked:
+  - Message: "Ви впевнені, що хочете очистити форму? Всі незбережені дані будуть втрачені."
+  - Buttons: "Так, очистити" (destructive) and "Скасувати" (safe default)
+  - Only clears form if user confirms "Так"
+  - Modal overlay prevents interaction with underlying UI
+- **Delete Employee Dialog** - Shows when "Видалити співробітника" button clicked:
+  - Message: "Ви впевнені, що хочете видалити цього співробітника? Цю дію неможливо скасувати."
+  - Buttons: "Так, видалити" (destructive) and "Скасувати" (safe default)
+  - Only deletes if user confirms "Так"
+- **Unsaved Changes Dialog** - Shows when navigating away from employee card with unsaved changes:
+  - Message: "У вас є незбережені зміни: [список змінених полів]. Зберегти перед виходом?"
+  - Buttons: "Зберегти і продовжити", "Продовжити без збереження", "Скасувати"
+  - Lists changed fields for transparency
+  - Saves and navigates if "Зберегти" clicked
+  - Navigates without saving if "Продовжити" clicked
+  - Stays on current page if "Скасувати" clicked
+
 **Document Expiry Notifications:**
 - **API endpoint** - `GET /api/document-expiry` returns expiry events (today and next 7 days)
 - **Notification popup** - "Сповіщення про закінчення терміну дії документів" modal with:
@@ -249,6 +325,16 @@ git pull origin master
   - Each entry shows employee name, document type label, and expiry date
 - **Dashboard timeline integration** - Document expiry events appear in the dashboard timeline alongside status change events
 - **Auto-check on load** - `checkDocumentExpiry()` function called from `loadEmployees()`, similar to `checkStatusChanges()`
+
+**Birthday Notifications:**
+- **API endpoint** - `GET /api/birthday-events` returns birthday events (today and next 7 days)
+- **Notification popup** - "Сповіщення про дні народження" modal with:
+  - Birthdays today - cake emoji (🎂), shows employee name, age, birth date
+  - Birthdays within 7 days - party emoji (🎉), shows employee name, upcoming age, birth date
+  - Each entry shows employee name and age
+- **Dashboard timeline integration** - Birthday events appear in the dashboard timeline alongside status and document events
+- **Auto-check on load** - `checkBirthdayEvents()` function called from `loadEmployees()`
+- **birth_date field** - Added to fields_schema.csv (field_type=date, field_group="Личные данные", show_in_table=no)
 
 **Status Change System:**
 - **Status Change Popup** - `employment_status` is read-only in the employee card. A "Змінити статус" button opens a popup with:
@@ -270,6 +356,24 @@ git pull origin master
 - **Data fields** - `status_start_date` and `status_end_date` (renamed from vacation_start/end_date), hidden from employee card form (no field_group), managed only through the popup
 - **Implementation** - `checkStatusChanges()` function in App.vue, called from `loadEmployees()`
 - **Logging** - Console output for debugging status checks and changes
+
+**Vue Router:**
+- **URL-based navigation** - All views accessible via URLs for bookmarking and direct linking
+- **Routes:**
+  - `/` - Dashboard (home page)
+  - `/cards` - Employee cards view (auto-loads first employee if available)
+  - `/cards/:id` - Employee cards view with specific employee loaded (e.g., `/cards/5`)
+  - `/table` - Summary table view
+  - `/reports` - **Custom Reports view** with advanced filtering and CSV export
+  - `/import` - **CSV Import view** with template download and bulk upload
+  - `/logs` - Audit logs view
+- **Persistent state** - Refresh page at `/cards/5` restores the employee card for ID 5
+- **Auto-load first employee** - Navigating to `/cards` without ID automatically loads first employee from list
+- **Router navigation** - All view switches use `router.push()` instead of reactive `currentView` variable
+- **Unsaved changes warning** - Navigation guard (`beforeRouteLeave`) prevents accidental data loss when leaving `/cards/:id` with unsaved changes
+  - Shows confirmation dialog: "Save before leaving?", "Continue without saving", "Cancel"
+  - Lists changed fields in dialog for transparency
+  - Also prevents browser refresh/close via `window.beforeunload` event
 
 **Vite proxy configuration** ([vite.config.js](client/vite.config.js)):
 - `/api`, `/files`, `/data` proxied to `http://localhost:3000`
@@ -345,9 +449,10 @@ Defined in [server/src/schema.js](server/src/schema.js). The column list is dyna
 61. `phone` - Phone number
 62. `phone_note` - Phone note
 63. `education` - Education
-64. `status_start_date` - Status start date (YYYY-MM-DD) — managed via Status Change popup
-65. `status_end_date` - Status end date (YYYY-MM-DD) — managed via Status Change popup
-66. `notes` - Notes
+64. `birth_date` - Birth date (YYYY-MM-DD) — for birthday notifications and age calculation
+65. `status_start_date` - Status start date (YYYY-MM-DD) — managed via Status Change popup
+66. `status_end_date` - Status end date (YYYY-MM-DD) — managed via Status Change popup
+67. `notes` - Notes
 
 **Auto-generated date columns convention:**
 - For every `field_type=file` field in `fields_schema.csv`, the system auto-generates two companion columns in `employees.csv`:
@@ -400,6 +505,24 @@ Reference data file [data/dictionaries.csv](data/dictionaries.csv) is kept for b
 
 All dropdown options are now defined directly in `fields_schema.csv` via the `field_options` column.
 
+### System Configuration (3 columns)
+
+System-wide settings in [data/config.csv](data/config.csv):
+
+**Columns:**
+- `config_key` - Configuration parameter name
+- `config_value` - Parameter value
+- `config_description` - Human-readable description
+
+**Current configuration:**
+- `max_log_entries` - Maximum number of log entries before automatic cleanup (default: 1000)
+
+**Features:**
+- CSV-based configuration (no hardcoded values)
+- UTF-8 with BOM encoding for Excel compatibility
+- Loaded via `GET /api/config` endpoint
+- Used by server for automatic log cleanup and other system behaviors
+
 ### Audit Logs (9 columns)
 
 Automatic change tracking in [data/logs.csv](data/logs.csv):
@@ -418,6 +541,8 @@ Automatic change tracking in [data/logs.csv](data/logs.csv):
 **Features:**
 - All CRUD operations automatically logged
 - Field-level change tracking for updates
+- **Automatic cleanup** - When log count exceeds `max_log_entries` from config.csv, oldest entries are removed
+- Cleanup triggered after each log write operation
 - Searchable logs view in UI
 - Sorted by timestamp descending (newest first)
 - Human-readable field labels: "Пригодность (fit_status)"
@@ -447,6 +572,72 @@ Template: `data/employees_import_sample.csv`
 6. **Why fields_schema.csv?** Single source of truth for UI configuration - no hardcoded forms, complete flexibility
 7. **Why multiple filter checkboxes?** Better UX than single-select dropdowns for filtering data
 8. **Why gitignore fields_schema.csv?** Production environments need custom fields/options without git conflicts; template provides starting point for new installs
+9. **Concurrent edit protection:** In-memory write locks (`employeeWriteLock`, `logWriteLock`) prevent CSV file corruption by serializing write operations. However, **the current implementation has a known limitation**: the lock protects only the `writeCSV()` call, not the full read-modify-write transaction. This means concurrent PUT requests can read stale data before writing, potentially causing lost updates (last-write-wins).
+   - **Current behavior:** `loadEmployees()` → modify in memory → `saveEmployees()` (locked) — two requests can both read before either writes
+   - **Impact:** If two users simultaneously edit different fields of the same employee, one update may be lost
+   - **Recommended workflow to avoid conflicts:**
+     - Coordinate team members to avoid editing the same employee simultaneously
+     - Use the refresh button (🔄) before editing to get latest data
+     - Check audit logs if updates appear to be missing
+   - **Technical note:** Full transaction-level locking (protecting read-modify-write) would eliminate this issue but adds complexity. Current design prioritizes simplicity for small-team deployments where concurrent edits are rare. If concurrent editing becomes frequent, consider implementing transaction locks or optimistic locking with version numbers.
+
+## Known Limitations
+
+### Concurrent Edit Race Condition (Read-Modify-Write)
+
+**Problem:** Two users editing the same employee simultaneously may experience lost updates (last-write-wins scenario).
+
+**Technical Details:**
+- Current implementation uses write locks (`employeeWriteLock`) to prevent CSV file corruption
+- However, the lock only protects the final write operation, NOT the full read-modify-write cycle
+- Flow: `PUT /api/employees/:id` → `loadEmployees()` (unlocked) → modify data → `saveEmployees()` (locked)
+
+**Scenario Example:**
+```
+Time  | Request A (update salary)     | Request B (update position)
+------|-------------------------------|-----------------------------
+T1    | loadEmployees() (salary=1000) |
+T2    |                               | loadEmployees() (salary=1000)
+T3    | modify: salary=1500           |
+T4    |                               | modify: position="Manager"
+T5    | saveEmployees() (locked)      |
+T6    | write CSV: salary=1500        | waiting for lock...
+T7    |                               | saveEmployees() (locked)
+T8    |                               | write CSV: salary=1000 (СТАРОЕ ЗНАЧЕНИЕ!)
+      |                               | Result: salary reverted to 1000
+```
+
+**Impact:**
+- Both updates succeed with HTTP 200 responses
+- No error message shown to users
+- One update silently lost (overwritten by stale data from other request)
+- Audit logs show both changes, but only last write persists in CSV
+
+**Best Practices to Avoid Issues:**
+
+1. **Организационные меры:**
+   - Координируйте работу команды — избегайте одновременного редактирования одного сотрудника
+   - Назначайте ответственных за определённые разделы данных (HR — личные данные, бухгалтерия — зарплаты)
+
+2. **Workflow рекомендации:**
+   - Перед редактированием нажмите кнопку обновления (🔄) чтобы получить свежие данные
+   - После сохранения проверьте что изменения применились (посмотрите в таблице или обновите карточку)
+   - Если изменения не сохранились — проверьте audit logs для диагностики
+
+3. **Проверка аудит логов:**
+   - Если обнаружили пропавшие изменения — откройте вкладку "Логи"
+   - Найдите записи с нужным `employee_id` и временем редактирования
+   - Если видите оба изменения в логах, но в CSV только одно — это признак race condition
+   - Повторно внесите потерянное изменение
+
+4. **Технические меры предосторожности:**
+   - Разворачивайте систему для малых команд (до 5-10 одновременных пользователей)
+   - Для больших команд рассмотрите внедрение transaction-level locking или миграцию на реляционную БД
+
+**Планы по улучшению:**
+- Возможное решение: transaction lock для всего PUT handler (read-modify-write как атомарная операция)
+- Альтернатива: optimistic locking с version numbers в CSV (требует миграции схемы)
+- Trade-off: текущая простота vs полная защита от race conditions
 
 ## CRITICAL: No Hardcoded Schema Values
 
