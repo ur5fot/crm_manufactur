@@ -761,6 +761,22 @@ async function submitDocEditDates() {
   }
 }
 
+// Попап підтвердження очищення форми
+const showClearConfirmPopup = ref(false);
+
+function openClearConfirmPopup() {
+  showClearConfirmPopup.value = true;
+}
+
+function closeClearConfirmPopup() {
+  showClearConfirmPopup.value = false;
+}
+
+function confirmClearForm() {
+  closeClearConfirmPopup();
+  startNew();
+}
+
 function formatDocDate(dateStr) {
   if (!dateStr) return '';
   const d = new Date(dateStr + 'T00:00:00');
@@ -1468,7 +1484,9 @@ function getDetailLabel(detail) {
 
 function handleGlobalKeydown(e) {
   if (e.key === 'Escape') {
-    if (showDocUploadPopup.value) {
+    if (showClearConfirmPopup.value) {
+      closeClearConfirmPopup();
+    } else if (showDocUploadPopup.value) {
       closeDocUploadPopup();
     } else if (showDocEditDatesPopup.value) {
       closeDocEditDatesPopup();
@@ -1761,6 +1779,23 @@ onUnmounted(() => {
       </div>
     </div>
 
+    <!-- Попап підтвердження очищення форми -->
+    <div v-if="showClearConfirmPopup" class="vacation-notification-overlay" @click="closeClearConfirmPopup">
+      <div class="vacation-notification-modal" @click.stop>
+        <div class="vacation-notification-header">
+          <h3>Підтвердження очищення</h3>
+          <button class="close-btn" @click="closeClearConfirmPopup">&times;</button>
+        </div>
+        <div class="vacation-notification-body">
+          <p style="margin: 0; padding: 16px 0;">Ви впевнені, що хочете очистити форму? Всі незбережені дані будуть втрачені.</p>
+        </div>
+        <div class="vacation-notification-footer status-change-footer">
+          <button class="secondary" type="button" @click="closeClearConfirmPopup">Скасувати</button>
+          <button class="primary" type="button" @click="confirmClearForm">Так, очистити</button>
+        </div>
+      </div>
+    </div>
+
     <div class="page">
       <header class="topbar">
         <div class="brand">
@@ -1989,7 +2024,7 @@ onUnmounted(() => {
                 <button
                   class="icon-btn clear-btn"
                   type="button"
-                  @click="startNew"
+                  @click="openClearConfirmPopup"
                   title="Очистити форму"
                 >
                   ✖️

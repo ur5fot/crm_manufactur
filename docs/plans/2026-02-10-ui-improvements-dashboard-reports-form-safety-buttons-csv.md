@@ -124,14 +124,14 @@ This plan implements 8 improvements to the CRM UI:
 - Modify: `client/src/App.vue`
 
 **Subtasks:**
-- [ ] Create confirmation dialog component/section (reuse popup pattern from status change)
-- [ ] Show dialog when "Очистити форму" button clicked
-- [ ] Dialog message: "Ви впевнені, що хочете очистити форму? Всі незбережені дані будуть втрачені."
-- [ ] Dialog buttons: "Так, очистити" and "Скасувати"
-- [ ] Only clear form if user confirms "Так"
-- [ ] Test dialog appears when clear button clicked
-- [ ] Test "Так" button clears form
-- [ ] Test "Скасувати" button closes dialog without clearing
+- [x] Create confirmation dialog component/section (reuse popup pattern from status change)
+- [x] Show dialog when "Очистити форму" button clicked
+- [x] Dialog message: "Ви впевнені, що хочете очистити форму? Всі незбережені дані будуть втрачені."
+- [x] Dialog buttons: "Так, очистити" and "Скасувати"
+- [x] Only clear form if user confirms "Так"
+- [x] Test dialog appears when clear button clicked
+- [x] Test "Так" button clears form
+- [x] Test "Скасувати" button closes dialog without clearing
 
 ---
 
