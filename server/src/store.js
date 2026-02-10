@@ -19,6 +19,10 @@ const CONFIG_PATH = path.join(DATA_DIR, "config.csv");
 // Simple in-memory lock for log writes to prevent race conditions
 let logWriteLock = Promise.resolve();
 
+// Simple in-memory lock for employee writes to prevent race conditions
+// when multiple requests try to update employees.csv concurrently
+let employeeWriteLock = Promise.resolve();
+
 export async function ensureDataDirs() {
   await fs.mkdir(DATA_DIR, { recursive: true });
   await fs.mkdir(FILES_DIR, { recursive: true });
@@ -147,9 +151,34 @@ export async function loadEmployees() {
   return readCsv(EMPLOYEES_PATH, columns);
 }
 
+/**
+ * Saves employee data to employees.csv with write lock to prevent race conditions
+ * Uses lock to ensure only one write operation at a time - prevents concurrent edits
+ * from overwriting each other's changes
+ *
+ * Lock mechanism:
+ * 1. Wait for previous write to complete (await previousLock)
+ * 2. Acquire new lock (other requests will wait for this)
+ * 3. Perform write operation
+ * 4. Release lock (allow next request to proceed)
+ *
+ * @param {Array} rows - Employee records to save
+ * @returns {Promise<void>}
+ */
 export async function saveEmployees(rows) {
-  const columns = await getEmployeeColumns();
-  return writeCsv(EMPLOYEES_PATH, columns, rows);
+  // Acquire lock: wait for previous write to complete, then execute our write
+  const previousLock = employeeWriteLock;
+  let releaseLock;
+  employeeWriteLock = new Promise(resolve => { releaseLock = resolve; });
+
+  try {
+    await previousLock;
+
+    const columns = await getEmployeeColumns();
+    await writeCsv(EMPLOYEES_PATH, columns, rows);
+  } finally {
+    releaseLock();
+  }
 }
 
 export async function loadFieldsSchema() {
