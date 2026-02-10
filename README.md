@@ -16,6 +16,10 @@ Local CRM system that stores data in CSV files and PDF documents. CSV files can 
 - **URL-based routing** - bookmarkable URLs with persistent state (/cards/:id for direct employee access)
 - **Auto-load first employee** - cards view automatically loads first employee when opened
 - **Summary table** - inline editing via double-click, multi-select filters with empty value support
+- **Custom Reports** - advanced filtering and CSV export with column selection
+- **Unsaved changes warning** - navigation guard prevents accidental data loss when leaving employee card with unsaved changes
+- **Icon-only buttons** - redesigned Delete and Clear buttons with tooltips for better UX and accident prevention
+- **Confirmation dialogs** - confirm before clearing form or deleting employee
 - **Automatic audit logging** - all changes tracked in `logs.csv` with automatic cleanup when threshold exceeded
 - **CSV import** - bulk import employees from CSV files
 - **System configuration** - CSV-based config file for log cleanup threshold and other settings
@@ -188,13 +192,18 @@ Open `http://localhost:5173` in your browser.
 
 ### Dashboard
 
-The Dashboard is the home screen showing employee statistics and upcoming status change events.
+The Dashboard is the home screen showing employee statistics, upcoming status change events, and auto-expanded reports.
 
 **Stat Cards:**
 - 4-column grid displaying employee counts by employment status (Total, per-status, Other)
 - Click any card to expand an inline list of employee names with that status
 - Only one card can be expanded at a time (accordion behavior)
 - Click an employee name to navigate directly to their card
+
+**Auto-expanded Reports:**
+- "Who is absent now" report automatically expands on Dashboard load
+- Shows all employees with non-working status (vacation, sick leave, etc.)
+- Employee names are clickable links to their cards
 
 **Timeline:**
 - Two-column layout with "Today" and "Next 7 days" cards
@@ -305,6 +314,8 @@ All views are accessible via bookmarkable URLs with persistent state:
 - `/cards` - Employee cards view (auto-loads first employee)
 - `/cards/:id` - Employee cards view with specific employee (e.g., `/cards/5`)
 - `/table` - Summary table view
+- `/reports` - Custom reports with advanced filtering and CSV export
+- `/import` - CSV import page with template download
 - `/logs` - Audit logs view
 
 **Features:**
@@ -313,9 +324,36 @@ All views are accessible via bookmarkable URLs with persistent state:
 - First employee auto-loads when navigating to `/cards` without ID
 - All navigation uses Vue Router for smooth transitions
 
+### Custom Reports
+
+Create custom filtered reports with advanced filtering and CSV export capabilities.
+
+**Features:**
+- **Advanced filtering** - Filter by any field with multiple conditions (contains, equals, not equals, empty, not empty)
+- **Multiple filters** - Combine multiple filters with AND logic
+- **Date range filtering** - Filter date fields by range
+- **Column selection** - Choose which fields to include in export
+- **Preview table** - See filtered results before export (max 100 rows preview)
+- **CSV export** - Export filtered data with proper UTF-8 BOM encoding
+- **Filename format** - `report_YYYY-MM-DD_HH-mm-ss.csv` with timestamp
+
+**Filter builder:**
+- Dynamic field selector dropdown (all fields from schema)
+- Condition selector: contains, equals, not equals, empty, not empty
+- Value input adapts to field type (text, select, date)
+- "Add Filter" and "Clear Filters" buttons
+
 ### CSV Import
 
-Template available in UI or at `data/employees_import_sample.csv`.
+CSV import has been moved to a dedicated Import page (`/import` route) with improved UX.
+
+**Import page features:**
+- Upload CSV files for bulk import
+- Download current template with all schema fields
+- Template auto-syncs with `fields_schema.csv` on server startup
+- Import instructions and validation
+
+Template available at `/import` page or `data/employees_import_sample.csv`.
 
 **Important:** The template file includes UTF-8 BOM and correct encoding for Excel compatibility. Use it as a reference for proper formatting.
 
@@ -356,6 +394,7 @@ All dropdown values in forms are managed via `data/dictionaries.csv`:
 - `GET /api/document-expiry` - Get document expiry events (today and next 7 days)
 - `GET /api/birthday-events` - Get birthday events (today and next 7 days)
 - `GET /api/config` - Get system configuration (key-value object from config.csv)
+- `GET /api/reports/custom` - Generate custom filtered report (accepts filter parameters)
 - `POST /api/employees/:id/open-folder` - Open employee's document folder in OS file explorer
 - `POST /api/employees/import` - Bulk import from CSV
 - `GET /api/dictionaries` - Get all reference data

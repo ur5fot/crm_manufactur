@@ -174,6 +174,7 @@ git pull origin master
 - `GET /api/document-expiry` - Get document expiry events (today and next 7 days) for dashboard timeline and notifications
 - `GET /api/birthday-events` - Get birthday events (today and next 7 days) for dashboard timeline and notifications
 - `GET /api/config` - Get system configuration (key-value object from config.csv)
+- `GET /api/reports/custom` - **Generate custom filtered report** (accepts filter parameters: field, condition, value; returns filtered employee data)
 - `GET /api/dictionaries` - Get all reference data grouped by type (legacy)
 - `GET /api/logs` - Get audit log sorted by timestamp descending (auto-cleaned when exceeds max_log_entries)
 - `POST /api/open-data-folder` - Open data folder in OS file explorer
@@ -204,8 +205,8 @@ git pull origin master
 - Form data mirrors employee object structure
 - **Dynamic UI generation**: Fields schema loaded on mount via `/api/fields-schema`
 - Form groups, table columns, and filters generated from schema
-- **Vue Router**: URL-based navigation with persistent state (/cards/:id, /table, /logs, /)
-- Four view modes: Dashboard (home), Cards (detail), Table (summary with inline editing), Logs (audit trail)
+- **Vue Router**: URL-based navigation with persistent state (/cards/:id, /table, /reports, /import, /logs, /)
+- Six view modes: Dashboard (home), Cards (detail), Table (summary with inline editing), Reports (custom filtering), Import (CSV upload), Logs (audit trail)
 
 **Dashboard UI** (full-width, no max-width constraint)**:**
 - **Stat Cards** - 4-column grid showing employee counts by `employment_status` (total, per-status, other)
@@ -215,6 +216,10 @@ git pull origin master
   - Employee names are clickable — navigate to employee card via `router.push('/cards/' + id)`
   - Each card + expand wrapped in `.stat-card-wrap` container
   - CSS transition 200ms for both expand and collapse animation
+- **Auto-expand Reports** - "Хто відсутній зараз" report automatically expands on Dashboard mount
+  - `toggleReport('current')` called after employees loaded
+  - Shows all employees with non-working status (not `options[0]`)
+  - Only auto-expands on Dashboard, not on other views
 - **Timeline Cards** - Two-column grid (`.timeline-grid`) showing events (status changes, document expiry, birthdays):
   - "Сьогодні" (today) and "Найближчі 7 днів" (next 7 days)
   - Card-style containers (`.timeline-card`) with white background and rounded corners
@@ -233,6 +238,34 @@ git pull origin master
 - **ID column** - Center-aligned with title attribute for accessibility
 - **Filter state** - Reactive columnFilters object with `__EMPTY__` sentinel value for empty checks
 
+**Custom Reports UI:**
+- **Filter Builder** - Dynamic form for building complex filters:
+  - Field selector dropdown (all fields from `fields_schema.csv`)
+  - Condition selector: `contains`, `equals`, `not_equals`, `empty`, `not_empty`
+  - Value input adapts to field type (text, select dropdown, date picker)
+  - "Додати фільтр" button to add filter to active list
+  - "Очистити фільтри" button to reset all filters
+- **Active Filters Display** - Shows applied filters with remove (✖️) button per filter
+- **Column Selector** - Checkboxes to choose which fields to include in CSV export
+- **Preview Table** - Shows filtered results (max 100 rows preview, paginated)
+- **CSV Export** - "Експорт в CSV" button generates and downloads filtered data
+  - Filename format: `report_YYYY-MM-DD_HH-mm-ss.csv`
+  - UTF-8 with BOM encoding for Excel compatibility
+  - Only selected columns included
+- **Backend filtering** - `GET /api/reports/custom` accepts filter array: `[{field, condition, value}, ...]`
+- **Multiple filters logic** - AND logic (all filters must match)
+
+**CSV Import UI:**
+- **Dedicated Import Page** - Moved from employee card to separate `/import` route
+- **Template Download** - "Завантажити шаблон CSV" button downloads `employees_import_sample.csv`
+  - Template auto-synced with `fields_schema.csv` on server startup via `run.sh`
+  - `syncCSVTemplate()` function in `store.js` adds/removes columns to match current schema
+  - Standalone script `server/src/sync-template.js` executed by `run.sh` before starting servers
+- **File Upload** - File picker for CSV upload
+- **Import Instructions** - Clear instructions on CSV format, required fields, encoding
+- **Validation** - Server-side validation with error messages for invalid data
+- **Success/Error Feedback** - Shows import results (rows added, rows skipped, errors)
+
 **Documents Section UI:**
 - **Dynamic document fields** - All fields with `field_type=file` from fields_schema automatically displayed
 - **Open Folder button** - Opens employee's document folder (`files/employee_{id}/`) in OS file explorer
@@ -246,6 +279,39 @@ git pull origin master
 - **Date editing** - Dates can be edited for already-uploaded documents without re-uploading the file
 - **File actions** - Open document in browser, delete document
 - **Empty form reset** - Creating new employee clears all document fields to prevent copying file links
+
+**Icon-Only Buttons Pattern:**
+- **Delete and Clear buttons** - Redesigned in employee cards view:
+  - "Видалити співробітника" → 🗑️ icon only (trash icon)
+  - "Очистити форму" → 🧹 icon only (broom icon)
+  - Positioned side-by-side with flexbox row layout
+  - `title` attribute for tooltip on hover (accessibility)
+  - Smaller size and less prominent color (gray) than primary action buttons
+  - Reduced opacity until hover (prevents accidental clicks)
+- **Tab bar buttons** - Redesigned refresh and new employee buttons:
+  - "Оновити" → 🔄 icon only (refresh icon)
+  - "Новий працівник" → ➕ icon only (plus icon)
+  - Moved from top-right to tab bar for better layout
+  - `title` attribute for accessibility
+  - Visual separation from view tabs (different color or spacing)
+
+**Confirmation Dialogs Pattern:**
+- **Clear Form Dialog** - Shows when "Очистити форму" button clicked:
+  - Message: "Ви впевнені, що хочете очистити форму? Всі незбережені дані будуть втрачені."
+  - Buttons: "Так, очистити" (destructive) and "Скасувати" (safe default)
+  - Only clears form if user confirms "Так"
+  - Modal overlay prevents interaction with underlying UI
+- **Delete Employee Dialog** - Shows when "Видалити співробітника" button clicked:
+  - Message: "Ви впевнені, що хочете видалити цього співробітника? Цю дію неможливо скасувати."
+  - Buttons: "Так, видалити" (destructive) and "Скасувати" (safe default)
+  - Only deletes if user confirms "Так"
+- **Unsaved Changes Dialog** - Shows when navigating away from employee card with unsaved changes:
+  - Message: "У вас є незбережені зміни: [список змінених полів]. Зберегти перед виходом?"
+  - Buttons: "Зберегти і продовжити", "Продовжити без збереження", "Скасувати"
+  - Lists changed fields for transparency
+  - Saves and navigates if "Зберегти" clicked
+  - Navigates without saving if "Продовжити" clicked
+  - Stays on current page if "Скасувати" clicked
 
 **Document Expiry Notifications:**
 - **API endpoint** - `GET /api/document-expiry` returns expiry events (today and next 7 days)
@@ -294,10 +360,16 @@ git pull origin master
   - `/cards` - Employee cards view (auto-loads first employee if available)
   - `/cards/:id` - Employee cards view with specific employee loaded (e.g., `/cards/5`)
   - `/table` - Summary table view
+  - `/reports` - **Custom Reports view** with advanced filtering and CSV export
+  - `/import` - **CSV Import view** with template download and bulk upload
   - `/logs` - Audit logs view
 - **Persistent state** - Refresh page at `/cards/5` restores the employee card for ID 5
 - **Auto-load first employee** - Navigating to `/cards` without ID automatically loads first employee from list
 - **Router navigation** - All view switches use `router.push()` instead of reactive `currentView` variable
+- **Unsaved changes warning** - Navigation guard (`beforeRouteLeave`) prevents accidental data loss when leaving `/cards/:id` with unsaved changes
+  - Shows confirmation dialog: "Save before leaving?", "Continue without saving", "Cancel"
+  - Lists changed fields in dialog for transparency
+  - Also prevents browser refresh/close via `window.beforeunload` event
 
 **Vite proxy configuration** ([vite.config.js](client/vite.config.js)):
 - `/api`, `/files`, `/data` proxied to `http://localhost:3000`

@@ -254,13 +254,13 @@ This plan implements 8 improvements to the CRM UI:
 
 ## Documentation
 
-- [ ] Update README.md: Add /reports and /import routes documentation
-- [ ] Update README.uk.md: Add /reports and /import routes documentation (Ukrainian)
-- [ ] Update CLAUDE.md:
+- [x] Update README.md: Add /reports and /import routes documentation
+- [x] Update README.uk.md: Add /reports and /import routes documentation (Ukrainian)
+- [x] Update CLAUDE.md:
   - Document new routes /reports and /import
   - Document custom reports API endpoint
   - Document CSV template sync on startup
   - Document unsaved changes warning pattern
   - Document icon-only button pattern
   - Document auto-expand report on Dashboard pattern
-- [ ] Move this plan to `docs/plans/completed/`
+- [x] Move this plan to `docs/plans/completed/`
