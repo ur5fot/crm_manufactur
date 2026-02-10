@@ -819,6 +819,11 @@ async function loadEmployees(silent = false) {
     await checkDocumentExpiry();
     await checkBirthdayEvents();
     lastUpdated.value = new Date();
+
+    // Auto-expand "Who is absent now" report on Dashboard load
+    if (currentView.value === 'dashboard' && activeReport.value !== 'current') {
+      await toggleReport('current');
+    }
   } catch (error) {
     if (!silent) errorMessage.value = error.message;
   } finally {
