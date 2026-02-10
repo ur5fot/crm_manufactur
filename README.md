@@ -2,6 +2,23 @@
 
 **[Українська версія / Ukrainian version](README.uk.md)**
 
+---
+
+> ⚠️ **VIBE CODING PROJECT WARNING** ⚠️
+>
+> This project was created using AI-assisted "vibe coding" methodology - rapid development prioritizing working features over strict code quality standards. While functional and tested, the codebase may contain:
+> - Unconventional architectural choices (monolithic components, in-memory CSV operations)
+> - Known limitations documented throughout (see "Known Limitations" section)
+> - Trade-offs favoring simplicity over scalability
+>
+> **Intended for:** Small teams (5-10 users), rapid prototyping, learning projects
+>
+> **Not recommended for:** Large-scale deployments, mission-critical systems, high-concurrency scenarios
+>
+> Use at your own risk. Review documentation carefully before deploying to production.
+
+---
+
 Local CRM system that stores data in CSV files and PDF documents. CSV files can be safely edited in Excel and changes reload automatically when you refresh the UI.
 
 ## Features
