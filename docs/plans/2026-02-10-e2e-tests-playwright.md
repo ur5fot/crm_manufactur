@@ -215,21 +215,21 @@
 - Create: `tests/fixtures/import-invalid.csv` (invalid data)
 
 **Steps:**
-- [ ] Test: "Импортировать валидный CSV"
+- [x] Test: "Импортировать валидный CSV"
   - Navigate to `/import`
   - Upload import-valid.csv (3 новых сотрудника)
   - Assert success message with count
   - Navigate to `/table`
   - Assert imported employees appear in table
-- [ ] Test: "Импорт с ошибками (invalid data)"
+- [x] Test: "Импорт с ошибками (invalid data)"
   - Upload import-invalid.csv (missing required fields)
   - Assert error messages displayed
   - Assert no employees created (check API)
-- [ ] Test: "Скачать шаблон CSV"
+- [x] Test: "Скачать шаблон CSV"
   - Click "Завантажити шаблон CSV"
   - Assert template file downloaded
   - Assert template matches employees_import_sample.csv structure
-- [ ] `npm run test:e2e tests/e2e/import.spec.js` (все тесты должны пройти)
+- [x] `npm run test:e2e tests/e2e/import.spec.js` (все тесты должны пройти)
 
 ---
 
