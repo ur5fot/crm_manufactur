@@ -443,6 +443,38 @@ nano data/fields_schema.csv
 
 For detailed architecture and development guidelines, see [CLAUDE.md](CLAUDE.md).
 
+## Known Limitations
+
+### Concurrent Editing
+
+**Issue:** If two users edit the same employee simultaneously, one update may be lost (last-write-wins).
+
+**Why it happens:**
+- The system uses write locks to prevent CSV file corruption
+- However, locks only protect the write operation, not the full read-modify-write cycle
+- Both users can read the same data, make different changes, and the last save overwrites the first
+
+**Example:**
+```
+User A: Opens employee card, changes salary from $1000 to $1500
+User B: Opens same employee card (also sees salary $1000), changes position
+User A: Saves changes → salary becomes $1500
+User B: Saves changes → salary reverts to $1000 (overwrites A's change)
+```
+
+**How to avoid this:**
+
+1. **Coordinate with your team** - avoid editing the same employee at the same time
+2. **Refresh before editing** - click the refresh button (🔄) to get latest data
+3. **Verify after saving** - check that your changes were applied correctly
+4. **Check audit logs** - if changes are missing, review the Logs tab to diagnose
+
+**Current design rationale:** This system is designed for small teams (5-10 users) where concurrent edits to the same employee are rare. The simple CSV-based approach prioritizes ease of use and Excel compatibility over advanced concurrency control.
+
+**For larger teams:** Consider implementing transaction-level locking or migrating to a relational database with proper ACID guarantees.
+
+See [CLAUDE.md](CLAUDE.md) for detailed technical explanation and improvement options.
+
 ## License
 
 MIT

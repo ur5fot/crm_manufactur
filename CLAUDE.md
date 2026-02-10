@@ -568,7 +568,72 @@ Template: `data/employees_import_sample.csv`
 6. **Why fields_schema.csv?** Single source of truth for UI configuration - no hardcoded forms, complete flexibility
 7. **Why multiple filter checkboxes?** Better UX than single-select dropdowns for filtering data
 8. **Why gitignore fields_schema.csv?** Production environments need custom fields/options without git conflicts; template provides starting point for new installs
-9. **Concurrent edit protection:** In-memory write locks (`employeeWriteLock`, `logWriteLock`) prevent race conditions when multiple requests try to update the same CSV file simultaneously. Each write operation waits for the previous one to complete before proceeding, ensuring sequential processing and data integrity. This simple pattern is sufficient for small-team deployments where concurrent edits to the same employee are rare.
+9. **Concurrent edit protection:** In-memory write locks (`employeeWriteLock`, `logWriteLock`) prevent CSV file corruption by serializing write operations. However, **the current implementation has a known limitation**: the lock protects only the `writeCSV()` call, not the full read-modify-write transaction. This means concurrent PUT requests can read stale data before writing, potentially causing lost updates (last-write-wins).
+   - **Current behavior:** `loadEmployees()` → modify in memory → `saveEmployees()` (locked) — two requests can both read before either writes
+   - **Impact:** If two users simultaneously edit different fields of the same employee, one update may be lost
+   - **Recommended workflow to avoid conflicts:**
+     - Coordinate team members to avoid editing the same employee simultaneously
+     - Use the refresh button (🔄) before editing to get latest data
+     - Check audit logs if updates appear to be missing
+   - **Technical note:** Full transaction-level locking (protecting read-modify-write) would eliminate this issue but adds complexity. Current design prioritizes simplicity for small-team deployments where concurrent edits are rare. If concurrent editing becomes frequent, consider implementing transaction locks or optimistic locking with version numbers.
+
+## Known Limitations
+
+### Concurrent Edit Race Condition (Read-Modify-Write)
+
+**Problem:** Two users editing the same employee simultaneously may experience lost updates (last-write-wins scenario).
+
+**Technical Details:**
+- Current implementation uses write locks (`employeeWriteLock`) to prevent CSV file corruption
+- However, the lock only protects the final write operation, NOT the full read-modify-write cycle
+- Flow: `PUT /api/employees/:id` → `loadEmployees()` (unlocked) → modify data → `saveEmployees()` (locked)
+
+**Scenario Example:**
+```
+Time  | Request A (update salary)     | Request B (update position)
+------|-------------------------------|-----------------------------
+T1    | loadEmployees() (salary=1000) |
+T2    |                               | loadEmployees() (salary=1000)
+T3    | modify: salary=1500           |
+T4    |                               | modify: position="Manager"
+T5    | saveEmployees() (locked)      |
+T6    | write CSV: salary=1500        | waiting for lock...
+T7    |                               | saveEmployees() (locked)
+T8    |                               | write CSV: salary=1000 (СТАРОЕ ЗНАЧЕНИЕ!)
+      |                               | Result: salary reverted to 1000
+```
+
+**Impact:**
+- Both updates succeed with HTTP 200 responses
+- No error message shown to users
+- One update silently lost (overwritten by stale data from other request)
+- Audit logs show both changes, but only last write persists in CSV
+
+**Best Practices to Avoid Issues:**
+
+1. **Организационные меры:**
+   - Координируйте работу команды — избегайте одновременного редактирования одного сотрудника
+   - Назначайте ответственных за определённые разделы данных (HR — личные данные, бухгалтерия — зарплаты)
+
+2. **Workflow рекомендации:**
+   - Перед редактированием нажмите кнопку обновления (🔄) чтобы получить свежие данные
+   - После сохранения проверьте что изменения применились (посмотрите в таблице или обновите карточку)
+   - Если изменения не сохранились — проверьте audit logs для диагностики
+
+3. **Проверка аудит логов:**
+   - Если обнаружили пропавшие изменения — откройте вкладку "Логи"
+   - Найдите записи с нужным `employee_id` и временем редактирования
+   - Если видите оба изменения в логах, но в CSV только одно — это признак race condition
+   - Повторно внесите потерянное изменение
+
+4. **Технические меры предосторожности:**
+   - Разворачивайте систему для малых команд (до 5-10 одновременных пользователей)
+   - Для больших команд рассмотрите внедрение transaction-level locking или миграцию на реляционную БД
+
+**Планы по улучшению:**
+- Возможное решение: transaction lock для всего PUT handler (read-modify-write как атомарная операция)
+- Альтернатива: optimistic locking с version numbers в CSV (требует миграции схемы)
+- Trade-off: текущая простота vs полная защита от race conditions
 
 ## CRITICAL: No Hardcoded Schema Values
 
