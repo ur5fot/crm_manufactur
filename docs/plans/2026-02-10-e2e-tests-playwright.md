@@ -67,17 +67,17 @@
 - Create: `tests/helpers/test-utils.js` (utilities)
 
 **Steps:**
-- [ ] Создать `tests/fixtures/test-data.csv` с 3-5 тестовыми сотрудниками (UTF-8 BOM, semicolon delimiter)
-- [ ] Скопировать `data/fields_schema.csv` → `tests/fixtures/test-fields-schema.csv`
-- [ ] Создать `tests/helpers/test-utils.js` с функциями:
+- [x] Создать `tests/fixtures/test-data.csv` с 3-5 тестовыми сотрудниками (UTF-8 BOM, semicolon delimiter)
+- [x] Скопировать `data/fields_schema.csv` → `tests/fixtures/test-fields-schema.csv`
+- [x] Создать `tests/helpers/test-utils.js` с функциями:
   - `setupTestData()` - копирует test-data.csv в data/employees.csv перед тестами
   - `cleanupTestData()` - удаляет тестовые файлы после тестов
   - `waitForEmployeesLoad()` - ожидает загрузки списка сотрудников в UI
   - `createTestEmployee()` - helper для создания нового сотрудника через API
-- [ ] Написать базовый тест `tests/e2e/setup.spec.js`:
+- [x] Написать базовый тест `tests/e2e/setup.spec.js`:
   - Проверить что сервер отвечает `GET /api/employees`
   - Проверить что клиент доступен по `localhost:5173`
-- [ ] `npm run test:e2e` (должен пройти setup test)
+- [x] `npm run test:e2e` (должен пройти setup test)
 
 ---
 
