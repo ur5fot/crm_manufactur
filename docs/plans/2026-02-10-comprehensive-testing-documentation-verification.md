@@ -149,25 +149,25 @@ This plan uses multiple AI agents to systematically test all features documented
 - Verify: Popup, automatic status restore, notifications, positional convention
 
 **Steps:**
-- [ ] Navigate to employee card
-- [ ] Verify employment_status field is read-only
-- [ ] Click "Змінити статус" button, verify popup opens
-- [ ] Verify popup shows all status options EXCEPT options[0] (working status)
-- [ ] Select status (e.g., vacation/options[2]), set start_date and end_date
-- [ ] Click "Застосувати", verify status updates
-- [ ] Verify status_start_date and status_end_date saved to CSV
-- [ ] Verify status field hidden from form (no field_group)
-- [ ] Set end_date to yesterday, reload page
-- [ ] Verify checkStatusChanges() auto-restores options[0] (working status)
-- [ ] Verify status_start_date and status_end_date cleared
-- [ ] Set status change for today, reload page
-- [ ] Verify notification popup appears with correct emoji (✈️ vacation, 🏥 sick leave, ℹ️ other)
-- [ ] Verify notification shows two sections: "changing today" and "returning today"
-- [ ] Verify timeline shows status events with correct dates
-- [ ] Click "Скинути статус" button, verify restores options[0] and clears dates
-- [ ] Verify all status values come from schema (no hardcoded strings)
-- [ ] Test with different status types (sick leave, vacation, custom)
-- [ ] Document any status management issues
+- [x] Navigate to employee card
+- [x] Verify employment_status field is read-only
+- [x] Click "Змінити статус" button, verify popup opens
+- [x] Verify popup shows all status options EXCEPT options[0] (working status)
+- [x] Select status (e.g., vacation/options[2]), set start_date and end_date
+- [x] Click "Застосувати", verify status updates
+- [x] Verify status_start_date and status_end_date saved to CSV
+- [x] Verify status field hidden from form (no field_group)
+- [x] Set end_date to yesterday, reload page
+- [x] Verify checkStatusChanges() auto-restores options[0] (working status)
+- [x] Verify status_start_date and status_end_date cleared
+- [x] Set status change for today, reload page
+- [x] Verify notification popup appears with correct emoji (✈️ vacation, 🏥 sick leave, ℹ️ other)
+- [x] Verify notification shows two sections: "changing today" and "returning today"
+- [x] Verify timeline shows status events with correct dates
+- [x] Click "Скинути статус" button, verify restores options[0] and clears dates
+- [x] Verify all status values come from schema (no hardcoded strings)
+- [x] Test with different status types (sick leave, vacation, custom)
+- [x] Document any status management issues
 
 ### TASK 7: Birthday Notifications Testing
 
