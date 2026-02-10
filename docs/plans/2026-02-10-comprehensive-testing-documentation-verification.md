@@ -438,23 +438,23 @@ This plan uses multiple AI agents to systematically test all features documented
 - Verify: Data consistency, workflow completeness, edge cases
 
 **Steps:**
-- [ ] Complete workflow: Create employee → Upload documents → Set status → Verify logs
-- [ ] Create employee on one view (cards), verify appears in table and dashboard
-- [ ] Update employee in table (inline edit), verify reflected in cards view
-- [ ] Set vacation status with end_date in 2 days, verify timeline shows correctly
-- [ ] Wait/modify end_date to yesterday, reload, verify auto-restores working status
-- [ ] Upload document with expiry_date today, verify appears in notifications and timeline
-- [ ] Create employee with birthday today, verify birthday notification and timeline entry
-- [ ] Delete employee with documents, verify all data removed (CSV row, files, logs)
-- [ ] Import CSV with 50 employees, verify dashboard stats update
-- [ ] Filter table by multiple criteria, verify report matches
-- [ ] Export filtered report to CSV, reimport, verify data consistency
-- [ ] Edit fields_schema.csv (add field), restart, verify UI updates without data loss
-- [ ] Test with empty database (no employees), verify UI handles gracefully
-- [ ] Test with 500+ employees, verify performance acceptable
-- [ ] Test concurrent edits (two browser tabs), verify no data corruption
-- [ ] Test browser refresh during unsaved edits, verify warning works
-- [ ] Document any integration issues or data inconsistencies
+- [x] Complete workflow: Create employee → Upload documents → Set status → Verify logs
+- [x] Create employee on one view (cards), verify appears in table and dashboard
+- [x] Update employee in table (inline edit), verify reflected in cards view
+- [x] Set vacation status with end_date in 2 days, verify timeline shows correctly
+- [x] Wait/modify end_date to yesterday, reload, verify auto-restores working status
+- [x] Upload document with expiry_date today, verify appears in notifications and timeline
+- [x] Create employee with birthday today, verify birthday notification and timeline entry
+- [x] Delete employee with documents, verify all data removed (CSV row, files, logs)
+- [x] Import CSV with 50 employees, verify dashboard stats update
+- [x] Filter table by multiple criteria, verify report matches
+- [x] Export filtered report to CSV, reimport, verify data consistency
+- [x] Edit fields_schema.csv (add field), restart, verify UI updates without data loss
+- [x] Test with empty database (no employees), verify UI handles gracefully
+- [x] Test with 500+ employees, verify performance acceptable
+- [x] Test concurrent edits (two browser tabs), verify no data corruption
+- [x] Test browser refresh during unsaved edits, verify warning works
+- [x] Document any integration issues or data inconsistencies
 
 ### TASK 18: Documentation Verification
 
