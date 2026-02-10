@@ -360,26 +360,26 @@ This plan uses multiple AI agents to systematically test all features documented
 - Verify: No hardcoded values, dynamic form groups, table columns, filters
 
 **Steps:**
-- [ ] Read fields_schema.csv, verify 8 columns: field_order, field_name, field_label, field_type, field_options, show_in_table, field_group, editable_in_table
-- [ ] Verify GET /api/fields-schema returns structured data (groups, tableFields, allFields)
-- [ ] Verify form groups in cards view match field_group from schema
-- [ ] Verify field labels match field_label from schema (no hardcoded labels)
-- [ ] Verify dropdown options match field_options from schema (pipe-separated)
-- [ ] Verify table columns match show_in_table=yes fields
-- [ ] Verify inline editing enabled only for editable_in_table=yes fields
-- [ ] Verify field types rendered correctly (text, select, textarea, date, email, tel, number, file)
-- [ ] Test positional convention for employment_status options:
+- [x] Read fields_schema.csv, verify 8 columns: field_order, field_name, field_label, field_type, field_options, show_in_table, field_group, editable_in_table
+- [x] Verify GET /api/fields-schema returns structured data (groups, tableFields, allFields)
+- [x] Verify form groups in cards view match field_group from schema
+- [x] Verify field labels match field_label from schema (no hardcoded labels)
+- [x] Verify dropdown options match field_options from schema (pipe-separated)
+- [x] Verify table columns match show_in_table=yes fields
+- [x] Verify inline editing enabled only for editable_in_table=yes fields
+- [x] Verify field types rendered correctly (text, select, textarea, date, email, tel, number, file)
+- [x] Test positional convention for employment_status options:
   - options[0] = working status (e.g., "Працює")
   - options[1] = fired status
   - options[2] = vacation status (✈️ emoji)
   - options[3] = sick leave status (🏥 emoji)
-- [ ] Verify dashboard stat cards use all employment_status options dynamically
-- [ ] Verify no hardcoded status strings in code (search for "Працює", "Відпустка", etc.)
-- [ ] Change field_label in schema, verify UI updates after reload
-- [ ] Add new option to field_options, verify appears in dropdown
-- [ ] Change show_in_table from yes to no, verify column hidden
-- [ ] Verify file fields (field_type=file) auto-generate _issue_date and _expiry_date columns
-- [ ] Document any hardcoded values or schema violations
+- [x] Verify dashboard stat cards use all employment_status options dynamically
+- [x] Verify no hardcoded status strings in code (search for "Працює", "Відпустка", etc.)
+- [x] Change field_label in schema, verify UI updates after reload
+- [x] Add new option to field_options, verify appears in dropdown
+- [x] Change show_in_table from yes to no, verify column hidden
+- [x] Verify file fields (field_type=file) auto-generate _issue_date and _expiry_date columns
+- [x] Document any hardcoded values or schema violations
 
 ### TASK 15: File Upload and Storage Testing
 
