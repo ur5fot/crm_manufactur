@@ -703,6 +703,21 @@ const formattedLastUpdated = computed(() => {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 });
 
+// Dashboard report counts
+const absentEmployeesCount = computed(() => {
+  if (activeReport.value === 'current') {
+    return reportData.value.length;
+  }
+  return 0;
+});
+
+const statusChangesThisMonthCount = computed(() => {
+  if (activeReport.value === 'month') {
+    return reportData.value.length;
+  }
+  return 0;
+});
+
 // Попап зміни статусу
 const showStatusChangePopup = ref(false);
 const statusChangeForm = reactive({
@@ -2346,10 +2361,10 @@ onUnmounted(() => {
         <div class="report-section">
           <div class="report-buttons">
             <button class="report-btn" :class="{ active: activeReport === 'current' }" @click="toggleReport('current')">
-              Хто відсутній зараз
+              Хто відсутній зараз<span v-if="activeReport === 'current'"> ({{ absentEmployeesCount }})</span>
             </button>
             <button class="report-btn" :class="{ active: activeReport === 'month' }" @click="toggleReport('month')">
-              Зміни статусів цього місяця
+              Зміни статусів цього місяця<span v-if="activeReport === 'month'"> ({{ statusChangesThisMonthCount }})</span>
             </button>
           </div>
           <div v-if="activeReport && !reportLoading" class="report-result">

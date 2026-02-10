@@ -179,13 +179,13 @@
 **Files:**
 - Modify: `client/src/App.vue`
 
-- [ ] Add computed property absentEmployeesCount returning dashboardReports.current.length
-- [ ] Add computed property statusChangesThisMonthCount returning dashboardReports.month.length
-- [ ] Update dashboard report section title "Хто відсутній зараз" to include count: "Хто відсутній зараз ({{ absentEmployeesCount }})"
-- [ ] Update dashboard report section title "Зміни статусів цього місяця" to include count: "Зміни статусів цього місяця ({{ statusChangesThisMonthCount }})"
-- [ ] Test: counts display correctly on dashboard
-- [ ] Test: counts update when data changes
-- [ ] run npm test - must pass
+- [x] Add computed property absentEmployeesCount returning dashboardReports.current.length
+- [x] Add computed property statusChangesThisMonthCount returning dashboardReports.month.length
+- [x] Update dashboard report section title "Хто відсутній зараз" to include count: "Хто відсутній зараз ({{ absentEmployeesCount }})"
+- [x] Update dashboard report section title "Зміни статусів цього місяця" to include count: "Зміни статусів цього місяця ({{ statusChangesThisMonthCount }})"
+- [x] Test: counts display correctly on dashboard
+- [x] Test: counts update when data changes
+- [x] run npm test - must pass
 
 ## Final Validation
 
