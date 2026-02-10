@@ -367,6 +367,47 @@ export async function getDocumentExpiryEvents() {
   return { today: todayEvents, thisWeek: weekEvents };
 }
 
+export async function getDocumentOverdueEvents() {
+  const employees = await loadEmployees();
+  const schema = await loadFieldsSchema();
+  const now = new Date();
+  const today = localDateStr(now);
+
+  // Находим все поля типа file и их labels
+  const fileFields = schema.filter(f => f.field_type === 'file');
+
+  const overdueEvents = [];
+
+  employees.forEach(emp => {
+    const name = [emp.last_name, emp.first_name, emp.middle_name].filter(Boolean).join(' ');
+
+    fileFields.forEach(field => {
+      const expiryDateField = `${field.field_name}_expiry_date`;
+      const expiryDate = emp[expiryDateField];
+      if (!expiryDate) return;
+      if (!emp[field.field_name]) return; // Пропускаем если документ отсутствует
+
+      // Документы с датой истечения строго меньше сегодняшней даты
+      if (expiryDate < today) {
+        overdueEvents.push({
+          employee_id: emp.employee_id,
+          name,
+          document_field: field.field_name,
+          document_label: field.field_label,
+          expiry_date: expiryDate,
+          has_file: true,
+          type: 'overdue'
+        });
+      }
+    });
+  });
+
+  // Сортируем по дате истечения (самые старые первыми)
+  overdueEvents.sort((a, b) => a.expiry_date.localeCompare(b.expiry_date));
+
+  return { overdue: overdueEvents };
+}
+
 export async function getStatusReport(type) {
   const employees = await loadEmployees();
   const schema = await loadFieldsSchema();

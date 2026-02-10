@@ -20,6 +20,7 @@ import {
   getDashboardStats,
   getDashboardEvents,
   getDocumentExpiryEvents,
+  getDocumentOverdueEvents,
   getStatusReport,
   exportEmployees,
   ROOT_DIR,
@@ -125,6 +126,16 @@ app.get("/api/dashboard/events", async (_req, res) => {
 app.get("/api/document-expiry", async (_req, res) => {
   try {
     const events = await getDocumentExpiryEvents();
+    res.json(events);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get("/api/document-overdue", async (_req, res) => {
+  try {
+    const events = await getDocumentOverdueEvents();
     res.json(events);
   } catch (err) {
     console.error(err);

@@ -1,4 +1,18 @@
 /**
+ * Task 1 Tests: Overdue Documents Dashboard Block
+ *
+ * Manual test checklist:
+ * - [ ] Navigate to Dashboard page
+ * - [ ] Overdue documents block appears after timeline cards
+ * - [ ] Shows "Немає прострочених документів" when no overdue docs
+ * - [ ] Shows overdue documents with warning emoji (⚠️)
+ * - [ ] Each entry shows employee name (clickable), document type, and expiry date
+ * - [ ] Clicking employee name navigates to employee card
+ * - [ ] Only shows documents with expiry_date < today
+ * - [ ] Block updates on dashboard refresh
+ */
+
+/**
  * Task 6 Tests: CSV Import Page
  *
  * Manual test checklist:
@@ -32,6 +46,21 @@
  */
 
 import { describe, it, expect } from 'vitest';
+
+describe('Task 1: Overdue Documents Dashboard Block', () => {
+  it('placeholder test - manual testing required', () => {
+    // This project doesn't have automated testing infrastructure yet
+    // All tests must be performed manually according to the plan:
+    // 1. Start the app with ./run.sh
+    // 2. Navigate to Dashboard
+    // 3. Verify "Прострочені документи" block appears after timeline cards
+    // 4. Verify overdue documents display with warning emoji, name, document type, and expiry date
+    // 5. Verify clicking employee name navigates to employee card
+    // 6. Test with no overdue docs - should show empty state message
+    // 7. Test with overdue docs - should show entries with expiry_date < today
+    expect(true).toBe(true);
+  });
+});
 
 describe('Task 6: Import Page', () => {
   it('placeholder test - manual testing required', () => {

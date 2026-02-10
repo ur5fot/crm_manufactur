@@ -110,6 +110,7 @@ const refreshIntervalId = ref(null);
 const lastUpdated = ref(null);
 const isRefreshing = ref(false);
 const dashboardEvents = ref({ today: [], thisWeek: [] });
+const dashboardOverdueEvents = ref([]);
 const expandedCard = ref(null); // null | 'total' | '<status_label>' | 'other'
 const activeReport = ref(null); // null | 'current' | 'month'
 const reportData = ref([]);
@@ -163,6 +164,7 @@ function startDashboardRefresh() {
   refreshIntervalId.value = setInterval(async () => {
     await loadEmployees(true);
     await loadDashboardEvents();
+    await loadOverdueDocuments();
   }, 300000);
 }
 
@@ -170,6 +172,7 @@ function refreshManually() {
   loadEmployees();
   if (currentView.value === 'dashboard') {
     loadDashboardEvents();
+    loadOverdueDocuments();
     startDashboardRefresh();
   }
 }
@@ -192,6 +195,7 @@ watch(() => route.name, async (newRoute, oldRoute) => {
   if (newView === 'dashboard') {
     loadEmployees();
     loadDashboardEvents();
+    loadOverdueDocuments();
     startDashboardRefresh();
   } else if (oldView === 'dashboard') {
     stopDashboardRefresh();
@@ -1093,6 +1097,15 @@ async function loadDashboardEvents() {
   }
 }
 
+async function loadOverdueDocuments() {
+  try {
+    const data = await api.getDocumentOverdue();
+    dashboardOverdueEvents.value = data.overdue || [];
+  } catch (error) {
+    console.error('Failed to load overdue documents:', error);
+  }
+}
+
 // Универсальная проверка и обработка смены статусов
 async function checkStatusChanges() {
   const now = new Date();
@@ -1655,6 +1668,7 @@ onMounted(async () => {
   // Load dashboard events if on dashboard
   if (route.name === 'dashboard' || !route.name) {
     await loadDashboardEvents();
+    await loadOverdueDocuments();
     startDashboardRefresh();
   }
 });
@@ -2083,6 +2097,18 @@ onUnmounted(() => {
             <span class="timeline-desc">{{ timelineEventDesc(event) }}</span>
           </div>
         </div>
+        </div>
+        <!-- Прострочені документи -->
+        <div class="timeline-card" style="margin-top: 1rem;">
+          <div class="timeline-title">Прострочені документи</div>
+          <div v-if="dashboardOverdueEvents.length === 0" class="timeline-empty">
+            Немає прострочених документів
+          </div>
+          <div v-for="event in dashboardOverdueEvents" :key="event.employee_id + event.document_field" class="timeline-event">
+            <span class="timeline-emoji">⚠️</span>
+            <span class="timeline-name timeline-link" @click="openEmployeeCard(event.employee_id)">{{ event.name }}</span>
+            <span class="timeline-desc">{{ event.document_label }} (закінчився {{ formatEventDate(event.expiry_date) }})</span>
+          </div>
         </div>
         <!-- Швидкі звіти по статусах -->
         <div class="report-section">

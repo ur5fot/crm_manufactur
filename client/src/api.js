@@ -74,6 +74,9 @@ export const api = {
   getDocumentExpiry() {
     return request("/document-expiry");
   },
+  getDocumentOverdue() {
+    return request("/document-overdue");
+  },
   getBirthdayEvents() {
     return request("/birthday-events");
   },
