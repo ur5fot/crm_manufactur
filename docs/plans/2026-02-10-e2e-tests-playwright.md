@@ -125,8 +125,8 @@
 - Create: `tests/fixtures/test-photo.jpg` (dummy image)
 
 **Steps:**
-- [ ] Создать dummy файлы для тестирования upload
-- [ ] Test: "Загрузить документ с датами"
+- [x] Создать dummy файлы для тестирования upload
+- [x] Test: "Загрузить документ с датами"
   - Navigate to employee card
   - Scroll to Documents section
   - Click "Завантажити" for id_certificate_file
@@ -136,16 +136,16 @@
   - Assert file appears in documents table
   - Assert dates displayed correctly
   - Assert file exists in `files/employee_{id}/` via API
-- [ ] Test: "Удалить документ"
+- [x] Test: "Удалить документ"
   - Load employee with document
   - Click delete icon for document
   - Assert document removed from UI
   - Assert file deleted from filesystem (API check)
-- [ ] Test: "Открыть папку сотрудника"
+- [x] Test: "Открыть папку сотрудника"
   - Click "Відкрити папку"
   - Assert API endpoint called `POST /api/employees/:id/open-folder`
   - (Note: cannot verify OS file explorer opened in E2E)
-- [ ] `npm run test:e2e tests/e2e/documents.spec.js` (все тесты должны пройти)
+- [x] `npm run test:e2e tests/e2e/documents.spec.js` (все тесты должны пройти)
 
 ---
 
