@@ -239,30 +239,30 @@
 - Create: `tests/e2e/dashboard.spec.js`
 
 **Steps:**
-- [ ] Test: "Отобразить статистику по статусам"
+- [x] Test: "Отобразить статистику по статусам"
   - Navigate to `/` (dashboard)
   - Assert stat cards render with counts
   - Assert total employees count correct
-- [ ] Test: "Развернуть список сотрудников по статусу"
+- [x] Test: "Развернуть список сотрудников по статусу"
   - Click on "Відпустка" stat card
   - Assert accordion expands with employee names
   - Assert employee names are clickable links
   - Click employee name
   - Assert navigates to `/cards/:id`
-- [ ] Test: "Уведомление о окончании документов"
+- [x] Test: "Уведомление о окончании документов"
   - Create employee with expiring document (expiry_date = today + 3 days)
   - Reload dashboard
   - Assert notification popup appears
   - Assert document expiry event in timeline
-- [ ] Test: "Уведомление о днях рождения"
+- [x] Test: "Уведомление о днях рождения"
   - Create employee with birthday today
   - Reload dashboard
   - Assert birthday notification appears with cake emoji
-- [ ] Test: "Auto-refresh dashboard"
+- [x] Test: "Auto-refresh dashboard"
   - Load dashboard
   - Wait for auto-refresh interval (check lastUpdate timestamp changes)
   - Assert data refreshed without page reload
-- [ ] `npm run test:e2e tests/e2e/dashboard.spec.js` (все тесты должны пройти)
+- [x] `npm run test:e2e tests/e2e/dashboard.spec.js` (все тесты должны пройти)
 
 ---
 

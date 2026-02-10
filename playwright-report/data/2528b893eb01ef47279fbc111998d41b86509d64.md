@@ -1,0 +1,504 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - generic [ref=e5]:
+    - generic [ref=e6]:
+      - heading "📋 Сповіщення про зміну статусів" [level=3] [ref=e7]
+      - button "×" [ref=e8] [cursor=pointer]
+    - generic [ref=e10]:
+      - paragraph [ref=e11]: "🏢 Сьогодні повертаються:"
+      - list [ref=e12]:
+        - listitem [ref=e13]:
+          - generic [ref=e15]: TestSickLeave User
+          - generic [ref=e16]: Лікарняний → Працює
+    - button "Зрозуміло" [ref=e18] [cursor=pointer]
+  - generic [ref=e20]:
+    - generic [ref=e21]:
+      - heading "🎂 Сповіщення про дні народження" [level=3] [ref=e22]
+      - button "×" [ref=e23] [cursor=pointer]
+    - generic [ref=e25]:
+      - paragraph [ref=e26]: "🎉 Найближчі дні народження:"
+      - list [ref=e27]:
+        - listitem [ref=e28]:
+          - generic [ref=e30]: 🎉 Сидоров Василь
+          - generic [ref=e31]:
+            - generic [ref=e32]: 25 років
+            - generic [ref=e33]: Сб, 14.02.2026
+    - button "Зрозуміло" [ref=e35] [cursor=pointer]
+  - generic [ref=e36]:
+    - banner [ref=e37]:
+      - generic [ref=e38]:
+        - generic [ref=e39]: CRM на CSV
+        - generic [ref=e40]: Vue + Node, локальні CSV файли
+      - generic [ref=e41]:
+        - button "Dashboard" [ref=e42] [cursor=pointer]
+        - button "Картки" [ref=e43] [cursor=pointer]
+        - button "Таблиця" [ref=e44] [cursor=pointer]
+        - button "Звіти" [ref=e45] [cursor=pointer]
+        - button "Імпорт" [ref=e46] [cursor=pointer]
+        - button "Логи" [ref=e47] [cursor=pointer]
+        - button "🔄" [ref=e48] [cursor=pointer]
+    - generic [ref=e49]:
+      - complementary [ref=e50]:
+        - generic [ref=e51]:
+          - generic [ref=e52]:
+            - generic [ref=e53]: Співробітники
+            - button "➕" [ref=e54] [cursor=pointer]
+          - generic [ref=e56]: 53 всього
+        - searchbox "Пошук за ПІБ, підрозділом або ID" [ref=e57]
+        - generic [ref=e58]:
+          - generic [ref=e59] [cursor=pointer]:
+            - generic [ref=e60]: ConcurrentTest2 Update2
+            - generic [ref=e61]: "ID: 1 · Value from Request 2 · Test Department Updated 2"
+            - generic [ref=e63]: Працює
+          - generic [ref=e64] [cursor=pointer]:
+            - generic [ref=e65]: Сидоров Василь
+            - generic [ref=e66]: "ID: 2"
+            - generic [ref=e68]: Працює
+          - generic [ref=e69] [cursor=pointer]:
+            - generic [ref=e70]: Мирон Дмитро Антифий
+            - generic [ref=e71]: "ID: 3"
+            - generic [ref=e73]: Працює
+          - generic [ref=e74] [cursor=pointer]:
+            - generic [ref=e75]: APITest Create
+            - generic [ref=e76]: "ID: 4"
+            - generic [ref=e78]: Працює
+          - generic [ref=e79] [cursor=pointer]:
+            - generic [ref=e80]: ImportTest1 John M
+            - generic [ref=e81]: "ID: 5"
+            - generic [ref=e83]: Працює
+          - generic [ref=e84] [cursor=pointer]:
+            - generic [ref=e85]: ImportTest2 Jane A
+            - generic [ref=e86]: "ID: 6"
+            - generic [ref=e88]: Працює
+          - generic [ref=e89] [cursor=pointer]:
+            - generic [ref=e90]: ImportTest1 John M
+            - generic [ref=e91]: "ID: 7"
+            - generic [ref=e93]: Працює
+          - generic [ref=e94] [cursor=pointer]:
+            - generic [ref=e95]: ImportTest2 Jane A
+            - generic [ref=e96]: "ID: 8"
+            - generic [ref=e98]: Працює
+          - generic [ref=e99] [cursor=pointer]:
+            - generic [ref=e100]: TestVacation User
+            - generic [ref=e101]: "ID: 9"
+            - generic [ref=e103]: Відпустка
+          - generic [ref=e104] [cursor=pointer]:
+            - generic [ref=e105]: TestSickLeave User
+            - generic [ref=e106]: "ID: 10"
+            - generic [ref=e108]: Лікарняний
+          - generic [ref=e109] [cursor=pointer]:
+            - generic [ref=e110]: Task4Test Cards View
+            - generic [ref=e111]: "ID: 11"
+            - generic [ref=e113]: Працює
+          - generic [ref=e114] [cursor=pointer]:
+            - generic [ref=e115]: TestInlineEdit TableView Testing
+            - generic [ref=e116]: "ID: 12"
+            - generic [ref=e118]: Працює
+          - generic [ref=e119] [cursor=pointer]:
+            - generic [ref=e120]: FilterTest Придатний
+            - generic [ref=e121]: "ID: 13"
+            - generic [ref=e123]: Працює
+          - generic [ref=e124] [cursor=pointer]:
+            - generic [ref=e125]: Новий Співробітник
+            - generic [ref=e126]: "ID: 16"
+            - generic [ref=e128]: без статусу
+          - generic [ref=e129] [cursor=pointer]:
+            - generic [ref=e130]: Невалідний Дата
+            - generic [ref=e131]: "ID: 17"
+            - generic [ref=e133]: без статусу
+          - generic [ref=e134] [cursor=pointer]:
+            - generic [ref=e135]: Невалідний Статус
+            - generic [ref=e136]: "ID: 18"
+            - generic [ref=e138]: Неправильний статус
+          - generic [ref=e139] [cursor=pointer]:
+            - generic [ref=e140]: Мінімальний Набір
+            - generic [ref=e141]: "ID: 19"
+            - generic [ref=e143]: без статусу
+          - generic [ref=e144] [cursor=pointer]:
+            - generic [ref=e145]: Частковий Імпорт
+            - generic [ref=e146]: "ID: 20"
+            - generic [ref=e148]: без статусу
+          - generic [ref=e149] [cursor=pointer]:
+            - generic [ref=e150]: БезБОМ Тест
+            - generic [ref=e151]: "ID: 21"
+            - generic [ref=e153]: без статусу
+          - generic [ref=e154] [cursor=pointer]:
+            - generic [ref=e155]: CleanupTest1 Log
+            - generic [ref=e156]: "ID: 22"
+            - generic [ref=e158]: без статусу
+          - generic [ref=e159] [cursor=pointer]:
+            - generic [ref=e160]: CleanupTest2 Log
+            - generic [ref=e161]: "ID: 23"
+            - generic [ref=e163]: без статусу
+          - generic [ref=e164] [cursor=pointer]:
+            - generic [ref=e165]: CleanupTest3 Log
+            - generic [ref=e166]: "ID: 24"
+            - generic [ref=e168]: без статусу
+          - generic [ref=e169] [cursor=pointer]:
+            - generic [ref=e170]: CleanupTest4 Log
+            - generic [ref=e171]: "ID: 25"
+            - generic [ref=e173]: без статусу
+          - generic [ref=e174] [cursor=pointer]:
+            - generic [ref=e175]: CleanupTest5 Log
+            - generic [ref=e176]: "ID: 26"
+            - generic [ref=e178]: без статусу
+          - generic [ref=e179] [cursor=pointer]:
+            - generic [ref=e180]: IntegrationTest Complete Workflow
+            - generic [ref=e181]: "ID: 27 · Test Engineer"
+            - generic [ref=e183]: Працює
+          - generic [ref=e184] [cursor=pointer]:
+            - generic [ref=e185]: Import Test1
+            - generic [ref=e186]: "ID: 28"
+            - generic [ref=e188]: Працює
+          - generic [ref=e189] [cursor=pointer]:
+            - generic [ref=e190]: Import Test2
+            - generic [ref=e191]: "ID: 29"
+            - generic [ref=e193]: Працює
+          - generic [ref=e194] [cursor=pointer]:
+            - generic [ref=e195]: Import Test3
+            - generic [ref=e196]: "ID: 30"
+            - generic [ref=e198]: Працює
+          - generic [ref=e199] [cursor=pointer]:
+            - generic [ref=e200]: Шевченко Тарас Григорович
+            - generic [ref=e201]: "ID: 31 · Інженер · Відділ розробки"
+            - generic [ref=e203]: Працює
+          - generic [ref=e204] [cursor=pointer]:
+            - generic [ref=e205]: Франко Іван Якович
+            - generic [ref=e206]: "ID: 32 · Тестувальник · Відділ тестування"
+            - generic [ref=e208]: Працює
+          - generic [ref=e209] [cursor=pointer]:
+            - generic [ref=e210]: Лесі Українка Петрівна
+            - generic [ref=e211]: "ID: 33 · Маркетолог · Відділ маркетингу"
+            - generic [ref=e213]: Працює
+          - generic [ref=e214] [cursor=pointer]:
+            - generic [ref=e215]: Шевченко Тарас Григорович
+            - generic [ref=e216]: "ID: 34 · Інженер · Відділ розробки"
+            - generic [ref=e218]: Працює
+          - generic [ref=e219] [cursor=pointer]:
+            - generic [ref=e220]: Франко Іван Якович
+            - generic [ref=e221]: "ID: 35 · Тестувальник · Відділ тестування"
+            - generic [ref=e223]: Працює
+          - generic [ref=e224] [cursor=pointer]:
+            - generic [ref=e225]: Лесі Українка Петрівна
+            - generic [ref=e226]: "ID: 36 · Маркетолог · Відділ маркетингу"
+            - generic [ref=e228]: Працює
+          - generic [ref=e229] [cursor=pointer]:
+            - generic [ref=e230]: Шевченко Тарас Григорович
+            - generic [ref=e231]: "ID: 37 · Інженер · Відділ розробки"
+            - generic [ref=e233]: Працює
+          - generic [ref=e234] [cursor=pointer]:
+            - generic [ref=e235]: Франко Іван Якович
+            - generic [ref=e236]: "ID: 38 · Тестувальник · Відділ тестування"
+            - generic [ref=e238]: Працює
+          - generic [ref=e239] [cursor=pointer]:
+            - generic [ref=e240]: Лесі Українка Петрівна
+            - generic [ref=e241]: "ID: 39 · Маркетолог · Відділ маркетингу"
+            - generic [ref=e243]: Працює
+          - generic [ref=e244] [cursor=pointer]:
+            - generic [ref=e245]: Шевченко Тарас Григорович
+            - generic [ref=e246]: "ID: 40 · Інженер · Відділ розробки"
+            - generic [ref=e248]: Працює
+          - generic [ref=e249] [cursor=pointer]:
+            - generic [ref=e250]: Франко Іван Якович
+            - generic [ref=e251]: "ID: 41 · Тестувальник · Відділ тестування"
+            - generic [ref=e253]: Працює
+          - generic [ref=e254] [cursor=pointer]:
+            - generic [ref=e255]: Лесі Українка Петрівна
+            - generic [ref=e256]: "ID: 42 · Маркетолог · Відділ маркетингу"
+            - generic [ref=e258]: Працює
+          - generic [ref=e259] [cursor=pointer]:
+            - generic [ref=e260]: Шевченко Тарас Григорович
+            - generic [ref=e261]: "ID: 43 · Інженер · Відділ розробки"
+            - generic [ref=e263]: Працює
+          - generic [ref=e264] [cursor=pointer]:
+            - generic [ref=e265]: Франко Іван Якович
+            - generic [ref=e266]: "ID: 44 · Тестувальник · Відділ тестування"
+            - generic [ref=e268]: Працює
+          - generic [ref=e269] [cursor=pointer]:
+            - generic [ref=e270]: Лесі Українка Петрівна
+            - generic [ref=e271]: "ID: 45 · Маркетолог · Відділ маркетингу"
+            - generic [ref=e273]: Працює
+          - generic [ref=e274] [cursor=pointer]:
+            - generic [ref=e275]: Шевченко Тарас Григорович
+            - generic [ref=e276]: "ID: 46 · Інженер · Відділ розробки"
+            - generic [ref=e278]: Працює
+          - generic [ref=e279] [cursor=pointer]:
+            - generic [ref=e280]: Франко Іван Якович
+            - generic [ref=e281]: "ID: 47 · Тестувальник · Відділ тестування"
+            - generic [ref=e283]: Працює
+          - generic [ref=e284] [cursor=pointer]:
+            - generic [ref=e285]: Лесі Українка Петрівна
+            - generic [ref=e286]: "ID: 48 · Маркетолог · Відділ маркетингу"
+            - generic [ref=e288]: Працює
+          - generic [ref=e289] [cursor=pointer]:
+            - generic [ref=e290]: Шевченко Тарас Григорович
+            - generic [ref=e291]: "ID: 49 · Інженер · Відділ розробки"
+            - generic [ref=e293]: Працює
+          - generic [ref=e294] [cursor=pointer]:
+            - generic [ref=e295]: Франко Іван Якович
+            - generic [ref=e296]: "ID: 50 · Тестувальник · Відділ тестування"
+            - generic [ref=e298]: Працює
+          - generic [ref=e299] [cursor=pointer]:
+            - generic [ref=e300]: Лесі Українка Петрівна
+            - generic [ref=e301]: "ID: 51 · Маркетолог · Відділ маркетингу"
+            - generic [ref=e303]: Працює
+          - generic [ref=e304] [cursor=pointer]:
+            - generic [ref=e305]: Шевченко Тарас Григорович
+            - generic [ref=e306]: "ID: 52 · Інженер · Відділ розробки"
+            - generic [ref=e308]: Працює
+          - generic [ref=e309] [cursor=pointer]:
+            - generic [ref=e310]: Франко Іван Якович
+            - generic [ref=e311]: "ID: 53 · Тестувальник · Відділ тестування"
+            - generic [ref=e313]: Працює
+          - generic [ref=e314] [cursor=pointer]:
+            - generic [ref=e315]: Лесі Українка Петрівна
+            - generic [ref=e316]: "ID: 54 · Маркетолог · Відділ маркетингу"
+            - generic [ref=e318]: Працює
+          - generic [ref=e319] [cursor=pointer]:
+            - generic [ref=e320]: Документов Тест Документович
+            - generic [ref=e321]: "ID: 55 · Тестер документів"
+            - generic [ref=e323]: Працює
+      - generic [ref=e324]:
+        - generic [ref=e325]:
+          - generic [ref=e326]: Картка співробітника
+          - generic [ref=e327]:
+            - button "Зберегти" [ref=e328] [cursor=pointer]
+            - generic [ref=e329]:
+              - button "✖️" [ref=e330] [cursor=pointer]
+              - button "🗑️" [ref=e331] [cursor=pointer]
+        - generic [ref=e332]:
+          - generic [ref=e333]:
+            - generic [ref=e334]: Особисті дані
+            - generic [ref=e335]:
+              - generic [ref=e336]:
+                - generic [ref=e337]: ID співробітника
+                - textbox "ID співробітника" [ref=e338]: "55"
+              - generic [ref=e339]:
+                - generic [ref=e340]: Прізвище
+                - textbox "Прізвище" [ref=e341]: Документов
+              - generic [ref=e342]:
+                - generic [ref=e343]: Ім'я
+                - textbox "Ім'я" [ref=e344]: Тест
+              - generic [ref=e345]:
+                - generic [ref=e346]: По батькові
+                - textbox "По батькові" [ref=e347]: Документович
+              - generic [ref=e348]:
+                - generic [ref=e349]: Дата народження
+                - textbox "Дата народження" [ref=e350]
+              - generic [ref=e351]:
+                - generic [ref=e352]: Статус роботи
+                - generic [ref=e353]:
+                  - textbox "Статус роботи" [ref=e354]: Працює
+                  - button "Змінити статус" [ref=e355] [cursor=pointer]
+              - generic [ref=e356]:
+                - generic [ref=e357]: Додатковий статус
+                - combobox "Додатковий статус" [ref=e358]:
+                  - option "--" [selected]
+                  - option "може працювати"
+                  - option "Не може працювати"
+              - generic [ref=e359]:
+                - generic [ref=e360]: Стать
+                - combobox "Стать" [ref=e361]:
+                  - option "--" [selected]
+                  - option "Чоловіча"
+                  - option "Жіноча"
+              - generic [ref=e362]:
+                - generic [ref=e363]: Група крові
+                - combobox "Група крові" [ref=e364]:
+                  - option "--" [selected]
+                  - option "0(I) Rh+"
+                  - option "0(I) Rh-"
+                  - option "A(II) Rh+"
+                  - option "A(II) Rh-"
+                  - option "B(III) Rh+"
+                  - option "B(III) Rh-"
+                  - option "AB(IV) Rh+"
+                  - option "AB(IV) Rh-"
+          - generic [ref=e365]:
+            - generic [ref=e366]: Посада та робота
+            - generic [ref=e367]:
+              - generic [ref=e368]:
+                - generic [ref=e369]: Підрозділ
+                - textbox "Підрозділ" [ref=e370]
+              - generic [ref=e371]:
+                - generic [ref=e372]: Посада
+                - textbox "Посада" [ref=e373]
+              - generic [ref=e374]:
+                - generic [ref=e375]: Звання
+                - textbox "Звання" [ref=e376]: Тестер документів
+              - generic [ref=e377]:
+                - generic [ref=e378]: Спеціальність
+                - textbox "Спеціальність" [ref=e379]
+              - generic [ref=e380]:
+                - generic [ref=e381]: Робочий стан
+                - textbox "Робочий стан" [ref=e382]
+              - generic [ref=e383]:
+                - generic [ref=e384]: Тип роботи
+                - combobox "Тип роботи" [ref=e385]:
+                  - option "--" [selected]
+                  - option "Часткова зайнятість"
+                  - option "Контракт"
+                  - option "Повна ставка"
+              - generic [ref=e386]:
+                - generic [ref=e387]: Придатність
+                - combobox "Придатність" [ref=e388]:
+                  - option "--" [selected]
+                  - option "Придатний"
+                  - option "Не придатний"
+                  - option "Обмежено придатний"
+              - generic [ref=e389]:
+                - generic [ref=e390]: Наказ
+                - textbox "Наказ" [ref=e391]
+          - generic [ref=e392]:
+            - generic [ref=e393]: Локація
+            - generic [ref=e394]:
+              - generic [ref=e395]:
+                - generic [ref=e396]: Місцезнаходження
+                - combobox "Місцезнаходження" [ref=e397]:
+                  - option "--" [selected]
+                  - option "Дніпро"
+                  - option "Запоріжжя"
+                  - option "На виїзді"
+              - generic [ref=e398]:
+                - generic [ref=e399]: Місце проживання
+                - textbox "Місце проживання" [ref=e400]
+              - generic [ref=e401]:
+                - generic [ref=e402]: Місце реєстрації
+                - textbox "Місце реєстрації" [ref=e403]
+          - generic [ref=e404]:
+            - generic [ref=e405]: Контакти та освіта
+            - generic [ref=e406]:
+              - generic [ref=e407]:
+                - generic [ref=e408]: Ел. пошта
+                - textbox "Ел. пошта" [ref=e409]
+              - generic [ref=e410]:
+                - generic [ref=e411]: Телефон
+                - textbox "Телефон" [ref=e412]
+              - generic [ref=e413]:
+                - generic [ref=e414]: Примітка до телефону
+                - textbox "Примітка до телефону" [ref=e415]
+              - generic [ref=e416]:
+                - generic [ref=e417]: Освіта
+                - textbox "Освіта" [ref=e418]
+          - generic [ref=e419]:
+            - generic [ref=e420]: Оплата
+            - generic [ref=e421]:
+              - generic [ref=e422]:
+                - generic [ref=e423]: Зарплатна сітка
+                - textbox "Зарплатна сітка" [ref=e424]
+              - generic [ref=e425]:
+                - generic [ref=e426]: Оклад
+                - spinbutton "Оклад" [ref=e427]
+              - generic [ref=e428]:
+                - generic [ref=e429]: Банк
+                - textbox "Банк" [ref=e430]
+              - generic [ref=e431]:
+                - generic [ref=e432]: Номер картки
+                - textbox "Номер картки" [ref=e433]
+              - generic [ref=e434]:
+                - generic [ref=e435]: IBAN
+                - textbox "IBAN" [ref=e436]
+              - generic [ref=e437]:
+                - generic [ref=e438]: ІПН
+                - textbox "ІПН" [ref=e439]
+          - generic [ref=e440]:
+            - generic [ref=e441]: Інше
+            - generic [ref=e443]:
+              - generic [ref=e444]: Примітка
+              - textbox "Примітка" [ref=e445]
+          - generic [ref=e446]:
+            - generic [ref=e447]:
+              - generic [ref=e448]: Документи
+              - button "Відкрити папку" [ref=e449] [cursor=pointer]
+            - table [ref=e450]:
+              - rowgroup [ref=e451]:
+                - row "Документ Статус Дата видачі Дата закінчення Дії" [ref=e452]:
+                  - columnheader "Документ" [ref=e453]
+                  - columnheader "Статус" [ref=e454]
+                  - columnheader "Дата видачі" [ref=e455]
+                  - columnheader "Дата закінчення" [ref=e456]
+                  - columnheader "Дії" [ref=e457]
+              - rowgroup [ref=e458]:
+                - row "Особова справа ✗ Не завантажено — — Завантажити" [ref=e459]:
+                  - cell "Особова справа" [ref=e460]
+                  - cell "✗ Не завантажено" [ref=e461]
+                  - cell "—" [ref=e462]
+                  - cell "—" [ref=e463]
+                  - cell "Завантажити" [ref=e464]:
+                    - button "Завантажити" [ref=e466] [cursor=pointer]
+                - row "Медична комісія ✗ Не завантажено — — Завантажити" [ref=e467]:
+                  - cell "Медична комісія" [ref=e468]
+                  - cell "✗ Не завантажено" [ref=e469]
+                  - cell "—" [ref=e470]
+                  - cell "—" [ref=e471]
+                  - cell "Завантажити" [ref=e472]:
+                    - button "Завантажити" [ref=e474] [cursor=pointer]
+                - row "Посвідчення ветерана ✗ Не завантажено — — Завантажити" [ref=e475]:
+                  - cell "Посвідчення ветерана" [ref=e476]
+                  - cell "✗ Не завантажено" [ref=e477]
+                  - cell "—" [ref=e478]
+                  - cell "—" [ref=e479]
+                  - cell "Завантажити" [ref=e480]:
+                    - button "Завантажити" [ref=e482] [cursor=pointer]
+                - row "Водійське посвідчення ✗ Не завантажено — — Завантажити" [ref=e483]:
+                  - cell "Водійське посвідчення" [ref=e484]
+                  - cell "✗ Не завантажено" [ref=e485]
+                  - cell "—" [ref=e486]
+                  - cell "—" [ref=e487]
+                  - cell "Завантажити" [ref=e488]:
+                    - button "Завантажити" [ref=e490] [cursor=pointer]
+                - row "Посвідчення особи ✗ Не завантажено — — Завантажити" [ref=e491]:
+                  - cell "Посвідчення особи" [ref=e492]
+                  - cell "✗ Не завантажено" [ref=e493]
+                  - cell "—" [ref=e494]
+                  - cell "—" [ref=e495]
+                  - cell "Завантажити" [ref=e496]:
+                    - button "Завантажити" [ref=e498] [cursor=pointer]
+                - row "Закордонний паспорт ✗ Не завантажено — — Завантажити" [ref=e499]:
+                  - cell "Закордонний паспорт" [ref=e500]
+                  - cell "✗ Не завантажено" [ref=e501]
+                  - cell "—" [ref=e502]
+                  - cell "—" [ref=e503]
+                  - cell "Завантажити" [ref=e504]:
+                    - button "Завантажити" [ref=e506] [cursor=pointer]
+                - row "Довідка про несудимість ✗ Не завантажено — — Завантажити" [ref=e507]:
+                  - cell "Довідка про несудимість" [ref=e508]
+                  - cell "✗ Не завантажено" [ref=e509]
+                  - cell "—" [ref=e510]
+                  - cell "—" [ref=e511]
+                  - cell "Завантажити" [ref=e512]:
+                    - button "Завантажити" [ref=e514] [cursor=pointer]
+                - row "Військовий квиток ✗ Не завантажено — — Завантажити" [ref=e515]:
+                  - cell "Військовий квиток" [ref=e516]
+                  - cell "✗ Не завантажено" [ref=e517]
+                  - cell "—" [ref=e518]
+                  - cell "—" [ref=e519]
+                  - cell "Завантажити" [ref=e520]:
+                    - button "Завантажити" [ref=e522] [cursor=pointer]
+                - row "Медична довідка ✗ Не завантажено — — Завантажити" [ref=e523]:
+                  - cell "Медична довідка" [ref=e524]
+                  - cell "✗ Не завантажено" [ref=e525]
+                  - cell "—" [ref=e526]
+                  - cell "—" [ref=e527]
+                  - cell "Завантажити" [ref=e528]:
+                    - button "Завантажити" [ref=e530] [cursor=pointer]
+                - row "Страховий поліс ✗ Не завантажено — — Завантажити" [ref=e531]:
+                  - cell "Страховий поліс" [ref=e532]
+                  - cell "✗ Не завантажено" [ref=e533]
+                  - cell "—" [ref=e534]
+                  - cell "—" [ref=e535]
+                  - cell "Завантажити" [ref=e536]:
+                    - button "Завантажити" [ref=e538] [cursor=pointer]
+                - row "Диплом про освіту ✗ Не завантажено — — Завантажити" [ref=e539]:
+                  - cell "Диплом про освіту" [ref=e540]
+                  - cell "✗ Не завантажено" [ref=e541]
+                  - cell "—" [ref=e542]
+                  - cell "—" [ref=e543]
+                  - cell "Завантажити" [ref=e544]:
+                    - button "Завантажити" [ref=e546] [cursor=pointer]
+          - generic [ref=e548]:
+            - generic [ref=e549]: CSV файли
+            - button "Відкрити папку data" [ref=e550] [cursor=pointer]
+```
