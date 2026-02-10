@@ -73,4 +73,4 @@ Bug fixes для CRM Manufacturing System по результатам comprehens
 ## Documentation
 
 - [x] update CLAUDE.md if concurrent edit protection implemented or limitation documented
-- [ ] move this plan to `docs/plans/completed/`
+- [x] move this plan to `docs/plans/completed/`
