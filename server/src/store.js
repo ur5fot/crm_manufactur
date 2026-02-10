@@ -353,11 +353,11 @@ export async function getDocumentExpiryEvents() {
       };
 
       if (expiryDate === today) {
-        todayEvents.push({ ...event, type: 'expired_today' });
+        todayEvents.push({ ...event, type: 'expiring_today' });
       } else if (expiryDate > today && expiryDate <= in7daysStr) {
         weekEvents.push({ ...event, type: 'expiring_soon' });
       } else if (expiryDate < today && expiryDate >= past30daysStr) {
-        todayEvents.push({ ...event, type: 'already_expired' });
+        todayEvents.push({ ...event, type: 'recently_expired' });
       }
     });
   });
@@ -639,9 +639,14 @@ export async function loadConfig() {
 
     return config;
   } catch (error) {
-    console.error('Ошибка загрузки config.csv:', error.message);
+    if (error.code === 'ENOENT') {
+      console.log('config.csv не найден, используются значения по умолчанию');
+    } else {
+      console.error('ОШИБКА: config.csv поврежден или имеет неверный формат:', error.message);
+      console.error('Используются значения по умолчанию. Проверьте файл config.csv!');
+    }
     // Возвращаем значения по умолчанию
-    return { max_log_entries: '1000' };
+    return { max_log_entries: '1000', max_file_upload_mb: '10', retirement_age_years: '60', max_report_preview_rows: '100' };
   }
 }
 

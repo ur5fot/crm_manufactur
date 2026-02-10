@@ -342,7 +342,9 @@ function statusEmoji(statusValue) {
 }
 
 function docExpiryEmoji(event) {
-  if (event.type === 'already_expired' || event.type === 'expired_today') return '⚠️';
+  if (event.type === 'recently_expired') return '⚠️'; // Документ просрочен (в пределах 30 дней)
+  if (event.type === 'expiring_today') return '⚠️'; // Документ истекает сегодня
+  if (event.type === 'expiring_soon') return '📄'; // Документ истекает в ближайшие 7 дней
   return '📄';
 }
 
@@ -357,7 +359,7 @@ function timelineEventEmoji(event) {
 function timelineEventDesc(event) {
   if (event.type === 'doc_expiry') {
     const label = event.document_label || event.document_field;
-    if (event.expiry_type === 'already_expired' || event.expiry_type === 'expired_today') {
+    if (event.expiry_type === 'recently_expired' || event.expiry_type === 'expiring_today') {
       return `— ${label} (термін сплив)`;
     }
     return `— ${label} (до ${formatEventDate(event.expiry_date)})`;
