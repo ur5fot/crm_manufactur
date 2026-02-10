@@ -16,6 +16,7 @@ import {
   addLog,
   addLogs,
   loadFieldsSchema,
+  formatFieldNameWithLabel,
   getDashboardStats,
   getDashboardEvents,
   getDocumentExpiryEvents,
@@ -406,6 +407,15 @@ app.post("/api/employees/import", importUpload.single("file"), async (req, res) 
 
   await saveEmployees(nextEmployees);
 
+  // Логирование импортированных сотрудников
+  for (let i = employees.length; i < nextEmployees.length; i++) {
+    const employee = nextEmployees[i];
+    const employeeName = [employee.last_name, employee.first_name, employee.middle_name]
+      .filter(Boolean)
+      .join(" ");
+    await addLog("CREATE", employee.employee_id, employeeName, "", "", "", "Створено співробітника (імпорт)");
+  }
+
   res.json({ added, skipped, errors });
 });
 
@@ -571,14 +581,17 @@ app.put("/api/employees/:id", async (req, res) => {
 
     // Логируем все изменения одной batch-операцией для предотвращения race condition
     if (changedFields.length > 0) {
-      const logEntries = changedFields.map(field => ({
-        action: "UPDATE",
-        employeeId: req.params.id,
-        employeeName: employeeName,
-        fieldName: field,
-        oldValue: current[field] || "",
-        newValue: next[field] || "",
-        details: `Изменено поле: ${field}`
+      const logEntries = await Promise.all(changedFields.map(async (field) => {
+        const formattedFieldName = await formatFieldNameWithLabel(field);
+        return {
+          action: "UPDATE",
+          employeeId: req.params.id,
+          employeeName: employeeName,
+          fieldName: formattedFieldName,
+          oldValue: current[field] || "",
+          newValue: next[field] || "",
+          details: `Изменено поле: ${formattedFieldName}`
+        };
       }));
       await addLogs(logEntries);
     }
@@ -610,6 +623,10 @@ app.delete("/api/employees/:id", async (req, res) => {
         .join(" ");
       await addLog("DELETE", req.params.id, employeeName, "", "", "", "Сотрудник удален");
     }
+
+    // Удаляем директорию с файлами сотрудника
+    const employeeDir = path.join(FILES_DIR, `employee_${req.params.id}`);
+    await fsPromises.rm(employeeDir, { recursive: true, force: true }).catch(() => {});
 
     res.status(204).end();
   } catch (err) {
@@ -807,6 +824,13 @@ app.post("/api/employees/:id/files", (req, res, next) => {
       }
     }
 
+    // Логирование загрузки файла
+    const employeeName = [employees[index].last_name, employees[index].first_name, employees[index].middle_name]
+      .filter(Boolean)
+      .join(" ");
+    const formattedFieldName = await formatFieldNameWithLabel(fileField);
+    await addLog("UPDATE", req.params.id, employeeName, formattedFieldName, oldFilePath || "", relativePath, `Завантажено документ: ${formattedFieldName}`);
+
     res.json({ path: relativePath });
   } catch (err) {
     // Очищаем временный файл при непредвиденной ошибке
@@ -874,14 +898,15 @@ app.delete("/api/employees/:id/files/:fieldName", async (req, res) => {
     const employeeName = [employee.last_name, employee.first_name, employee.middle_name]
       .filter(Boolean)
       .join(" ");
+    const formattedFieldName = await formatFieldNameWithLabel(fieldName);
     await addLog(
       "UPDATE",
       id,
       employeeName,
-      fieldName,
+      formattedFieldName,
       filePath,
       "",
-      `Удален документ: ${fieldName}`
+      `Удален документ: ${formattedFieldName}`
     );
 
     res.status(204).end();

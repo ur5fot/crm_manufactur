@@ -161,6 +161,20 @@ export async function saveFieldsSchema(rows) {
 }
 
 /**
+ * Форматує назву поля з людинозрозумілою міткою: "Мітка (field_name)"
+ * @param {string} fieldName - технічна назва поля
+ * @returns {Promise<string>} - форматована назва "Мітка (field_name)" або просто "field_name" якщо мітка не знайдена
+ */
+export async function formatFieldNameWithLabel(fieldName) {
+  const schema = await loadFieldsSchema();
+  const field = schema.find(f => f.field_name === fieldName);
+  if (field && field.field_label) {
+    return `${field.field_label} (${fieldName})`;
+  }
+  return fieldName;
+}
+
+/**
  * Получает список колонок для employees.csv из fields_schema.csv
  * @returns {Promise<string[]>}
  */
