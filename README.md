@@ -18,7 +18,7 @@ Local CRM system that stores data in CSV files and PDF documents. CSV files can 
 - **Summary table** - inline editing via double-click, multi-select filters with empty value support
 - **Custom Reports** - advanced filtering and CSV export with column selection
 - **Unsaved changes warning** - navigation guard prevents accidental data loss when leaving employee card with unsaved changes
-- **Icon-only buttons** - redesigned Delete and Clear buttons with tooltips for better UX and accident prevention
+- **Icon-only buttons** - redesigned Delete and Clear buttons with tooltips for better UX and accident prevention; New Employee button (➕) located in Cards view sidebar, Refresh button (🔄) in global header
 - **Confirmation dialogs** - confirm before clearing form or deleting employee
 - **Automatic audit logging** - all changes tracked in `logs.csv` with automatic cleanup when threshold exceeded
 - **CSV import** - bulk import employees from CSV files
