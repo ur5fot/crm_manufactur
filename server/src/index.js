@@ -203,7 +203,8 @@ app.get("/api/reports/custom", async (req, res) => {
     if (req.query.filters) {
       try {
         filters = JSON.parse(req.query.filters);
-      } catch {
+      } catch (err) {
+        console.error('Invalid filters JSON:', err);
         res.status(400).json({ error: 'Invalid filters JSON' });
         return;
       }
@@ -212,7 +213,8 @@ app.get("/api/reports/custom", async (req, res) => {
     if (req.query.columns) {
       try {
         columns = JSON.parse(req.query.columns);
-      } catch {
+      } catch (err) {
+        console.error('Invalid columns JSON:', err);
         res.status(400).json({ error: 'Invalid columns JSON' });
         return;
       }
@@ -233,7 +235,8 @@ app.get("/api/export", async (req, res) => {
     if (req.query.filters) {
       try {
         filters = JSON.parse(req.query.filters);
-      } catch {
+      } catch (err) {
+        console.error('Invalid filters JSON:', err);
         res.status(400).json({ error: 'Invalid filters JSON' });
         return;
       }
@@ -583,7 +586,7 @@ app.put("/api/employees/:id", async (req, res) => {
       const issueDate = String(next[issueDateField] || "").trim();
       const expiryDate = String(next[expiryDateField] || "").trim();
 
-      if (issueDate && expiryDate && new Date(expiryDate) < new Date(issueDate)) {
+      if (issueDate && expiryDate && expiryDate < issueDate) {
         res.status(400).json({
           error: `Дата закінчення не може бути раніше дати видачі для документа ${docField}`
         });
@@ -774,7 +777,7 @@ app.post("/api/employees/:id/files", (req, res, next) => {
     }
 
     // Перевіряємо що дата закінчення не раніше дати видачі
-    if (issueDate && expiryDate && new Date(expiryDate) < new Date(issueDate)) {
+    if (issueDate && expiryDate && expiryDate < issueDate) {
       await fsPromises.unlink(req.file.path).catch(() => {});
       res.status(400).json({ error: "Дата закінчення не може бути раніше дати видачі" });
       return;

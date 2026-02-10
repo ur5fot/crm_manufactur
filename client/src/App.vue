@@ -1437,8 +1437,10 @@ async function checkRetirementEvents() {
           }
         }
       }
-      // Перезагружаем список сотрудников после изменений
-      await loadEmployees();
+      // Reload employees without triggering check functions again (prevent infinite loop)
+      const employeeData = await api.getEmployees();
+      employees.value = employeeData.employees || [];
+      lastUpdated.value = new Date();
     }
 
     retirementNotifiedDate = today;

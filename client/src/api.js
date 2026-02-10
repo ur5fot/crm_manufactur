@@ -3,7 +3,12 @@ const BASE_URL = import.meta.env.VITE_API_URL || "/api";
 async function request(path, options = {}) {
   const response = await fetch(`${BASE_URL}${path}`, options);
   if (!response.ok) {
-    const text = await response.text();
+    let text = '';
+    try {
+      text = await response.text();
+    } catch (err) {
+      // Ignore text extraction errors
+    }
     throw new Error(text || `Request failed: ${response.status}`);
   }
   if (response.status === 204) {

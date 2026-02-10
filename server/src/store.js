@@ -468,7 +468,7 @@ export async function exportEmployees(filters, searchTerm = '') {
   // Визначити колонки для export: тільки show_in_table=yes, відсортовані по field_order
   const exportFields = schema
     .filter(f => f.show_in_table === 'yes')
-    .sort((a, b) => parseInt(a.field_order) - parseInt(b.field_order))
+    .sort((a, b) => parseInt(a.field_order, 10) - parseInt(b.field_order, 10))
     .map(f => ({ key: f.field_name, label: f.field_label }));
 
   // Створити whitelist для валідації фільтрів
@@ -870,15 +870,26 @@ export async function getCustomReport(filters = [], columns = null) {
           case 'equals':
             // For number fields, use numeric comparison
             if (typeof value === 'number' || !isNaN(parseFloat(value))) {
-              return parseFloat(empValue) === parseFloat(value);
+              const empNum = parseFloat(empValue);
+              const valNum = parseFloat(value);
+              if (isNaN(empNum) || isNaN(valNum)) return false;
+              return empNum === valNum;
             }
             return empValue === value || empValueStr === filterValueStr;
           case 'not_equals':
             return empValue !== value && empValueStr !== filterValueStr;
-          case 'greater_than':
-            return parseFloat(empValue || 0) > parseFloat(value || 0);
-          case 'less_than':
-            return parseFloat(empValue || 0) < parseFloat(value || 0);
+          case 'greater_than': {
+            const empNum = parseFloat(empValue || 0);
+            const valNum = parseFloat(value || 0);
+            if (isNaN(empNum) || isNaN(valNum)) return false;
+            return empNum > valNum;
+          }
+          case 'less_than': {
+            const empNum = parseFloat(empValue || 0);
+            const valNum = parseFloat(value || 0);
+            if (isNaN(empNum) || isNaN(valNum)) return false;
+            return empNum < valNum;
+          }
           case 'date_range':
             // Date range: check if empValue is between valueFrom and valueTo (inclusive)
             if (!empValue) return false;
