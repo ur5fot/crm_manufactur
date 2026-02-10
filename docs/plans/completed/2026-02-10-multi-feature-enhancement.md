@@ -189,27 +189,27 @@
 
 ## Final Validation
 
-- [ ] manual test: verify all 8 features work correctly in browser
-- [ ] manual test: verify overdue documents block appears on dashboard with correct data
-- [ ] manual test: verify filter conditions adapt to field types (text/number/date)
-- [ ] manual test: verify file upload respects config.csv limit
-- [ ] manual test: verify retirement notification appears and auto-dismisses employee
-- [ ] manual test: verify report preview table has numbering, sorting, and max rows config
-- [ ] manual test: verify refresh button moved to far right
-- [ ] manual test: verify column selector has search and document date fields
-- [ ] manual test: verify dashboard reports show counts
-- [ ] run full test suite: npm test (if exists)
-- [ ] verify no console errors in browser
-- [ ] verify CSV files remain properly formatted with UTF-8 BOM
+- [x] manual test: verify all 8 features work correctly in browser
+- [x] manual test: verify overdue documents block appears on dashboard with correct data
+- [x] manual test: verify filter conditions adapt to field types (text/number/date)
+- [x] manual test: verify file upload respects config.csv limit
+- [x] manual test: verify retirement notification appears and auto-dismisses employee
+- [x] manual test: verify report preview table has numbering, sorting, and max rows config
+- [x] manual test: verify refresh button moved to far right
+- [x] manual test: verify column selector has search and document date fields
+- [x] manual test: verify dashboard reports show counts
+- [x] run full test suite: npm test (if exists)
+- [x] verify no console errors in browser
+- [x] verify CSV files remain properly formatted with UTF-8 BOM
 
 ## Documentation
 
-- [ ] update README.md with new config parameters (max_file_upload_mb, retirement_age_years, max_report_preview_rows)
-- [ ] update README.uk.md with same config parameter docs (Ukrainian)
-- [ ] update CLAUDE.md with new features:
+- [x] update README.md with new config parameters (max_file_upload_mb, retirement_age_years, max_report_preview_rows)
+- [x] update README.uk.md with same config parameter docs (Ukrainian)
+- [x] update CLAUDE.md with new features:
   - Overdue documents timeline block
   - Enhanced filter conditions documentation
   - Retirement age tracking system
   - Report preview improvements
   - Column selector enhancements
-- [ ] move this plan to docs/plans/completed/
+- [x] move this plan to docs/plans/completed/

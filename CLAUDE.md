@@ -185,7 +185,9 @@ git pull origin master
 - IDs are sequential numeric strings (e.g., "1", "2", "3")
 - Auto-incremented IDs calculated by finding max existing ID + 1
 - Deleting an employee removes associated file directory
-- File uploads use multer with 10MB limit for PDFs and images (jpg, jpeg, png, gif, webp):
+- File uploads use multer with configurable size limit for PDFs and images (jpg, jpeg, png, gif, webp):
+  - Limit configured via `max_file_upload_mb` in config.csv (default: 10MB)
+  - Server loads config at startup and applies to multer fileSize limit
   - Files initially saved with temporary names (`temp_{timestamp}.*`)
   - After upload completes, renamed based on `file_field` parameter with original extension preserved (e.g., `driver_license_file.pdf`, `id_certificate_file.jpg`)
   - This ensures correct naming even though multer processes files before body fields are available
@@ -220,6 +222,10 @@ git pull origin master
   - `toggleReport('current')` called after employees loaded
   - Shows all employees with non-working status (not `options[0]`)
   - Only auto-expands on Dashboard, not on other views
+  - Report section titles show employee count:
+    - "Хто відсутній зараз (N)" - where N = number of absent employees
+    - "Зміни статусів цього місяця (N)" - where N = number of status changes
+  - Counts computed from `absentEmployeesCount` and `statusChangesThisMonthCount` properties
 - **Timeline Cards** - Two-column grid (`.timeline-grid`) showing events (status changes, document expiry, birthdays):
   - "Сьогодні" (today) and "Найближчі 7 днів" (next 7 days)
   - Card-style containers (`.timeline-card`) with white background and rounded corners
@@ -227,6 +233,13 @@ git pull origin master
   - Status events: emoji by status position — ✈️ (vacation/options[2]), 🏥 (sick leave/options[3]), ℹ️ (others)
   - Document expiry events: ⚠️ (expiring today), 📄 (expiring within 7 days)
   - Birthday events: 🎂 (birthday today), 🎉 (birthday within 7 days)
+- **Overdue Documents Block** - Separate timeline card showing documents past expiry date:
+  - Full-width card (`.timeline-card.overdue-card`) after timeline grid
+  - "Прострочені документи" header with warning emoji (⚠️)
+  - Lists all documents with `expiry_date < today`
+  - Each entry shows employee name (clickable link), document type label, and expiry date
+  - Empty state: "Немає прострочених документів" when no overdue documents exist
+  - Data loaded from `GET /api/document-overdue` endpoint
 - **Auto-refresh** - Dashboard data refreshes automatically via interval
 - **Footer** - Shows last update timestamp
 
@@ -241,13 +254,27 @@ git pull origin master
 **Custom Reports UI:**
 - **Filter Builder** - Dynamic form for building complex filters:
   - Field selector dropdown (all fields from `fields_schema.csv`)
-  - Condition selector: `contains`, `equals`, `not_equals`, `empty`, `not_empty`
-  - Value input adapts to field type (text, select dropdown, date picker)
+  - Condition selector adapts to field type:
+    - Text fields: `contains`, `not_contains`, `empty`, `not_empty`
+    - Number/salary fields: `greater_than`, `less_than`, `equals`, `empty`, `not_empty`
+    - Date fields: `date_range` (requires two inputs: from and to), `empty`, `not_empty`
+  - Value input adapts to field type and condition:
+    - Text conditions: single text input
+    - Number conditions: single number input (type=number)
+    - Date range: two date inputs (valueFrom, valueTo)
+    - Empty/not_empty: no input (condition only)
   - "Додати фільтр" button to add filter to active list
   - "Очистити фільтри" button to reset all filters
 - **Active Filters Display** - Shows applied filters with remove (✖️) button per filter
-- **Column Selector** - Checkboxes to choose which fields to include in CSV export
-- **Preview Table** - Shows filtered results (max 100 rows preview, paginated)
+- **Column Selector** - Checkboxes to choose which fields to include in CSV export:
+  - Search input to filter column checkboxes by field label
+  - Includes document date fields: "{label} - Дата видачі", "{label} - Дата закінчення"
+  - Hint below checkboxes: "💡 Підказка: звіт автоматично виконується після вибору колонок"
+- **Preview Table** - Shows filtered results with enhancements:
+  - Row numbering column (№) as first column
+  - Sortable columns (click header to toggle sort direction with ↑/↓ indicator)
+  - Pagination: shows first N rows (configurable via `max_report_preview_rows` in config.csv, default 100)
+  - Status bar shows: "Знайдено записів: X (показано: Y)" where Y = min(X, max_preview_rows)
 - **CSV Export** - "Експорт в CSV" button generates and downloads filtered data
   - Filename format: `report_YYYY-MM-DD_HH-mm-ss.csv`
   - UTF-8 with BOM encoding for Excel compatibility
@@ -290,6 +317,7 @@ git pull origin master
   - Reduced opacity until hover (prevents accidental clicks)
 - **Global header buttons** - Refresh button in tab bar:
   - "Оновити" → 🔄 icon only (refresh icon)
+  - Positioned at far right of tab bar (after all navigation tabs)
   - Located in global header tab bar (visible on all views)
   - `title` attribute for accessibility
 - **Cards view sidebar buttons** - New employee button in left panel:
@@ -335,6 +363,18 @@ git pull origin master
 - **Dashboard timeline integration** - Birthday events appear in the dashboard timeline alongside status and document events
 - **Auto-check on load** - `checkBirthdayEvents()` function called from `loadEmployees()`
 - **birth_date field** - Added to fields_schema.csv (field_type=date, field_group="Личные данные", show_in_table=no)
+
+**Retirement Age Notifications:**
+- **API endpoint** - `GET /api/retirement-events` returns retirement events (employees reaching retirement age)
+- **Configuration** - Retirement age defined in `config.csv` (`retirement_age_years`, default: 60)
+- **Notification popup** - "Сповіщення про вихід на пенсію" modal with:
+  - Employees reaching retirement today - elder emoji (👴), shows employee name and age
+  - Employees reaching retirement this month - info emoji (ℹ️), shows employee name, age, and date
+- **Auto-dismiss logic** - When an employee reaches retirement age today:
+  - Automatically updates `employment_status` to `options[1]` (fired/dismissed status)
+  - Logs the auto-dismiss action to audit logs with details
+  - Happens during `checkRetirementEvents()` function called from `loadEmployees()`
+- **Age calculation** - Calculates age from `birth_date` field and compares with `retirement_age_years` from config
 
 **Status Change System:**
 - **Status Change Popup** - `employment_status` is read-only in the employee card. A "Змінити статус" button opens a popup with:
@@ -516,6 +556,9 @@ System-wide settings in [data/config.csv](data/config.csv):
 
 **Current configuration:**
 - `max_log_entries` - Maximum number of log entries before automatic cleanup (default: 1000)
+- `max_file_upload_mb` - Maximum file upload size in megabytes (default: 10)
+- `retirement_age_years` - Retirement age for auto-dismiss notifications (default: 60)
+- `max_report_preview_rows` - Maximum rows shown in report preview table (default: 100)
 
 **Features:**
 - CSV-based configuration (no hardcoded values)

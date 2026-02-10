@@ -187,7 +187,11 @@ Open `http://localhost:5173` in your browser.
   - `config_key` - Configuration parameter name
   - `config_value` - Parameter value
   - `config_description` - Human-readable description
-  - Current settings: `max_log_entries` (default: 1000) for automatic log cleanup
+  - Current settings:
+    - `max_log_entries` (default: 1000) - Maximum audit log entries before automatic cleanup
+    - `max_file_upload_mb` (default: 10) - Maximum file upload size in megabytes
+    - `retirement_age_years` (default: 60) - Retirement age for auto-dismiss notifications
+    - `max_report_preview_rows` (default: 100) - Maximum rows shown in report preview table
 
 - **logs.csv** - Audit log of all changes with automatic cleanup (9 columns):
   - `log_id` - Log entry ID
