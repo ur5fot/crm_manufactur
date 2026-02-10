@@ -634,3 +634,71 @@ export async function getBirthdayEvents() {
 
   return { today: todayEvents, next7Days: next7DaysEvents };
 }
+
+/**
+ * Get custom report with advanced filtering
+ * @param {Array} filters - Array of filter objects: [{field, condition, value}]
+ * @param {Array|null} columns - Array of column names to include (null = all)
+ * @returns {Promise<Array>} Filtered employee records
+ */
+export async function getCustomReport(filters = [], columns = null) {
+  const employees = await loadEmployees();
+  const schema = await loadFieldsSchema();
+
+  // Create whitelist for field validation
+  const allFieldNames = schema.map(f => f.field_name);
+
+  // Apply filters
+  let filtered = employees;
+
+  if (filters && Array.isArray(filters) && filters.length > 0) {
+    filtered = filtered.filter(emp => {
+      // AND logic: employee must match ALL filters
+      return filters.every(filter => {
+        const { field, condition, value } = filter;
+
+        // Validate field name
+        if (!allFieldNames.includes(field)) {
+          return true; // Skip invalid fields
+        }
+
+        const empValue = emp[field];
+        const empValueStr = String(empValue || '').toLowerCase();
+        const filterValueStr = String(value || '').toLowerCase();
+
+        switch (condition) {
+          case 'contains':
+            return empValueStr.includes(filterValueStr);
+          case 'equals':
+            return empValue === value || empValueStr === filterValueStr;
+          case 'not_equals':
+            return empValue !== value && empValueStr !== filterValueStr;
+          case 'empty':
+            return !empValue || empValue === '';
+          case 'not_empty':
+            return empValue && empValue !== '';
+          default:
+            return true;
+        }
+      });
+    });
+  }
+
+  // If columns specified, project only those columns
+  if (columns && Array.isArray(columns) && columns.length > 0) {
+    const validColumns = columns.filter(col => allFieldNames.includes(col));
+    filtered = filtered.map(emp => {
+      const projected = {};
+      validColumns.forEach(col => {
+        projected[col] = emp[col];
+      });
+      // Always include employee_id for identification
+      if (!projected.employee_id) {
+        projected.employee_id = emp.employee_id;
+      }
+      return projected;
+    });
+  }
+
+  return filtered;
+}

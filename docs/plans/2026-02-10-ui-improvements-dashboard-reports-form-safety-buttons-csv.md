@@ -69,30 +69,30 @@ This plan implements 8 improvements to the CRM UI:
 - Modify: `server/src/store.js`
 
 **Subtasks:**
-- [ ] Add /reports route to Vue Router configuration
-- [ ] Create Reports view section in template
-- [ ] Add "Звіти" tab button to navigation bar
-- [ ] Implement filter builder UI:
+- [x] Add /reports route to Vue Router configuration
+- [x] Create Reports view section in template
+- [x] Add "Звіти" tab button to navigation bar
+- [x] Implement filter builder UI:
   - Dynamic field selector dropdown (all fields from fields_schema)
   - Condition selector (contains, equals, not equals, empty, not empty)
   - Value input (text, select, date based on field type)
   - "Додати фільтр" and "Очистити фільтри" buttons
   - Support multiple filters (AND logic)
-- [ ] Add date range filter (optional, for any date field)
-- [ ] Add column selector (checkboxes to choose which fields to include in export)
-- [ ] Implement preview table showing filtered results (paginated, max 100 rows preview)
-- [ ] Add "Експорт в CSV" button
-- [ ] Backend: Add GET /api/reports/custom endpoint accepting filter parameters
-- [ ] Backend: Implement filtering logic in store.js (getCustomReport function)
-- [ ] Backend: Return filtered employee data as JSON
-- [ ] Frontend: Generate CSV from filtered data (reuse CSV export logic from table view)
-- [ ] Frontend: Trigger download with proper filename (report_YYYY-MM-DD_HH-mm-ss.csv)
-- [ ] Test filter builder with various field types (text, select, date, file)
-- [ ] Test multiple filter combinations
-- [ ] Test date range filtering
-- [ ] Test column selector includes/excludes correct fields
-- [ ] Test CSV export contains correct data with UTF-8 BOM
-- [ ] Test empty results scenario
+- [x] Add date range filter (optional, for any date field)
+- [x] Add column selector (checkboxes to choose which fields to include in export)
+- [x] Implement preview table showing filtered results (paginated, max 100 rows preview)
+- [x] Add "Експорт в CSV" button
+- [x] Backend: Add GET /api/reports/custom endpoint accepting filter parameters
+- [x] Backend: Implement filtering logic in store.js (getCustomReport function)
+- [x] Backend: Return filtered employee data as JSON
+- [x] Frontend: Generate CSV from filtered data (reuse CSV export logic from table view)
+- [x] Frontend: Trigger download with proper filename (report_YYYY-MM-DD_HH-mm-ss.csv)
+- [x] Test filter builder with various field types (text, select, date, file)
+- [x] Test multiple filter combinations
+- [x] Test date range filtering
+- [x] Test column selector includes/excludes correct fields
+- [x] Test CSV export contains correct data with UTF-8 BOM
+- [x] Test empty results scenario
 
 ---
 

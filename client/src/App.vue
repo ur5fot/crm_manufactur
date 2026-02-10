@@ -118,12 +118,19 @@ const activeReport = ref(null); // null | 'current' | 'month'
 const reportData = ref([]);
 const reportLoading = ref(false);
 
+// Custom reports state
+const customFilters = ref([]);
+const customReportResults = ref([]);
+const customReportLoading = ref(false);
+const selectedColumns = ref([]);
+
 // Compute current view based on route
 const currentView = computed(() => {
   const name = route.name;
   if (name === 'dashboard') return 'dashboard';
   if (name === 'cards') return 'cards';
   if (name === 'table') return 'table';
+  if (name === 'reports') return 'reports';
   if (name === 'logs') return 'logs';
   return 'dashboard';
 });
@@ -132,6 +139,7 @@ const tabs = [
   { key: 'dashboard', label: 'Dashboard' },
   { key: 'cards', label: 'Картки' },
   { key: 'table', label: 'Таблиця' },
+  { key: 'reports', label: 'Звіти' },
   { key: 'logs', label: 'Логи' },
 ];
 
@@ -142,6 +150,8 @@ function switchView(view) {
     router.push({ name: 'cards' });
   } else if (view === 'table') {
     router.push({ name: 'table' });
+  } else if (view === 'reports') {
+    router.push({ name: 'reports' });
   } else if (view === 'logs') {
     router.push({ name: 'logs' });
   }
@@ -175,6 +185,7 @@ watch(() => route.name, async (newRoute, oldRoute) => {
   const oldView = oldRoute === 'dashboard' ? 'dashboard' :
                    oldRoute === 'cards' ? 'cards' :
                    oldRoute === 'table' ? 'table' :
+                   oldRoute === 'reports' ? 'reports' :
                    oldRoute === 'logs' ? 'logs' : 'dashboard';
 
   if (newView === 'dashboard') {
@@ -358,6 +369,82 @@ async function toggleReport(type) {
   } finally {
     reportLoading.value = false;
   }
+}
+
+// Custom reports functions
+function addCustomFilter() {
+  customFilters.value.push({
+    field: '',
+    condition: 'contains',
+    value: ''
+  });
+}
+
+function removeCustomFilter(index) {
+  customFilters.value.splice(index, 1);
+}
+
+function clearCustomFilters() {
+  customFilters.value = [];
+  customReportResults.value = [];
+}
+
+async function runCustomReport() {
+  customReportLoading.value = true;
+  errorMessage.value = '';
+  try {
+    const validFilters = customFilters.value.filter(f => f.field && f.condition);
+    const columns = selectedColumns.value.length > 0 ? selectedColumns.value : null;
+    const data = await api.getCustomReport(validFilters, columns);
+    customReportResults.value = data.results || [];
+  } catch (error) {
+    errorMessage.value = error.message;
+    customReportResults.value = [];
+  } finally {
+    customReportLoading.value = false;
+  }
+}
+
+function exportCustomReportCSV() {
+  if (customReportResults.value.length === 0) {
+    alert('Немає даних для експорту');
+    return;
+  }
+
+  const schema = allFieldsSchema.value;
+  const columns = selectedColumns.value.length > 0
+    ? selectedColumns.value
+    : schema.filter(f => f.show_in_table === 'yes').map(f => f.field_name);
+
+  const headers = columns.map(col => {
+    const field = schema.find(f => f.field_name === col);
+    return field ? field.field_label : col;
+  });
+
+  const rows = customReportResults.value.map(emp => {
+    return columns.map(col => {
+      const val = emp[col];
+      if (val == null || val === '') return '';
+      const strVal = String(val).replace(/"/g, '""');
+      return strVal.includes(';') || strVal.includes('"') || strVal.includes('\n')
+        ? `"${strVal}"`
+        : strVal;
+    });
+  });
+
+  const BOM = '\uFEFF';
+  const csvContent = BOM + [headers.join(';'), ...rows.map(r => r.join(';'))].join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+  const filename = `report_${timestamp}.csv`;
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 const form = reactive(emptyEmployee());
@@ -2311,6 +2398,124 @@ onUnmounted(() => {
                 </tr>
               </tbody>
             </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Режим звітів -->
+      <div v-else-if="currentView === 'reports'" class="layout-table">
+        <div class="panel table-panel">
+          <div class="panel-header">
+            <div class="panel-title">Користувацькі звіти</div>
+          </div>
+
+          <div class="custom-reports-container">
+            <!-- Filter Builder -->
+            <div class="filter-builder">
+              <h3>Фільтри</h3>
+              <div v-for="(filter, index) in customFilters" :key="index" class="filter-row">
+                <select v-model="filter.field" class="filter-field">
+                  <option value="">-- Виберіть поле --</option>
+                  <option v-for="field in allFieldsSchema" :key="field.field_name" :value="field.field_name">
+                    {{ field.field_label }}
+                  </option>
+                </select>
+
+                <select v-model="filter.condition" class="filter-condition">
+                  <option value="contains">Містить</option>
+                  <option value="equals">Дорівнює</option>
+                  <option value="not_equals">Не дорівнює</option>
+                  <option value="empty">Порожнє</option>
+                  <option value="not_empty">Не порожнє</option>
+                </select>
+
+                <input
+                  v-if="filter.condition !== 'empty' && filter.condition !== 'not_empty'"
+                  v-model="filter.value"
+                  type="text"
+                  class="filter-value"
+                  placeholder="Значення"
+                />
+
+                <button type="button" class="btn-remove-filter" @click="removeCustomFilter(index)" title="Видалити фільтр">
+                  ✕
+                </button>
+              </div>
+
+              <div class="filter-actions">
+                <button type="button" class="secondary" @click="addCustomFilter">
+                  Додати фільтр
+                </button>
+                <button type="button" class="secondary" @click="clearCustomFilters">
+                  Очистити фільтри
+                </button>
+              </div>
+            </div>
+
+            <!-- Column Selector -->
+            <div class="column-selector">
+              <h3>Колонки для експорту</h3>
+              <p class="help-text">Не вибрано жодної колонки = експортуються всі колонки з таблиці</p>
+              <div class="column-checkboxes">
+                <label v-for="field in allFieldsSchema" :key="field.field_name" class="column-checkbox">
+                  <input
+                    type="checkbox"
+                    :value="field.field_name"
+                    v-model="selectedColumns"
+                  />
+                  {{ field.field_label }}
+                </label>
+              </div>
+            </div>
+
+            <!-- Run Report Button -->
+            <div class="report-actions">
+              <button type="button" class="primary" @click="runCustomReport" :disabled="customReportLoading">
+                {{ customReportLoading ? 'Завантаження...' : 'Виконати звіт' }}
+              </button>
+              <button
+                type="button"
+                class="secondary"
+                @click="exportCustomReportCSV"
+                :disabled="customReportResults.length === 0"
+              >
+                Експорт в CSV
+              </button>
+            </div>
+
+            <!-- Results Preview -->
+            <div v-if="customReportResults.length > 0" class="report-preview">
+              <h3>Попередній перегляд результатів (макс. 100 рядків)</h3>
+              <div class="status-bar">
+                <span>Знайдено записів: {{ customReportResults.length }}</span>
+              </div>
+              <div class="table-container">
+                <table class="summary-table">
+                  <thead>
+                    <tr>
+                      <th v-for="field in (selectedColumns.length > 0 ? selectedColumns : allFieldsSchema.filter(f => f.show_in_table === 'yes').map(f => f.field_name))" :key="field">
+                        {{ allFieldsSchema.find(f => f.field_name === field)?.field_label || field }}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="(emp, idx) in customReportResults.slice(0, 100)" :key="emp.employee_id || idx">
+                      <td v-for="field in (selectedColumns.length > 0 ? selectedColumns : allFieldsSchema.filter(f => f.show_in_table === 'yes').map(f => f.field_name))" :key="field">
+                        {{ emp[field] || '' }}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div v-else-if="customReportResults.length === 0 && !customReportLoading && customFilters.length > 0" class="alert">
+              За обраними фільтрами не знайдено результатів
+            </div>
+
+            <div v-if="errorMessage" class="alert">
+              {{ errorMessage }}
+            </div>
           </div>
         </div>
       </div>

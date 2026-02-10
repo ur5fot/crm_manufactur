@@ -157,6 +157,38 @@ app.get("/api/reports/statuses", async (req, res) => {
   }
 });
 
+app.get("/api/reports/custom", async (req, res) => {
+  try {
+    let filters = [];
+    let columns = null;
+
+    if (req.query.filters) {
+      try {
+        filters = JSON.parse(req.query.filters);
+      } catch {
+        res.status(400).json({ error: 'Invalid filters JSON' });
+        return;
+      }
+    }
+
+    if (req.query.columns) {
+      try {
+        columns = JSON.parse(req.query.columns);
+      } catch {
+        res.status(400).json({ error: 'Invalid columns JSON' });
+        return;
+      }
+    }
+
+    const { getCustomReport } = await import('./store.js');
+    const results = await getCustomReport(filters, columns);
+    res.json({ results });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get("/api/export", async (req, res) => {
   try {
     let filters = {};

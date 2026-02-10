@@ -80,6 +80,17 @@ export const api = {
   getStatusReport(type) {
     return request(`/reports/statuses?type=${type}`);
   },
+  getCustomReport(filters, columns) {
+    const queryParams = new URLSearchParams();
+    if (filters && filters.length > 0) {
+      queryParams.set('filters', JSON.stringify(filters));
+    }
+    if (columns && columns.length > 0) {
+      queryParams.set('columns', JSON.stringify(columns));
+    }
+    const params = queryParams.toString() ? `?${queryParams.toString()}` : '';
+    return request(`/reports/custom${params}`);
+  },
   async exportCSV(filters, searchTerm = '') {
     const queryParams = new URLSearchParams();
     if (filters && Object.keys(filters).length > 0) {
