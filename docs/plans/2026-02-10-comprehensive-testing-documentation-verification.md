@@ -252,25 +252,25 @@ This plan uses multiple AI agents to systematically test all features documented
 - Verify: Template download, upload, validation, error handling
 
 **Steps:**
-- [ ] Navigate to /import
-- [ ] Verify "Імпорт" tab appears in navigation
-- [ ] Click "Завантажити шаблон CSV", verify downloads employees_import_sample.csv
-- [ ] Open template in Excel, verify UTF-8 BOM encoding (no garbled text)
-- [ ] Verify template headers match current schema (all fields from fields_schema.csv)
-- [ ] Verify template auto-synced on server startup (run.sh calls sync-template.js)
-- [ ] Create valid CSV: fill last_name, first_name, leave employee_id empty
-- [ ] Upload CSV, verify import succeeds
-- [ ] Verify auto-generated sequential IDs
-- [ ] Verify all fields imported correctly (check employees.csv)
-- [ ] Create CSV with existing employee_id, verify row skipped
-- [ ] Create CSV with invalid data (wrong date format, invalid select value)
-- [ ] Upload, verify validation errors shown with clear messages
-- [ ] Create CSV with partial columns (only required fields)
-- [ ] Upload, verify succeeds with empty values for missing fields
-- [ ] Create CSV with wrong encoding (no BOM), verify handles correctly or shows error
-- [ ] Verify import results show: rows added, rows skipped, errors
-- [ ] Check logs.csv, verify CREATE entries for imported employees
-- [ ] Document any import issues or validation problems
+- [x] Navigate to /import
+- [x] Verify "Імпорт" tab appears in navigation
+- [x] Click "Завантажити шаблон CSV", verify downloads employees_import_sample.csv
+- [x] Open template in Excel, verify UTF-8 BOM encoding (no garbled text)
+- [x] Verify template headers match current schema (all fields from fields_schema.csv)
+- [x] Verify template auto-synced on server startup (run.sh calls sync-template.js)
+- [x] Create valid CSV: fill last_name, first_name, leave employee_id empty
+- [x] Upload CSV, verify import succeeds
+- [x] Verify auto-generated sequential IDs
+- [x] Verify all fields imported correctly (check employees.csv)
+- [x] Create CSV with existing employee_id, verify row skipped
+- [x] Create CSV with invalid data (wrong date format, invalid select value)
+- [x] Upload, verify validation errors shown with clear messages
+- [x] Create CSV with partial columns (only required fields)
+- [x] Upload, verify succeeds with empty values for missing fields
+- [x] Create CSV with wrong encoding (no BOM), verify handles correctly or shows error
+- [x] Verify import results show: rows added, rows skipped, errors
+- [x] Check logs.csv, verify CREATE entries for imported employees
+- [x] Document any import issues or validation problems
 
 ### TASK 11: Audit Logs Testing
 
