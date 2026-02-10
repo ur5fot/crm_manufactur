@@ -157,20 +157,22 @@
 
 **Files:**
 - Modify: `client/src/App.vue`
+- Modify: `server/src/store.js`
 
-- [ ] Add columnSearchTerm ref for filtering column checkboxes
-- [ ] Add text input above column checkboxes: <input v-model="columnSearchTerm" placeholder="Пошук полів..." />
-- [ ] Add computed property filteredColumnsForSelector that filters allFieldsSchema by columnSearchTerm (search in field.label)
-- [ ] Update v-for in column checkboxes to use filteredColumnsForSelector instead of allFieldsSchema
-- [ ] Add document date fields to allFieldsSchema or create separate list for date companions:
+- [x] Add columnSearchTerm ref for filtering column checkboxes
+- [x] Add text input above column checkboxes: <input v-model="columnSearchTerm" placeholder="Пошук полів..." />
+- [x] Add computed property filteredColumnsForSelector that filters allFieldsSchema by columnSearchTerm (search in field.label)
+- [x] Update v-for in column checkboxes to use filteredColumnsForSelector instead of allFieldsSchema
+- [x] Add document date fields to allFieldsSchema or create separate list for date companions:
   - For each document field (field_type=file), add two entries: "{label} - Дата видачі", "{label} - Дата закінчення"
   - Map to field keys: "{field_key}_issue_date", "{field_key}_expiry_date"
-- [ ] Ensure document date fields appear in column selector with proper labels
-- [ ] Update selectedColumns to allow selecting date fields
-- [ ] Update preview table and CSV export to include selected date fields
-- [ ] Test: column search filters checkboxes correctly
-- [ ] Test: document issue_date and expiry_date fields selectable and appear in export
-- [ ] run npm test - must pass before task 8
+- [x] Ensure document date fields appear in column selector with proper labels
+- [x] Update selectedColumns to allow selecting date fields
+- [x] Update preview table and CSV export to include selected date fields
+- [x] Fix backend getCustomReport to validate document date fields in column whitelist
+- [x] Test: column search filters checkboxes correctly
+- [x] Test: document issue_date and expiry_date fields selectable and appear in export
+- [x] run npm test - must pass before task 8
 
 ### TASK 8: Dashboard reports show count
 

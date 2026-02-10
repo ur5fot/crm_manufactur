@@ -833,8 +833,16 @@ export async function getCustomReport(filters = [], columns = null) {
   const employees = await loadEmployees();
   const schema = await loadFieldsSchema();
 
-  // Create whitelist for field validation
-  const allFieldNames = schema.map(f => f.field_name);
+  // Create whitelist for field validation (including auto-generated date fields)
+  const allFieldNames = [];
+  schema.forEach(f => {
+    allFieldNames.push(f.field_name);
+    // Add auto-generated date fields for document fields
+    if (f.field_type === 'file') {
+      allFieldNames.push(`${f.field_name}_issue_date`);
+      allFieldNames.push(`${f.field_name}_expiry_date`);
+    }
+  });
 
   // Apply filters
   let filtered = employees;

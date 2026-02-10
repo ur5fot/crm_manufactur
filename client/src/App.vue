@@ -168,6 +168,7 @@ const customReportLoading = ref(false);
 const selectedColumns = ref([]);
 const reportSortColumn = ref(null);
 const reportSortDirection = ref('asc');
+const columnSearchTerm = ref('');
 
 // App config
 const appConfig = ref({
@@ -486,9 +487,14 @@ function exportCustomReportCSV() {
     ? selectedColumns.value
     : schema.filter(f => f.showInTable).map(f => f.key);
 
+  // Build lookup map for all fields including document date fields
+  const allColumnsMap = {};
+  filteredColumnsForSelector.value.forEach(col => {
+    allColumnsMap[col.key] = col.label;
+  });
+
   const headers = columns.map(col => {
-    const field = schema.find(f => f.key === col);
-    return field ? field.label : col;
+    return allColumnsMap[col] || col;
   });
 
   const rows = customReportResults.value.map(emp => {
@@ -548,6 +554,42 @@ function sortReportPreview(fieldKey) {
     }
   });
 }
+
+// Computed property for filtering column selector
+const filteredColumnsForSelector = computed(() => {
+  const searchLower = columnSearchTerm.value.toLowerCase().trim();
+
+  // Build list: all regular fields + document date fields
+  const regularFields = allFieldsSchema.value.map(f => ({
+    key: f.key,
+    label: f.label
+  }));
+
+  // Add document date fields
+  const docFields = documentFields.value;
+  const dateFields = [];
+  docFields.forEach(doc => {
+    dateFields.push({
+      key: `${doc.key}_issue_date`,
+      label: `${doc.label} - Дата видачі`
+    });
+    dateFields.push({
+      key: `${doc.key}_expiry_date`,
+      label: `${doc.label} - Дата закінчення`
+    });
+  });
+
+  const allColumns = [...regularFields, ...dateFields];
+
+  // Filter by search term if provided
+  if (!searchLower) {
+    return allColumns;
+  }
+
+  return allColumns.filter(col =>
+    col.label.toLowerCase().includes(searchLower)
+  );
+});
 
 const form = reactive(emptyEmployee());
 
@@ -2849,8 +2891,14 @@ onUnmounted(() => {
             <div class="column-selector">
               <h3>Колонки для експорту</h3>
               <p class="help-text">Не вибрано жодної колонки = експортуються всі колонки з таблиці</p>
+              <input
+                type="text"
+                v-model="columnSearchTerm"
+                placeholder="Пошук полів..."
+                style="width: 100%; padding: 0.5rem; margin-bottom: 0.75rem; border: 1px solid #ccc; border-radius: 4px;"
+              />
               <div class="column-checkboxes">
-                <label v-for="field in allFieldsSchema" :key="field.key" class="column-checkbox">
+                <label v-for="field in filteredColumnsForSelector" :key="field.key" class="column-checkbox">
                   <input
                     type="checkbox"
                     :value="field.key"
@@ -2896,7 +2944,7 @@ onUnmounted(() => {
                         </span>
                       </th>
                       <th v-for="field in (selectedColumns.length > 0 ? selectedColumns : allFieldsSchema.filter(f => f.showInTable).map(f => f.key))" :key="field" style="cursor: pointer;" @click="sortReportPreview(field)">
-                        {{ allFieldsSchema.find(f => f.key === field)?.label || field }}
+                        {{ filteredColumnsForSelector.find(f => f.key === field)?.label || allFieldsSchema.find(f => f.key === field)?.label || field }}
                         <span v-if="reportSortColumn === field">
                           {{ reportSortDirection === 'asc' ? '↑' : '↓' }}
                         </span>
