@@ -198,21 +198,21 @@ This plan uses multiple AI agents to systematically test all features documented
 - Verify: Inline editing, filters, empty value filter, ID navigation
 
 **Steps:**
-- [ ] Navigate to /table
-- [ ] Verify table shows only columns with show_in_table=yes from schema
-- [ ] Verify ID column center-aligned with title attribute
-- [ ] Double-click on cell with editable_in_table=yes, verify inline editing activates
-- [ ] Edit value, press Enter or click outside, verify saves and updates CSV
-- [ ] Double-click on ID cell, verify navigates to /cards/:id
-- [ ] Test multi-select filters for select fields
-- [ ] Check multiple values in one filter, verify OR logic (shows rows matching any)
-- [ ] Test "(Пусто)" empty value checkbox, verify filters rows with empty values
-- [ ] Apply multiple column filters, verify AND logic (all filters must match)
-- [ ] Click "Clear Filters" button, verify all filters reset
-- [ ] Verify filter state persists when navigating away and back
-- [ ] Verify columnFilters uses __EMPTY__ sentinel for empty checks
-- [ ] Test table with 100+ employees, verify performance
-- [ ] Document any table issues or filter bugs
+- [x] Navigate to /table
+- [x] Verify table shows only columns with show_in_table=yes from schema
+- [x] Verify ID column center-aligned with title attribute
+- [x] Double-click on cell with editable_in_table=yes, verify inline editing activates
+- [x] Edit value, press Enter or click outside, verify saves and updates CSV
+- [x] Double-click on ID cell, verify navigates to /cards/:id
+- [x] Test multi-select filters for select fields
+- [x] Check multiple values in one filter, verify OR logic (shows rows matching any)
+- [x] Test "(Пусто)" empty value checkbox, verify filters rows with empty values
+- [x] Apply multiple column filters, verify AND logic (all filters must match)
+- [x] Click "Clear Filters" button, verify all filters reset
+- [x] Verify filter state persists when navigating away and back
+- [x] Verify columnFilters uses __EMPTY__ sentinel for empty checks
+- [x] Test table with 100+ employees, verify performance
+- [x] Document any table issues or filter bugs
 
 ### TASK 9: Custom Reports Testing
 
