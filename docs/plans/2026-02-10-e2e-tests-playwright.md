@@ -155,26 +155,26 @@
 - Create: `tests/e2e/table-filters.spec.js`
 
 **Steps:**
-- [ ] Test: "Отобразить таблицу с сотрудниками"
+- [x] Test: "Отобразить таблицу с сотрудниками"
   - Navigate to `/table`
   - Assert table renders with data
   - Assert columns match fields_schema show_in_table=yes
-- [ ] Test: "Фильтровать по статусу (multi-select)"
+- [x] Test: "Фильтровать по статусу (multi-select)"
   - Open employment_status filter
   - Check "Відпустка" checkbox
   - Assert table shows only vacation employees
   - Check "(Пусто)" checkbox
   - Assert table includes employees with empty status
-- [ ] Test: "Поиск по тексту"
+- [x] Test: "Поиск по тексту"
   - Type "Іванов" in search field
   - Assert table filters to matching rows
-- [ ] Test: "Inline редактирование ячейки"
+- [x] Test: "Inline редактирование ячейки"
   - Double-click on editable cell (position)
   - Edit value
   - Press Enter
   - Assert value saved (check API)
   - Assert audit log created
-- [ ] `npm run test:e2e tests/e2e/table-filters.spec.js` (все тесты должны пройти)
+- [x] `npm run test:e2e tests/e2e/table-filters.spec.js` (все тесты должны пройти)
 
 ---
 
