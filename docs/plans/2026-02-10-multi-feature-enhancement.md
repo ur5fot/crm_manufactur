@@ -146,12 +146,12 @@
 **Files:**
 - Modify: `client/src/App.vue`
 
-- [ ] Move refresh button code block from current position (before tab-divider) to after the v-for tabs loop
-- [ ] Ensure refresh button remains inside .tab-bar container
-- [ ] Verify button still uses class="tab-icon-btn refresh-btn" and title="Оновити дані"
-- [ ] Test: refresh button appears at far right after Logs tab
-- [ ] Test: refresh button functionality unchanged (calls refreshManually)
-- [ ] run npm test - must pass before task 7
+- [x] Move refresh button code block from current position (before tab-divider) to after the v-for tabs loop
+- [x] Ensure refresh button remains inside .tab-bar container
+- [x] Verify button still uses class="tab-icon-btn refresh-btn" and title="Оновити дані"
+- [x] Test: refresh button appears at far right after Logs tab
+- [x] Test: refresh button functionality unchanged (calls refreshManually)
+- [x] run npm test - must pass before task 7
 
 ### TASK 7: Reports page column selector enhancements
 

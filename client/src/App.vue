@@ -2166,15 +2166,6 @@ onUnmounted(() => {
         </div>
         <div class="tab-bar">
           <button
-            class="tab-icon-btn refresh-btn"
-            type="button"
-            @click="refreshManually"
-            title="Оновити дані"
-          >
-            🔄
-          </button>
-          <div class="tab-divider"></div>
-          <button
             v-for="tab in tabs"
             :key="tab.key"
             class="tab-item"
@@ -2182,6 +2173,14 @@ onUnmounted(() => {
             @click="switchView(tab.key)"
           >
             {{ tab.label }}
+          </button>
+          <button
+            class="tab-icon-btn refresh-btn"
+            type="button"
+            @click="refreshManually"
+            title="Оновити дані"
+          >
+            🔄
           </button>
         </div>
       </header>
