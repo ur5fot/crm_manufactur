@@ -68,5 +68,5 @@ Move the "New Employee" button (➕) from the global header tab bar to the left 
 
 ## Completion
 
-- [ ] Update CLAUDE.md if UI structure changed significantly (document button location)
-- [ ] Move this plan to `docs/plans/completed/`
+- [x] Update CLAUDE.md if UI structure changed significantly (document button location)
+- [x] Move this plan to `docs/plans/completed/`

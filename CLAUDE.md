@@ -288,12 +288,16 @@ git pull origin master
   - `title` attribute for tooltip on hover (accessibility)
   - Smaller size and less prominent color (gray) than primary action buttons
   - Reduced opacity until hover (prevents accidental clicks)
-- **Tab bar buttons** - Redesigned refresh and new employee buttons:
+- **Global header buttons** - Refresh button in tab bar:
   - "Оновити" → 🔄 icon only (refresh icon)
-  - "Новий працівник" → ➕ icon only (plus icon)
-  - Moved from top-right to tab bar for better layout
+  - Located in global header tab bar (visible on all views)
   - `title` attribute for accessibility
-  - Visual separation from view tabs (different color or spacing)
+- **Cards view sidebar buttons** - New employee button in left panel:
+  - "Новий працівник" → ➕ icon only (plus icon)
+  - Located in Cards view left sidebar panel-header (after "Співробітники" title)
+  - Only visible when `currentView === 'cards'`
+  - Uses `.tab-icon-btn` class for consistent styling with refresh button
+  - `title` attribute for accessibility
 
 **Confirmation Dialogs Pattern:**
 - **Clear Form Dialog** - Shows when "Очистити форму" button clicked:
