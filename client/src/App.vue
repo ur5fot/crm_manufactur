@@ -166,6 +166,13 @@ const customFilters = ref([]);
 const customReportResults = ref([]);
 const customReportLoading = ref(false);
 const selectedColumns = ref([]);
+const reportSortColumn = ref(null);
+const reportSortDirection = ref('asc');
+
+// App config
+const appConfig = ref({
+  max_report_preview_rows: 100
+});
 
 // Compute current view based on route
 const currentView = computed(() => {
@@ -508,6 +515,38 @@ function exportCustomReportCSV() {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+}
+
+function sortReportPreview(fieldKey) {
+  // Toggle sort direction if clicking same column, otherwise default to ascending
+  if (reportSortColumn.value === fieldKey) {
+    reportSortDirection.value = reportSortDirection.value === 'asc' ? 'desc' : 'asc';
+  } else {
+    reportSortColumn.value = fieldKey;
+    reportSortDirection.value = 'asc';
+  }
+
+  // Sort the results array
+  customReportResults.value.sort((a, b) => {
+    const valA = a[fieldKey] || '';
+    const valB = b[fieldKey] || '';
+
+    // Try numeric comparison first
+    const numA = parseFloat(valA);
+    const numB = parseFloat(valB);
+    if (!isNaN(numA) && !isNaN(numB)) {
+      return reportSortDirection.value === 'asc' ? numA - numB : numB - numA;
+    }
+
+    // String comparison
+    const strA = String(valA).toLowerCase();
+    const strB = String(valB).toLowerCase();
+    if (reportSortDirection.value === 'asc') {
+      return strA.localeCompare(strB);
+    } else {
+      return strB.localeCompare(strA);
+    }
+  });
 }
 
 const form = reactive(emptyEmployee());
@@ -1751,6 +1790,14 @@ onMounted(async () => {
     }
   });
 
+  // Load config
+  try {
+    const config = await api.getConfig();
+    appConfig.value = config;
+  } catch (error) {
+    console.error('Failed to load config:', error);
+  }
+
   await loadFieldsSchema();
   await loadEmployees();
 
@@ -2813,6 +2860,9 @@ onUnmounted(() => {
                   {{ field.label }}
                 </label>
               </div>
+              <p class="hint-text" style="font-size: 0.85rem; color: #666; margin-top: 0.5rem;">
+                💡 Підказка: звіт автоматично виконується після вибору колонок
+              </p>
             </div>
 
             <!-- Run Report Button -->
@@ -2832,21 +2882,31 @@ onUnmounted(() => {
 
             <!-- Results Preview -->
             <div v-if="customReportResults.length > 0" class="report-preview">
-              <h3>Попередній перегляд результатів (макс. 100 рядків)</h3>
+              <h3>Попередній перегляд результатів</h3>
               <div class="status-bar">
-                <span>Знайдено записів: {{ customReportResults.length }}</span>
+                <span>Знайдено записів: {{ customReportResults.length }} (показано: {{ Math.min(customReportResults.length, parseInt(appConfig.max_report_preview_rows) || 100) }})</span>
               </div>
               <div class="table-container">
                 <table class="summary-table">
                   <thead>
                     <tr>
-                      <th v-for="field in (selectedColumns.length > 0 ? selectedColumns : allFieldsSchema.filter(f => f.showInTable).map(f => f.key))" :key="field">
+                      <th style="cursor: pointer;" @click="sortReportPreview('_rowNum')">
+                        №
+                        <span v-if="reportSortColumn === '_rowNum'">
+                          {{ reportSortDirection === 'asc' ? '↑' : '↓' }}
+                        </span>
+                      </th>
+                      <th v-for="field in (selectedColumns.length > 0 ? selectedColumns : allFieldsSchema.filter(f => f.showInTable).map(f => f.key))" :key="field" style="cursor: pointer;" @click="sortReportPreview(field)">
                         {{ allFieldsSchema.find(f => f.key === field)?.label || field }}
+                        <span v-if="reportSortColumn === field">
+                          {{ reportSortDirection === 'asc' ? '↑' : '↓' }}
+                        </span>
                       </th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="(emp, idx) in customReportResults.slice(0, 100)" :key="emp.employee_id || idx">
+                    <tr v-for="(emp, idx) in customReportResults.slice(0, parseInt(appConfig.max_report_preview_rows) || 100)" :key="emp.employee_id || idx">
+                      <td>{{ idx + 1 }}</td>
                       <td v-for="field in (selectedColumns.length > 0 ? selectedColumns : allFieldsSchema.filter(f => f.showInTable).map(f => f.key))" :key="field">
                         {{ emp[field] || '' }}
                       </td>

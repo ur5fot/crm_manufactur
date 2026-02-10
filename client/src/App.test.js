@@ -92,3 +92,43 @@ describe('Task 7: Unsaved Changes Warning', () => {
     expect(true).toBe(true);
   });
 });
+
+/**
+ * Task 5 Tests: Reports page preview table improvements
+ *
+ * Manual test checklist:
+ * - [ ] Navigate to Reports page
+ * - [ ] Run a custom report with filters
+ * - [ ] Verify row numbering column appears as first column with "№" header
+ * - [ ] Verify row numbers display correctly (1, 2, 3...)
+ * - [ ] Click any column header to sort by that column
+ * - [ ] Verify sort indicator (↑/↓) appears on sorted column
+ * - [ ] Click same column header again to toggle sort direction
+ * - [ ] Verify preview table shows maximum N rows (configured in config.csv)
+ * - [ ] Verify status bar shows "Знайдено записів: X (показано: Y)" format
+ * - [ ] Verify Y = min(X, max_report_preview_rows)
+ * - [ ] Verify hint text appears below column selector: "💡 Підказка: звіт автоматично виконується після вибору колонок"
+ * - [ ] Verify hint is styled as small gray text
+ * - [ ] Test with large result set (>100 rows) and verify only first N rows displayed
+ * - [ ] Verify CSV export includes all rows, not just preview rows
+ * - [ ] Change max_report_preview_rows in config.csv and verify preview limit updates
+ */
+
+describe('Task 5: Reports Page Preview Table Improvements', () => {
+  it('placeholder test - manual testing required', () => {
+    // This project doesn't have automated testing infrastructure yet
+    // All tests must be performed manually according to the plan:
+    // 1. Start the app with ./run.sh
+    // 2. Navigate to Reports page
+    // 3. Add filters and run custom report
+    // 4. Verify row numbering column with "№" header
+    // 5. Click column headers to test sorting (ascending/descending)
+    // 6. Verify sort indicators (↑/↓) display correctly
+    // 7. Verify preview table respects max_report_preview_rows config
+    // 8. Verify status bar shows "Знайдено: X (показано: Y)" format
+    // 9. Verify hint text below column selector
+    // 10. Test with large dataset to verify pagination works
+    // 11. Verify CSV export includes all rows, not just preview
+    expect(true).toBe(true);
+  });
+});

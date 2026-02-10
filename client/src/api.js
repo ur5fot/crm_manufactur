@@ -83,6 +83,9 @@ export const api = {
   getRetirementEvents() {
     return request("/retirement-events");
   },
+  getConfig() {
+    return request("/config");
+  },
   getStatusReport(type) {
     return request(`/reports/statuses?type=${type}`);
   },

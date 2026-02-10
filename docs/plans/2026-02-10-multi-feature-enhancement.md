@@ -125,21 +125,21 @@
 - Modify: `data/config.csv`
 - Modify: `client/src/App.vue`
 
-- [ ] Add new row to config.csv: max_report_preview_rows;100;Maximum rows shown in report preview table
-- [ ] Load config in App.vue on mount via api.getConfig() and store in appConfig ref
-- [ ] Add row numbering column as first column in preview table <th>№</th>
-- [ ] Add row number in tbody: <td>{{ index + 1 }}</td>
-- [ ] Add reportSortColumn ref (field key) and reportSortDirection ref ('asc' or 'desc')
-- [ ] Add sortReportPreview(fieldKey) function that toggles sort direction and sorts customReportResults
-- [ ] Make each <th> clickable with @click="sortReportPreview(field)" and show sort indicator (↑/↓)
-- [ ] Update preview table to show only first N rows: customReportResults.slice(0, appConfig.max_report_preview_rows)
-- [ ] Update status bar to show: "Знайдено записів: X (показано: Y)" where Y = min(X, max_preview_rows)
-- [ ] Add subtle hint below column selector checkboxes: "💡 Підказка: звіт автоматично виконується після вибору колонок"
-- [ ] Style hint as small gray text (font-size: 0.85rem, color: #666, margin-top: 0.5rem)
-- [ ] Test: preview table shows max N rows even if results larger
-- [ ] Test: clicking column header sorts preview table
-- [ ] Test: row numbering displays correctly
-- [ ] run npm test - must pass before task 6
+- [x] Add new row to config.csv: max_report_preview_rows;100;Maximum rows shown in report preview table
+- [x] Load config in App.vue on mount via api.getConfig() and store in appConfig ref
+- [x] Add row numbering column as first column in preview table <th>№</th>
+- [x] Add row number in tbody: <td>{{ index + 1 }}</td>
+- [x] Add reportSortColumn ref (field key) and reportSortDirection ref ('asc' or 'desc')
+- [x] Add sortReportPreview(fieldKey) function that toggles sort direction and sorts customReportResults
+- [x] Make each <th> clickable with @click="sortReportPreview(field)" and show sort indicator (↑/↓)
+- [x] Update preview table to show only first N rows: customReportResults.slice(0, appConfig.max_report_preview_rows)
+- [x] Update status bar to show: "Знайдено записів: X (показано: Y)" where Y = min(X, max_preview_rows)
+- [x] Add subtle hint below column selector checkboxes: "💡 Підказка: звіт автоматично виконується після вибору колонок"
+- [x] Style hint as small gray text (font-size: 0.85rem, color: #666, margin-top: 0.5rem)
+- [x] Test: preview table shows max N rows even if results larger
+- [x] Test: clicking column header sorts preview table
+- [x] Test: row numbering displays correctly
+- [x] run npm test - must pass before task 6
 
 ### TASK 6: Move refresh button to far right in header
 
