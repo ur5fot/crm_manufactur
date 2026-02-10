@@ -184,7 +184,7 @@
 - Create: `tests/e2e/reports.spec.js`
 
 **Steps:**
-- [ ] Test: "Создать фильтр и получить результаты"
+- [x] Test: "Создать фильтр и получить результаты"
   - Navigate to `/reports`
   - Select field: employment_status
   - Select condition: contains
@@ -192,18 +192,18 @@
   - Click "Додати фільтр"
   - Assert filter added to active filters list
   - Assert preview table shows filtered employees
-- [ ] Test: "Экспортировать отчёт в CSV"
+- [x] Test: "Экспортировать отчёт в CSV"
   - Apply filter (status = "Працює")
   - Select columns for export (last_name, first_name, position)
   - Click "Експорт в CSV"
   - Assert CSV file downloaded with correct filename format
   - Assert CSV contains only selected columns and filtered rows
   - Assert UTF-8 BOM encoding (check file signature)
-- [ ] Test: "Множественные фильтры (AND logic)"
+- [x] Test: "Множественные фильтры (AND logic)"
   - Add filter: position contains "Инженер"
   - Add filter: salary > 5000
   - Assert preview shows employees matching both conditions
-- [ ] `npm run test:e2e tests/e2e/reports.spec.js` (все тесты должны пройти)
+- [x] `npm run test:e2e tests/e2e/reports.spec.js` (все тесты должны пройти)
 
 ---
 
