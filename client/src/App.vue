@@ -1423,11 +1423,13 @@ async function checkRetirementEvents() {
     const thisMonthItems = data.thisMonth || [];
 
     // Auto-dismiss employees reaching retirement age today
+    // Only auto-dismiss employees with working status (options[0]) to avoid overwriting other statuses
     if (todayItems.length > 0) {
       const firedStatus = employmentOptions.value[1] || 'Уволен';
       for (const event of todayItems) {
         const emp = employees.value.find(e => e.employee_id === event.employee_id);
-        if (emp && emp.employment_status !== firedStatus) {
+        // Only auto-dismiss if employee is currently in working status
+        if (emp && emp.employment_status === workingStatus.value) {
           try {
             await api.updateEmployee(event.employee_id, {
               ...emp,
