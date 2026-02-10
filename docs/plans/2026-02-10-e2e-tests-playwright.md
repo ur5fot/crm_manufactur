@@ -301,19 +301,19 @@
 - Create: `tests/e2e/logs.spec.js`
 
 **Steps:**
-- [ ] Test: "Просмотр логов изменений"
+- [x] Test: "Просмотр логов изменений"
   - Navigate to `/logs`
   - Assert logs table renders
   - Assert newest logs appear first (sorted by timestamp desc)
-- [ ] Test: "Поиск логов по сотруднику"
-  - Create employee "Test Логов"
+- [x] Test: "Поиск логов по сотруднику"
+  - Create employee "Test Логів"
   - Edit employee (change position)
   - Delete employee
   - Navigate to `/logs`
-  - Search for "Test Логов"
+  - Search for "Test Логів"
   - Assert 3 log entries: CREATE, UPDATE, DELETE
   - Assert UPDATE log shows old_value and new_value
-- [ ] `npm run test:e2e tests/e2e/logs.spec.js` (все тесты должны пройти)
+- [x] `npm run test:e2e tests/e2e/logs.spec.js` (все тесты должны пройти)
 
 ---
 
