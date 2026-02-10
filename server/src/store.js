@@ -702,3 +702,81 @@ export async function getCustomReport(filters = [], columns = null) {
 
   return filtered;
 }
+
+/**
+ * Synchronizes employees_import_sample.csv with fields_schema.csv
+ * Adds missing columns from schema, removes obsolete columns
+ * Preserves UTF-8 BOM encoding for Excel compatibility
+ * @returns {Promise<{added: string[], removed: string[], status: string}>}
+ */
+export async function syncCSVTemplate() {
+  const TEMPLATE_PATH = path.join(DATA_DIR, "employees_import_sample.csv");
+
+  try {
+    // Get current schema columns
+    const schemaColumns = await getEmployeeColumns();
+
+    // Check if template file exists
+    let templateExists = true;
+    try {
+      await fs.access(TEMPLATE_PATH);
+    } catch {
+      templateExists = false;
+    }
+
+    if (!templateExists) {
+      // Create new template with current schema
+      const headerRow = schemaColumns.join(";");
+      const content = "\uFEFF" + headerRow + "\r\n";
+      await fs.writeFile(TEMPLATE_PATH, content, "utf-8");
+      console.log("✓ Создан новый шаблон CSV с текущей схемой");
+      return { added: schemaColumns, removed: [], status: "created" };
+    }
+
+    // Read existing template
+    const fileContent = await fs.readFile(TEMPLATE_PATH, "utf-8");
+    const lines = fileContent.split("\n").filter(line => line.trim());
+
+    if (lines.length === 0) {
+      // Empty file, create header
+      const headerRow = schemaColumns.join(";");
+      const content = "\uFEFF" + headerRow + "\r\n";
+      await fs.writeFile(TEMPLATE_PATH, content, "utf-8");
+      console.log("✓ Шаблон CSV был пуст, создан заголовок");
+      return { added: schemaColumns, removed: [], status: "created" };
+    }
+
+    // Parse current header
+    const headerLine = lines[0].replace(/^\uFEFF/, '');
+    const currentColumns = headerLine.split(";").map(col => col.trim().replace(/^"|"$/g, ''));
+
+    // Find differences
+    const missingColumns = schemaColumns.filter(col => !currentColumns.includes(col));
+    const obsoleteColumns = currentColumns.filter(col => !schemaColumns.includes(col));
+
+    // If no changes needed
+    if (missingColumns.length === 0 && obsoleteColumns.length === 0) {
+      console.log("✓ Шаблон CSV актуален, синхронизация не требуется");
+      return { added: [], removed: [], status: "up_to_date" };
+    }
+
+    // Reconstruct template with updated columns
+    // Keep only current schema columns in correct order
+    const newHeaderRow = schemaColumns.join(";");
+    const content = "\uFEFF" + newHeaderRow + "\r\n";
+    await fs.writeFile(TEMPLATE_PATH, content, "utf-8");
+
+    // Log changes
+    if (missingColumns.length > 0) {
+      console.log(`✓ Добавлено колонок в шаблон CSV: ${missingColumns.join(", ")}`);
+    }
+    if (obsoleteColumns.length > 0) {
+      console.log(`✓ Удалено устаревших колонок из шаблона CSV: ${obsoleteColumns.join(", ")}`);
+    }
+
+    return { added: missingColumns, removed: obsoleteColumns, status: "updated" };
+  } catch (error) {
+    console.error("❌ Ошибка синхронизации шаблона CSV:", error.message);
+    throw error;
+  }
+}

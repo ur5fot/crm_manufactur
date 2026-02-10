@@ -213,7 +213,7 @@ This plan implements 8 improvements to the CRM UI:
 - Create: `server/src/sync-template.js`
 
 **Subtasks:**
-- [ ] Add syncCSVTemplate function to store.js:
+- [x] Add syncCSVTemplate function to store.js:
   - Read fields_schema.csv to get current EMPLOYEE_COLUMNS
   - Read employees_import_sample.csv
   - Compare headers
@@ -221,19 +221,19 @@ This plan implements 8 improvements to the CRM UI:
   - Remove obsolete columns not in schema
   - Write updated template with UTF-8 BOM
   - Log sync results (added/removed columns)
-- [ ] Create server/src/sync-template.js entry point:
+- [x] Create server/src/sync-template.js entry point:
   - Import store functions
   - Call syncCSVTemplate
   - Exit with appropriate status code
-- [ ] Add template sync step to run.sh:
+- [x] Add template sync step to run.sh:
   - Run Node script before starting servers: node server/src/sync-template.js
   - Display sync output to console
-- [ ] Add startup message: "Синхронізація шаблону CSV..."
-- [ ] Test sync adds new columns from schema
-- [ ] Test sync removes obsolete columns
-- [ ] Test sync preserves UTF-8 BOM encoding
-- [ ] Test run.sh executes sync before starting servers
-- [ ] Test manual schema changes reflect in template after restart
+- [x] Add startup message: "Синхронізація шаблону CSV..."
+- [x] Test sync adds new columns from schema
+- [x] Test sync removes obsolete columns
+- [x] Test sync preserves UTF-8 BOM encoding
+- [x] Test run.sh executes sync before starting servers
+- [x] Test manual schema changes reflect in template after restart
 
 ---
 
