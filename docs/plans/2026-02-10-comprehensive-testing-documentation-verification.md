@@ -222,26 +222,26 @@ This plan uses multiple AI agents to systematically test all features documented
 - Verify: Filter builder, preview, CSV export, column selection
 
 **Steps:**
-- [ ] Navigate to /reports
-- [ ] Verify filter builder shows all fields from schema
-- [ ] Add filter: select field, select condition (contains, equals, not_equals, empty, not_empty)
-- [ ] For text field, select "contains", enter value, click "Додати фільтр"
-- [ ] Verify filter appears in active filters list with ✖️ remove button
-- [ ] For select field, verify condition dropdown shows field options
-- [ ] For date field, verify date picker appears for value input
-- [ ] Add multiple filters, verify preview table shows results (max 100 rows)
-- [ ] Verify AND logic (all filters must match)
-- [ ] Test "empty" and "not_empty" conditions (value input should be disabled)
-- [ ] Remove filter by clicking ✖️, verify preview updates
-- [ ] Click "Очистити фільтри", verify all filters cleared
-- [ ] Select/deselect columns in column selector
-- [ ] Click "Експорт в CSV", verify downloads file
-- [ ] Verify filename format: report_YYYY-MM-DD_HH-mm-ss.csv
-- [ ] Open exported CSV in Excel, verify UTF-8 BOM encoding (no garbled Cyrillic)
-- [ ] Verify only selected columns included
-- [ ] Verify filtered data matches preview
-- [ ] Test with complex filters (5+ conditions), verify performance
-- [ ] Document any report generation issues
+- [x] Navigate to /reports
+- [x] Verify filter builder shows all fields from schema
+- [x] Add filter: select field, select condition (contains, equals, not_equals, empty, not_empty)
+- [x] For text field, select "contains", enter value, click "Додати фільтр"
+- [x] Verify filter appears in active filters list with ✖️ remove button
+- [x] For select field, verify condition dropdown shows field options
+- [x] For date field, verify date picker appears for value input
+- [x] Add multiple filters, verify preview table shows results (max 100 rows)
+- [x] Verify AND logic (all filters must match)
+- [x] Test "empty" and "not_empty" conditions (value input should be disabled)
+- [x] Remove filter by clicking ✖️, verify preview updates
+- [x] Click "Очистити фільтри", verify all filters cleared
+- [x] Select/deselect columns in column selector
+- [x] Click "Експорт в CSV", verify downloads file
+- [x] Verify filename format: report_YYYY-MM-DD_HH-mm-ss.csv
+- [x] Open exported CSV in Excel, verify UTF-8 BOM encoding (no garbled Cyrillic)
+- [x] Verify only selected columns included
+- [x] Verify filtered data matches preview
+- [x] Test with complex filters (5+ conditions), verify performance
+- [x] Document any report generation issues
 
 ### TASK 10: CSV Import Testing
 
