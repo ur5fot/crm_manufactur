@@ -42,25 +42,25 @@ This plan uses multiple AI agents to systematically test all features documented
 - Test: server/src/schema.js (schema validation)
 
 **Steps:**
-- [ ] Test GET /api/employees - verify returns employee array
-- [ ] Test GET /api/employees/:id - verify returns single employee
-- [ ] Test POST /api/employees - create test employee, verify ID generation
-- [ ] Test PUT /api/employees/:id - update test employee, verify changes persist
-- [ ] Test DELETE /api/employees/:id - delete test employee, verify file cleanup
-- [ ] Test GET /api/fields-schema - verify returns schema with groups, tableFields, allFields
-- [ ] Test GET /api/config - verify returns config object from config.csv
-- [ ] Test GET /api/logs - verify returns audit log entries sorted by timestamp desc
-- [ ] Test GET /api/document-expiry - verify returns expiry events (today + 7 days)
-- [ ] Test GET /api/birthday-events - verify returns birthday events (today + 7 days)
-- [ ] Test GET /api/reports/custom - verify filtering with conditions (contains, equals, empty, etc.)
-- [ ] Test POST /api/employees/:id/files - upload PDF and image files with dates
-- [ ] Test DELETE /api/employees/:id/files/:fieldName - delete document
-- [ ] Test POST /api/employees/:id/open-folder - verify folder opens in OS
-- [ ] Test POST /api/open-data-folder - verify data folder opens in OS
-- [ ] Test POST /api/employees/import - import CSV with valid and invalid data
-- [ ] Verify all responses have correct status codes
-- [ ] Verify all operations log to logs.csv
-- [ ] Document any API failures or unexpected behaviors
+- [x] Test GET /api/employees - verify returns employee array
+- [x] Test GET /api/employees/:id - verify returns single employee
+- [x] Test POST /api/employees - create test employee, verify ID generation
+- [x] Test PUT /api/employees/:id - update test employee, verify changes persist
+- [x] Test DELETE /api/employees/:id - delete test employee, verify file cleanup
+- [x] Test GET /api/fields-schema - verify returns schema with groups, tableFields, allFields
+- [x] Test GET /api/config - verify returns config object from config.csv
+- [x] Test GET /api/logs - verify returns audit log entries sorted by timestamp desc
+- [x] Test GET /api/document-expiry - verify returns expiry events (today + 7 days)
+- [x] Test GET /api/birthday-events - verify returns birthday events (today + 7 days)
+- [x] Test GET /api/reports/custom - verify filtering with conditions (contains, equals, empty, etc.)
+- [x] Test POST /api/employees/:id/files - upload PDF and image files with dates
+- [x] Test DELETE /api/employees/:id/files/:fieldName - delete document
+- [x] Test POST /api/employees/:id/open-folder - verify folder opens in OS
+- [x] Test POST /api/open-data-folder - verify data folder opens in OS
+- [x] Test POST /api/employees/import - import CSV with valid and invalid data
+- [x] Verify all responses have correct status codes
+- [x] Verify all operations log to logs.csv
+- [x] Document any API failures or unexpected behaviors
 
 ### TASK 3: Dashboard View Testing
 
