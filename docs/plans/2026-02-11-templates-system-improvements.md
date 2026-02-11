@@ -81,19 +81,19 @@ What needs to be added:
 **Files:**
 - Create: `server/test/docx-generator.test.js`
 
-- [ ] Create unit test file for docx-generator module
-- [ ] Test: extractPlaceholders() returns correct placeholder list
-- [ ] Test: extractPlaceholders() with template without placeholders
-- [ ] Test: extractPlaceholders() throws error for non-existent file
-- [ ] Test: extractPlaceholders() throws error for invalid DOCX
-- [ ] Test: generateDocx() creates valid DOCX file
-- [ ] Test: generateDocx() replaces placeholders correctly
-- [ ] Test: generateDocx() handles null/undefined values as empty string
-- [ ] Test: generateDocx() adds current_date placeholder
-- [ ] Test: generateDocx() adds current_datetime placeholder
-- [ ] Test: generateDocx() throws error for non-existent template
-- [ ] Test: generateDocx() creates output directory if missing
-- [ ] Run tests: `cd server && npm test -- docx-generator.test.js`
+- [x] Create unit test file for docx-generator module
+- [x] Test: extractPlaceholders() returns correct placeholder list
+- [x] Test: extractPlaceholders() with template without placeholders
+- [x] Test: extractPlaceholders() throws error for non-existent file
+- [x] Test: extractPlaceholders() throws error for invalid DOCX
+- [x] Test: generateDocx() creates valid DOCX file
+- [x] Test: generateDocx() replaces placeholders correctly
+- [x] Test: generateDocx() handles null/undefined values as empty string
+- [x] Test: generateDocx() adds current_date placeholder
+- [x] Test: generateDocx() adds current_datetime placeholder
+- [x] Test: generateDocx() throws error for non-existent template
+- [x] Test: generateDocx() creates output directory if missing
+- [x] Run tests: `cd server && npm test -- docx-generator.test.js`
 
 ---
 
