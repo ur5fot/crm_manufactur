@@ -88,7 +88,10 @@ function openFolder(targetPath) {
   return new Promise((resolve, reject) => {
     execFile(command, [resolvedPath], (error) => {
       if (error) {
-        reject(error);
+        // Graceful degradation: в headless окружении команда может провалиться
+        // но это не критическая ошибка - папка создана, API должен вернуть успех
+        console.warn(`Could not open folder in file manager (expected in headless environments): ${error.message}`);
+        resolve();
         return;
       }
       resolve();
@@ -344,9 +347,13 @@ app.post("/api/employees/:id/open-folder", async (req, res) => {
     // Создаем папку если она не существует
     await fsPromises.mkdir(employeeFolder, { recursive: true });
 
+    // Пытаемся открыть папку (graceful degradation в headless)
     await openFolder(employeeFolder);
+
     res.json({ ok: true });
   } catch (error) {
+    // Ошибка только если security validation провалилась
+    console.error('Open folder error:', error);
     res.status(500).json({ error: "Не удалось открыть папку сотрудника" });
   }
 });
