@@ -1,3 +1,4 @@
 ﻿template_id;template_name;template_type;docx_filename;placeholder_fields;description;created_date;active
 1;Заявка на відпустку (оновлена);Заявка;;;Оновлений опис;2026-02-11;yes
 2;Службова записка;Службова записка;;;;2026-02-11;no
+3;Test Upload Template;Заявка;template_3_1770817926113.docx;current_date, department, first_name, last_name, position;Template for upload testing;2026-02-11;yes

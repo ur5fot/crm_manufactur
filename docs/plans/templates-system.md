@@ -38,14 +38,14 @@
 - [x] Verify 404 errors for non-existent IDs
 
 ### Task 4: Template DOCX Upload API
-- [ ] Create files/templates/ directory
-- [ ] Add POST /api/templates/:id/upload route with multer
-- [ ] Validate .docx extension
-- [ ] Check file size against max_file_upload_mb from config.csv
-- [ ] Save as template_{id}_{timestamp}.docx
-- [ ] Extract placeholders and update template record
-- [ ] Return JSON with filename and placeholders
-- [ ] Test upload with valid/invalid files
+- [x] Create files/templates/ directory
+- [x] Add POST /api/templates/:id/upload route with multer
+- [x] Validate .docx extension
+- [x] Check file size against max_file_upload_mb from config.csv
+- [x] Save as template_{id}_{timestamp}.docx
+- [x] Extract placeholders and update template record
+- [x] Return JSON with filename and placeholders
+- [x] Test upload with valid/invalid files
 
 ### Task 5: Document Generation API
 - [ ] Create files/documents/ directory

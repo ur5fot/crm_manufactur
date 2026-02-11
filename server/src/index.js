@@ -34,6 +34,7 @@ import {
   saveTemplates
 } from "./store.js";
 import { mergeRow, normalizeRows } from "./csv.js";
+import { extractPlaceholders } from "./docx-generator.js";
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -1129,6 +1130,86 @@ app.delete("/api/templates/:id", async (req, res) => {
     res.status(204).end();
   } catch (err) {
     console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Template DOCX upload
+const templateUpload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => {
+      const templatesDir = path.join(FILES_DIR, 'templates');
+      fs.mkdir(templatesDir, { recursive: true }, (error) => {
+        cb(error, templatesDir);
+      });
+    },
+    filename: (req, file, cb) => {
+      const templateId = req.params.id;
+      const timestamp = Date.now();
+      const ext = path.extname(file.originalname).toLowerCase();
+      cb(null, `template_${templateId}_${timestamp}${ext}`);
+    }
+  }),
+  limits: { fileSize: parseInt(appConfig.max_file_upload_mb || 10) * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (ext !== '.docx') {
+      cb(new Error('Тільки DOCX файли дозволені'));
+      return;
+    }
+    cb(null, true);
+  }
+});
+
+app.post("/api/templates/:id/upload", templateUpload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      res.status(400).json({ error: "Файл не надано" });
+      return;
+    }
+
+    const templates = await loadTemplates();
+    const template = templates.find((t) => t.template_id === req.params.id);
+
+    if (!template) {
+      // Clean up uploaded file
+      await fsPromises.unlink(req.file.path);
+      res.status(404).json({ error: "Шаблон не найден" });
+      return;
+    }
+
+    // Extract placeholders from uploaded DOCX
+    const placeholders = await extractPlaceholders(req.file.path);
+
+    // Update template record
+    template.docx_filename = req.file.filename;
+    template.placeholder_fields = placeholders.join(', ');
+    await saveTemplates(templates);
+
+    await addLog(
+      "UPLOAD_TEMPLATE_FILE",
+      req.params.id,
+      template.template_name,
+      "",
+      "",
+      "",
+      `Завантажено DOCX файл для шаблону: ${template.template_name}, плейсхолдери: ${placeholders.join(', ')}`
+    );
+
+    res.json({
+      filename: req.file.filename,
+      placeholders: placeholders
+    });
+  } catch (err) {
+    console.error(err);
+    // Clean up file on error
+    if (req.file && req.file.path) {
+      try {
+        await fsPromises.unlink(req.file.path);
+      } catch (unlinkErr) {
+        console.error('Failed to clean up file:', unlinkErr);
+      }
+    }
     res.status(500).json({ error: err.message });
   }
 });
