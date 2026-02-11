@@ -110,14 +110,14 @@
 - [x] Test create and edit flows
 
 ### Task 11: Upload DOCX Modal
-- [ ] Add upload modal with file picker (accept=".docx")
-- [ ] Add help box with template instructions
-- [ ] Implement uploadTemplateFile(template) to open modal
-- [ ] Implement onTemplateFileSelected(event)
-- [ ] Implement uploadTemplateDocx() calling API
-- [ ] Show alert with extracted placeholders
-- [ ] Refresh table after upload
-- [ ] Test upload and error handling
+- [x] Add upload modal with file picker (accept=".docx")
+- [x] Add help box with template instructions
+- [x] Implement uploadTemplateFile(template) to open modal
+- [x] Implement onTemplateFileSelected(event)
+- [x] Implement uploadTemplateDocx() calling API
+- [x] Show alert with extracted placeholders
+- [x] Refresh table after upload
+- [x] Test upload and error handling
 
 ### Task 12: Delete Template
 - [ ] Implement deleteTemplate(template)

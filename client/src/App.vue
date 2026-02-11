@@ -321,6 +321,12 @@ const templateForm = reactive({
   placeholder_fields: ''
 });
 
+// Template upload modal
+const showUploadTemplateModal = ref(false);
+const uploadTemplateId = ref('');
+const uploadTemplateName = ref('');
+const selectedTemplateFile = ref(null);
+
 // Уведомления о сменах статусов
 const statusReturning = ref([]);
 const statusStarting = ref([]);
@@ -1753,8 +1759,50 @@ function closeTemplateDialog() {
 }
 
 function uploadTemplateFile(template) {
-  // TODO: Implement in Task 11
-  console.log('Upload DOCX for template:', template);
+  uploadTemplateId.value = template.template_id;
+  uploadTemplateName.value = template.template_name;
+  selectedTemplateFile.value = null;
+  showUploadTemplateModal.value = true;
+}
+
+function closeUploadTemplateModal() {
+  showUploadTemplateModal.value = false;
+  uploadTemplateId.value = '';
+  uploadTemplateName.value = '';
+  selectedTemplateFile.value = null;
+}
+
+function onTemplateFileSelected(event) {
+  const file = event.target.files?.[0];
+  if (file) {
+    if (!file.name.toLowerCase().endsWith('.docx')) {
+      alert('Помилка: файл повинен мати розширення .docx');
+      event.target.value = '';
+      return;
+    }
+    selectedTemplateFile.value = file;
+  }
+}
+
+async function uploadTemplateDocx() {
+  if (!selectedTemplateFile.value) {
+    alert('Будь ласка, оберіть файл DOCX');
+    return;
+  }
+
+  try {
+    const formData = new FormData();
+    formData.append('file', selectedTemplateFile.value);
+
+    const result = await api.uploadTemplateFile(uploadTemplateId.value, formData);
+
+    alert(`✓ Файл завантажено успішно!\n\nВиявлені плейсхолдери:\n${result.placeholders.join(', ') || '(немає)'}`);
+
+    closeUploadTemplateModal();
+    await loadTemplates();
+  } catch (error) {
+    alert('Помилка завантаження файлу: ' + error.message);
+  }
 }
 
 function deleteTemplate(template) {
@@ -3417,6 +3465,56 @@ onUnmounted(() => {
             :disabled="!templateForm.template_name || !templateForm.template_type"
           >
             {{ templateDialogMode === 'create' ? 'Створити' : 'Зберегти' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Template Upload DOCX Dialog -->
+    <div v-if="showUploadTemplateModal" class="vacation-notification-overlay" @click="closeUploadTemplateModal">
+      <div class="vacation-notification-modal" @click.stop style="max-width: 550px;">
+        <div class="vacation-notification-header">
+          <h3>Завантаження DOCX шаблону</h3>
+          <button class="close-btn" @click="closeUploadTemplateModal">&times;</button>
+        </div>
+        <div class="vacation-notification-body">
+          <p style="margin-bottom: 15px;">
+            <strong>{{ uploadTemplateName }}</strong>
+          </p>
+
+          <div class="help-box" style="background-color: #f0f8ff; border-left: 4px solid #0066cc; padding: 15px; margin-bottom: 20px;">
+            <h4 style="margin-top: 0; margin-bottom: 10px; color: #0066cc;">📋 Інструкція зі створення шаблону</h4>
+            <ul style="margin: 0; padding-left: 20px; line-height: 1.6;">
+              <li>Створіть DOCX файл у Microsoft Word або LibreOffice</li>
+              <li>Використовуйте плейсхолдери у форматі <code>{{'{'}}field_name{{'}'}}</code></li>
+              <li>Доступні поля співробітника: <code>{{'{'}}last_name{{'}'}}</code>, <code>{{'{'}}first_name{{'}'}}</code>, <code>{{'{'}}position{{'}'}}</code>, та ін.</li>
+              <li>Спеціальні плейсхолдери: <code>{{'{'}}current_date{{'}'}}</code>, <code>{{'{'}}current_datetime{{'}'}}</code></li>
+              <li>Приклад: "Я, <code>{{'{'}}last_name{{'}'}} {{'{'}}first_name{{'}'}}</code>, прошу надати відпустку..."</li>
+            </ul>
+          </div>
+
+          <div class="form-group">
+            <label for="template-file-input">Оберіть DOCX файл <span style="color: red;">*</span></label>
+            <input
+              id="template-file-input"
+              type="file"
+              accept=".docx"
+              @change="onTemplateFileSelected"
+            />
+            <p v-if="selectedTemplateFile" style="margin-top: 10px; color: #28a745;">
+              ✓ Обрано: {{ selectedTemplateFile.name }}
+            </p>
+          </div>
+        </div>
+        <div class="vacation-notification-footer status-change-footer">
+          <button class="secondary" type="button" @click="closeUploadTemplateModal">Скасувати</button>
+          <button
+            class="primary"
+            type="button"
+            @click="uploadTemplateDocx"
+            :disabled="!selectedTemplateFile"
+          >
+            Завантажити
           </button>
         </div>
       </div>
