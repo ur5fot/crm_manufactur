@@ -362,13 +362,13 @@
 
 ## Финальная проверка
 
-- [ ] Manual test: Запустить `./run.sh`, затем `npm run test:e2e` - все тесты должны пройти
-- [ ] Run full test suite: `npm run test:e2e` (all green)
-- [ ] Verify test reports in `test-results/` and `playwright-report/`
-- [ ] Check test coverage: все основные user flows покрыты (CRUD, documents, reports, import, dashboard, logs, status changes)
+- [x] Manual test: Запустить `./run.sh`, затем `npm run test:e2e` - все тесты должны пройти
+- [x] Run full test suite: `npm run test:e2e` (all green)
+- [x] Verify test reports in `test-results/` and `playwright-report/`
+- [x] Check test coverage: все основные user flows покрыты (CRUD, documents, reports, import, dashboard, logs, status changes)
 
 ## После завершения
 
-- [ ] Update `README.md`: add Testing section with test commands
-- [ ] Update `CLAUDE.md`: add Testing approach and E2E patterns
+- [x] Update `README.md`: add Testing section with test commands
+- [x] Update `CLAUDE.md`: add Testing approach and E2E patterns
 - [ ] (Optional) Move this plan to `docs/plans/completed/`

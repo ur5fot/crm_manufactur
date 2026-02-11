@@ -467,6 +467,60 @@ nano data/fields_schema.csv
 
 For detailed architecture and development guidelines, see [CLAUDE.md](CLAUDE.md).
 
+## Testing
+
+The project includes comprehensive end-to-end (E2E) tests using [Playwright](https://playwright.dev/).
+
+### Running Tests
+
+**Prerequisites:** Start the application servers first:
+
+```bash
+./run.sh
+```
+
+**Run all tests:**
+
+```bash
+npm run test:e2e
+```
+
+**Run tests interactively (UI mode):**
+
+```bash
+npm run test:e2e:ui
+```
+
+**Run tests with visible browser:**
+
+```bash
+npm run test:e2e:headed
+```
+
+**Run specific test file:**
+
+```bash
+npm run test:e2e tests/e2e/employee-crud.spec.js
+```
+
+### Test Coverage
+
+The test suite covers all major user flows:
+
+- Employee CRUD operations (create, read, update, delete)
+- Document upload and management (PDF + images with dates)
+- Table view with multi-select filters and inline editing
+- Custom reports with advanced filters and CSV export
+- CSV import (valid/invalid data, template download)
+- Dashboard statistics, timeline, and notifications
+- Status changes with date ranges and automatic restoration
+- Retirement notifications with auto-dismiss
+- Audit logs viewing and search
+
+### Documentation
+
+For detailed testing documentation, debugging tips, and best practices, see [tests/README.md](tests/README.md).
+
 ## Known Limitations
 
 ### Concurrent Editing
