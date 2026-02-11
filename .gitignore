@@ -11,12 +11,13 @@ data/logs.csv
 data/fields_schema.csv
 data/config.csv
 
-# Claude Code та BMAD (особисті налаштування та output)
+# Claude Code та Ralphex (особисті налаштування та output)
 .claude/
-_bmad/
+_bmad/  # Legacy BMAD directory (no longer used, migrated to Ralphex)
 
-# ralphex progress logs
+# Ralphex orchestrator progress logs
 progress*.txt
+ralphex*.log
 
 # Playwright test artifacts
 playwright-report/

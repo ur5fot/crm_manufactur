@@ -1321,6 +1321,43 @@ app.post("/api/templates/:id/generate", async (req, res) => {
   }
 });
 
+// Download generated document
+app.get("/api/documents/:id/download", async (req, res) => {
+  try {
+    // Load document from generated_documents.csv
+    const documents = await loadGeneratedDocuments();
+    const document = documents.find((d) => d.document_id === req.params.id);
+
+    if (!document) {
+      res.status(404).json({ error: "Документ не знайдено" });
+      return;
+    }
+
+    // Validate file exists
+    const filePath = path.join(FILES_DIR, 'documents', document.docx_filename);
+
+    if (!fs.existsSync(filePath)) {
+      res.status(404).json({ error: "Файл документу не знайдено на диску" });
+      return;
+    }
+
+    // Send file with proper headers
+    res.download(filePath, document.docx_filename, (err) => {
+      if (err) {
+        console.error('Download error:', err);
+        if (!res.headersSent) {
+          res.status(500).json({ error: "Помилка завантаження файлу" });
+        }
+      }
+    });
+  } catch (err) {
+    console.error(err);
+    if (!res.headersSent) {
+      res.status(500).json({ error: err.message });
+    }
+  }
+});
+
 app.listen(port, () => {
   console.log(`CRM server running on http://localhost:${port}`);
 });

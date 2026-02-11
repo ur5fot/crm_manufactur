@@ -59,12 +59,12 @@
 - [x] Return JSON: {document_id, filename, download_url}
 
 ### Task 6: Document Download API
-- [ ] Add GET /api/documents/:id/download route
-- [ ] Load document from generated_documents.csv
-- [ ] Validate document and file exist (404 if not)
-- [ ] Use res.download() to send DOCX file
-- [ ] Set proper Content-Type and Content-Disposition headers
-- [ ] Test download with curl
+- [x] Add GET /api/documents/:id/download route
+- [x] Load document from generated_documents.csv
+- [x] Validate document and file exist (404 if not)
+- [x] Use res.download() to send DOCX file
+- [x] Set proper Content-Type and Content-Disposition headers
+- [x] Test download with curl
 
 ### Task 7: Frontend API Client
 - [ ] Add getTemplates() to client/src/api.js

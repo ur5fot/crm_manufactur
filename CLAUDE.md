@@ -19,26 +19,84 @@ When updating features or architecture, ensure all three files reflect the chang
 
 ## Development Workflow
 
-### Story Completion and Git Commits
+### Task Orchestration with Ralphex
 
-**IMPORTANT:** After implementing or reviewing a story, ALWAYS ask the user before committing changes:
+**This project uses [Ralphex](https://github.com/umputun/ralphex)** - a standalone CLI orchestrator for autonomous plan execution.
+
+**How Ralphex works:**
+1. **User runs Ralphex once:** `ralphex docs/plans/feature.md`
+2. **Ralphex manages entire lifecycle:**
+   - Reads plan file from `docs/plans/` (markdown with checkboxes)
+   - Executes tasks sequentially (finds unchecked `- [ ]` boxes)
+   - **Launches fresh Claude Code session for EACH task** (minimal context)
+   - Runs validation commands (tests, linters) after task completion
+   - Marks checkboxes complete `- [x]` and commits changes
+   - Automatically proceeds to next task until all complete
+3. **Multi-phase code review:**
+   - Phase 1: First review (5 agents in parallel: quality, implementation, testing, simplification, documentation)
+   - Phase 2: External review (codex or custom tool)
+   - Phase 3: Second review (2 agents: quality + implementation, critical issues only)
+4. **Moves plan to `completed/`** when all tasks + reviews pass
+
+**Plan file format:**
+```markdown
+# Plan: Feature Name
+
+## Validation Commands
+- `npm test`
+- `npm run lint`
+
+### Task 1: Description
+- [ ] Subtask 1
+- [ ] Subtask 2
+
+### Task 2: Description
+- [ ] Subtask 1
+```
+
+**Agent behavior (CRITICAL):**
+- You receive **ONE task at a time** in a **fresh session**
+- Execute ONLY the current task's subtasks
+- Do NOT proceed to next tasks (Ralphex handles orchestration)
+- **Git commits:** Ralphex commits automatically after validation passes
+- **No need to ask user about commits** - Ralphex manages git workflow
+- Focus on implementation quality - reviews happen in separate phases
+
+**Configuration:**
+- Custom agents: `~/.config/ralphex/agents/*.txt`
+- Prompts: `~/.config/ralphex/*.txt` (task.txt, review_first.txt, etc.)
+- Template variables: `{{PLAN_FILE}}`, `{{PROGRESS_FILE}}`, `{{DEFAULT_BRANCH}}`
+
+**Previous workflow:** This project previously used bmad skills but has migrated to Ralphex orchestration.
+
+### Git Commits: Ralphex vs Manual Workflow
+
+**When working WITH Ralphex orchestration:**
+- **DO NOT ask user about commits** - Ralphex handles git automatically
+- Ralphex commits after each task passes validation
+- Focus on implementation quality and validation success
+- Commit message generated from task description
+
+**When working WITHOUT Ralphex (manual workflow):**
+
+**IMPORTANT:** After implementing changes manually, ALWAYS ask the user before committing:
 
 ```
-Story завершена! Создать git commit?
+Изменения готовы! Создать git commit?
 
 1. Да, закоммитить изменения
 2. Нет, я сделаю это сам позже
 ```
 
 **Only create commits when explicitly requested by the user.** Never commit automatically after:
-- Completing story implementation (`/bmad-bmm-dev-story`)
-- Finishing code review fixes (`/bmad-bmm-code-review`)
+- Manual task implementation
+- Code review fixes (outside Ralphex)
 - Applying architectural changes
 - Any other code modifications
 
 **If user chooses [1]:**
 1. Follow the standard git commit process (see below)
-2. Use story title and key changes in commit message
+2. Use descriptive commit message
 3. Include `Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>` trailer
 
 **If user chooses [2]:**
