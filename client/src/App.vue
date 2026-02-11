@@ -266,6 +266,10 @@ watch(() => route.name, async (newRoute, oldRoute) => {
     loadLogs();
   }
 
+  if (newView === 'templates') {
+    loadTemplates();
+  }
+
   // Auto-load first employee when navigating to cards view without ID
   // (but not if user explicitly wants to create new employee)
   if (newView === 'cards' && !route.params.id && !isCreatingNew.value) {
@@ -1677,6 +1681,19 @@ async function loadLogs() {
 }
 
 // Templates management functions
+async function loadTemplates() {
+  loading.value = true;
+  errorMessage.value = "";
+  try {
+    const data = await api.getTemplates();
+    templates.value = data || [];
+  } catch (error) {
+    errorMessage.value = error.message;
+  } finally {
+    loading.value = false;
+  }
+}
+
 function openCreateTemplateDialog() {
   templateDialogMode.value = 'create';
   Object.assign(templateForm, {
@@ -1687,6 +1704,21 @@ function openCreateTemplateDialog() {
     placeholder_fields: ''
   });
   showTemplateDialog.value = true;
+}
+
+function editTemplate(template) {
+  // TODO: Implement in Task 10
+  console.log('Edit template:', template);
+}
+
+function uploadTemplateFile(template) {
+  // TODO: Implement in Task 11
+  console.log('Upload DOCX for template:', template);
+}
+
+function deleteTemplate(template) {
+  // TODO: Implement in Task 12
+  console.log('Delete template:', template);
 }
 
 async function loadFieldsSchema() {
@@ -3160,6 +3192,57 @@ onUnmounted(() => {
 
           <div v-if="templates.length === 0 && !loading" class="empty-state">
             <p>Немає шаблонів. Створіть перший шаблон для генерації документів.</p>
+          </div>
+
+          <div v-else class="templates-table-container">
+            <table class="templates-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Назва</th>
+                  <th>Тип</th>
+                  <th>Файл DOCX</th>
+                  <th>Плейсхолдери</th>
+                  <th>Створено</th>
+                  <th>Дії</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="template in templates" :key="template.template_id">
+                  <td style="text-align: center;">{{ template.template_id }}</td>
+                  <td>{{ template.template_name }}</td>
+                  <td>
+                    <span class="template-type-badge" :data-type="template.template_type">
+                      {{ template.template_type }}
+                    </span>
+                  </td>
+                  <td>
+                    <span v-if="template.docx_filename" class="file-uploaded">
+                      ✓ {{ template.docx_filename }}
+                    </span>
+                    <span v-else class="file-missing">
+                      ⚠ Файл відсутній
+                    </span>
+                  </td>
+                  <td class="placeholders-cell">
+                    <code v-if="template.placeholder_fields">{{ template.placeholder_fields }}</code>
+                    <span v-else>—</span>
+                  </td>
+                  <td>{{ template.created_date || '—' }}</td>
+                  <td class="actions-cell">
+                    <button class="icon-btn" title="Редагувати" @click="editTemplate(template)">
+                      ✎
+                    </button>
+                    <button class="icon-btn" title="Завантажити DOCX" @click="uploadTemplateFile(template)">
+                      📁
+                    </button>
+                    <button class="icon-btn" title="Видалити" @click="deleteTemplate(template)">
+                      🗑
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>

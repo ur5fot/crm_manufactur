@@ -1706,3 +1706,106 @@ button.small {
   opacity: 0.3;
   cursor: not-allowed;
 }
+
+/* Templates table styles */
+.templates-table-container {
+  overflow-x: auto;
+  margin-top: 16px;
+}
+
+.templates-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.templates-table th,
+.templates-table td {
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+}
+
+.templates-table th {
+  background: var(--bg-accent);
+  font-weight: 600;
+  color: var(--ink);
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.templates-table tbody tr:hover {
+  background: var(--bg-accent);
+}
+
+.template-type-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 500;
+  background: var(--bg-accent);
+  color: var(--ink);
+}
+
+.template-type-badge[data-type="Заявка"] {
+  background: #e3f2fd;
+  color: #1565c0;
+}
+
+.template-type-badge[data-type="Службова записка"] {
+  background: #f3e5f5;
+  color: #6a1b9a;
+}
+
+.template-type-badge[data-type="Доповідь/Звіт"] {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.template-type-badge[data-type="Інше"] {
+  background: #fff3e0;
+  color: #e65100;
+}
+
+.file-uploaded {
+  color: #2e7d32;
+  font-weight: 500;
+}
+
+.file-missing {
+  color: #f57c00;
+  font-style: italic;
+}
+
+.placeholders-cell code {
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  background: var(--bg-accent);
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: var(--accent-strong);
+  word-break: break-word;
+}
+
+.actions-cell {
+  white-space: nowrap;
+}
+
+.actions-cell .icon-btn {
+  margin-right: 8px;
+  font-size: 16px;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 4px 8px;
+  transition: transform 0.2s, opacity 0.2s;
+}
+
+.actions-cell .icon-btn:hover {
+  transform: scale(1.2);
+  opacity: 0.7;
+}

@@ -87,14 +87,14 @@
 - [x] Test navigation to /templates
 
 ### Task 9: Templates List Table
-- [ ] Add table with columns: ID, Назва, Тип, Файл DOCX, Плейсхолдери, Створено, Дії
-- [ ] Add loadTemplates() function calling API
-- [ ] Display template type badge with colors
-- [ ] Show file status: "✓ filename" or "⚠ Файл відсутній"
-- [ ] Display placeholders as code
-- [ ] Add action buttons: ✎ (edit), 📁 (upload), 🗑 (delete)
-- [ ] Call loadTemplates() when entering view
-- [ ] Test table displays data correctly
+- [x] Add table with columns: ID, Назва, Тип, Файл DOCX, Плейсхолдери, Створено, Дії
+- [x] Add loadTemplates() function calling API
+- [x] Display template type badge with colors
+- [x] Show file status: "✓ filename" or "⚠ Файл відсутній"
+- [x] Display placeholders as code
+- [x] Add action buttons: ✎ (edit), 📁 (upload), 🗑 (delete)
+- [x] Call loadTemplates() when entering view
+- [x] Test table displays data correctly
 
 ### Task 10: Create/Edit Template Modal
 - [ ] Add modal HTML with form fields
