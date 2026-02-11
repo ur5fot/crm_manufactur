@@ -18,14 +18,14 @@
 - [x] Test CSV creation with UTF-8 BOM and semicolon delimiter
 
 ### Task 2: DOCX Generator Module
-- [ ] Install npm packages: docxtemplater, pizzip
-- [ ] Create server/src/docx-generator.js module
-- [ ] Implement generateDocx(templatePath, data, outputPath) function
-- [ ] Add null value handling (replace undefined with empty string)
-- [ ] Add special placeholders: {current_date}, {current_datetime}
-- [ ] Implement extractPlaceholders(templatePath) function using regex /\{([a-zA-Z0-9_]+)\}/g
-- [ ] Test generation with sample DOCX template
-- [ ] Verify generated DOCX opens in Microsoft Word
+- [x] Install npm packages: docxtemplater, pizzip
+- [x] Create server/src/docx-generator.js module
+- [x] Implement generateDocx(templatePath, data, outputPath) function
+- [x] Add null value handling (replace undefined with empty string)
+- [x] Add special placeholders: {current_date}, {current_datetime}
+- [x] Implement extractPlaceholders(templatePath) function using regex /\{([a-zA-Z0-9_]+)\}/g
+- [x] Test generation with sample DOCX template
+- [x] Verify generated DOCX opens in Microsoft Word
 
 ### Task 3: Templates CRUD API
 - [ ] Add GET /api/templates route (return active templates)
