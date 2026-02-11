@@ -463,6 +463,30 @@ git diff data/fields_schema.template.csv
 nano data/fields_schema.csv
 ```
 
+## Data Migration
+
+If you encounter data format issues (e.g., date format errors in browser console, all documents showing as overdue), migration scripts may be needed.
+
+**Quick fix for date format issues:**
+
+```bash
+# Backup first (CRITICAL!)
+cp data/employees.csv data/employees.csv.backup_$(date +%Y%m%d_%H%M%S)
+
+# Run migration script
+node server/src/fix-all-dates.cjs
+
+# Restart servers
+./stop.sh && ./run.sh
+```
+
+**Common scenarios requiring migration:**
+- Date format mismatches (DD.MM.YYYY vs YYYY-MM-DD)
+- Browser console errors about invalid input values
+- Data comparisons failing due to format differences
+
+See [CLAUDE.md - Data Migration](CLAUDE.md#data-migration) for detailed guide on creating migration scripts.
+
 ## Development
 
 For detailed architecture and development guidelines, see [CLAUDE.md](CLAUDE.md).

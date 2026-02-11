@@ -780,6 +780,197 @@ When adding new dictionary types:
 2. Use in form by adding field with `type: "select"` and `optionsKey: "your_type"`
 3. Frontend automatically loads from `/api/dictionaries` on mount
 
+## Data Migration
+
+### When to Create Migration Scripts
+
+Create migration scripts when production data needs format changes:
+
+**Common scenarios:**
+- Date format issues (DD.MM.YYYY → YYYY-MM-DD)
+- Schema changes requiring data transformation
+- Fixing invalid data accumulated over time
+- Renaming fields or changing data types
+
+**Symptoms requiring migration:**
+- Browser console errors about invalid date formats
+- Data not displaying correctly in UI inputs
+- Comparison logic failing (e.g., all documents showing as overdue)
+- Import/export breaking due to format mismatches
+
+### Migration Script Template
+
+Location: `server/src/fix-*.cjs` (use `.cjs` extension for CommonJS in ES module project)
+
+**Example: Date Format Migration**
+
+```javascript
+/**
+ * Migration script: Fix date formats from DD.MM.YYYY to YYYY-MM-DD
+ */
+const fs = require('fs');
+const path = require('path');
+
+const DATA_DIR = path.join(__dirname, '../../data');
+const EMPLOYEES_FILE = path.join(DATA_DIR, 'employees.csv');
+
+// CSV utilities
+function parseCSV(content) {
+  const lines = content.split('\n').filter(line => line.trim());
+  if (lines.length === 0) return { headers: [], rows: [] };
+
+  const headers = lines[0].replace(/^\uFEFF/, '').split(';'); // Remove BOM
+  const rows = lines.slice(1).map(line => {
+    const values = line.split(';');
+    const row = {};
+    headers.forEach((header, i) => {
+      row[header] = values[i] || '';
+    });
+    return row;
+  });
+
+  return { headers, rows };
+}
+
+function serializeCSV(headers, rows) {
+  const headerLine = headers.join(';');
+  const dataLines = rows.map(row =>
+    headers.map(header => row[header] || '').join(';')
+  );
+  return '\uFEFF' + headerLine + '\n' + dataLines.join('\n') + '\n';
+}
+
+// Data transformation logic
+function transformData(rows) {
+  let changedCount = 0;
+
+  rows.forEach((row, index) => {
+    // Your transformation logic here
+    // Example: convert date format
+    if (row.birth_date && /^\d{2}\.\d{2}\.\d{4}$/.test(row.birth_date)) {
+      const [day, month, year] = row.birth_date.split('.');
+      row.birth_date = `${year}-${month}-${day}`;
+      changedCount++;
+      console.log(`✓ Row ${index + 2}: Date converted`);
+    }
+  });
+
+  return changedCount;
+}
+
+// Main migration function
+function migrate() {
+  console.log('🔄 Starting migration...');
+
+  if (!fs.existsSync(EMPLOYEES_FILE)) {
+    console.error('❌ employees.csv not found!');
+    process.exit(1);
+  }
+
+  const content = fs.readFileSync(EMPLOYEES_FILE, 'utf-8');
+  const { headers, rows } = parseCSV(content);
+
+  const changedCount = transformData(rows);
+
+  const newContent = serializeCSV(headers, rows);
+  fs.writeFileSync(EMPLOYEES_FILE, newContent, 'utf-8');
+
+  console.log(`✅ Migration completed! Changed ${changedCount} records.`);
+}
+
+try {
+  migrate();
+} catch (error) {
+  console.error('❌ Migration failed:', error);
+  process.exit(1);
+}
+```
+
+### Migration Workflow
+
+**1. Development (Local):**
+```bash
+# Create migration script
+touch server/src/fix-issue-name.cjs
+
+# Edit script with transformation logic
+# Test on local data
+node server/src/fix-issue-name.cjs
+
+# Verify results
+git diff data/employees.csv
+```
+
+**2. Commit and Deploy:**
+```bash
+git add server/src/fix-issue-name.cjs
+git commit -m "feat: migration script for [issue description]"
+git push origin <branch>
+```
+
+**3. Production Deployment:**
+```bash
+# On production server
+cd /path/to/crm_manufactur
+git pull origin master
+
+# CRITICAL: Always backup before migration!
+cp data/employees.csv data/employees.csv.backup_$(date +%Y%m%d_%H%M%S)
+
+# Run migration
+node server/src/fix-issue-name.cjs
+
+# Verify output logs
+# Check for errors or unexpected changes
+
+# Restart servers
+./stop.sh
+./run.sh
+
+# Test in browser
+# Verify data displays correctly
+```
+
+### Best Practices
+
+**Safety:**
+- ✅ Always create backup before running migration
+- ✅ Test migration on local/staging data first
+- ✅ Use `.cjs` extension for CommonJS in ES module project
+- ✅ Validate data before and after transformation
+- ✅ Log all changes for audit trail
+- ✅ Handle errors gracefully (don't crash on invalid data)
+
+**Code Quality:**
+- ✅ Add detailed comments explaining transformation logic
+- ✅ Include usage instructions in script header
+- ✅ Show progress and summary statistics
+- ✅ Use meaningful console output (emojis help: ✓ ⚠️ ❌)
+
+**Deployment:**
+- ✅ Commit migration script to git for documentation
+- ✅ Update CHANGELOG or deployment notes
+- ✅ Coordinate with team before running on production
+- ✅ Keep migration script in repo for future reference
+
+### Real-World Example: fix-all-dates.cjs
+
+See [server/src/fix-all-dates.cjs](server/src/fix-all-dates.cjs) for a production migration script that:
+- Fixes date format issues (DD.MM.YYYY → YYYY-MM-DD)
+- Processes 25+ date columns automatically
+- Validates calendar dates (rejects invalid like 30.02.2020)
+- Clears unparseable data instead of crashing
+- Shows detailed change log
+
+**Problem solved:**
+- Browser console error: "The specified value '22.02.1974' does not conform to required format 'yyyy-MM-dd'"
+- All documents showing as overdue due to string comparison of mismatched date formats
+
+**Usage:**
+```bash
+node server/src/fix-all-dates.cjs
+```
+
 ## Testing Approach
 
 ### E2E Testing with Playwright
