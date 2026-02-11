@@ -1707,8 +1707,49 @@ function openCreateTemplateDialog() {
 }
 
 function editTemplate(template) {
-  // TODO: Implement in Task 10
-  console.log('Edit template:', template);
+  templateDialogMode.value = 'edit';
+  Object.assign(templateForm, {
+    template_id: template.template_id,
+    template_name: template.template_name,
+    template_type: template.template_type,
+    description: template.description || '',
+    placeholder_fields: template.placeholder_fields || ''
+  });
+  showTemplateDialog.value = true;
+}
+
+async function saveTemplate() {
+  try {
+    const payload = {
+      template_name: templateForm.template_name,
+      template_type: templateForm.template_type,
+      description: templateForm.description || ''
+    };
+
+    if (templateDialogMode.value === 'create') {
+      await api.createTemplate(payload);
+      alert('✓ Шаблон створено успішно');
+    } else {
+      await api.updateTemplate(templateForm.template_id, payload);
+      alert('✓ Шаблон оновлено успішно');
+    }
+
+    closeTemplateDialog();
+    await loadTemplates();
+  } catch (error) {
+    alert('Помилка збереження: ' + error.message);
+  }
+}
+
+function closeTemplateDialog() {
+  showTemplateDialog.value = false;
+  Object.assign(templateForm, {
+    template_id: '',
+    template_name: '',
+    template_type: '',
+    description: '',
+    placeholder_fields: ''
+  });
 }
 
 function uploadTemplateFile(template) {
@@ -3313,6 +3354,70 @@ onUnmounted(() => {
               </tbody>
             </table>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Template Create/Edit Dialog -->
+    <div v-if="showTemplateDialog" class="vacation-notification-overlay" @click="closeTemplateDialog">
+      <div class="vacation-notification-modal" @click.stop style="max-width: 600px;">
+        <div class="vacation-notification-header">
+          <h3>{{ templateDialogMode === 'create' ? 'Новий шаблон' : 'Редагувати шаблон' }}</h3>
+          <button class="close-btn" @click="closeTemplateDialog">&times;</button>
+        </div>
+        <div class="vacation-notification-body">
+          <div class="form-group">
+            <label for="template-name">Назва шаблону <span style="color: red;">*</span></label>
+            <input
+              id="template-name"
+              v-model="templateForm.template_name"
+              type="text"
+              required
+              placeholder="Наприклад: Заявка на відпустку"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="template-type">Тип документа <span style="color: red;">*</span></label>
+            <select id="template-type" v-model="templateForm.template_type" required>
+              <option value="">Оберіть тип</option>
+              <option value="Заявка">Заявка</option>
+              <option value="Службова записка">Службова записка</option>
+              <option value="Доповідь/Звіт">Доповідь/Звіт</option>
+              <option value="Інше">Інше</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="template-description">Опис</label>
+            <textarea
+              id="template-description"
+              v-model="templateForm.description"
+              rows="3"
+              placeholder="Опис шаблону та його призначення"
+            ></textarea>
+          </div>
+
+          <div v-if="templateForm.placeholder_fields" class="form-group">
+            <label>Плейсхолдери (автоматично з DOCX)</label>
+            <input
+              v-model="templateForm.placeholder_fields"
+              type="text"
+              readonly
+              style="background-color: #f5f5f5; cursor: not-allowed;"
+            />
+          </div>
+        </div>
+        <div class="vacation-notification-footer status-change-footer">
+          <button class="secondary" type="button" @click="closeTemplateDialog">Скасувати</button>
+          <button
+            class="primary"
+            type="button"
+            @click="saveTemplate"
+            :disabled="!templateForm.template_name || !templateForm.template_type"
+          >
+            {{ templateDialogMode === 'create' ? 'Створити' : 'Зберегти' }}
+          </button>
         </div>
       </div>
     </div>

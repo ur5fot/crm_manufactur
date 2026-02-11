@@ -97,17 +97,17 @@
 - [x] Test table displays data correctly
 
 ### Task 10: Create/Edit Template Modal
-- [ ] Add modal HTML with form fields
-- [ ] Add template_name (text, required)
-- [ ] Add template_type select (Заявка, Службова записка, Доповідь/Звіт, Інше)
-- [ ] Add description textarea
-- [ ] Show placeholders field (read-only)
-- [ ] Implement openCreateTemplateDialog()
-- [ ] Implement editTemplate(template)
-- [ ] Implement saveTemplate() calling API
-- [ ] Implement closeTemplateDialog()
-- [ ] Show success alert
-- [ ] Test create and edit flows
+- [x] Add modal HTML with form fields
+- [x] Add template_name (text, required)
+- [x] Add template_type select (Заявка, Службова записка, Доповідь/Звіт, Інше)
+- [x] Add description textarea
+- [x] Show placeholders field (read-only)
+- [x] Implement openCreateTemplateDialog()
+- [x] Implement editTemplate(template)
+- [x] Implement saveTemplate() calling API
+- [x] Implement closeTemplateDialog()
+- [x] Show success alert
+- [x] Test create and edit flows
 
 ### Task 11: Upload DOCX Modal
 - [ ] Add upload modal with file picker (accept=".docx")
