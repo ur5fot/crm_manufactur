@@ -151,13 +151,13 @@
 - [x] Test all styles
 
 ### Task 15: End-to-End Testing
-- [ ] Test template CRUD flow
-- [ ] Test placeholder extraction
-- [ ] Test document generation
-- [ ] Verify DOCX opens in Word
-- [ ] Check CSV files have UTF-8 BOM and semicolon
-- [ ] Test write locks prevent data corruption
-- [ ] Test error handling (invalid file, missing data)
-- [ ] Verify audit logs
-- [ ] Check data_snapshot in generated_documents.csv
-- [ ] Performance test: generation < 5 seconds
+- [x] Test template CRUD flow
+- [x] Test placeholder extraction
+- [x] Test document generation
+- [x] Verify DOCX opens in Word
+- [x] Check CSV files have UTF-8 BOM and semicolon
+- [x] Test write locks prevent data corruption
+- [x] Test error handling (invalid file, missing data)
+- [x] Verify audit logs
+- [x] Check data_snapshot in generated_documents.csv
+- [x] Performance test: generation < 5 seconds
