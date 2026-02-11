@@ -9,4 +9,5 @@
 8;Upload Test 1770824360397;Заявка;;;;2026-02-11;yes
 9;Upload Test 1770824403081;Заявка;;;;2026-02-11;yes
 10;Upload Test 1770824452057;Заявка;;;;2026-02-11;yes
-11;E2E Upload Test;Заявка;;;For E2E testing;2026-02-11;yes
+11;E2E Upload Test;Заявка;;;For E2E testing;2026-02-11;no
+12;Delete Test Auto;Заявка;;;For automated testing;2026-02-11;no

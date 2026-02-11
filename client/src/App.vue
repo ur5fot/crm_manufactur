@@ -1805,9 +1805,20 @@ async function uploadTemplateDocx() {
   }
 }
 
-function deleteTemplate(template) {
-  // TODO: Implement in Task 12
-  console.log('Delete template:', template);
+async function deleteTemplate(template) {
+  const confirmed = confirm(`Видалити шаблон "${template.template_name}"?\n\nЦя дія не видаляє файл DOCX, а лише позначає шаблон як неактивний.`);
+
+  if (!confirmed) {
+    return;
+  }
+
+  try {
+    await api.deleteTemplate(template.template_id);
+    alert('Шаблон успішно видалено');
+    await loadTemplates();
+  } catch (error) {
+    alert('Помилка видалення шаблону: ' + error.message);
+  }
 }
 
 async function loadFieldsSchema() {

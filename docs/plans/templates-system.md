@@ -120,12 +120,12 @@
 - [x] Test upload and error handling
 
 ### Task 12: Delete Template
-- [ ] Implement deleteTemplate(template)
-- [ ] Add confirmation dialog
-- [ ] Call api.deleteTemplate(id) if confirmed
-- [ ] Refresh table after deletion
-- [ ] Show success alert
-- [ ] Test deletion
+- [x] Implement deleteTemplate(template)
+- [x] Add confirmation dialog
+- [x] Call api.deleteTemplate(id) if confirmed
+- [x] Refresh table after deletion
+- [x] Show success alert
+- [x] Test deletion
 
 ### Task 13: Document Generation in Employee Card
 - [ ] Add "Генерування документів" section after Documents in Cards view
