@@ -16,3 +16,7 @@ _bmad/
 
 # ralphex progress logs
 progress*.txt
+
+# Playwright test artifacts
+playwright-report/
+test-results/
