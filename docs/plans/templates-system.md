@@ -1,0 +1,163 @@
+# Plan: Document Templates System
+
+## Validation Commands
+- `cd server && npm install`
+- `cd client && npm install`
+- `./run.sh`
+- `curl -s http://localhost:3000/api/templates | jq .`
+- `ls -la data/templates.csv data/generated_documents.csv`
+- `ls -la files/templates/ files/documents/`
+
+### Task 1: Backend CSV Infrastructure
+- [x] Create data/templates.csv (8 columns: template_id, template_name, template_type, docx_filename, placeholder_fields, description, created_date, active)
+- [x] Create data/generated_documents.csv (7 columns: document_id, template_id, employee_id, docx_filename, generation_date, generated_by, data_snapshot)
+- [x] Add loadTemplates() to server/src/store.js with CSV reading
+- [x] Add saveTemplates() to server/src/store.js with write lock pattern
+- [x] Add loadGeneratedDocuments() to server/src/store.js
+- [x] Add saveGeneratedDocuments() to server/src/store.js with write lock
+- [x] Test CSV creation with UTF-8 BOM and semicolon delimiter
+
+### Task 2: DOCX Generator Module
+- [ ] Install npm packages: docxtemplater, pizzip
+- [ ] Create server/src/docx-generator.js module
+- [ ] Implement generateDocx(templatePath, data, outputPath) function
+- [ ] Add null value handling (replace undefined with empty string)
+- [ ] Add special placeholders: {current_date}, {current_datetime}
+- [ ] Implement extractPlaceholders(templatePath) function using regex /\{([a-zA-Z0-9_]+)\}/g
+- [ ] Test generation with sample DOCX template
+- [ ] Verify generated DOCX opens in Microsoft Word
+
+### Task 3: Templates CRUD API
+- [ ] Add GET /api/templates route (return active templates)
+- [ ] Add GET /api/templates/:id route
+- [ ] Add POST /api/templates route (auto-increment ID)
+- [ ] Add PUT /api/templates/:id route
+- [ ] Add DELETE /api/templates/:id route (soft delete: active='no')
+- [ ] Add audit logging (CREATE_TEMPLATE, UPDATE_TEMPLATE, DELETE_TEMPLATE)
+- [ ] Test endpoints with curl
+- [ ] Verify 404 errors for non-existent IDs
+
+### Task 4: Template DOCX Upload API
+- [ ] Create files/templates/ directory
+- [ ] Add POST /api/templates/:id/upload route with multer
+- [ ] Validate .docx extension
+- [ ] Check file size against max_file_upload_mb from config.csv
+- [ ] Save as template_{id}_{timestamp}.docx
+- [ ] Extract placeholders and update template record
+- [ ] Return JSON with filename and placeholders
+- [ ] Test upload with valid/invalid files
+
+### Task 5: Document Generation API
+- [ ] Create files/documents/ directory
+- [ ] Add POST /api/templates/:id/generate route
+- [ ] Load template and employee data
+- [ ] Validate template has docx_filename
+- [ ] Prepare data with employee fields + special placeholders
+- [ ] Call generateDocx() and save to files/documents/
+- [ ] Create record in generated_documents.csv with data_snapshot
+- [ ] Add audit log (GENERATE_DOCUMENT)
+- [ ] Return JSON: {document_id, filename, download_url}
+
+### Task 6: Document Download API
+- [ ] Add GET /api/documents/:id/download route
+- [ ] Load document from generated_documents.csv
+- [ ] Validate document and file exist (404 if not)
+- [ ] Use res.download() to send DOCX file
+- [ ] Set proper Content-Type and Content-Disposition headers
+- [ ] Test download with curl
+
+### Task 7: Frontend API Client
+- [ ] Add getTemplates() to client/src/api.js
+- [ ] Add getTemplate(id)
+- [ ] Add createTemplate(payload)
+- [ ] Add updateTemplate(id, payload)
+- [ ] Add deleteTemplate(id)
+- [ ] Add uploadTemplateFile(id, formData)
+- [ ] Add generateDocument(templateId, employeeId, customData)
+- [ ] Add downloadDocument(documentId) returning URL
+
+### Task 8: Templates View Navigation
+- [ ] Add {key: 'templates', label: 'Шаблони'} to tabs in App.vue
+- [ ] Add route handling in currentView computed
+- [ ] Add case in switchView function
+- [ ] Add reactive refs: templates, showTemplateDialog, templateDialogMode, templateForm
+- [ ] Add Templates view section in template
+- [ ] Add view-header with title and "+ Новий шаблон" button
+- [ ] Add empty state message
+- [ ] Test navigation to /templates
+
+### Task 9: Templates List Table
+- [ ] Add table with columns: ID, Назва, Тип, Файл DOCX, Плейсхолдери, Створено, Дії
+- [ ] Add loadTemplates() function calling API
+- [ ] Display template type badge with colors
+- [ ] Show file status: "✓ filename" or "⚠ Файл відсутній"
+- [ ] Display placeholders as code
+- [ ] Add action buttons: ✎ (edit), 📁 (upload), 🗑 (delete)
+- [ ] Call loadTemplates() when entering view
+- [ ] Test table displays data correctly
+
+### Task 10: Create/Edit Template Modal
+- [ ] Add modal HTML with form fields
+- [ ] Add template_name (text, required)
+- [ ] Add template_type select (Заявка, Службова записка, Доповідь/Звіт, Інше)
+- [ ] Add description textarea
+- [ ] Show placeholders field (read-only)
+- [ ] Implement openCreateTemplateDialog()
+- [ ] Implement editTemplate(template)
+- [ ] Implement saveTemplate() calling API
+- [ ] Implement closeTemplateDialog()
+- [ ] Show success alert
+- [ ] Test create and edit flows
+
+### Task 11: Upload DOCX Modal
+- [ ] Add upload modal with file picker (accept=".docx")
+- [ ] Add help box with template instructions
+- [ ] Implement uploadTemplateFile(template) to open modal
+- [ ] Implement onTemplateFileSelected(event)
+- [ ] Implement uploadTemplateDocx() calling API
+- [ ] Show alert with extracted placeholders
+- [ ] Refresh table after upload
+- [ ] Test upload and error handling
+
+### Task 12: Delete Template
+- [ ] Implement deleteTemplate(template)
+- [ ] Add confirmation dialog
+- [ ] Call api.deleteTemplate(id) if confirmed
+- [ ] Refresh table after deletion
+- [ ] Show success alert
+- [ ] Test deletion
+
+### Task 13: Document Generation in Employee Card
+- [ ] Add "Генерування документів" section after Documents in Cards view
+- [ ] Add grid layout for template cards
+- [ ] Display cards with icon, name, description, button
+- [ ] Disable button if no DOCX file (show warning)
+- [ ] Disable if employee not saved
+- [ ] Implement generateDocumentForEmployee(template)
+- [ ] Auto-download using window.open(downloadUrl)
+- [ ] Show success alert
+- [ ] Test generation from card
+
+### Task 14: CSS Styling
+- [ ] Add .templates-table-container, .templates-table styles
+- [ ] Add .template-type-badge with colors
+- [ ] Add .file-uploaded (green), .file-missing (yellow)
+- [ ] Add .placeholders-cell code style
+- [ ] Add .actions-cell, .icon-btn with hover
+- [ ] Add .empty-state style
+- [ ] Add .template-dialog, .help-box modal styles
+- [ ] Add .document-generation-grid, .template-card
+- [ ] Add .template-card.disabled, .warning-text
+- [ ] Test all styles
+
+### Task 15: End-to-End Testing
+- [ ] Test template CRUD flow
+- [ ] Test placeholder extraction
+- [ ] Test document generation
+- [ ] Verify DOCX opens in Word
+- [ ] Check CSV files have UTF-8 BOM and semicolon
+- [ ] Test write locks prevent data corruption
+- [ ] Test error handling (invalid file, missing data)
+- [ ] Verify audit logs
+- [ ] Check data_snapshot in generated_documents.csv
+- [ ] Performance test: generation < 5 seconds
