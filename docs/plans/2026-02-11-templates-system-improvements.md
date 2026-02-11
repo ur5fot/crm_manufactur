@@ -146,15 +146,15 @@ What needs to be added:
 **Files:**
 - Modify: `server/src/index.js`
 
-- [ ] Add GET /api/documents route (list all generated documents)
-- [ ] Support query params: template_id, employee_id, start_date, end_date
-- [ ] Join with templates.csv to include template_name
-- [ ] Join with employees.csv to include employee name
-- [ ] Sort by generation_date DESC (newest first)
-- [ ] Support pagination: offset, limit params
-- [ ] Return total count for pagination
-- [ ] Test with curl and various filters
-- [ ] Verify performance with large generated_documents.csv
+- [x] Add GET /api/documents route (list all generated documents)
+- [x] Support query params: template_id, employee_id, start_date, end_date
+- [x] Join with templates.csv to include template_name
+- [x] Join with employees.csv to include employee name
+- [x] Sort by generation_date DESC (newest first)
+- [x] Support pagination: offset, limit params
+- [x] Return total count for pagination
+- [x] Test with curl and various filters
+- [x] Verify performance with large generated_documents.csv
 
 ---
 

@@ -1320,6 +1320,102 @@ app.post("/api/templates/:id/generate", async (req, res) => {
   }
 });
 
+// Get list of generated documents with filtering and pagination
+app.get("/api/documents", async (req, res) => {
+  try {
+    const { template_id, employee_id, start_date, end_date, offset = '0', limit = '50' } = req.query;
+
+    // Load all data sources
+    const documents = await loadGeneratedDocuments();
+    const templates = await loadTemplates();
+    const employees = await loadEmployees();
+
+    // Create lookup maps for joins
+    const templateMap = new Map(templates.map(t => [t.template_id, t]));
+    const employeeMap = new Map(employees.map(e => [e.employee_id, e]));
+
+    // Filter documents
+    let filtered = documents.filter(doc => {
+      // Filter by template_id
+      if (template_id && doc.template_id !== template_id) {
+        return false;
+      }
+
+      // Filter by employee_id
+      if (employee_id && doc.employee_id !== employee_id) {
+        return false;
+      }
+
+      // Filter by date range
+      if (start_date || end_date) {
+        const docDate = new Date(doc.generation_date);
+
+        if (start_date) {
+          const startDateObj = new Date(start_date);
+          if (docDate < startDateObj) {
+            return false;
+          }
+        }
+
+        if (end_date) {
+          const endDateObj = new Date(end_date);
+          // End date should include the whole day
+          endDateObj.setHours(23, 59, 59, 999);
+          if (docDate > endDateObj) {
+            return false;
+          }
+        }
+      }
+
+      return true;
+    });
+
+    // Sort by generation_date DESC (newest first)
+    filtered.sort((a, b) => {
+      const dateA = new Date(a.generation_date);
+      const dateB = new Date(b.generation_date);
+      return dateB - dateA;
+    });
+
+    // Get total count before pagination
+    const total = filtered.length;
+
+    // Apply pagination
+    const offsetNum = parseInt(offset, 10);
+    const limitNum = parseInt(limit, 10);
+    const paginated = filtered.slice(offsetNum, offsetNum + limitNum);
+
+    // Join with templates and employees to enrich data
+    const enriched = paginated.map(doc => {
+      const template = templateMap.get(doc.template_id);
+      const employee = employeeMap.get(doc.employee_id);
+
+      return {
+        document_id: doc.document_id,
+        template_id: doc.template_id,
+        template_name: template ? template.template_name : 'Unknown Template',
+        employee_id: doc.employee_id,
+        employee_name: employee
+          ? `${employee.last_name || ''} ${employee.first_name || ''} ${employee.middle_name || ''}`.trim()
+          : 'Unknown Employee',
+        docx_filename: doc.docx_filename,
+        generation_date: doc.generation_date,
+        generated_by: doc.generated_by
+      };
+    });
+
+    res.json({
+      documents: enriched,
+      total,
+      offset: offsetNum,
+      limit: limitNum
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Download generated document
 app.get("/api/documents/:id/download", async (req, res) => {
   try {

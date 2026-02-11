@@ -102,3 +102,5 @@
 101;Generate Test;contract;template_101_1770840236007.docx;first_name, last_name;;2026-02-11;yes
 102;Document Record Test;contract;template_102_1770840236036.docx;first_name, last_name, position;;2026-02-11;yes
 103;Concurrent Test;contract;template_103_1770840236072.docx;first_name;;2026-02-11;yes
+104;Тестовий шаблон 1770840871079;Заявка;;;Це тестовий шаблон для автоматизованого тестування;2026-02-11;yes
+105;No DOCX Test 1770840924005;Заявка;;;;2026-02-11;yes
