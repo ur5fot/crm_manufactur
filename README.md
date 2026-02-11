@@ -1,0 +1,354 @@
+# CRM Manufacturing System
+
+A comprehensive CRM system for managing employee records, documents, and templates.
+
+## Features
+
+- Employee management (CRUD operations)
+- Document templates with DOCX file upload
+- Automated document generation with placeholder replacement
+- Document history tracking
+- Audit logging for all operations
+- File management for employee documents
+- Dashboard with statistics and events
+
+## Technology Stack
+
+**Backend:**
+- Node.js with Express
+- CSV-based data storage with file locks
+- Multer for file uploads
+- Docxtemplater for DOCX generation
+
+**Frontend:**
+- Vue.js 3
+- Bootstrap for UI components
+- Axios for API communication
+
+**Testing:**
+- Playwright for E2E tests
+- Node.js native test runner for unit/integration tests
+
+## Installation
+
+### Prerequisites
+
+- Node.js 18+ (backend and frontend)
+- npm or yarn
+
+### Setup
+
+1. Clone the repository
+2. Install backend dependencies:
+   ```bash
+   cd server
+   npm install
+   ```
+3. Install frontend dependencies:
+   ```bash
+   cd client
+   npm install
+   ```
+
+### Running the Application
+
+**Backend:**
+```bash
+cd server
+npm start
+```
+Server runs on http://localhost:3000
+
+**Frontend:**
+```bash
+cd client
+npm run dev
+```
+Frontend runs on http://localhost:5173
+
+## API Documentation
+
+### Templates API
+
+#### GET /api/templates
+List all active templates.
+
+**Response:**
+```json
+{
+  "templates": [
+    {
+      "template_id": "1",
+      "template_name": "Contract Template",
+      "template_type": "Employment Contract",
+      "docx_filename": "template_1_1234567890.docx",
+      "placeholder_fields": "first_name, last_name, position",
+      "description": "Standard employment contract",
+      "created_date": "2026-02-10",
+      "active": "yes"
+    }
+  ]
+}
+```
+
+#### GET /api/templates/:id
+Get single template by ID.
+
+**Response:** Template object or 404 error
+
+#### POST /api/templates
+Create new template.
+
+**Request:**
+```json
+{
+  "template_name": "Contract Template",
+  "template_type": "Employment Contract",
+  "description": "Standard employment contract"
+}
+```
+
+**Response:**
+```json
+{
+  "template_id": "1",
+  "template": { /* full template object */ }
+}
+```
+
+#### PUT /api/templates/:id
+Update template metadata (name, type, description).
+
+**Request:**
+```json
+{
+  "template_name": "Updated Name",
+  "template_type": "Updated Type",
+  "description": "Updated description"
+}
+```
+
+#### DELETE /api/templates/:id
+Soft delete template (sets active='no').
+
+**Response:** 204 No Content
+
+#### POST /api/templates/:id/upload
+Upload DOCX file for template.
+
+**Request:**
+- Content-Type: multipart/form-data
+- Field: file (DOCX file)
+
+**Response:**
+```json
+{
+  "filename": "template_1_1234567890.docx",
+  "placeholders": ["first_name", "last_name", "position"]
+}
+```
+
+**Notes:**
+- Automatically extracts placeholders from DOCX
+- Updates template record with filename and placeholders
+
+#### POST /api/templates/:id/generate
+Generate document from template for an employee.
+
+**Request:**
+```json
+{
+  "employee_id": "emp123"
+}
+```
+
+**Response:**
+```json
+{
+  "document_id": "1",
+  "filename": "Contract_emp123_1234567890.docx",
+  "download_url": "/api/documents/1/download"
+}
+```
+
+**Notes:**
+- Replaces placeholders with employee data
+- Stores generated document in files/documents/
+- Creates record in generated_documents.csv
+
+### Documents API
+
+#### GET /api/documents
+List generated documents with filtering and pagination.
+
+**Query Parameters:**
+- template_id (optional) - Filter by template ID
+- employee_id (optional) - Filter by employee ID
+- start_date (optional) - Filter by generation date >= start_date (YYYY-MM-DD)
+- end_date (optional) - Filter by generation date <= end_date (YYYY-MM-DD)
+- offset (optional, default: 0) - Pagination offset
+- limit (optional, default: 50) - Pagination limit
+
+**Response:**
+```json
+{
+  "documents": [
+    {
+      "document_id": "1",
+      "template_id": "1",
+      "template_name": "Contract Template",
+      "employee_id": "emp123",
+      "employee_name": "Smith John",
+      "docx_filename": "Contract_emp123_1234567890.docx",
+      "generation_date": "2026-02-11T10:30:00.000Z",
+      "generated_by": "system"
+    }
+  ],
+  "total": 42,
+  "offset": 0,
+  "limit": 50
+}
+```
+
+#### GET /api/documents/:id/download
+Download generated document file.
+
+**Response:**
+- Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document
+- Content-Disposition: attachment; filename="..."
+- Body: DOCX file binary
+
+### Employees API
+
+(Additional employee endpoints documented separately)
+
+## Placeholder Syntax
+
+Templates use curly braces for placeholders: `{placeholder_name}`
+
+### Employee Field Placeholders
+
+Any employee field can be used as a placeholder:
+- {first_name}, {last_name}, {middle_name}
+- {position}
+- {birth_date}
+- {passport_series}, {passport_number}
+- {inn}, {snils}
+- And any other employee field defined in schema.csv
+
+### Special Placeholders
+
+Auto-generated placeholders available in all templates:
+- {current_date} - Current date in DD.MM.YYYY format
+- {current_datetime} - Current date/time in DD.MM.YYYY HH:MM format
+
+### Example Template
+
+```
+CONTRACT OF EMPLOYMENT
+
+Employee: {last_name} {first_name} {middle_name}
+Position: {position}
+Start Date: {employment_start_date}
+Passport: {passport_series} {passport_number}
+INN: {inn}
+
+Date of Agreement: {current_date}
+```
+
+## Testing
+
+### E2E Tests
+
+Run all E2E tests:
+```bash
+npm run test:e2e
+```
+
+Run specific test file:
+```bash
+npm run test:e2e -- templates-generation.spec.js
+```
+
+### Unit Tests
+
+Run server unit tests:
+```bash
+cd server
+npm test
+```
+
+Run specific test file:
+```bash
+cd server
+npm test -- docx-generator.test.js
+```
+
+## Project Structure
+
+```
+.
+├── client/                 # Vue.js frontend
+│   ├── src/
+│   │   ├── App.vue        # Main app component
+│   │   └── api.js         # API client
+│   └── package.json
+├── server/                 # Node.js backend
+│   ├── src/
+│   │   ├── index.js       # Express server & API routes
+│   │   ├── store.js       # CSV data storage
+│   │   ├── docx-generator.js  # DOCX generation
+│   │   └── schema.js      # Employee field schema
+│   ├── test/              # Unit & integration tests
+│   └── package.json
+├── tests/
+│   └── e2e/               # Playwright E2E tests
+├── data/                  # CSV data files
+│   ├── employees.csv
+│   ├── templates.csv
+│   ├── generated_documents.csv
+│   ├── logs.csv
+│   └── config.csv
+├── files/                 # Uploaded files
+│   ├── templates/         # Template DOCX files
+│   ├── documents/         # Generated DOCX files
+│   └── employee_*/        # Employee-specific files
+└── docs/                  # Documentation
+    └── templates-system-improvements.md
+```
+
+## Data Storage
+
+This application uses CSV files for data storage with file locking to prevent concurrent write issues. This approach is suitable for small to medium deployments (< 10,000 employees).
+
+For larger deployments, consider migrating to:
+- SQLite (embedded database)
+- PostgreSQL (full-featured database)
+- MySQL/MariaDB
+
+## Configuration
+
+Configuration is stored in `data/config.csv`:
+
+- max_file_upload_mb - Maximum file upload size in MB (default: 10)
+- retirement_age_years - Retirement age for statistics (default: 60)
+- max_log_entries - Maximum audit log entries to keep (default: 1000)
+- max_report_preview_rows - Maximum rows in report preview (default: 100)
+
+## Security Considerations
+
+- Input validation on all API endpoints
+- File extension validation for uploads
+- File size limits enforced
+- No direct access to CSV files via static routes
+- Audit logging for all operations
+- Soft delete for data retention
+
+## Documentation
+
+For detailed documentation on the templates system, see:
+- [Templates System Documentation](docs/templates-system-improvements.md)
+
+## License
+
+Proprietary - Internal use only
