@@ -344,17 +344,17 @@
 - Create: `.github/workflows/tests.yml` (optional)
 
 **Steps:**
-- [ ] Создать `tests/README.md` с инструкциями:
+- [x] Создать `tests/README.md` с инструкциями:
   - Как запустить тесты локально
   - Как запустить отдельный тест
   - Как использовать Playwright UI mode для debugging
   - Требования: запущенные сервера (`./run.sh`)
-- [ ] (Optional) Создать `.github/workflows/tests.yml`:
+- [x] (Optional) Создать `.github/workflows/tests.yml`:
   - Install dependencies
   - Start server + client
   - Run Playwright tests
   - Upload test artifacts on failure
-- [ ] Обновить `CLAUDE.md`:
+- [x] Обновить `CLAUDE.md`:
   - Добавить секцию "Testing" с описанием E2E tests
   - Добавить команды для запуска тестов
 

@@ -107,6 +107,40 @@ npm run build
 npm run preview
 ```
 
+### Testing
+
+The project uses Playwright for end-to-end (E2E) testing of the entire application stack.
+
+**Run all E2E tests:**
+```bash
+# Ensure servers are running first
+./run.sh
+
+# In another terminal
+npm run test:e2e
+```
+
+**Run tests in UI mode (interactive debugging):**
+```bash
+npm run test:e2e:ui
+```
+
+**Run tests with visible browser:**
+```bash
+npm run test:e2e:headed
+```
+
+**Run specific test file:**
+```bash
+npm run test:e2e tests/e2e/employee-crud.spec.js
+```
+
+**Important notes:**
+- Tests require both servers running (`./run.sh`)
+- Tests operate on isolated test data (not production data)
+- All major user flows are covered: CRUD, documents, reports, import, dashboard, logs
+- See [tests/README.md](tests/README.md) for detailed testing documentation
+
 ### First Installation / Production Deployment
 
 **Initial setup:**
@@ -745,6 +779,118 @@ When adding new dictionary types:
 1. Add entries to [data/dictionaries.csv](data/dictionaries.csv)
 2. Use in form by adding field with `type: "select"` and `optionsKey: "your_type"`
 3. Frontend automatically loads from `/api/dictionaries` on mount
+
+## Testing Approach
+
+### E2E Testing with Playwright
+
+The project uses [Playwright](https://playwright.dev/) for comprehensive end-to-end testing covering all major user flows.
+
+**Test Philosophy:**
+- Tests validate the complete stack: UI + API + data persistence
+- All critical user flows must have E2E coverage
+- Tests use isolated test data (never modify production data)
+- Tests should be stable and non-flaky (no random failures)
+
+**Test Coverage Areas:**
+- Employee CRUD operations (create, read, update, delete)
+- Document upload, viewing, deletion (PDF + images)
+- Table view with filters and inline editing
+- Custom reports with advanced filters and CSV export
+- CSV import (valid/invalid data, template download)
+- Dashboard statistics, timeline, notifications
+- Status changes with date ranges and auto-restore
+- Retirement notifications with auto-dismiss
+- Audit logs viewing and search
+
+**Test Structure:**
+```
+tests/
+├── e2e/                           # E2E test files
+│   ├── setup.spec.js              # Basic connectivity tests
+│   ├── employee-crud.spec.js      # CRUD operations
+│   ├── documents.spec.js          # Document management
+│   ├── table-filters.spec.js      # Table view + filters
+│   ├── reports.spec.js            # Custom reports + export
+│   ├── import.spec.js             # CSV import
+│   ├── dashboard.spec.js          # Dashboard + notifications
+│   ├── status-retirement.spec.js  # Status changes + retirement
+│   └── logs.spec.js               # Audit logs
+├── fixtures/                      # Test data
+│   ├── test-data.csv              # Sample employees
+│   ├── import-valid.csv           # Valid import data
+│   ├── import-invalid.csv         # Invalid import (error testing)
+│   ├── test-passport.pdf          # Dummy PDF
+│   └── test-photo.jpg             # Dummy image
+├── helpers/                       # Utilities
+│   └── test-utils.js              # setupTestData, cleanupTestData, etc.
+└── README.md                      # Testing documentation
+```
+
+**Running Tests:**
+
+Prerequisites: servers must be running (`./run.sh`)
+
+```bash
+# Run all tests
+npm run test:e2e
+
+# Run specific test file
+npm run test:e2e tests/e2e/employee-crud.spec.js
+
+# Run in UI mode (interactive debugging)
+npm run test:e2e:ui
+
+# Run with visible browser
+npm run test:e2e:headed
+
+# Run test by name
+npx playwright test --grep "Создать нового сотрудника"
+```
+
+**Debugging Failed Tests:**
+
+1. Check screenshots: `test-results/[test-name]/test-failed-1.png`
+2. View trace: `npx playwright show-trace test-results/[test-name]/trace.zip`
+3. Run in debug mode: `npx playwright test --debug tests/e2e/employee-crud.spec.js`
+
+**Test Data Management:**
+
+Tests use isolated data via `setupTestData()` and `cleanupTestData()` helpers:
+- `tests/fixtures/test-data.csv` copied to `data/employees.csv` before tests
+- Production data protected (gitignored, never modified by tests)
+- Test files cleaned up after test completion
+
+**Best Practices for Writing Tests:**
+
+1. Use explicit waits: `await expect(locator).toBeVisible()`
+2. Verify via API when testing data persistence
+3. Avoid hardcoded delays (use Playwright's auto-waiting)
+4. Clean up test data in `afterEach` hooks
+5. Run tests 3+ times to ensure stability (no flaky tests)
+
+**CI/CD Integration:**
+
+GitHub Actions workflow (`.github/workflows/tests.yml`) runs tests automatically on:
+- Push to master or feature branches
+- Pull requests
+- Manual workflow dispatch
+
+Workflow steps:
+1. Install dependencies (root, server, client)
+2. Install Playwright browsers
+3. Start backend + frontend servers
+4. Run E2E tests
+5. Upload test artifacts on failure (screenshots, traces, server logs)
+
+**When to Write/Update Tests:**
+
+- After implementing new features → add E2E tests covering the feature
+- After fixing bugs → add regression test to prevent recurrence
+- When changing UI flows → update relevant E2E tests
+- Before major refactoring → ensure tests pass before and after
+
+See [tests/README.md](tests/README.md) for detailed testing documentation.
 
 ## Documentation Maintenance
 
