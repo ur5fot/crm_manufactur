@@ -33,7 +33,8 @@ import {
   loadTemplates,
   saveTemplates,
   loadGeneratedDocuments,
-  saveGeneratedDocuments
+  saveGeneratedDocuments,
+  addGeneratedDocument
 } from "./store.js";
 import { mergeRow, normalizeRows } from "./csv.js";
 import { extractPlaceholders, generateDocx } from "./docx-generator.js";
@@ -114,7 +115,8 @@ function getNextId(items, idField) {
   if (ids.length === 0) {
     return "1";
   }
-  const maxId = Math.max(...ids);
+  // Use reduce to avoid stack overflow with large arrays (Math.max spread has ~65k argument limit)
+  const maxId = ids.reduce((max, id) => Math.max(max, id), 0);
   return String(maxId + 1);
 }
 
@@ -348,6 +350,14 @@ app.post("/api/employees/:id/open-folder", async (req, res) => {
   try {
     const employeeId = req.params.id;
     const employeeFolder = path.join(FILES_DIR, `employee_${employeeId}`);
+    const resolvedFolder = path.resolve(employeeFolder);
+    const allowedDir = path.resolve(FILES_DIR);
+
+    // Path traversal protection - validate before directory creation
+    if (!resolvedFolder.startsWith(allowedDir + path.sep)) {
+      res.status(403).json({ error: "Недозволений шлях до папки" });
+      return;
+    }
 
     // Создаем папку если она не существует
     await fsPromises.mkdir(employeeFolder, { recursive: true });
@@ -556,9 +566,13 @@ app.put("/api/employees/:id", async (req, res) => {
     }
 
     // Запрещаем изменение файловых полей через PUT — только через upload endpoint
-    const updates = { ...payload };
-    for (const docField of getDocumentFieldsSync()) {
-      delete updates[docField];
+    // Build updates object safely to prevent prototype pollution
+    const allowedColumns = getEmployeeColumnsSync().filter(col => !getDocumentFieldsSync().includes(col));
+    const updates = {};
+    for (const col of allowedColumns) {
+      if (col in payload && col !== '__proto__' && col !== 'constructor' && col !== 'prototype') {
+        updates[col] = payload[col];
+      }
     }
     const current = employees[index];
     const next = mergeRow(getEmployeeColumnsSync(), current, updates);
@@ -687,9 +701,14 @@ app.delete("/api/employees/:id", async (req, res) => {
       await addLog("DELETE", req.params.id, employeeName, "", "", "", "Сотрудник удален");
     }
 
-    // Удаляем директорию с файлами сотрудника
+    // Удаляем директорию с файлами сотрудника с защитой от path traversal
     const employeeDir = path.join(FILES_DIR, `employee_${req.params.id}`);
-    await fsPromises.rm(employeeDir, { recursive: true, force: true }).catch(() => {});
+    const resolvedDir = path.resolve(employeeDir);
+    const allowedDir = path.resolve(FILES_DIR);
+
+    if (resolvedDir.startsWith(allowedDir + path.sep)) {
+      await fsPromises.rm(resolvedDir, { recursive: true, force: true }).catch(() => {});
+    }
 
     res.status(204).end();
   } catch (err) {
@@ -1287,23 +1306,15 @@ app.post("/api/templates/:id/generate", async (req, res) => {
     // Call generateDocx
     await generateDocx(templatePath, data, outputPath);
 
-    // Create record in generated_documents.csv
-    // IMPORTANT: Load documents, generate ID, and save must be atomic to prevent race conditions
-    const documents = await loadGeneratedDocuments();
-    const newDocId = getNextId(documents, "document_id");
-
-    const newDocument = {
-      document_id: newDocId,
+    // Create record in generated_documents.csv atomically with race condition protection
+    const newDocId = await addGeneratedDocument({
       template_id: template.template_id,
       employee_id: employee_id,
       docx_filename: docxFilename,
       generation_date: new Date().toISOString(),
       generated_by: 'system', // Can be enhanced with user authentication later
       data_snapshot: JSON.stringify(data)
-    };
-
-    documents.push(newDocument);
-    await saveGeneratedDocuments(documents);
+    });
 
     // Add audit log
     await addLog(
@@ -1388,9 +1399,15 @@ app.get("/api/documents", async (req, res) => {
     // Get total count before pagination
     const total = filtered.length;
 
-    // Apply pagination
-    const offsetNum = parseInt(offset, 10);
-    const limitNum = parseInt(limit, 10);
+    // Apply pagination with validation to prevent DoS
+    const offsetNum = parseInt(offset, 10) || 0;
+    const limitNum = Math.min(Math.max(parseInt(limit, 10) || 50, 1), 1000);
+
+    if (offsetNum < 0 || isNaN(offsetNum)) {
+      res.status(400).json({ error: 'Invalid offset parameter' });
+      return;
+    }
+
     const paginated = filtered.slice(offsetNum, offsetNum + limitNum);
 
     // Join with templates and employees to enrich data

@@ -1038,6 +1038,36 @@ export async function saveGeneratedDocuments(rows) {
 }
 
 /**
+ * Atomically adds a new generated document with race condition protection
+ * @param {Object} documentData - Document data without document_id
+ * @returns {Promise<string>} The new document_id
+ */
+export async function addGeneratedDocument(documentData) {
+  // Acquire lock: wait for previous write to complete, then execute our write
+  const previousLock = generatedDocumentsWriteLock;
+  let releaseLock;
+  generatedDocumentsWriteLock = new Promise(resolve => { releaseLock = resolve; });
+
+  try {
+    await previousLock;
+    const documents = await loadGeneratedDocuments();
+    const newDocId = getNextId(documents, "document_id");
+
+    const newDocument = {
+      document_id: newDocId,
+      ...documentData
+    };
+
+    documents.push(newDocument);
+    await writeCsv(GENERATED_DOCUMENTS_PATH, GENERATED_DOCUMENT_COLUMNS, documents);
+
+    return newDocId;
+  } finally {
+    releaseLock();
+  }
+}
+
+/**
  * Synchronizes employees_import_sample.csv with fields_schema.csv
  * Adds missing columns from schema, removes obsolete columns
  * Preserves UTF-8 BOM encoding for Excel compatibility
