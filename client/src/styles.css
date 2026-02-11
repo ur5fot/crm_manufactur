@@ -1809,3 +1809,59 @@ button.small {
   transform: scale(1.2);
   opacity: 0.7;
 }
+
+.document-generation-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.template-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  background: var(--bg-primary);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+
+.template-card:not(.disabled):hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.template-card.disabled {
+  opacity: 0.6;
+  background: var(--bg-accent);
+}
+
+.template-card-icon {
+  font-size: 32px;
+  text-align: center;
+}
+
+.template-card-content {
+  flex: 1;
+}
+
+.template-card-title {
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--ink);
+  margin-bottom: 8px;
+}
+
+.template-card-description {
+  font-size: 14px;
+  color: var(--ink-light);
+  margin-bottom: 8px;
+}
+
+.warning-text {
+  font-size: 13px;
+  color: #f57c00;
+  font-weight: 500;
+}

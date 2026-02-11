@@ -128,15 +128,15 @@
 - [x] Test deletion
 
 ### Task 13: Document Generation in Employee Card
-- [ ] Add "Генерування документів" section after Documents in Cards view
-- [ ] Add grid layout for template cards
-- [ ] Display cards with icon, name, description, button
-- [ ] Disable button if no DOCX file (show warning)
-- [ ] Disable if employee not saved
-- [ ] Implement generateDocumentForEmployee(template)
-- [ ] Auto-download using window.open(downloadUrl)
-- [ ] Show success alert
-- [ ] Test generation from card
+- [x] Add "Генерування документів" section after Documents in Cards view
+- [x] Add grid layout for template cards
+- [x] Display cards with icon, name, description, button
+- [x] Disable button if no DOCX file (show warning)
+- [x] Disable if employee not saved
+- [x] Implement generateDocumentForEmployee(template)
+- [x] Auto-download using window.open(downloadUrl)
+- [x] Show success alert
+- [x] Test generation from card
 
 ### Task 14: CSS Styling
 - [ ] Add .templates-table-container, .templates-table styles

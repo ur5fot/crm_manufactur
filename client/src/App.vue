@@ -270,12 +270,17 @@ watch(() => route.name, async (newRoute, oldRoute) => {
     loadTemplates();
   }
 
-  // Auto-load first employee when navigating to cards view without ID
-  // (but not if user explicitly wants to create new employee)
-  if (newView === 'cards' && !route.params.id && !isCreatingNew.value) {
-    await loadEmployeesIfNeeded();
-    if (employees.value.length > 0 && !form.employee_id) {
-      openEmployeeCard(employees.value[0].employee_id);
+  if (newView === 'cards') {
+    // Load templates for document generation section
+    loadTemplates();
+
+    // Auto-load first employee when navigating to cards view without ID
+    // (but not if user explicitly wants to create new employee)
+    if (!route.params.id && !isCreatingNew.value) {
+      await loadEmployeesIfNeeded();
+      if (employees.value.length > 0 && !form.employee_id) {
+        openEmployeeCard(employees.value[0].employee_id);
+      }
     }
   }
 
@@ -1821,6 +1826,33 @@ async function deleteTemplate(template) {
   }
 }
 
+async function generateDocumentForEmployee(template) {
+  try {
+    const employeeId = form.employee_id;
+
+    if (!employeeId) {
+      alert('Помилка: не знайдено ID співробітника. Спочатку збережіть співробітника.');
+      return;
+    }
+
+    if (!template.docx_filename) {
+      alert('Помилка: для цього шаблону не завантажено файл DOCX');
+      return;
+    }
+
+    // Generate document with employee data
+    const result = await api.generateDocument(template.template_id, employeeId, {});
+
+    // Auto-download the document
+    const downloadUrl = api.downloadDocument(result.document_id);
+    window.open(downloadUrl, '_blank');
+
+    alert(`✓ Документ "${template.template_name}" успішно згенеровано та завантажено`);
+  } catch (error) {
+    alert('Помилка генерування документа: ' + error.message);
+  }
+}
+
 async function loadFieldsSchema() {
   try {
     const data = await api.getFieldsSchema();
@@ -2869,6 +2901,43 @@ onUnmounted(() => {
                   </tr>
                 </tbody>
               </table>
+            </div>
+
+            <div class="section">
+              <div class="panel-header">
+                <div class="section-title">Генерування документів</div>
+              </div>
+              <div v-if="isNew" class="inline-note">
+                Спочатку збережіть співробітника, потім згенеруйте документи.
+              </div>
+              <div v-else-if="templates.length === 0" class="empty-state">
+                Немає доступних шаблонів документів
+              </div>
+              <div v-else class="document-generation-grid">
+                <div
+                  v-for="template in templates"
+                  :key="template.template_id"
+                  class="template-card"
+                  :class="{ disabled: !template.docx_filename }"
+                >
+                  <div class="template-card-icon">📄</div>
+                  <div class="template-card-content">
+                    <div class="template-card-title">{{ template.template_name }}</div>
+                    <div class="template-card-description">{{ template.description || 'Без опису' }}</div>
+                    <div v-if="!template.docx_filename" class="warning-text">
+                      ⚠ Файл DOCX не завантажено
+                    </div>
+                  </div>
+                  <button
+                    class="primary small"
+                    type="button"
+                    :disabled="!template.docx_filename"
+                    @click="generateDocumentForEmployee(template)"
+                  >
+                    Згенерувати
+                  </button>
+                </div>
+              </div>
             </div>
 
             <div class="section">
