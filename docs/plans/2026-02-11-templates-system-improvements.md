@@ -102,22 +102,22 @@ What needs to be added:
 **Files:**
 - Create: `server/test/templates-api.test.js`
 
-- [ ] Create integration test file for templates API
-- [ ] Test: POST /api/templates creates template with auto-increment ID
-- [ ] Test: POST /api/templates validates required fields
-- [ ] Test: POST /api/templates creates audit log entry
-- [ ] Test: GET /api/templates returns only active templates
-- [ ] Test: GET /api/templates/:id returns 404 for non-existent
-- [ ] Test: PUT /api/templates/:id updates template
-- [ ] Test: PUT /api/templates/:id doesn't allow changing docx_filename
-- [ ] Test: DELETE /api/templates/:id soft deletes (active='no')
-- [ ] Test: POST /api/templates/:id/upload validates DOCX extension
-- [ ] Test: POST /api/templates/:id/upload extracts placeholders
-- [ ] Test: POST /api/templates/:id/upload respects file size limit
-- [ ] Test: POST /api/templates/:id/generate validates employee_id
-- [ ] Test: POST /api/templates/:id/generate creates document record
-- [ ] Test: Concurrent document generation doesn't corrupt CSV
-- [ ] Run tests: `cd server && npm test -- templates-api.test.js`
+- [x] Create integration test file for templates API
+- [x] Test: POST /api/templates creates template with auto-increment ID
+- [x] Test: POST /api/templates validates required fields
+- [x] Test: POST /api/templates creates audit log entry
+- [x] Test: GET /api/templates returns only active templates
+- [x] Test: GET /api/templates/:id returns 404 for non-existent
+- [x] Test: PUT /api/templates/:id updates template
+- [x] Test: PUT /api/templates/:id doesn't allow changing docx_filename
+- [x] Test: DELETE /api/templates/:id soft deletes (active='no')
+- [x] Test: POST /api/templates/:id/upload validates DOCX extension
+- [x] Test: POST /api/templates/:id/upload extracts placeholders
+- [x] Test: POST /api/templates/:id/upload respects file size limit
+- [x] Test: POST /api/templates/:id/generate validates employee_id
+- [x] Test: POST /api/templates/:id/generate creates document record
+- [x] Test: Concurrent document generation doesn't corrupt CSV
+- [x] Run tests: `cd server && npm test -- templates-api.test.js`
 
 ---
 

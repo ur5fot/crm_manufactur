@@ -1280,10 +1280,9 @@ app.post("/api/templates/:id/generate", async (req, res) => {
     await generateDocx(templatePath, data, outputPath);
 
     // Create record in generated_documents.csv
+    // IMPORTANT: Load documents, generate ID, and save must be atomic to prevent race conditions
     const documents = await loadGeneratedDocuments();
-    const newDocId = String(
-      Math.max(0, ...documents.map((d) => parseInt(d.document_id) || 0)) + 1
-    );
+    const newDocId = getNextId(documents, "document_id");
 
     const newDocument = {
       document_id: newDocId,
