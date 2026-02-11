@@ -1,0 +1,190 @@
+# Plan: Templates System Improvements - Multi-phase Code Review
+
+## Description
+Multi-phase code review completed - Templates system improvements
+
+What has been implemented:
+- Complete templates CRUD system with backend and frontend
+- DOCX template upload and placeholder extraction
+- Document generation from templates using employee data
+- Document download functionality
+- Soft delete with audit logging
+- E2E tests for CRUD and upload flows
+
+What needs to be added:
+- E2E tests for document generation and download
+- Unit tests for DOCX generator module
+- Integration tests for templates API
+- Document history view (frontend and backend)
+- Documentation and future enhancements backlog
+
+## Files Involved
+- Create: `tests/e2e/templates-generation.spec.js` (E2E test for document generation and download)
+- Create: `server/test/docx-generator.test.js` (unit tests for DOCX module)
+- Create: `server/test/templates-api.test.js` (integration tests for API)
+- Modify: `client/src/App.vue` (add document history view)
+- Modify: `server/src/index.js` (add document history API)
+- Create: `docs/templates-system-improvements.md` (future enhancements backlog)
+
+## Related Patterns
+- Existing E2E tests pattern: `tests/e2e/templates-crud.spec.js`, `tests/e2e/templates-upload.spec.js`
+- Backend unit tests pattern: To be established
+- CSV-based data storage with write locks
+- Soft delete pattern (active='yes'/'no')
+- Audit logging for all operations
+
+## Approach
+- Testing approach: Regular (implement E2E and unit tests for existing code)
+- Complete each task fully before moving to the next
+- CRITICAL: every task MUST include new/updated tests
+- CRITICAL: all tests must pass before starting next task
+
+---
+
+## Tasks
+
+### Task 1: Document Generation E2E Test
+
+**Files:**
+- Create: `tests/e2e/templates-generation.spec.js`
+
+- [x] Create E2E test file for document generation flow
+- [x] Test: Navigate to employee card with template that has DOCX file
+- [x] Test: Click generate document button
+- [x] Test: Verify success alert appears
+- [x] Test: Verify document download starts automatically
+- [x] Test: Verify generated document appears in generated_documents.csv
+- [x] Test: Error case - try to generate without DOCX file
+- [x] Test: Error case - employee not saved
+- [x] Run test: `npm run test:e2e -- templates-generation.spec.js`
+
+---
+
+### Task 2: Document Download E2E Test
+
+**Files:**
+- Modify: `tests/e2e/templates-generation.spec.js`
+
+- [ ] Add test for direct document download via API
+- [ ] Create a test document in generated_documents.csv
+- [ ] Test: GET /api/documents/:id/download returns 200 with DOCX
+- [ ] Test: Verify Content-Type header is `application/vnd.openxmlformats-officedocument.wordprocessingml.document`
+- [ ] Test: Verify Content-Disposition header has filename
+- [ ] Test: 404 error when document_id doesn't exist
+- [ ] Test: 404 error when document file missing from disk
+- [ ] Run test: `npm run test:e2e -- templates-generation.spec.js`
+
+---
+
+### Task 3: DOCX Generator Unit Tests
+
+**Files:**
+- Create: `server/test/docx-generator.test.js`
+
+- [ ] Create unit test file for docx-generator module
+- [ ] Test: extractPlaceholders() returns correct placeholder list
+- [ ] Test: extractPlaceholders() with template without placeholders
+- [ ] Test: extractPlaceholders() throws error for non-existent file
+- [ ] Test: extractPlaceholders() throws error for invalid DOCX
+- [ ] Test: generateDocx() creates valid DOCX file
+- [ ] Test: generateDocx() replaces placeholders correctly
+- [ ] Test: generateDocx() handles null/undefined values as empty string
+- [ ] Test: generateDocx() adds current_date placeholder
+- [ ] Test: generateDocx() adds current_datetime placeholder
+- [ ] Test: generateDocx() throws error for non-existent template
+- [ ] Test: generateDocx() creates output directory if missing
+- [ ] Run tests: `cd server && npm test -- docx-generator.test.js`
+
+---
+
+### Task 4: Templates API Integration Tests
+
+**Files:**
+- Create: `server/test/templates-api.test.js`
+
+- [ ] Create integration test file for templates API
+- [ ] Test: POST /api/templates creates template with auto-increment ID
+- [ ] Test: POST /api/templates validates required fields
+- [ ] Test: POST /api/templates creates audit log entry
+- [ ] Test: GET /api/templates returns only active templates
+- [ ] Test: GET /api/templates/:id returns 404 for non-existent
+- [ ] Test: PUT /api/templates/:id updates template
+- [ ] Test: PUT /api/templates/:id doesn't allow changing docx_filename
+- [ ] Test: DELETE /api/templates/:id soft deletes (active='no')
+- [ ] Test: POST /api/templates/:id/upload validates DOCX extension
+- [ ] Test: POST /api/templates/:id/upload extracts placeholders
+- [ ] Test: POST /api/templates/:id/upload respects file size limit
+- [ ] Test: POST /api/templates/:id/generate validates employee_id
+- [ ] Test: POST /api/templates/:id/generate creates document record
+- [ ] Test: Concurrent document generation doesn't corrupt CSV
+- [ ] Run tests: `cd server && npm test -- templates-api.test.js`
+
+---
+
+### Task 5: Document History View (Frontend)
+
+**Files:**
+- Modify: `client/src/App.vue`
+- Modify: `client/src/api.js`
+
+- [ ] Add "Історія документів" tab to navigation
+- [ ] Add route handling for /document-history view
+- [ ] Add getGeneratedDocuments() API method
+- [ ] Create document history table component
+- [ ] Show columns: ID, Template, Employee, Generated Date, Generated By, Actions
+- [ ] Add download button for each document
+- [ ] Add filter by template dropdown
+- [ ] Add filter by employee search
+- [ ] Add date range filter
+- [ ] Add pagination (show 50 per page)
+- [ ] Test navigation and filtering
+
+---
+
+### Task 6: Document History API (Backend)
+
+**Files:**
+- Modify: `server/src/index.js`
+
+- [ ] Add GET /api/documents route (list all generated documents)
+- [ ] Support query params: template_id, employee_id, start_date, end_date
+- [ ] Join with templates.csv to include template_name
+- [ ] Join with employees.csv to include employee name
+- [ ] Sort by generation_date DESC (newest first)
+- [ ] Support pagination: offset, limit params
+- [ ] Return total count for pagination
+- [ ] Test with curl and various filters
+- [ ] Verify performance with large generated_documents.csv
+
+---
+
+### Task 7: Cleanup & Documentation
+
+**Files:**
+- Create: `docs/templates-system-improvements.md`
+
+- [ ] Document completed implementation
+- [ ] Create backlog of future enhancements:
+  - Batch document generation
+  - Template versioning
+  - Custom fields beyond employee data
+  - Template usage statistics
+  - Automatic cleanup of old documents
+  - Document re-generation capability
+- [ ] Document API endpoints in README
+- [ ] Add example template DOCX to repository
+- [ ] Document placeholder syntax and special fields
+- [ ] Move templates-system.md to docs/plans/completed/
+
+---
+
+## Verification
+
+- [ ] Run full E2E test suite: `npm run test:e2e`
+- [ ] Run server unit tests: `cd server && npm test`
+- [ ] Verify all templates tests pass
+- [ ] Manual test: create template, upload DOCX, generate document
+- [ ] Manual test: download generated document and verify content
+- [ ] Check logs.csv for proper audit trail
+- [ ] Verify generated_documents.csv has data_snapshot
+- [ ] Test concurrent generation (2+ users generating simultaneously)
