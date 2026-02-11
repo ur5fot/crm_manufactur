@@ -48,15 +48,15 @@
 - [x] Test upload with valid/invalid files
 
 ### Task 5: Document Generation API
-- [ ] Create files/documents/ directory
-- [ ] Add POST /api/templates/:id/generate route
-- [ ] Load template and employee data
-- [ ] Validate template has docx_filename
-- [ ] Prepare data with employee fields + special placeholders
-- [ ] Call generateDocx() and save to files/documents/
-- [ ] Create record in generated_documents.csv with data_snapshot
-- [ ] Add audit log (GENERATE_DOCUMENT)
-- [ ] Return JSON: {document_id, filename, download_url}
+- [x] Create files/documents/ directory
+- [x] Add POST /api/templates/:id/generate route
+- [x] Load template and employee data
+- [x] Validate template has docx_filename
+- [x] Prepare data with employee fields + special placeholders
+- [x] Call generateDocx() and save to files/documents/
+- [x] Create record in generated_documents.csv with data_snapshot
+- [x] Add audit log (GENERATE_DOCUMENT)
+- [x] Return JSON: {document_id, filename, download_url}
 
 ### Task 6: Document Download API
 - [ ] Add GET /api/documents/:id/download route

@@ -31,10 +31,12 @@ import {
   getRetirementEvents,
   loadConfig,
   loadTemplates,
-  saveTemplates
+  saveTemplates,
+  loadGeneratedDocuments,
+  saveGeneratedDocuments
 } from "./store.js";
 import { mergeRow, normalizeRows } from "./csv.js";
-import { extractPlaceholders } from "./docx-generator.js";
+import { extractPlaceholders, generateDocx } from "./docx-generator.js";
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -1210,6 +1212,111 @@ app.post("/api/templates/:id/upload", templateUpload.single('file'), async (req,
         console.error('Failed to clean up file:', unlinkErr);
       }
     }
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Generate document from template
+app.post("/api/templates/:id/generate", async (req, res) => {
+  try {
+    const { employee_id } = req.body;
+
+    if (!employee_id) {
+      res.status(400).json({ error: "employee_id обов'язковий" });
+      return;
+    }
+
+    // Load template
+    const templates = await loadTemplates();
+    const template = templates.find((t) => t.template_id === req.params.id);
+
+    if (!template) {
+      res.status(404).json({ error: "Шаблон не знайдено" });
+      return;
+    }
+
+    // Validate template has DOCX file
+    if (!template.docx_filename) {
+      res.status(400).json({ error: "Шаблон не має завантаженого DOCX файлу" });
+      return;
+    }
+
+    // Load employee data
+    const employees = await loadEmployees();
+    const employee = employees.find((e) => e.employee_id === employee_id);
+
+    if (!employee) {
+      res.status(404).json({ error: "Співробітник не знайдено" });
+      return;
+    }
+
+    // Prepare data with employee fields + special placeholders
+    const now = new Date();
+    const currentDate = now.toLocaleDateString('uk-UA'); // DD.MM.YYYY format
+    const currentDateTime = now.toLocaleString('uk-UA'); // DD.MM.YYYY HH:mm:ss format
+
+    const data = {
+      ...employee,
+      current_date: currentDate,
+      current_datetime: currentDateTime
+    };
+
+    // Generate DOCX filename
+    const timestamp = Date.now();
+    const sanitizedName = template.template_name.replace(/[^a-zA-Z0-9а-яА-ЯіїєґІЇЄҐ]/g, '_');
+    const docxFilename = `${sanitizedName}_${employee_id}_${timestamp}.docx`;
+
+    // Paths
+    const templatePath = path.join(FILES_DIR, 'templates', template.docx_filename);
+    const outputPath = path.join(FILES_DIR, 'documents', docxFilename);
+
+    // Check template file exists
+    if (!fs.existsSync(templatePath)) {
+      res.status(404).json({ error: "DOCX файл шаблону не знайдено на диску" });
+      return;
+    }
+
+    // Call generateDocx
+    await generateDocx(templatePath, data, outputPath);
+
+    // Create record in generated_documents.csv
+    const documents = await loadGeneratedDocuments();
+    const newDocId = String(
+      Math.max(0, ...documents.map((d) => parseInt(d.document_id) || 0)) + 1
+    );
+
+    const newDocument = {
+      document_id: newDocId,
+      template_id: template.template_id,
+      employee_id: employee_id,
+      docx_filename: docxFilename,
+      generation_date: new Date().toISOString(),
+      generated_by: 'system', // Can be enhanced with user authentication later
+      data_snapshot: JSON.stringify(data)
+    };
+
+    documents.push(newDocument);
+    await saveGeneratedDocuments(documents);
+
+    // Add audit log
+    await addLog(
+      "GENERATE_DOCUMENT",
+      employee_id,
+      `${employee.last_name || ''} ${employee.first_name || ''}`.trim(),
+      "",
+      "",
+      "",
+      `Згенеровано документ з шаблону: ${template.template_name}, файл: ${docxFilename}`
+    );
+
+    // Return response
+    res.json({
+      document_id: newDocId,
+      filename: docxFilename,
+      download_url: `/api/documents/${newDocId}/download`
+    });
+  } catch (err) {
+    console.error(err);
     res.status(500).json({ error: err.message });
   }
 });
