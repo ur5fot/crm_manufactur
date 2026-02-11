@@ -325,15 +325,15 @@
 - Modify: `client/src/App.vue` (fix bugs found by tests)
 
 **Steps:**
-- [ ] `npm run test:e2e` (run all tests)
-- [ ] For each failing test:
+- [x] `npm run test:e2e` (run all tests)
+- [x] For each failing test:
   - Analyze failure screenshot (`test-results/`)
   - Check Playwright trace (`npx playwright show-trace`)
   - Identify root cause (bug in code vs test issue)
   - Fix code or test accordingly
-- [ ] Re-run tests until all pass: `npm run test:e2e`
-- [ ] Verify test coverage covers main user flows (CRUD, documents, reports, import, dashboard, logs)
-- [ ] Run tests 3 times to ensure stability (no flaky tests)
+- [x] Re-run tests until all pass: `npm run test:e2e`
+- [x] Verify test coverage covers main user flows (CRUD, documents, reports, import, dashboard, logs)
+- [x] Run tests 3 times to ensure stability (no flaky tests)
 
 ---
 
