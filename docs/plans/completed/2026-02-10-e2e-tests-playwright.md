@@ -371,4 +371,4 @@
 
 - [x] Update `README.md`: add Testing section with test commands
 - [x] Update `CLAUDE.md`: add Testing approach and E2E patterns
-- [ ] (Optional) Move this plan to `docs/plans/completed/`
+- [x] (Optional) Move this plan to `docs/plans/completed/`
