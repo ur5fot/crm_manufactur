@@ -34,15 +34,26 @@ test.describe('Document Upload Operations', () => {
     await page.goto(`http://localhost:5173/cards/${employeeId}`);
     await page.waitForLoadState('networkidle');
 
-    // Dismiss any notification popups that might be blocking the UI
-    const dismissButtons = page.locator('button:has-text("Зрозуміло"), button:has-text("×")');
-    const dismissCount = await dismissButtons.count();
-    for (let i = 0; i < dismissCount; i++) {
+    // Dismiss any notification popups - aggressively close all overlays
+    await page.waitForTimeout(1000); // Wait for notifications to render
+
+    // Try to close multiple popups (birthday, document expiry, etc)
+    for (let i = 0; i < 10; i++) {
       try {
-        await dismissButtons.first().click({ timeout: 2000 });
-        await page.waitForTimeout(300);
+        const overlay = page.locator('.vacation-notification-overlay').first();
+        const isVisible = await overlay.isVisible().catch(() => false);
+
+        if (!isVisible) {
+          break; // No more overlays
+        }
+
+        // Try to click "Зрозуміло" or "×" button with force
+        const closeButton = overlay.locator('button:has-text("Зрозуміло"), button.close-btn, button:has-text("×")').first();
+        await closeButton.click({ force: true, timeout: 2000 });
+        await page.waitForTimeout(500);
       } catch (e) {
-        // Ignore if button is not clickable
+        // If button not found or not clickable, try next iteration
+        break;
       }
     }
 
@@ -157,15 +168,26 @@ test.describe('Document Upload Operations', () => {
     await page.goto(`http://localhost:5173/cards/${employeeId}`);
     await page.waitForLoadState('networkidle');
 
-    // Dismiss any notification popups
-    const dismissButtons = page.locator('button:has-text("Зрозуміло"), button:has-text("×")');
-    const dismissCount = await dismissButtons.count();
-    for (let i = 0; i < dismissCount; i++) {
+    // Dismiss any notification popups - aggressively close all overlays
+    await page.waitForTimeout(1000); // Wait for notifications to render
+
+    // Try to close multiple popups (birthday, document expiry, etc)
+    for (let i = 0; i < 10; i++) {
       try {
-        await dismissButtons.first().click({ timeout: 2000 });
-        await page.waitForTimeout(300);
+        const overlay = page.locator('.vacation-notification-overlay').first();
+        const isVisible = await overlay.isVisible().catch(() => false);
+
+        if (!isVisible) {
+          break; // No more overlays
+        }
+
+        // Try to click "Зрозуміло" or "×" button with force
+        const closeButton = overlay.locator('button:has-text("Зрозуміло"), button.close-btn, button:has-text("×")').first();
+        await closeButton.click({ force: true, timeout: 2000 });
+        await page.waitForTimeout(500);
       } catch (e) {
-        // Ignore if button is not clickable
+        // If button not found or not clickable, try next iteration
+        break;
       }
     }
 
@@ -227,15 +249,26 @@ test.describe('Document Upload Operations', () => {
     await page.goto(`http://localhost:5173/cards/${employeeId}`);
     await page.waitForLoadState('networkidle');
 
-    // Dismiss any notification popups
-    const dismissButtons = page.locator('button:has-text("Зрозуміло"), button:has-text("×")');
-    const dismissCount = await dismissButtons.count();
-    for (let i = 0; i < dismissCount; i++) {
+    // Dismiss any notification popups - aggressively close all overlays
+    await page.waitForTimeout(1000); // Wait for notifications to render
+
+    // Try to close multiple popups (birthday, document expiry, etc)
+    for (let i = 0; i < 10; i++) {
       try {
-        await dismissButtons.first().click({ timeout: 2000 });
-        await page.waitForTimeout(300);
+        const overlay = page.locator('.vacation-notification-overlay').first();
+        const isVisible = await overlay.isVisible().catch(() => false);
+
+        if (!isVisible) {
+          break; // No more overlays
+        }
+
+        // Try to click "Зрозуміло" or "×" button with force
+        const closeButton = overlay.locator('button:has-text("Зрозуміло"), button.close-btn, button:has-text("×")').first();
+        await closeButton.click({ force: true, timeout: 2000 });
+        await page.waitForTimeout(500);
       } catch (e) {
-        // Ignore if button is not clickable
+        // If button not found or not clickable, try next iteration
+        break;
       }
     }
 
