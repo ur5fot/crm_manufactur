@@ -183,6 +183,7 @@ const currentView = computed(() => {
   if (name === 'table') return 'table';
   if (name === 'reports') return 'reports';
   if (name === 'import') return 'import';
+  if (name === 'templates') return 'templates';
   if (name === 'logs') return 'logs';
   return 'dashboard';
 });
@@ -193,6 +194,7 @@ const tabs = [
   { key: 'table', label: 'Таблиця' },
   { key: 'reports', label: 'Звіти' },
   { key: 'import', label: 'Імпорт' },
+  { key: 'templates', label: 'Шаблони' },
   { key: 'logs', label: 'Логи' },
 ];
 
@@ -207,6 +209,8 @@ function switchView(view) {
     router.push({ name: 'reports' });
   } else if (view === 'import') {
     router.push({ name: 'import' });
+  } else if (view === 'templates') {
+    router.push({ name: 'templates' });
   } else if (view === 'logs') {
     router.push({ name: 'logs' });
   }
@@ -300,6 +304,18 @@ const editingCells = reactive({}); // { employeeId_fieldName: value }
 const columnFilters = reactive({}); // { fieldName: selectedValue }
 const logs = ref([]);
 const logsSearchTerm = ref("");
+
+// Templates management
+const templates = ref([]);
+const showTemplateDialog = ref(false);
+const templateDialogMode = ref('create'); // 'create' or 'edit'
+const templateForm = reactive({
+  template_id: '',
+  template_name: '',
+  template_type: '',
+  description: '',
+  placeholder_fields: ''
+});
 
 // Уведомления о сменах статусов
 const statusReturning = ref([]);
@@ -1658,6 +1674,19 @@ async function loadLogs() {
   } finally {
     loading.value = false;
   }
+}
+
+// Templates management functions
+function openCreateTemplateDialog() {
+  templateDialogMode.value = 'create';
+  Object.assign(templateForm, {
+    template_id: '',
+    template_name: '',
+    template_type: '',
+    description: '',
+    placeholder_fields: ''
+  });
+  showTemplateDialog.value = true;
 }
 
 async function loadFieldsSchema() {
@@ -3115,6 +3144,22 @@ onUnmounted(() => {
 
           <div v-if="errorMessage" class="alert">
             {{ errorMessage }}
+          </div>
+        </div>
+      </div>
+
+      <!-- Режим шаблонів -->
+      <div v-else-if="currentView === 'templates'" class="layout-table">
+        <div class="panel table-panel">
+          <div class="view-header">
+            <div class="panel-title">Шаблони документів</div>
+            <button class="primary" type="button" @click="openCreateTemplateDialog">
+              ➕ Новий шаблон
+            </button>
+          </div>
+
+          <div v-if="templates.length === 0 && !loading" class="empty-state">
+            <p>Немає шаблонів. Створіть перший шаблон для генерації документів.</p>
           </div>
         </div>
       </div>

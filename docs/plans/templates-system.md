@@ -77,14 +77,14 @@
 - [x] Add downloadDocument(documentId) returning URL
 
 ### Task 8: Templates View Navigation
-- [ ] Add {key: 'templates', label: 'Шаблони'} to tabs in App.vue
-- [ ] Add route handling in currentView computed
-- [ ] Add case in switchView function
-- [ ] Add reactive refs: templates, showTemplateDialog, templateDialogMode, templateForm
-- [ ] Add Templates view section in template
-- [ ] Add view-header with title and "+ Новий шаблон" button
-- [ ] Add empty state message
-- [ ] Test navigation to /templates
+- [x] Add {key: 'templates', label: 'Шаблони'} to tabs in App.vue
+- [x] Add route handling in currentView computed
+- [x] Add case in switchView function
+- [x] Add reactive refs: templates, showTemplateDialog, templateDialogMode, templateForm
+- [x] Add Templates view section in template
+- [x] Add view-header with title and "+ Новий шаблон" button
+- [x] Add empty state message
+- [x] Test navigation to /templates
 
 ### Task 9: Templates List Table
 - [ ] Add table with columns: ID, Назва, Тип, Файл DOCX, Плейсхолдери, Створено, Дії
