@@ -104,3 +104,23 @@
 103;Concurrent Test;contract;template_103_1770840236072.docx;first_name;;2026-02-11;yes
 104;Тестовий шаблон 1770840871079;Заявка;;;Це тестовий шаблон для автоматизованого тестування;2026-02-11;yes
 105;No DOCX Test 1770840924005;Заявка;;;;2026-02-11;yes
+106;Тестовий шаблон 1770841683580;Заявка;;;Це тестовий шаблон для автоматизованого тестування;2026-02-11;yes
+107;No DOCX Test 1770841737276;Заявка;;;;2026-02-11;yes
+108;Тестовий шаблон 1770842013231;Заявка;;;Це тестовий шаблон для автоматизованого тестування;2026-02-11;yes
+109;No DOCX Test 1770842067940;Заявка;;;;2026-02-11;yes
+110;Тестовий шаблон 1770842197745;Заявка;;;Це тестовий шаблон для автоматизованого тестування;2026-02-11;yes
+111;Тестовий шаблон 1770842380757;Заявка;;;Це тестовий шаблон для автоматизованого тестування;2026-02-11;yes
+112;No DOCX Test 1770842425470;Заявка;;;;2026-02-11;yes
+113;Test Template;contract;;;Test description;2026-02-11;yes
+114;Audit Test Template;document;;;;2026-02-11;yes
+115;Active Template;contract;;;;2026-02-11;yes
+116;To Be Deleted;contract;;;;2026-02-11;no
+117;Updated Name;document;;;Updated description;2026-02-11;yes
+118;Protected Test;contract;template_118_1770842467205.docx;name, position;;2026-02-11;yes
+119;To Delete;contract;;;;2026-02-11;no
+120;Upload Test;contract;;;;2026-02-11;yes
+121;Placeholder Test;contract;template_121_1770842467406.docx;first_name, last_name, position, salary;;2026-02-11;yes
+122;Size Test;contract;template_122_1770842467448.docx;test;;2026-02-11;yes
+123;Generate Test;contract;template_123_1770842467480.docx;first_name, last_name;;2026-02-11;yes
+124;Document Record Test;contract;template_124_1770842467508.docx;first_name, last_name, position;;2026-02-11;yes
+125;Concurrent Test;contract;template_125_1770842467589.docx;first_name;;2026-02-11;yes

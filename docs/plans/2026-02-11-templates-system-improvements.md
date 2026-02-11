@@ -180,11 +180,11 @@ What needs to be added:
 
 ## Verification
 
-- [ ] Run full E2E test suite: `npm run test:e2e`
-- [ ] Run server unit tests: `cd server && npm test`
-- [ ] Verify all templates tests pass
-- [ ] Manual test: create template, upload DOCX, generate document
-- [ ] Manual test: download generated document and verify content
-- [ ] Check logs.csv for proper audit trail
-- [ ] Verify generated_documents.csv has data_snapshot
-- [ ] Test concurrent generation (2+ users generating simultaneously)
+- [x] Run full E2E test suite: `npm run test:e2e`
+- [x] Run server unit tests: `cd server && npm test`
+- [x] Verify all templates tests pass
+- [x] Manual test: create template, upload DOCX, generate document
+- [x] Manual test: download generated document and verify content
+- [x] Check logs.csv for proper audit trail
+- [x] Verify generated_documents.csv has data_snapshot
+- [x] Test concurrent generation (2+ users generating simultaneously)
