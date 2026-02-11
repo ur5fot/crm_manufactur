@@ -563,12 +563,21 @@ app.put("/api/employees/:id", async (req, res) => {
     }
 
     // Валидация дат (формат и корректность)
+    // ВАЖНО: Валидируем только поля которые были изменены в этом запросе
+    // Это предотвращает ошибки валидации из-за legacy невалидных данных в других полях
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
     const dateFields = getEmployeeColumnsSync().filter(col =>
       col.includes('_date') || col === 'birth_date'
     );
 
-    for (const dateField of dateFields) {
+    // Находим какие поля были изменены в этом запросе
+    const changedDateFields = dateFields.filter(dateField => {
+      const currentValue = String(current[dateField] || "").trim();
+      const nextValue = String(next[dateField] || "").trim();
+      return currentValue !== nextValue;
+    });
+
+    for (const dateField of changedDateFields) {
       const dateValue = String(next[dateField] || "").trim();
       if (dateValue) {
         if (!dateRegex.test(dateValue)) {
