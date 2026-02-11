@@ -1,1 +1,3 @@
 ﻿template_id;template_name;template_type;docx_filename;placeholder_fields;description;created_date;active
+1;Заявка на відпустку (оновлена);Заявка;;;Оновлений опис;2026-02-11;yes
+2;Службова записка;Службова записка;;;;2026-02-11;no

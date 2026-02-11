@@ -29,7 +29,9 @@ import {
   getDocumentFieldsSync,
   getBirthdayEvents,
   getRetirementEvents,
-  loadConfig
+  loadConfig,
+  loadTemplates,
+  saveTemplates
 } from "./store.js";
 import { mergeRow, normalizeRows } from "./csv.js";
 
@@ -965,6 +967,163 @@ app.delete("/api/employees/:id/files/:fieldName", async (req, res) => {
       filePath,
       "",
       `Удален документ: ${formattedFieldName}`
+    );
+
+    res.status(204).end();
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Templates CRUD API
+app.get("/api/templates", async (req, res) => {
+  try {
+    const templates = await loadTemplates();
+    // Return only active templates
+    const activeTemplates = templates.filter((t) => t.active !== 'no');
+    res.json({ templates: activeTemplates });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get("/api/templates/:id", async (req, res) => {
+  try {
+    const templates = await loadTemplates();
+    const template = templates.find((t) => t.template_id === req.params.id);
+    if (!template) {
+      res.status(404).json({ error: "Шаблон не найден" });
+      return;
+    }
+    res.json({ template });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/api/templates", async (req, res) => {
+  try {
+    const payload = req.body || {};
+    const templates = await loadTemplates();
+
+    // Validation
+    if (!payload.template_name || !payload.template_name.trim()) {
+      res.status(400).json({ error: "Назва шаблону обов'язкова" });
+      return;
+    }
+    if (!payload.template_type || !payload.template_type.trim()) {
+      res.status(400).json({ error: "Тип шаблону обов'язковий" });
+      return;
+    }
+
+    const templateId = getNextId(templates, "template_id");
+
+    const newTemplate = {
+      template_id: templateId,
+      template_name: payload.template_name || '',
+      template_type: payload.template_type || '',
+      docx_filename: '',
+      placeholder_fields: '',
+      description: payload.description || '',
+      created_date: new Date().toISOString().split('T')[0],
+      active: 'yes'
+    };
+
+    templates.push(newTemplate);
+    await saveTemplates(templates);
+
+    await addLog(
+      "CREATE_TEMPLATE",
+      templateId,
+      payload.template_name,
+      "",
+      "",
+      "",
+      `Створено шаблон: ${payload.template_name}`
+    );
+
+    res.status(201).json({ template_id: templateId, template: newTemplate });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put("/api/templates/:id", async (req, res) => {
+  try {
+    const payload = req.body || {};
+    const templates = await loadTemplates();
+    const index = templates.findIndex((t) => t.template_id === req.params.id);
+
+    if (index === -1) {
+      res.status(404).json({ error: "Шаблон не найден" });
+      return;
+    }
+
+    // Validation
+    if (!payload.template_name || !payload.template_name.trim()) {
+      res.status(400).json({ error: "Назва шаблону обов'язкова" });
+      return;
+    }
+    if (!payload.template_type || !payload.template_type.trim()) {
+      res.status(400).json({ error: "Тип шаблону обов'язковий" });
+      return;
+    }
+
+    const oldTemplate = templates[index];
+
+    templates[index] = {
+      ...oldTemplate,
+      template_name: payload.template_name || oldTemplate.template_name,
+      template_type: payload.template_type || oldTemplate.template_type,
+      description: payload.description !== undefined ? payload.description : oldTemplate.description,
+      // Don't allow manual changes to docx_filename, placeholder_fields, active
+    };
+
+    await saveTemplates(templates);
+
+    await addLog(
+      "UPDATE_TEMPLATE",
+      req.params.id,
+      payload.template_name,
+      "",
+      "",
+      "",
+      `Оновлено шаблон: ${payload.template_name}`
+    );
+
+    res.json({ template: templates[index] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete("/api/templates/:id", async (req, res) => {
+  try {
+    const templates = await loadTemplates();
+    const index = templates.findIndex((t) => t.template_id === req.params.id);
+
+    if (index === -1) {
+      res.status(404).json({ error: "Шаблон не найден" });
+      return;
+    }
+
+    // Soft delete: set active='no'
+    templates[index].active = 'no';
+    await saveTemplates(templates);
+
+    await addLog(
+      "DELETE_TEMPLATE",
+      req.params.id,
+      templates[index].template_name,
+      "",
+      "",
+      "",
+      `Видалено шаблон: ${templates[index].template_name}`
     );
 
     res.status(204).end();

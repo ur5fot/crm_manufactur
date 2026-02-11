@@ -28,14 +28,14 @@
 - [x] Verify generated DOCX opens in Microsoft Word
 
 ### Task 3: Templates CRUD API
-- [ ] Add GET /api/templates route (return active templates)
-- [ ] Add GET /api/templates/:id route
-- [ ] Add POST /api/templates route (auto-increment ID)
-- [ ] Add PUT /api/templates/:id route
-- [ ] Add DELETE /api/templates/:id route (soft delete: active='no')
-- [ ] Add audit logging (CREATE_TEMPLATE, UPDATE_TEMPLATE, DELETE_TEMPLATE)
-- [ ] Test endpoints with curl
-- [ ] Verify 404 errors for non-existent IDs
+- [x] Add GET /api/templates route (return active templates)
+- [x] Add GET /api/templates/:id route
+- [x] Add POST /api/templates route (auto-increment ID)
+- [x] Add PUT /api/templates/:id route
+- [x] Add DELETE /api/templates/:id route (soft delete: active='no')
+- [x] Add audit logging (CREATE_TEMPLATE, UPDATE_TEMPLATE, DELETE_TEMPLATE)
+- [x] Test endpoints with curl
+- [x] Verify 404 errors for non-existent IDs
 
 ### Task 4: Template DOCX Upload API
 - [ ] Create files/templates/ directory
