@@ -168,5 +168,16 @@ export const api = {
   },
   downloadDocument(documentId) {
     return `${BASE_URL}/documents/${documentId}/download`;
+  },
+  getGeneratedDocuments(filters = {}) {
+    const queryParams = new URLSearchParams();
+    if (filters.template_id) queryParams.set('template_id', filters.template_id);
+    if (filters.employee_id) queryParams.set('employee_id', filters.employee_id);
+    if (filters.start_date) queryParams.set('start_date', filters.start_date);
+    if (filters.end_date) queryParams.set('end_date', filters.end_date);
+    if (filters.offset !== undefined) queryParams.set('offset', filters.offset);
+    if (filters.limit !== undefined) queryParams.set('limit', filters.limit);
+    const params = queryParams.toString() ? `?${queryParams.toString()}` : '';
+    return request(`/documents${params}`);
   }
 };
