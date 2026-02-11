@@ -39,7 +39,7 @@ jobs:
       - name: Setup test data files
         run: |
           cp data/fields_schema.template.csv data/fields_schema.csv
-          cp data/config.template.csv data/config.csv 2>/dev/null || true
+          cp data/config.template.csv data/config.csv
           mkdir -p data files
 
       - name: Start backend server

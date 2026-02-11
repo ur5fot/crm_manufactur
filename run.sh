@@ -53,6 +53,12 @@ if [ ! -d "$root_dir/server/node_modules" ]; then
   (cd "$root_dir/server" && npm install)
 fi
 
+# Initialize config.csv from template if not exists
+if [ ! -f "$root_dir/data/config.csv" ] && [ -f "$root_dir/data/config.template.csv" ]; then
+  echo "Ініціалізація config.csv з шаблону..."
+  cp "$root_dir/data/config.template.csv" "$root_dir/data/config.csv"
+fi
+
 # Sync CSV template before starting services
 echo "Синхронізація шаблону CSV..."
 (cd "$root_dir/server" && node src/sync-template.js) || {

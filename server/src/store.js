@@ -684,6 +684,19 @@ export async function getBirthdayEvents() {
 
     if (isNaN(birthYear) || isNaN(birthMonth) || isNaN(birthDay)) return;
 
+    // Handle leap day (Feb 29) in non-leap years
+    const isLeapYear = (year) => (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
+    if (birthMonth === 2 && birthDay === 29 && !isLeapYear(currentYear)) {
+      return; // Skip Feb 29 birthdays in non-leap years
+    }
+    if (birthMonth === 2 && birthDay === 29 && !isLeapYear(currentYear + 1)) {
+      // For next year check, skip if next year is not a leap year
+      const thisYearBirthday = new Date(currentYear, birthMonth - 1, birthDay);
+      if (thisYearBirthday < nowDateOnly || thisYearBirthday > in7days) {
+        return; // Not in range and next year won't have this date
+      }
+    }
+
     // Проверяем день рождения в текущем году и следующем (для случая перехода через Новый год)
     const thisYearBirthday = new Date(currentYear, birthMonth - 1, birthDay);
     const nextYearBirthday = new Date(currentYear + 1, birthMonth - 1, birthDay);
@@ -772,6 +785,12 @@ export async function getRetirementEvents(retirementAge = 60) {
     const birthDay = parseInt(birthParts[2], 10);
 
     if (isNaN(birthYear) || isNaN(birthMonth) || isNaN(birthDay)) return;
+
+    // Handle leap day (Feb 29) in non-leap years
+    const isLeapYear = (year) => (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
+    if (birthMonth === 2 && birthDay === 29 && !isLeapYear(currentYear)) {
+      return; // Skip Feb 29 birthdays in non-leap years
+    }
 
     // Проверяем день рождения в текущем году и следующем (для случая перехода через Новый год)
     const thisYearBirthday = new Date(currentYear, birthMonth - 1, birthDay);
