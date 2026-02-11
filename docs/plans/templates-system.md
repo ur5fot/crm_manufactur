@@ -139,16 +139,16 @@
 - [x] Test generation from card
 
 ### Task 14: CSS Styling
-- [ ] Add .templates-table-container, .templates-table styles
-- [ ] Add .template-type-badge with colors
-- [ ] Add .file-uploaded (green), .file-missing (yellow)
-- [ ] Add .placeholders-cell code style
-- [ ] Add .actions-cell, .icon-btn with hover
-- [ ] Add .empty-state style
-- [ ] Add .template-dialog, .help-box modal styles
-- [ ] Add .document-generation-grid, .template-card
-- [ ] Add .template-card.disabled, .warning-text
-- [ ] Test all styles
+- [x] Add .templates-table-container, .templates-table styles
+- [x] Add .template-type-badge with colors
+- [x] Add .file-uploaded (green), .file-missing (yellow)
+- [x] Add .placeholders-cell code style
+- [x] Add .actions-cell, .icon-btn with hover
+- [x] Add .empty-state style
+- [x] Add .template-dialog, .help-box modal styles
+- [x] Add .document-generation-grid, .template-card
+- [x] Add .template-card.disabled, .warning-text
+- [x] Test all styles
 
 ### Task 15: End-to-End Testing
 - [ ] Test template CRUD flow
