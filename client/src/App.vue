@@ -91,6 +91,51 @@ const documentFields = computed(() => {
     }));
 });
 
+// Get field type by field name
+const getFieldType = (fieldName) => {
+  const field = allFieldsSchema.value.find(f => f.key === fieldName);
+  return field?.type || 'text';
+};
+
+// Get filter condition options based on field type
+const filterConditionOptions = (filter) => {
+  if (!filter || !filter.field) {
+    return [
+      { value: 'contains', label: 'Містить' },
+      { value: 'empty', label: 'Порожнє' },
+      { value: 'not_empty', label: 'Не порожнє' }
+    ];
+  }
+
+  const fieldType = getFieldType(filter.field);
+
+  if (fieldType === 'number' || filter.field === 'salary_amount') {
+    return [
+      { value: 'greater_than', label: 'Більше ніж' },
+      { value: 'less_than', label: 'Менше ніж' },
+      { value: 'equals', label: 'Дорівнює' },
+      { value: 'empty', label: 'Порожнє' },
+      { value: 'not_empty', label: 'Не порожнє' }
+    ];
+  }
+
+  if (fieldType === 'date') {
+    return [
+      { value: 'date_range', label: 'Період від-до' },
+      { value: 'empty', label: 'Порожнє' },
+      { value: 'not_empty', label: 'Не порожнє' }
+    ];
+  }
+
+  // Default for text, select, textarea, etc.
+  return [
+    { value: 'contains', label: 'Містить' },
+    { value: 'not_contains', label: 'Не містить' },
+    { value: 'empty', label: 'Порожнє' },
+    { value: 'not_empty', label: 'Не порожнє' }
+  ];
+};
+
 // CSV links removed - data directory not publicly accessible for security reasons
 
 const employees = ref([]);
@@ -110,6 +155,7 @@ const refreshIntervalId = ref(null);
 const lastUpdated = ref(null);
 const isRefreshing = ref(false);
 const dashboardEvents = ref({ today: [], thisWeek: [] });
+const dashboardOverdueEvents = ref([]);
 const expandedCard = ref(null); // null | 'total' | '<status_label>' | 'other'
 const activeReport = ref(null); // null | 'current' | 'month'
 const reportData = ref([]);
@@ -120,6 +166,14 @@ const customFilters = ref([]);
 const customReportResults = ref([]);
 const customReportLoading = ref(false);
 const selectedColumns = ref([]);
+const reportSortColumn = ref(null);
+const reportSortDirection = ref('asc');
+const columnSearchTerm = ref('');
+
+// App config
+const appConfig = ref({
+  max_report_preview_rows: 100
+});
 
 // Compute current view based on route
 const currentView = computed(() => {
@@ -161,8 +215,13 @@ function switchView(view) {
 function startDashboardRefresh() {
   stopDashboardRefresh();
   refreshIntervalId.value = setInterval(async () => {
-    await loadEmployees(true);
-    await loadDashboardEvents();
+    try {
+      await loadEmployees(true);
+      await loadDashboardEvents();
+      await loadOverdueDocuments();
+    } catch (error) {
+      console.error('Dashboard auto-refresh failed:', error);
+    }
   }, 300000);
 }
 
@@ -170,6 +229,7 @@ function refreshManually() {
   loadEmployees();
   if (currentView.value === 'dashboard') {
     loadDashboardEvents();
+    loadOverdueDocuments();
     startDashboardRefresh();
   }
 }
@@ -192,6 +252,7 @@ watch(() => route.name, async (newRoute, oldRoute) => {
   if (newView === 'dashboard') {
     loadEmployees();
     loadDashboardEvents();
+    loadOverdueDocuments();
     startDashboardRefresh();
   } else if (oldView === 'dashboard') {
     stopDashboardRefresh();
@@ -258,6 +319,12 @@ const birthdayNext7Days = ref([]);
 const showBirthdayNotification = ref(false);
 let birthdayNotifiedDate = '';
 
+const retirementToday = ref([]);
+const retirementThisMonth = ref([]);
+const showRetirementNotification = ref(false);
+let retirementNotifiedDate = '';
+const retirementNotifiedIds = new Set(); // Track which employees we've already processed for retirement
+
 // Динамические значения статусов из fields_schema (по позиции в field_options)
 // Конвенция: options[0] = рабочий, options[1] = уволен, options[2] = отпуск, options[3] = больничный
 const employmentOptions = computed(() => {
@@ -276,7 +343,9 @@ function statusEmoji(statusValue) {
 }
 
 function docExpiryEmoji(event) {
-  if (event.type === 'already_expired' || event.type === 'expired_today') return '⚠️';
+  if (event.type === 'recently_expired') return '⚠️'; // Документ просрочен (в пределах 30 дней)
+  if (event.type === 'expiring_today') return '⚠️'; // Документ истекает сегодня
+  if (event.type === 'expiring_soon') return '📄'; // Документ истекает в ближайшие 7 дней
   return '📄';
 }
 
@@ -291,7 +360,7 @@ function timelineEventEmoji(event) {
 function timelineEventDesc(event) {
   if (event.type === 'doc_expiry') {
     const label = event.document_label || event.document_field;
-    if (event.expiry_type === 'already_expired' || event.expiry_type === 'expired_today') {
+    if (event.expiry_type === 'recently_expired' || event.expiry_type === 'expiring_today') {
       return `— ${label} (термін сплив)`;
     }
     return `— ${label} (до ${formatEventDate(event.expiry_date)})`;
@@ -383,7 +452,9 @@ function addCustomFilter() {
   customFilters.value.push({
     field: '',
     condition: 'contains',
-    value: ''
+    value: '',
+    valueFrom: '',
+    valueTo: ''
   });
 }
 
@@ -423,9 +494,14 @@ function exportCustomReportCSV() {
     ? selectedColumns.value
     : schema.filter(f => f.showInTable).map(f => f.key);
 
+  // Build lookup map for all fields including document date fields
+  const allColumnsMap = {};
+  filteredColumnsForSelector.value.forEach(col => {
+    allColumnsMap[col.key] = col.label;
+  });
+
   const headers = columns.map(col => {
-    const field = schema.find(f => f.key === col);
-    return field ? field.label : col;
+    return allColumnsMap[col] || col;
   });
 
   const rows = customReportResults.value.map(emp => {
@@ -453,6 +529,74 @@ function exportCustomReportCSV() {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
+
+function sortReportPreview(fieldKey) {
+  // Toggle sort direction if clicking same column, otherwise default to ascending
+  if (reportSortColumn.value === fieldKey) {
+    reportSortDirection.value = reportSortDirection.value === 'asc' ? 'desc' : 'asc';
+  } else {
+    reportSortColumn.value = fieldKey;
+    reportSortDirection.value = 'asc';
+  }
+
+  // Sort the results array
+  customReportResults.value.sort((a, b) => {
+    const valA = a[fieldKey] || '';
+    const valB = b[fieldKey] || '';
+
+    // Try numeric comparison first
+    const numA = parseFloat(valA);
+    const numB = parseFloat(valB);
+    if (!isNaN(numA) && !isNaN(numB)) {
+      return reportSortDirection.value === 'asc' ? numA - numB : numB - numA;
+    }
+
+    // String comparison
+    const strA = String(valA).toLowerCase();
+    const strB = String(valB).toLowerCase();
+    if (reportSortDirection.value === 'asc') {
+      return strA.localeCompare(strB);
+    } else {
+      return strB.localeCompare(strA);
+    }
+  });
+}
+
+// Computed property for filtering column selector
+const filteredColumnsForSelector = computed(() => {
+  const searchLower = columnSearchTerm.value.toLowerCase().trim();
+
+  // Build list: all regular fields + document date fields
+  const regularFields = allFieldsSchema.value.map(f => ({
+    key: f.key,
+    label: f.label
+  }));
+
+  // Add document date fields
+  const docFields = documentFields.value;
+  const dateFields = [];
+  docFields.forEach(doc => {
+    dateFields.push({
+      key: `${doc.key}_issue_date`,
+      label: `${doc.label} - Дата видачі`
+    });
+    dateFields.push({
+      key: `${doc.key}_expiry_date`,
+      label: `${doc.label} - Дата закінчення`
+    });
+  });
+
+  const allColumns = [...regularFields, ...dateFields];
+
+  // Filter by search term if provided
+  if (!searchLower) {
+    return allColumns;
+  }
+
+  return allColumns.filter(col =>
+    col.label.toLowerCase().includes(searchLower)
+  );
+});
 
 const form = reactive(emptyEmployee());
 
@@ -564,6 +708,21 @@ const formattedLastUpdated = computed(() => {
   if (!lastUpdated.value) return '';
   const d = lastUpdated.value;
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+});
+
+// Dashboard report counts
+const absentEmployeesCount = computed(() => {
+  if (activeReport.value === 'current') {
+    return reportData.value.length;
+  }
+  return 0;
+});
+
+const statusChangesThisMonthCount = computed(() => {
+  if (activeReport.value === 'month') {
+    return reportData.value.length;
+  }
+  return 0;
 });
 
 // Попап зміни статусу
@@ -1000,6 +1159,7 @@ async function loadEmployees(silent = false) {
     await checkStatusChanges();
     await checkDocumentExpiry();
     await checkBirthdayEvents();
+    await checkRetirementEvents();
     lastUpdated.value = new Date();
 
     // Auto-expand "Who is absent now" report on Dashboard load
@@ -1070,7 +1230,7 @@ async function loadDashboardEvents() {
 
     // На дашборд виводимо лише сьогоднішні події (не прострочені за минулі 30 днів)
     const todayDocEvents = (docData.today || [])
-      .filter(evt => evt.type !== 'already_expired')
+      .filter(evt => evt.type !== 'recently_expired')
       .map(mapDocEvent);
     const todayBirthdayEvents = (birthdayData.today || []).map(evt => mapBirthdayEvent(evt, true));
     const todayEvents = [
@@ -1093,10 +1253,25 @@ async function loadDashboardEvents() {
   }
 }
 
+async function loadOverdueDocuments() {
+  try {
+    const data = await api.getDocumentOverdue();
+    dashboardOverdueEvents.value = data.overdue || [];
+  } catch (error) {
+    console.error('Failed to load overdue documents:', error);
+  }
+}
+
 // Универсальная проверка и обработка смены статусов
 async function checkStatusChanges() {
   const now = new Date();
   const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+  // Проверяем что схема полей загружена (workingStatus должен быть доступен)
+  if (!workingStatus.value) {
+    console.warn('checkStatusChanges: workingStatus not available yet, skipping');
+    return;
+  }
 
   // Сбрасываем уведомления при смене дня (для длительных сессий)
   if (notifiedDate !== today) {
@@ -1197,7 +1372,7 @@ async function checkDocumentExpiry() {
 
   try {
     const data = await api.getDocumentExpiry();
-    const todayItems = (data.today || []).filter(evt => evt.type !== 'already_expired');
+    const todayItems = (data.today || []).filter(evt => evt.type !== 'recently_expired');
     const weekItems = data.thisWeek || [];
 
     docExpiryNotifiedDate = today;
@@ -1240,6 +1415,78 @@ async function checkBirthdayEvents() {
 
 function closeBirthdayNotification() {
   showBirthdayNotification.value = false;
+}
+
+async function checkRetirementEvents() {
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+  // Проверяем что схема полей загружена
+  if (!workingStatus.value || !employmentOptions.value[1]) {
+    console.warn('checkRetirementEvents: employment options not available yet, skipping');
+    return;
+  }
+
+  // Сбрасываем Set при смене дня
+  if (retirementNotifiedDate !== today) {
+    retirementNotifiedIds.clear();
+    retirementNotifiedDate = today;
+  }
+
+  try {
+    const data = await api.getRetirementEvents();
+    const todayItems = data.today || [];
+    const thisMonthItems = data.thisMonth || [];
+
+    // Filter out employees we've already processed today
+    const newTodayItems = todayItems.filter(item => !retirementNotifiedIds.has(item.employee_id));
+    const newThisMonthItems = thisMonthItems.filter(item => !retirementNotifiedIds.has(item.employee_id));
+
+    // Auto-dismiss employees reaching retirement age today (only new ones)
+    // Only auto-dismiss employees with working status (options[0]) to avoid overwriting other statuses
+    if (newTodayItems.length > 0) {
+      const firedStatus = employmentOptions.value[1];
+      for (const event of newTodayItems) {
+        const emp = employees.value.find(e => e.employee_id === event.employee_id);
+        // Only auto-dismiss if employee is currently in working status
+        if (emp && emp.employment_status === workingStatus.value) {
+          try {
+            await api.updateEmployee(event.employee_id, {
+              ...emp,
+              employment_status: firedStatus
+            });
+            console.log(`Auto-dismissed employee ${event.employee_name} (ID: ${event.employee_id}) due to retirement`);
+            retirementNotifiedIds.add(event.employee_id); // Mark as processed
+          } catch (error) {
+            console.error(`Failed to auto-dismiss employee ${event.employee_id}:`, error);
+          }
+        } else {
+          // Even if not dismissed (e.g., already fired), mark as processed to avoid re-showing notification
+          retirementNotifiedIds.add(event.employee_id);
+        }
+      }
+      // Reload employees without triggering check functions again (prevent infinite loop)
+      const employeeData = await api.getEmployees();
+      employees.value = employeeData.employees || [];
+      lastUpdated.value = new Date();
+    }
+
+    // Mark all month items as processed (even if only showing notification, not auto-dismissing)
+    newThisMonthItems.forEach(item => retirementNotifiedIds.add(item.employee_id));
+
+    // Show notification only for new items
+    if (newTodayItems.length > 0 || newThisMonthItems.length > 0) {
+      retirementToday.value = newTodayItems;
+      retirementThisMonth.value = newThisMonthItems;
+      showRetirementNotification.value = true;
+    }
+  } catch (error) {
+    console.error('Failed to check retirement events:', error);
+  }
+}
+
+function closeRetirementNotification() {
+  showRetirementNotification.value = false;
 }
 
 async function selectEmployee(id) {
@@ -1613,6 +1860,31 @@ function handleGlobalKeydown(e) {
   }
 }
 
+// Watch for filter field changes and reset condition when field type changes
+watch(() => customFilters.value, (newFilters, oldFilters) => {
+  if (!oldFilters) return;
+
+  newFilters.forEach((filter, index) => {
+    const oldFilter = oldFilters[index];
+    if (!oldFilter || !filter.field || !oldFilter.field) return;
+
+    // If field changed, check if current condition is still valid
+    if (filter.field !== oldFilter.field) {
+      const newFieldType = getFieldType(filter.field);
+      const oldFieldType = getFieldType(oldFilter.field);
+
+      // If field type changed, reset condition to first available option
+      if (newFieldType !== oldFieldType) {
+        const availableOptions = filterConditionOptions(filter);
+        filter.condition = availableOptions[0]?.value || 'contains';
+        filter.value = '';
+        filter.valueFrom = '';
+        filter.valueTo = '';
+      }
+    }
+  });
+}, { deep: true });
+
 onMounted(async () => {
   document.addEventListener('keydown', handleGlobalKeydown);
 
@@ -1637,6 +1909,14 @@ onMounted(async () => {
     }
   });
 
+  // Load config
+  try {
+    const config = await api.getConfig();
+    appConfig.value = config;
+  } catch (error) {
+    console.error('Failed to load config:', error);
+  }
+
   await loadFieldsSchema();
   await loadEmployees();
 
@@ -1655,6 +1935,7 @@ onMounted(async () => {
   // Load dashboard events if on dashboard
   if (route.name === 'dashboard' || !route.name) {
     await loadDashboardEvents();
+    await loadOverdueDocuments();
     startDashboardRefresh();
   }
 });
@@ -1794,6 +2075,49 @@ onUnmounted(() => {
         </div>
         <div class="vacation-notification-footer">
           <button class="primary" @click="closeBirthdayNotification">Зрозуміло</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Уведомление про вихід на пенсію -->
+    <div v-if="showRetirementNotification" class="vacation-notification-overlay" @click="closeRetirementNotification">
+      <div class="vacation-notification-modal" @click.stop>
+        <div class="vacation-notification-header">
+          <h3>👴 Сповіщення про вихід на пенсію</h3>
+          <button class="close-btn" @click="closeRetirementNotification">&times;</button>
+        </div>
+        <div class="vacation-notification-body">
+          <div v-if="retirementToday.length > 0" class="notification-section">
+            <p class="notification-message">👴 Виходять на пенсію сьогодні:</p>
+            <ul class="vacation-employees-list">
+              <li v-for="(evt, idx) in retirementToday" :key="'retire-today-' + idx" class="vacation-employee starting">
+                <div class="employee-info">
+                  <span class="employee-name">👴 {{ evt.employee_name }}</span>
+                </div>
+                <div class="status-details">
+                  <span class="status-badge">{{ evt.age }} років</span>
+                  <span class="vacation-end-date">{{ formatEventDate(evt.retirement_date) }}</span>
+                </div>
+              </li>
+            </ul>
+          </div>
+          <div v-if="retirementThisMonth.length > 0" class="notification-section">
+            <p class="notification-message">ℹ️ Виходять на пенсію цього місяця:</p>
+            <ul class="vacation-employees-list">
+              <li v-for="(evt, idx) in retirementThisMonth" :key="'retire-month-' + idx" class="vacation-employee returning">
+                <div class="employee-info">
+                  <span class="employee-name">ℹ️ {{ evt.employee_name }}</span>
+                </div>
+                <div class="status-details">
+                  <span class="status-badge">{{ evt.age }} років</span>
+                  <span class="vacation-end-date">{{ formatEventDate(evt.retirement_date) }}</span>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </div>
+        <div class="vacation-notification-footer">
+          <button class="primary" @click="closeRetirementNotification">Зрозуміло</button>
         </div>
       </div>
     </div>
@@ -1961,15 +2285,6 @@ onUnmounted(() => {
         </div>
         <div class="tab-bar">
           <button
-            class="tab-icon-btn refresh-btn"
-            type="button"
-            @click="refreshManually"
-            title="Оновити дані"
-          >
-            🔄
-          </button>
-          <div class="tab-divider"></div>
-          <button
             v-for="tab in tabs"
             :key="tab.key"
             class="tab-item"
@@ -1977,6 +2292,14 @@ onUnmounted(() => {
             @click="switchView(tab.key)"
           >
             {{ tab.label }}
+          </button>
+          <button
+            class="tab-icon-btn refresh-btn"
+            type="button"
+            @click="refreshManually"
+            title="Оновити дані"
+          >
+            🔄
           </button>
         </div>
       </header>
@@ -2084,14 +2407,26 @@ onUnmounted(() => {
           </div>
         </div>
         </div>
+        <!-- Прострочені документи -->
+        <div class="timeline-card" style="margin-top: 1rem;">
+          <div class="timeline-title">Прострочені документи</div>
+          <div v-if="dashboardOverdueEvents.length === 0" class="timeline-empty">
+            Немає прострочених документів
+          </div>
+          <div v-for="event in dashboardOverdueEvents" :key="event.employee_id + event.document_field" class="timeline-event">
+            <span class="timeline-emoji">⚠️</span>
+            <span class="timeline-name timeline-link" @click="openEmployeeCard(event.employee_id)">{{ event.name }}</span>
+            <span class="timeline-desc">{{ event.document_label }} (закінчився {{ formatEventDate(event.expiry_date) }})</span>
+          </div>
+        </div>
         <!-- Швидкі звіти по статусах -->
         <div class="report-section">
           <div class="report-buttons">
             <button class="report-btn" :class="{ active: activeReport === 'current' }" @click="toggleReport('current')">
-              Хто відсутній зараз
+              Хто відсутній зараз<span v-if="activeReport === 'current'"> ({{ absentEmployeesCount }})</span>
             </button>
             <button class="report-btn" :class="{ active: activeReport === 'month' }" @click="toggleReport('month')">
-              Зміни статусів цього місяця
+              Зміни статусів цього місяця<span v-if="activeReport === 'month'"> ({{ statusChangesThisMonthCount }})</span>
             </button>
           </div>
           <div v-if="activeReport && !reportLoading" class="report-result">
@@ -2575,15 +2910,39 @@ onUnmounted(() => {
                 </select>
 
                 <select v-model="filter.condition" class="filter-condition">
-                  <option value="contains">Містить</option>
-                  <option value="equals">Дорівнює</option>
-                  <option value="not_equals">Не дорівнює</option>
-                  <option value="empty">Порожнє</option>
-                  <option value="not_empty">Не порожнє</option>
+                  <option v-for="opt in filterConditionOptions(filter)" :key="opt.value" :value="opt.value">
+                    {{ opt.label }}
+                  </option>
                 </select>
 
+                <!-- Date range: show two date inputs -->
+                <template v-if="filter.condition === 'date_range'">
+                  <input
+                    v-model="filter.valueFrom"
+                    type="date"
+                    class="filter-value"
+                    placeholder="Від"
+                  />
+                  <input
+                    v-model="filter.valueTo"
+                    type="date"
+                    class="filter-value"
+                    placeholder="До"
+                  />
+                </template>
+
+                <!-- Number field: show number input -->
                 <input
-                  v-if="filter.condition !== 'empty' && filter.condition !== 'not_empty'"
+                  v-else-if="filter.condition && !['empty', 'not_empty'].includes(filter.condition) && (getFieldType(filter.field) === 'number' || filter.field === 'salary_amount')"
+                  v-model="filter.value"
+                  type="number"
+                  class="filter-value"
+                  placeholder="Значення"
+                />
+
+                <!-- Text field: show text input -->
+                <input
+                  v-else-if="filter.condition && !['empty', 'not_empty', 'date_range'].includes(filter.condition)"
                   v-model="filter.value"
                   type="text"
                   class="filter-value"
@@ -2609,8 +2968,14 @@ onUnmounted(() => {
             <div class="column-selector">
               <h3>Колонки для експорту</h3>
               <p class="help-text">Не вибрано жодної колонки = експортуються всі колонки з таблиці</p>
+              <input
+                type="text"
+                v-model="columnSearchTerm"
+                placeholder="Пошук полів..."
+                style="width: 100%; padding: 0.5rem; margin-bottom: 0.75rem; border: 1px solid #ccc; border-radius: 4px;"
+              />
               <div class="column-checkboxes">
-                <label v-for="field in allFieldsSchema" :key="field.key" class="column-checkbox">
+                <label v-for="field in filteredColumnsForSelector" :key="field.key" class="column-checkbox">
                   <input
                     type="checkbox"
                     :value="field.key"
@@ -2619,6 +2984,9 @@ onUnmounted(() => {
                   {{ field.label }}
                 </label>
               </div>
+              <p class="hint-text" style="font-size: 0.85rem; color: #666; margin-top: 0.5rem;">
+                💡 Підказка: звіт автоматично виконується після вибору колонок
+              </p>
             </div>
 
             <!-- Run Report Button -->
@@ -2638,21 +3006,28 @@ onUnmounted(() => {
 
             <!-- Results Preview -->
             <div v-if="customReportResults.length > 0" class="report-preview">
-              <h3>Попередній перегляд результатів (макс. 100 рядків)</h3>
+              <h3>Попередній перегляд результатів</h3>
               <div class="status-bar">
-                <span>Знайдено записів: {{ customReportResults.length }}</span>
+                <span>Знайдено записів: {{ customReportResults.length }} (показано: {{ Math.min(customReportResults.length, parseInt(appConfig.max_report_preview_rows) || 100) }})</span>
               </div>
               <div class="table-container">
                 <table class="summary-table">
                   <thead>
                     <tr>
-                      <th v-for="field in (selectedColumns.length > 0 ? selectedColumns : allFieldsSchema.filter(f => f.showInTable).map(f => f.key))" :key="field">
-                        {{ allFieldsSchema.find(f => f.key === field)?.label || field }}
+                      <th>
+                        №
+                      </th>
+                      <th v-for="field in (selectedColumns.length > 0 ? selectedColumns : allFieldsSchema.filter(f => f.showInTable).map(f => f.key))" :key="field" style="cursor: pointer;" @click="sortReportPreview(field)">
+                        {{ filteredColumnsForSelector.find(f => f.key === field)?.label || allFieldsSchema.find(f => f.key === field)?.label || field }}
+                        <span v-if="reportSortColumn === field">
+                          {{ reportSortDirection === 'asc' ? '↑' : '↓' }}
+                        </span>
                       </th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="(emp, idx) in customReportResults.slice(0, 100)" :key="emp.employee_id || idx">
+                    <tr v-for="(emp, idx) in customReportResults.slice(0, parseInt(appConfig.max_report_preview_rows) || 100)" :key="emp.employee_id || idx">
+                      <td>{{ idx + 1 }}</td>
                       <td v-for="field in (selectedColumns.length > 0 ? selectedColumns : allFieldsSchema.filter(f => f.showInTable).map(f => f.key))" :key="field">
                         {{ emp[field] || '' }}
                       </td>

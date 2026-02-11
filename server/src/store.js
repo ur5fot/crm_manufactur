@@ -353,11 +353,11 @@ export async function getDocumentExpiryEvents() {
       };
 
       if (expiryDate === today) {
-        todayEvents.push({ ...event, type: 'expired_today' });
+        todayEvents.push({ ...event, type: 'expiring_today' });
       } else if (expiryDate > today && expiryDate <= in7daysStr) {
         weekEvents.push({ ...event, type: 'expiring_soon' });
       } else if (expiryDate < today && expiryDate >= past30daysStr) {
-        todayEvents.push({ ...event, type: 'already_expired' });
+        todayEvents.push({ ...event, type: 'recently_expired' });
       }
     });
   });
@@ -365,6 +365,47 @@ export async function getDocumentExpiryEvents() {
   weekEvents.sort((a, b) => a.expiry_date.localeCompare(b.expiry_date));
 
   return { today: todayEvents, thisWeek: weekEvents };
+}
+
+export async function getDocumentOverdueEvents() {
+  const employees = await loadEmployees();
+  const schema = await loadFieldsSchema();
+  const now = new Date();
+  const today = localDateStr(now);
+
+  // Находим все поля типа file и их labels
+  const fileFields = schema.filter(f => f.field_type === 'file');
+
+  const overdueEvents = [];
+
+  employees.forEach(emp => {
+    const name = [emp.last_name, emp.first_name, emp.middle_name].filter(Boolean).join(' ');
+
+    fileFields.forEach(field => {
+      const expiryDateField = `${field.field_name}_expiry_date`;
+      const expiryDate = emp[expiryDateField];
+      if (!expiryDate) return;
+      if (!emp[field.field_name]) return; // Пропускаем если документ отсутствует
+
+      // Документы с датой истечения строго меньше сегодняшней даты
+      if (expiryDate < today) {
+        overdueEvents.push({
+          employee_id: emp.employee_id,
+          name,
+          document_field: field.field_name,
+          document_label: field.field_label,
+          expiry_date: expiryDate,
+          has_file: true,
+          type: 'overdue'
+        });
+      }
+    });
+  });
+
+  // Сортируем по дате истечения (самые старые первыми)
+  overdueEvents.sort((a, b) => a.expiry_date.localeCompare(b.expiry_date));
+
+  return { overdue: overdueEvents };
 }
 
 export async function getStatusReport(type) {
@@ -427,7 +468,7 @@ export async function exportEmployees(filters, searchTerm = '') {
   // Визначити колонки для export: тільки show_in_table=yes, відсортовані по field_order
   const exportFields = schema
     .filter(f => f.show_in_table === 'yes')
-    .sort((a, b) => parseInt(a.field_order) - parseInt(b.field_order))
+    .sort((a, b) => parseInt(a.field_order, 10) - parseInt(b.field_order, 10))
     .map(f => ({ key: f.field_name, label: f.field_label }));
 
   // Створити whitelist для валідації фільтрів
@@ -598,9 +639,14 @@ export async function loadConfig() {
 
     return config;
   } catch (error) {
-    console.error('Ошибка загрузки config.csv:', error.message);
+    if (error.code === 'ENOENT') {
+      console.log('config.csv не найден, используются значения по умолчанию');
+    } else {
+      console.error('ОШИБКА: config.csv поврежден или имеет неверный формат:', error.message);
+      console.error('Используются значения по умолчанию. Проверьте файл config.csv!');
+    }
     // Возвращаем значения по умолчанию
-    return { max_log_entries: '1000' };
+    return { max_log_entries: '1000', max_file_upload_mb: '10', retirement_age_years: '60', max_report_preview_rows: '100' };
   }
 }
 
@@ -637,6 +683,19 @@ export async function getBirthdayEvents() {
     const birthDay = parseInt(birthParts[2], 10);
 
     if (isNaN(birthYear) || isNaN(birthMonth) || isNaN(birthDay)) return;
+
+    // Handle leap day (Feb 29) in non-leap years
+    const isLeapYear = (year) => (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
+    if (birthMonth === 2 && birthDay === 29 && !isLeapYear(currentYear)) {
+      return; // Skip Feb 29 birthdays in non-leap years
+    }
+    if (birthMonth === 2 && birthDay === 29 && !isLeapYear(currentYear + 1)) {
+      // For next year check, skip if next year is not a leap year
+      const thisYearBirthday = new Date(currentYear, birthMonth - 1, birthDay);
+      if (thisYearBirthday < nowDateOnly || thisYearBirthday > in7days) {
+        return; // Not in range and next year won't have this date
+      }
+    }
 
     // Проверяем день рождения в текущем году и следующем (для случая перехода через Новый год)
     const thisYearBirthday = new Date(currentYear, birthMonth - 1, birthDay);
@@ -693,6 +752,102 @@ export async function getBirthdayEvents() {
 }
 
 /**
+ * Получить события выхода на пенсию (сегодня и в этом месяце)
+ * @param {number} retirementAge - Возраст выхода на пенсию
+ * @returns {Promise<{today: Array, thisMonth: Array}>}
+ */
+export async function getRetirementEvents(retirementAge = 60) {
+  const employees = await loadEmployees();
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const today = localDateStr(now);
+
+  // Normalize now to midnight for date-only comparison
+  const nowDateOnly = new Date(currentYear, now.getMonth(), now.getDate());
+
+  // Calculate month start and end
+  const monthStart = new Date(currentYear, now.getMonth(), 1);
+  const monthEnd = new Date(currentYear, now.getMonth() + 1, 0);
+
+  const todayEvents = [];
+  const thisMonthEvents = [];
+
+  employees.forEach(emp => {
+    const birthDate = emp.birth_date;
+    if (!birthDate) return;
+
+    // Парсим дату рождения
+    const birthParts = birthDate.split('-');
+    if (birthParts.length !== 3) return;
+
+    const birthYear = parseInt(birthParts[0], 10);
+    const birthMonth = parseInt(birthParts[1], 10);
+    const birthDay = parseInt(birthParts[2], 10);
+
+    if (isNaN(birthYear) || isNaN(birthMonth) || isNaN(birthDay)) return;
+
+    // Handle leap day (Feb 29) in non-leap years
+    const isLeapYear = (year) => (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
+    if (birthMonth === 2 && birthDay === 29 && !isLeapYear(currentYear)) {
+      return; // Skip Feb 29 birthdays in non-leap years
+    }
+
+    // Проверяем день рождения в текущем году и следующем (для случая перехода через Новый год)
+    const thisYearBirthday = new Date(currentYear, birthMonth - 1, birthDay);
+    const nextYearBirthday = new Date(currentYear + 1, birthMonth - 1, birthDay);
+
+    const name = [emp.last_name, emp.first_name, emp.middle_name].filter(Boolean).join(' ');
+
+    // Проверяем день рождения в текущем году
+    const age = currentYear - birthYear;
+    if (age === retirementAge && thisYearBirthday >= monthStart && thisYearBirthday <= monthEnd) {
+      const retirementDateStr = localDateStr(thisYearBirthday);
+
+      const event = {
+        employee_id: emp.employee_id,
+        employee_name: name,
+        birth_date: birthDate,
+        retirement_date: retirementDateStr,
+        age: age
+      };
+
+      if (retirementDateStr === today) {
+        todayEvents.push(event);
+      } else if (thisYearBirthday > nowDateOnly) {
+        thisMonthEvents.push(event);
+      }
+    }
+
+    // Проверяем день рождения в следующем году (для случая перехода через Новый год)
+    const nextYearAge = (currentYear + 1) - birthYear;
+    if (nextYearAge === retirementAge && nextYearBirthday >= monthStart && nextYearBirthday <= monthEnd) {
+      const retirementDateStr = localDateStr(nextYearBirthday);
+
+      const event = {
+        employee_id: emp.employee_id,
+        employee_name: name,
+        birth_date: birthDate,
+        retirement_date: retirementDateStr,
+        age: nextYearAge
+      };
+
+      if (retirementDateStr === today) {
+        todayEvents.push(event);
+      } else if (nextYearBirthday > nowDateOnly) {
+        thisMonthEvents.push(event);
+      }
+    }
+  });
+
+  // Сортируем события месяца по дате
+  thisMonthEvents.sort((a, b) => {
+    return a.retirement_date.localeCompare(b.retirement_date);
+  });
+
+  return { today: todayEvents, thisMonth: thisMonthEvents };
+}
+
+/**
  * Get custom report with advanced filtering
  * @param {Array} filters - Array of filter objects: [{field, condition, value}]
  * @param {Array|null} columns - Array of column names to include (null = all)
@@ -702,8 +857,16 @@ export async function getCustomReport(filters = [], columns = null) {
   const employees = await loadEmployees();
   const schema = await loadFieldsSchema();
 
-  // Create whitelist for field validation
-  const allFieldNames = schema.map(f => f.field_name);
+  // Create whitelist for field validation (including auto-generated date fields)
+  const allFieldNames = [];
+  schema.forEach(f => {
+    allFieldNames.push(f.field_name);
+    // Add auto-generated date fields for document fields
+    if (f.field_type === 'file') {
+      allFieldNames.push(`${f.field_name}_issue_date`);
+      allFieldNames.push(`${f.field_name}_expiry_date`);
+    }
+  });
 
   // Apply filters
   let filtered = employees;
@@ -712,7 +875,7 @@ export async function getCustomReport(filters = [], columns = null) {
     filtered = filtered.filter(emp => {
       // AND logic: employee must match ALL filters
       return filters.every(filter => {
-        const { field, condition, value } = filter;
+        const { field, condition, value, valueFrom, valueTo } = filter;
 
         // Validate field name
         if (!allFieldNames.includes(field)) {
@@ -726,10 +889,39 @@ export async function getCustomReport(filters = [], columns = null) {
         switch (condition) {
           case 'contains':
             return empValueStr.includes(filterValueStr);
+          case 'not_contains':
+            return !empValueStr.includes(filterValueStr);
           case 'equals':
+            // For number fields, use numeric comparison
+            if (typeof value === 'number' || !isNaN(parseFloat(value))) {
+              const empNum = parseFloat(empValue);
+              const valNum = parseFloat(value);
+              if (isNaN(empNum) || isNaN(valNum)) return false;
+              return empNum === valNum;
+            }
             return empValue === value || empValueStr === filterValueStr;
           case 'not_equals':
             return empValue !== value && empValueStr !== filterValueStr;
+          case 'greater_than': {
+            const empNum = parseFloat(empValue || 0);
+            const valNum = parseFloat(value || 0);
+            if (isNaN(empNum) || isNaN(valNum)) return false;
+            return empNum > valNum;
+          }
+          case 'less_than': {
+            const empNum = parseFloat(empValue || 0);
+            const valNum = parseFloat(value || 0);
+            if (isNaN(empNum) || isNaN(valNum)) return false;
+            return empNum < valNum;
+          }
+          case 'date_range':
+            // Date range: check if empValue is between valueFrom and valueTo (inclusive)
+            // Both dates are required for date_range condition
+            if (!empValue) return false;
+            if (!valueFrom || !valueTo) return false; // Require both dates
+            if (empValue < valueFrom) return false;
+            if (empValue > valueTo) return false;
+            return true;
           case 'empty':
             return !empValue || empValue === '';
           case 'not_empty':

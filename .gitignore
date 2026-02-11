@@ -9,6 +9,7 @@ files/*
 data/employees.csv
 data/logs.csv
 data/fields_schema.csv
+data/config.csv
 
 # Claude Code та BMAD (особисті налаштування та output)
 .claude/
@@ -16,3 +17,7 @@ _bmad/
 
 # ralphex progress logs
 progress*.txt
+
+# Playwright test artifacts
+playwright-report/
+test-results/

@@ -107,6 +107,40 @@ npm run build
 npm run preview
 ```
 
+### Testing
+
+The project uses Playwright for end-to-end (E2E) testing of the entire application stack.
+
+**Run all E2E tests:**
+```bash
+# Ensure servers are running first
+./run.sh
+
+# In another terminal
+npm run test:e2e
+```
+
+**Run tests in UI mode (interactive debugging):**
+```bash
+npm run test:e2e:ui
+```
+
+**Run tests with visible browser:**
+```bash
+npm run test:e2e:headed
+```
+
+**Run specific test file:**
+```bash
+npm run test:e2e tests/e2e/employee-crud.spec.js
+```
+
+**Important notes:**
+- Tests require both servers running (`./run.sh`)
+- Tests operate on isolated test data (not production data)
+- All major user flows are covered: CRUD, documents, reports, import, dashboard, logs
+- See [tests/README.md](tests/README.md) for detailed testing documentation
+
 ### First Installation / Production Deployment
 
 **Initial setup:**
@@ -172,9 +206,12 @@ git pull origin master
 - `POST /api/employees/import` - Bulk import from CSV file
 - `GET /api/fields-schema` - **Get dynamic UI schema** (field types, labels, options, groups, table configuration)
 - `GET /api/document-expiry` - Get document expiry events (today and next 7 days) for dashboard timeline and notifications
+- `GET /api/document-overdue` - Get overdue document events (documents past expiry date) for dashboard overdue block
 - `GET /api/birthday-events` - Get birthday events (today and next 7 days) for dashboard timeline and notifications
+- `GET /api/retirement-events` - Get retirement events (employees reaching retirement age today or this month)
 - `GET /api/config` - Get system configuration (key-value object from config.csv)
 - `GET /api/reports/custom` - **Generate custom filtered report** (accepts filter parameters: field, condition, value; returns filtered employee data)
+- `GET /api/reports/statuses?type=current|month` - Get status report data for dashboard (current: non-working employees, month: status changes this month)
 - `GET /api/dictionaries` - Get all reference data grouped by type (legacy)
 - `GET /api/logs` - Get audit log sorted by timestamp descending (auto-cleaned when exceeds max_log_entries)
 - `POST /api/open-data-folder` - Open data folder in OS file explorer
@@ -185,7 +222,9 @@ git pull origin master
 - IDs are sequential numeric strings (e.g., "1", "2", "3")
 - Auto-incremented IDs calculated by finding max existing ID + 1
 - Deleting an employee removes associated file directory
-- File uploads use multer with 10MB limit for PDFs and images (jpg, jpeg, png, gif, webp):
+- File uploads use multer with configurable size limit for PDFs and images (jpg, jpeg, png, gif, webp):
+  - Limit configured via `max_file_upload_mb` in config.csv (default: 10MB)
+  - Server loads config at startup and applies to multer fileSize limit
   - Files initially saved with temporary names (`temp_{timestamp}.*`)
   - After upload completes, renamed based on `file_field` parameter with original extension preserved (e.g., `driver_license_file.pdf`, `id_certificate_file.jpg`)
   - This ensures correct naming even though multer processes files before body fields are available
@@ -220,6 +259,10 @@ git pull origin master
   - `toggleReport('current')` called after employees loaded
   - Shows all employees with non-working status (not `options[0]`)
   - Only auto-expands on Dashboard, not on other views
+  - Report section titles show employee count:
+    - "Хто відсутній зараз (N)" - where N = number of absent employees
+    - "Зміни статусів цього місяця (N)" - where N = number of status changes
+  - Counts computed from `absentEmployeesCount` and `statusChangesThisMonthCount` properties
 - **Timeline Cards** - Two-column grid (`.timeline-grid`) showing events (status changes, document expiry, birthdays):
   - "Сьогодні" (today) and "Найближчі 7 днів" (next 7 days)
   - Card-style containers (`.timeline-card`) with white background and rounded corners
@@ -227,6 +270,13 @@ git pull origin master
   - Status events: emoji by status position — ✈️ (vacation/options[2]), 🏥 (sick leave/options[3]), ℹ️ (others)
   - Document expiry events: ⚠️ (expiring today), 📄 (expiring within 7 days)
   - Birthday events: 🎂 (birthday today), 🎉 (birthday within 7 days)
+- **Overdue Documents Block** - Separate timeline card showing documents past expiry date:
+  - Full-width card (`.timeline-card.overdue-card`) after timeline grid
+  - "Прострочені документи" header with warning emoji (⚠️)
+  - Lists all documents with `expiry_date < today`
+  - Each entry shows employee name (clickable link), document type label, and expiry date
+  - Empty state: "Немає прострочених документів" when no overdue documents exist
+  - Data loaded from `GET /api/document-overdue` endpoint
 - **Auto-refresh** - Dashboard data refreshes automatically via interval
 - **Footer** - Shows last update timestamp
 
@@ -241,13 +291,27 @@ git pull origin master
 **Custom Reports UI:**
 - **Filter Builder** - Dynamic form for building complex filters:
   - Field selector dropdown (all fields from `fields_schema.csv`)
-  - Condition selector: `contains`, `equals`, `not_equals`, `empty`, `not_empty`
-  - Value input adapts to field type (text, select dropdown, date picker)
+  - Condition selector adapts to field type:
+    - Text fields: `contains`, `not_contains`, `empty`, `not_empty`
+    - Number/salary fields: `greater_than`, `less_than`, `equals`, `empty`, `not_empty`
+    - Date fields: `date_range` (requires two inputs: from and to), `empty`, `not_empty`
+  - Value input adapts to field type and condition:
+    - Text conditions: single text input
+    - Number conditions: single number input (type=number)
+    - Date range: two date inputs (valueFrom, valueTo)
+    - Empty/not_empty: no input (condition only)
   - "Додати фільтр" button to add filter to active list
   - "Очистити фільтри" button to reset all filters
 - **Active Filters Display** - Shows applied filters with remove (✖️) button per filter
-- **Column Selector** - Checkboxes to choose which fields to include in CSV export
-- **Preview Table** - Shows filtered results (max 100 rows preview, paginated)
+- **Column Selector** - Checkboxes to choose which fields to include in CSV export:
+  - Search input to filter column checkboxes by field label
+  - Includes document date fields: "{label} - Дата видачі", "{label} - Дата закінчення"
+  - Hint below checkboxes: "💡 Підказка: звіт автоматично виконується після вибору колонок"
+- **Preview Table** - Shows filtered results with enhancements:
+  - Row numbering column (№) as first column
+  - Sortable columns (click header to toggle sort direction with ↑/↓ indicator)
+  - Pagination: shows first N rows (configurable via `max_report_preview_rows` in config.csv, default 100)
+  - Status bar shows: "Знайдено записів: X (показано: Y)" where Y = min(X, max_preview_rows)
 - **CSV Export** - "Експорт в CSV" button generates and downloads filtered data
   - Filename format: `report_YYYY-MM-DD_HH-mm-ss.csv`
   - UTF-8 with BOM encoding for Excel compatibility
@@ -290,6 +354,7 @@ git pull origin master
   - Reduced opacity until hover (prevents accidental clicks)
 - **Global header buttons** - Refresh button in tab bar:
   - "Оновити" → 🔄 icon only (refresh icon)
+  - Positioned at far right of tab bar (after all navigation tabs)
   - Located in global header tab bar (visible on all views)
   - `title` attribute for accessibility
 - **Cards view sidebar buttons** - New employee button in left panel:
@@ -335,6 +400,18 @@ git pull origin master
 - **Dashboard timeline integration** - Birthday events appear in the dashboard timeline alongside status and document events
 - **Auto-check on load** - `checkBirthdayEvents()` function called from `loadEmployees()`
 - **birth_date field** - Added to fields_schema.csv (field_type=date, field_group="Личные данные", show_in_table=no)
+
+**Retirement Age Notifications:**
+- **API endpoint** - `GET /api/retirement-events` returns retirement events (employees reaching retirement age)
+- **Configuration** - Retirement age defined in `config.csv` (`retirement_age_years`, default: 60)
+- **Notification popup** - "Сповіщення про вихід на пенсію" modal with:
+  - Employees reaching retirement today - elder emoji (👴), shows employee name and age
+  - Employees reaching retirement this month - info emoji (ℹ️), shows employee name, age, and date
+- **Auto-dismiss logic** - When an employee reaches retirement age today:
+  - Automatically updates `employment_status` to `options[1]` (fired/dismissed status)
+  - Logs the auto-dismiss action to audit logs with details
+  - Happens during `checkRetirementEvents()` function called from `loadEmployees()`
+- **Age calculation** - Calculates age from `birth_date` field and compares with `retirement_age_years` from config
 
 **Status Change System:**
 - **Status Change Popup** - `employment_status` is read-only in the employee card. A "Змінити статус" button opens a popup with:
@@ -516,6 +593,9 @@ System-wide settings in [data/config.csv](data/config.csv):
 
 **Current configuration:**
 - `max_log_entries` - Maximum number of log entries before automatic cleanup (default: 1000)
+- `max_file_upload_mb` - Maximum file upload size in megabytes (default: 10)
+- `retirement_age_years` - Retirement age for auto-dismiss notifications (default: 60)
+- `max_report_preview_rows` - Maximum rows shown in report preview table (default: 100)
 
 **Features:**
 - CSV-based configuration (no hardcoded values)
@@ -699,6 +779,118 @@ When adding new dictionary types:
 1. Add entries to [data/dictionaries.csv](data/dictionaries.csv)
 2. Use in form by adding field with `type: "select"` and `optionsKey: "your_type"`
 3. Frontend automatically loads from `/api/dictionaries` on mount
+
+## Testing Approach
+
+### E2E Testing with Playwright
+
+The project uses [Playwright](https://playwright.dev/) for comprehensive end-to-end testing covering all major user flows.
+
+**Test Philosophy:**
+- Tests validate the complete stack: UI + API + data persistence
+- All critical user flows must have E2E coverage
+- Tests use isolated test data (never modify production data)
+- Tests should be stable and non-flaky (no random failures)
+
+**Test Coverage Areas:**
+- Employee CRUD operations (create, read, update, delete)
+- Document upload, viewing, deletion (PDF + images)
+- Table view with filters and inline editing
+- Custom reports with advanced filters and CSV export
+- CSV import (valid/invalid data, template download)
+- Dashboard statistics, timeline, notifications
+- Status changes with date ranges and auto-restore
+- Retirement notifications with auto-dismiss
+- Audit logs viewing and search
+
+**Test Structure:**
+```
+tests/
+├── e2e/                           # E2E test files
+│   ├── setup.spec.js              # Basic connectivity tests
+│   ├── employee-crud.spec.js      # CRUD operations
+│   ├── documents.spec.js          # Document management
+│   ├── table-filters.spec.js      # Table view + filters
+│   ├── reports.spec.js            # Custom reports + export
+│   ├── import.spec.js             # CSV import
+│   ├── dashboard.spec.js          # Dashboard + notifications
+│   ├── status-retirement.spec.js  # Status changes + retirement
+│   └── logs.spec.js               # Audit logs
+├── fixtures/                      # Test data
+│   ├── test-data.csv              # Sample employees
+│   ├── import-valid.csv           # Valid import data
+│   ├── import-invalid.csv         # Invalid import (error testing)
+│   ├── test-passport.pdf          # Dummy PDF
+│   └── test-photo.jpg             # Dummy image
+├── helpers/                       # Utilities
+│   └── test-utils.js              # setupTestData, cleanupTestData, etc.
+└── README.md                      # Testing documentation
+```
+
+**Running Tests:**
+
+Prerequisites: servers must be running (`./run.sh`)
+
+```bash
+# Run all tests
+npm run test:e2e
+
+# Run specific test file
+npm run test:e2e tests/e2e/employee-crud.spec.js
+
+# Run in UI mode (interactive debugging)
+npm run test:e2e:ui
+
+# Run with visible browser
+npm run test:e2e:headed
+
+# Run test by name
+npx playwright test --grep "Создать нового сотрудника"
+```
+
+**Debugging Failed Tests:**
+
+1. Check screenshots: `test-results/[test-name]/test-failed-1.png`
+2. View trace: `npx playwright show-trace test-results/[test-name]/trace.zip`
+3. Run in debug mode: `npx playwright test --debug tests/e2e/employee-crud.spec.js`
+
+**Test Data Management:**
+
+Tests use isolated data via `setupTestData()` and `cleanupTestData()` helpers:
+- `tests/fixtures/test-data.csv` copied to `data/employees.csv` before tests
+- Production data protected (gitignored, never modified by tests)
+- Test files cleaned up after test completion
+
+**Best Practices for Writing Tests:**
+
+1. Use explicit waits: `await expect(locator).toBeVisible()`
+2. Verify via API when testing data persistence
+3. Avoid hardcoded delays (use Playwright's auto-waiting)
+4. Clean up test data in `afterEach` hooks
+5. Run tests 3+ times to ensure stability (no flaky tests)
+
+**CI/CD Integration:**
+
+GitHub Actions workflow (`.github/workflows/tests.yml`) runs tests automatically on:
+- Push to master or feature branches
+- Pull requests
+- Manual workflow dispatch
+
+Workflow steps:
+1. Install dependencies (root, server, client)
+2. Install Playwright browsers
+3. Start backend + frontend servers
+4. Run E2E tests
+5. Upload test artifacts on failure (screenshots, traces, server logs)
+
+**When to Write/Update Tests:**
+
+- After implementing new features → add E2E tests covering the feature
+- After fixing bugs → add regression test to prevent recurrence
+- When changing UI flows → update relevant E2E tests
+- Before major refactoring → ensure tests pass before and after
+
+See [tests/README.md](tests/README.md) for detailed testing documentation.
 
 ## Documentation Maintenance
 

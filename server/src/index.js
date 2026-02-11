@@ -20,6 +20,7 @@ import {
   getDashboardStats,
   getDashboardEvents,
   getDocumentExpiryEvents,
+  getDocumentOverdueEvents,
   getStatusReport,
   exportEmployees,
   ROOT_DIR,
@@ -27,6 +28,7 @@ import {
   getEmployeeColumnsSync,
   getDocumentFieldsSync,
   getBirthdayEvents,
+  getRetirementEvents,
   loadConfig
 } from "./store.js";
 import { mergeRow, normalizeRows } from "./csv.js";
@@ -37,6 +39,21 @@ const port = process.env.PORT || 3000;
 await ensureDataDirs();
 await initializeEmployeeColumns();
 
+// Load configuration with fallback
+let appConfig;
+try {
+  appConfig = await loadConfig();
+  console.log(`Max file upload size: ${appConfig.max_file_upload_mb || 10}MB`);
+} catch (err) {
+  console.error('Failed to load config.csv, using default values:', err.message);
+  appConfig = {
+    max_file_upload_mb: 10,
+    retirement_age_years: 60,
+    max_log_entries: 1000,
+    max_report_preview_rows: 100
+  };
+}
+
 app.use(cors());
 app.use(express.json({ limit: "10mb" }));
 app.use("/files", express.static(FILES_DIR));
@@ -45,7 +62,7 @@ app.use("/files", express.static(FILES_DIR));
 
 const importUpload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 }
+  limits: { fileSize: parseInt(appConfig.max_file_upload_mb || 10) * 1024 * 1024 }
 });
 
 function getOpenCommand() {
@@ -132,9 +149,31 @@ app.get("/api/document-expiry", async (_req, res) => {
   }
 });
 
+app.get("/api/document-overdue", async (_req, res) => {
+  try {
+    const events = await getDocumentOverdueEvents();
+    res.json(events);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get("/api/birthday-events", async (_req, res) => {
   try {
     const events = await getBirthdayEvents();
+    res.json(events);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get("/api/retirement-events", async (_req, res) => {
+  try {
+    const config = await loadConfig();
+    const retirementAge = parseInt(config.retirement_age_years || 60, 10);
+    const events = await getRetirementEvents(retirementAge);
     res.json(events);
   } catch (err) {
     console.error(err);
@@ -175,7 +214,8 @@ app.get("/api/reports/custom", async (req, res) => {
     if (req.query.filters) {
       try {
         filters = JSON.parse(req.query.filters);
-      } catch {
+      } catch (err) {
+        console.error('Invalid filters JSON:', err);
         res.status(400).json({ error: 'Invalid filters JSON' });
         return;
       }
@@ -184,7 +224,8 @@ app.get("/api/reports/custom", async (req, res) => {
     if (req.query.columns) {
       try {
         columns = JSON.parse(req.query.columns);
-      } catch {
+      } catch (err) {
+        console.error('Invalid columns JSON:', err);
         res.status(400).json({ error: 'Invalid columns JSON' });
         return;
       }
@@ -205,7 +246,8 @@ app.get("/api/export", async (req, res) => {
     if (req.query.filters) {
       try {
         filters = JSON.parse(req.query.filters);
-      } catch {
+      } catch (err) {
+        console.error('Invalid filters JSON:', err);
         res.status(400).json({ error: 'Invalid filters JSON' });
         return;
       }
@@ -521,12 +563,21 @@ app.put("/api/employees/:id", async (req, res) => {
     }
 
     // Валидация дат (формат и корректность)
+    // ВАЖНО: Валидируем только поля которые были изменены в этом запросе
+    // Это предотвращает ошибки валидации из-за legacy невалидных данных в других полях
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
     const dateFields = getEmployeeColumnsSync().filter(col =>
       col.includes('_date') || col === 'birth_date'
     );
 
-    for (const dateField of dateFields) {
+    // Находим какие поля были изменены в этом запросе
+    const changedDateFields = dateFields.filter(dateField => {
+      const currentValue = String(current[dateField] || "").trim();
+      const nextValue = String(next[dateField] || "").trim();
+      return currentValue !== nextValue;
+    });
+
+    for (const dateField of changedDateFields) {
       const dateValue = String(next[dateField] || "").trim();
       if (dateValue) {
         if (!dateRegex.test(dateValue)) {
@@ -555,7 +606,7 @@ app.put("/api/employees/:id", async (req, res) => {
       const issueDate = String(next[issueDateField] || "").trim();
       const expiryDate = String(next[expiryDateField] || "").trim();
 
-      if (issueDate && expiryDate && new Date(expiryDate) < new Date(issueDate)) {
+      if (issueDate && expiryDate && expiryDate < issueDate) {
         res.status(400).json({
           error: `Дата закінчення не може бути раніше дати видачі для документа ${docField}`
         });
@@ -655,7 +706,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 },
+  limits: { fileSize: parseInt(appConfig.max_file_upload_mb || 10) * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();
     if (ALLOWED_FILE_EXTENSIONS.includes(ext)) {
@@ -746,7 +797,7 @@ app.post("/api/employees/:id/files", (req, res, next) => {
     }
 
     // Перевіряємо що дата закінчення не раніше дати видачі
-    if (issueDate && expiryDate && new Date(expiryDate) < new Date(issueDate)) {
+    if (issueDate && expiryDate && expiryDate < issueDate) {
       await fsPromises.unlink(req.file.path).catch(() => {});
       res.status(400).json({ error: "Дата закінчення не може бути раніше дати видачі" });
       return;

@@ -187,7 +187,11 @@ Open `http://localhost:5173` in your browser.
   - `config_key` - Configuration parameter name
   - `config_value` - Parameter value
   - `config_description` - Human-readable description
-  - Current settings: `max_log_entries` (default: 1000) for automatic log cleanup
+  - Current settings:
+    - `max_log_entries` (default: 1000) - Maximum audit log entries before automatic cleanup
+    - `max_file_upload_mb` (default: 10) - Maximum file upload size in megabytes
+    - `retirement_age_years` (default: 60) - Retirement age for auto-dismiss notifications
+    - `max_report_preview_rows` (default: 100) - Maximum rows shown in report preview table
 
 - **logs.csv** - Audit log of all changes with automatic cleanup (9 columns):
   - `log_id` - Log entry ID
@@ -409,9 +413,12 @@ All dropdown values in forms are managed via `data/dictionaries.csv`:
 - `POST /api/employees/:id/files` - Upload document (PDF/images) with optional issue_date and expiry_date
 - `DELETE /api/employees/:id/files/:fieldName` - Delete employee document
 - `GET /api/document-expiry` - Get document expiry events (today and next 7 days)
+- `GET /api/document-overdue` - Get overdue document events (past expiry date)
 - `GET /api/birthday-events` - Get birthday events (today and next 7 days)
+- `GET /api/retirement-events` - Get retirement events (employees reaching retirement age)
 - `GET /api/config` - Get system configuration (key-value object from config.csv)
 - `GET /api/reports/custom` - Generate custom filtered report (accepts filter parameters)
+- `GET /api/reports/statuses?type=current|month` - Get status report data (current or month)
 - `POST /api/employees/:id/open-folder` - Open employee's document folder in OS file explorer
 - `POST /api/employees/import` - Bulk import from CSV
 - `GET /api/dictionaries` - Get all reference data
@@ -459,6 +466,60 @@ nano data/fields_schema.csv
 ## Development
 
 For detailed architecture and development guidelines, see [CLAUDE.md](CLAUDE.md).
+
+## Testing
+
+The project includes comprehensive end-to-end (E2E) tests using [Playwright](https://playwright.dev/).
+
+### Running Tests
+
+**Prerequisites:** Start the application servers first:
+
+```bash
+./run.sh
+```
+
+**Run all tests:**
+
+```bash
+npm run test:e2e
+```
+
+**Run tests interactively (UI mode):**
+
+```bash
+npm run test:e2e:ui
+```
+
+**Run tests with visible browser:**
+
+```bash
+npm run test:e2e:headed
+```
+
+**Run specific test file:**
+
+```bash
+npm run test:e2e tests/e2e/employee-crud.spec.js
+```
+
+### Test Coverage
+
+The test suite covers all major user flows:
+
+- Employee CRUD operations (create, read, update, delete)
+- Document upload and management (PDF + images with dates)
+- Table view with multi-select filters and inline editing
+- Custom reports with advanced filters and CSV export
+- CSV import (valid/invalid data, template download)
+- Dashboard statistics, timeline, and notifications
+- Status changes with date ranges and automatic restoration
+- Retirement notifications with auto-dismiss
+- Audit logs viewing and search
+
+### Documentation
+
+For detailed testing documentation, debugging tips, and best practices, see [tests/README.md](tests/README.md).
 
 ## Known Limitations
 
