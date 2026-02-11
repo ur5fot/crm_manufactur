@@ -1266,8 +1266,16 @@ app.post("/api/templates/:id/generate", async (req, res) => {
     const sanitizedName = template.template_name.replace(/[^a-zA-Z0-9а-яА-ЯіїєґІЇЄҐ]/g, '_');
     const docxFilename = `${sanitizedName}_${employee_id}_${timestamp}.docx`;
 
-    // Paths
+    // Paths with path traversal protection
     const templatePath = path.join(FILES_DIR, 'templates', template.docx_filename);
+    const resolvedTemplatePath = path.resolve(templatePath);
+    const allowedTemplateDir = path.resolve(FILES_DIR, 'templates');
+
+    if (!resolvedTemplatePath.startsWith(allowedTemplateDir + path.sep)) {
+      res.status(403).json({ error: "Недозволений шлях до шаблону" });
+      return;
+    }
+
     const outputPath = path.join(FILES_DIR, 'documents', docxFilename);
 
     // Check template file exists
@@ -1428,8 +1436,15 @@ app.get("/api/documents/:id/download", async (req, res) => {
       return;
     }
 
-    // Validate file exists
+    // Validate file exists and prevent path traversal
     const filePath = path.join(FILES_DIR, 'documents', document.docx_filename);
+    const resolvedPath = path.resolve(filePath);
+    const allowedDir = path.resolve(FILES_DIR, 'documents');
+
+    if (!resolvedPath.startsWith(allowedDir + path.sep)) {
+      res.status(403).json({ error: "Недозволений шлях до файлу" });
+      return;
+    }
 
     if (!fs.existsSync(filePath)) {
       res.status(404).json({ error: "Файл документу не знайдено на диску" });
