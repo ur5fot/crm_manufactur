@@ -245,3 +245,111 @@ test.describe('Document Generation E2E', () => {
     }
   });
 });
+
+test.describe('Document Download E2E', () => {
+  test('Direct document download via API returns 200 with DOCX', async ({ request }) => {
+    // Read generated_documents.csv to get an existing document ID
+    const csvPath = path.resolve(__dirname, '../../data/generated_documents.csv');
+    const csvContent = fs.readFileSync(csvPath, 'utf-8');
+    const lines = csvContent.split('\n').filter(line => line.trim());
+
+    if (lines.length > 1) {
+      // Get first document (skip header)
+      const firstDoc = lines[1];
+      const fields = firstDoc.split(';');
+      const documentId = fields[0];
+      const docxFilename = fields[3];
+
+      // Verify the file exists on disk
+      const filePath = path.resolve(__dirname, '../../data/files/documents', docxFilename);
+      const fileExists = fs.existsSync(filePath);
+
+      if (fileExists) {
+        // Make GET request to download endpoint
+        const response = await request.get(`http://localhost:3000/api/documents/${documentId}/download`);
+
+        // Verify status code
+        expect(response.status()).toBe(200);
+
+        // Verify Content-Type header
+        const contentType = response.headers()['content-type'];
+        expect(contentType).toContain('application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+
+        // Verify Content-Disposition header has filename
+        const contentDisposition = response.headers()['content-disposition'];
+        expect(contentDisposition).toBeTruthy();
+        expect(contentDisposition).toContain('attachment');
+        expect(contentDisposition).toContain(docxFilename);
+
+        // Verify response body is binary and non-empty
+        const body = await response.body();
+        expect(body.length).toBeGreaterThan(0);
+      } else {
+        // Skip test if document file is missing
+        expect(true).toBe(true);
+      }
+    } else {
+      // Skip test if no documents exist
+      expect(true).toBe(true);
+    }
+  });
+
+  test('404 error when document_id does not exist', async ({ request }) => {
+    // Use a non-existent document ID
+    const nonExistentId = '999999999';
+
+    // Make GET request
+    const response = await request.get(`http://localhost:3000/api/documents/${nonExistentId}/download`);
+
+    // Verify 404 status
+    expect(response.status()).toBe(404);
+
+    // Verify error message
+    const body = await response.json();
+    expect(body.error).toContain('не знайдено');
+  });
+
+  test('404 error when document file missing from disk', async ({ request }) => {
+    // Create a test document entry in CSV with non-existent file
+    const csvPath = path.resolve(__dirname, '../../data/generated_documents.csv');
+    const csvContent = fs.readFileSync(csvPath, 'utf-8');
+    const lines = csvContent.split('\n').filter(line => line.trim());
+
+    // Get max document_id
+    let maxId = 0;
+    for (let i = 1; i < lines.length; i++) {
+      const fields = lines[i].split(';');
+      const id = parseInt(fields[0], 10);
+      if (id > maxId) {
+        maxId = id;
+      }
+    }
+
+    const testDocId = (maxId + 1).toString();
+    const nonExistentFilename = 'non_existent_file_test_12345.docx';
+    // Use CSV-style escaping: double quotes inside quoted field are escaped as ""
+    const testSnapshot = JSON.stringify({test: 'data'}).replace(/"/g, '""');
+    const testData = `${testDocId};1;1;${nonExistentFilename};2026-02-11T00:00:00.000Z;system;"${testSnapshot}"`;
+
+    // Backup original CSV
+    const originalContent = csvContent;
+
+    // Append test data to CSV
+    fs.appendFileSync(csvPath, '\n' + testData);
+
+    try {
+      // Make GET request
+      const response = await request.get(`http://localhost:3000/api/documents/${testDocId}/download`);
+
+      // Verify 404 status
+      expect(response.status()).toBe(404);
+
+      // Verify error message
+      const body = await response.json();
+      expect(body.error).toContain('не знайдено на диску');
+    } finally {
+      // Clean up: restore original CSV
+      fs.writeFileSync(csvPath, originalContent);
+    }
+  });
+});

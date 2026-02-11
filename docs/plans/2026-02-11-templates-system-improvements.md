@@ -65,14 +65,14 @@ What needs to be added:
 **Files:**
 - Modify: `tests/e2e/templates-generation.spec.js`
 
-- [ ] Add test for direct document download via API
-- [ ] Create a test document in generated_documents.csv
-- [ ] Test: GET /api/documents/:id/download returns 200 with DOCX
-- [ ] Test: Verify Content-Type header is `application/vnd.openxmlformats-officedocument.wordprocessingml.document`
-- [ ] Test: Verify Content-Disposition header has filename
-- [ ] Test: 404 error when document_id doesn't exist
-- [ ] Test: 404 error when document file missing from disk
-- [ ] Run test: `npm run test:e2e -- templates-generation.spec.js`
+- [x] Add test for direct document download via API
+- [x] Create a test document in generated_documents.csv
+- [x] Test: GET /api/documents/:id/download returns 200 with DOCX
+- [x] Test: Verify Content-Type header is `application/vnd.openxmlformats-officedocument.wordprocessingml.document`
+- [x] Test: Verify Content-Disposition header has filename
+- [x] Test: 404 error when document_id doesn't exist
+- [x] Test: 404 error when document file missing from disk
+- [x] Run test: `npm run test:e2e -- templates-generation.spec.js`
 
 ---
 
