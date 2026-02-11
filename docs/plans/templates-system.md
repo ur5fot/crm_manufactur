@@ -67,14 +67,14 @@
 - [x] Test download with curl
 
 ### Task 7: Frontend API Client
-- [ ] Add getTemplates() to client/src/api.js
-- [ ] Add getTemplate(id)
-- [ ] Add createTemplate(payload)
-- [ ] Add updateTemplate(id, payload)
-- [ ] Add deleteTemplate(id)
-- [ ] Add uploadTemplateFile(id, formData)
-- [ ] Add generateDocument(templateId, employeeId, customData)
-- [ ] Add downloadDocument(documentId) returning URL
+- [x] Add getTemplates() to client/src/api.js
+- [x] Add getTemplate(id)
+- [x] Add createTemplate(payload)
+- [x] Add updateTemplate(id, payload)
+- [x] Add deleteTemplate(id)
+- [x] Add uploadTemplateFile(id, formData)
+- [x] Add generateDocument(templateId, employeeId, customData)
+- [x] Add downloadDocument(documentId) returning URL
 
 ### Task 8: Templates View Navigation
 - [ ] Add {key: 'templates', label: 'Шаблони'} to tabs in App.vue

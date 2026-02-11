@@ -127,5 +127,46 @@ export const api = {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  },
+
+  // Templates API
+  getTemplates() {
+    return request("/templates");
+  },
+  getTemplate(id) {
+    return request(`/templates/${id}`);
+  },
+  createTemplate(payload) {
+    return request("/templates", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+  },
+  updateTemplate(id, payload) {
+    return request(`/templates/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+  },
+  deleteTemplate(id) {
+    return request(`/templates/${id}`, { method: "DELETE" });
+  },
+  uploadTemplateFile(id, formData) {
+    return request(`/templates/${id}/upload`, {
+      method: "POST",
+      body: formData
+    });
+  },
+  generateDocument(templateId, employeeId, customData = {}) {
+    return request(`/templates/${templateId}/generate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ employee_id: employeeId, custom_data: customData })
+    });
+  },
+  downloadDocument(documentId) {
+    return `${BASE_URL}/documents/${documentId}/download`;
   }
 };
