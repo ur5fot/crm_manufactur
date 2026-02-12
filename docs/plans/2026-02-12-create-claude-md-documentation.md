@@ -1,0 +1,206 @@
+# Create comprehensive CLAUDE.md documentation file for the CRM Manufacturing System project
+
+## Overview
+Create a CLAUDE.md file that documents the architecture, technical decisions, code patterns, and development workflows for the CRM Manufacturing System.
+
+## Context
+- Files involved:
+  - Create: `CLAUDE.md` (root directory)
+  - Reference: `README.md`, `docs/plans/completed/*.md`, `server/src/index.js`, `server/src/store.js`, `client/src/App.vue`
+- Related patterns: Documentation pattern from completed plans (references to CLAUDE.md sections)
+- Dependencies: None
+
+## Approach
+- Review approach: Analyze existing code and completed plans to extract patterns
+- Write comprehensive CLAUDE.md covering all aspects of the project
+- No testing required (documentation task)
+
+---
+
+## TASK 1: Create CLAUDE.md - Project Overview and Architecture
+
+**Files:**
+- Create: `CLAUDE.md`
+
+**Steps:**
+- [x] Create CLAUDE.md in root directory
+- [x] Add project overview section (CRM Manufacturing System description)
+- [x] Document technology stack (Node.js, Express, Vue.js, CSV storage)
+- [x] Document project structure (client/, server/, data/, files/, tests/, docs/)
+- [x] Document data storage architecture (CSV files with file locking)
+- [x] Document file organization (templates, documents, employee folders)
+
+---
+
+## TASK 2: Document Key Technical Decisions
+
+**Files:**
+- Modify: `CLAUDE.md`
+
+**Steps:**
+- [ ] Add "Key Technical Decisions" section
+- [ ] Document CSV-based storage rationale and limitations (suitable for <10k employees)
+- [ ] Document file locking pattern for concurrent writes (employeeWriteLock, templatesWriteLock, etc.)
+- [ ] Document soft delete pattern (active='yes'/'no' instead of hard deletes)
+- [ ] Document audit logging for all operations (logs.csv)
+- [ ] Document UTF-8 BOM and semicolon delimiter conventions
+- [ ] Document auto-increment ID pattern for entities
+- [ ] Document security decisions (path traversal protection, input validation, file size limits)
+
+---
+
+## TASK 3: Document Backend Code Patterns
+
+**Files:**
+- Modify: `CLAUDE.md`
+
+**Steps:**
+- [ ] Add "Backend Patterns" section
+- [ ] Document API route structure and conventions
+- [ ] Document CSV read/write patterns (loadX, saveX functions in store.js)
+- [ ] Document multer file upload pattern and configuration
+- [ ] Document error handling and HTTP status codes
+- [ ] Document data validation patterns
+- [ ] Document joining data from multiple CSV files pattern
+- [ ] Document DOCX generation pattern (docxtemplater usage)
+- [ ] Document placeholder extraction and replacement
+
+---
+
+## TASK 4: Document Frontend Code Patterns
+
+**Files:**
+- Modify: `CLAUDE.md`
+
+**Steps:**
+- [ ] Add "Frontend Patterns" section
+- [ ] Document Vue.js 3 Composition API usage
+- [ ] Document routing structure (/cards, /reports, /import, /logs, /dashboard, /templates, /document-history)
+- [ ] Document API client pattern (api.js)
+- [ ] Document form validation and unsaved changes warning
+- [ ] Document modal/popup patterns (templates, status change, document upload)
+- [ ] Document table filtering and pagination patterns
+- [ ] Document dynamic field schema loading from fields_schema.csv
+- [ ] Document Bootstrap UI components usage
+
+---
+
+## TASK 5: Document Testing Approach
+
+**Files:**
+- Modify: `CLAUDE.md`
+
+**Steps:**
+- [ ] Add "Testing" section
+- [ ] Document E2E testing with Playwright (tests/e2e/)
+- [ ] Document test structure and naming conventions
+- [ ] Document unit/integration tests (server/test/)
+- [ ] Document test data fixtures pattern
+- [ ] Document test commands (npm run test:e2e, cd server && npm test)
+- [ ] Document testing approach: Regular (code first, then tests)
+- [ ] Document test coverage expectations (80%+)
+- [ ] Document critical rule: all tests must pass before moving to next task
+
+---
+
+## TASK 6: Document API Endpoints
+
+**Files:**
+- Modify: `CLAUDE.md`
+
+**Steps:**
+- [ ] Add "API Structure" section
+- [ ] Document employees API endpoints (CRUD, import, export)
+- [ ] Document templates API endpoints (CRUD, upload, generate)
+- [ ] Document documents API endpoints (list with filters, download)
+- [ ] Document logs API endpoint
+- [ ] Document dashboard/stats API endpoints
+- [ ] Document config API endpoints
+- [ ] Document file management endpoints (open folder)
+- [ ] Reference README.md for detailed API documentation
+
+---
+
+## TASK 7: Document Development Workflow
+
+**Files:**
+- Modify: `CLAUDE.md`
+
+**Steps:**
+- [ ] Add "Development Workflow" section
+- [ ] Document how to run the application (./run.sh, or separate server/client commands)
+- [ ] Document how to stop the application (./stop.sh)
+- [ ] Document development mode (npm run dev)
+- [ ] Document port configuration (server: 3000, client: 5173)
+- [ ] Document plan-based development approach (docs/plans/)
+- [ ] Document plan structure and completion checklist
+- [ ] Document when to update CLAUDE.md (internal patterns change)
+- [ ] Document when to update README.md (user-facing changes)
+
+---
+
+## TASK 8: Document Special Features
+
+**Files:**
+- Modify: `CLAUDE.md`
+
+**Steps:**
+- [ ] Add "Special Features" section
+- [ ] Document templates system (DOCX upload, placeholder extraction, generation)
+- [ ] Document placeholder syntax ({field_name}, {current_date}, {current_datetime})
+- [ ] Document document history tracking with data snapshots
+- [ ] Document status change system (employment_status, status_start_date, status_end_date)
+- [ ] Document automatic status reset when end date expires
+- [ ] Document dashboard notifications (birthdays, retirements, document expiry, status changes)
+- [ ] Document document expiry tracking and notifications
+- [ ] Document custom reports with dynamic filters
+
+---
+
+## TASK 9: Document Code Style and Conventions
+
+**Files:**
+- Modify: `CLAUDE.md`
+
+**Steps:**
+- [ ] Add "Code Style and Conventions" section
+- [ ] Document naming conventions (snake_case for CSV fields, camelCase for JS)
+- [ ] Document file naming patterns (employee_{id}, template_{id}_{timestamp}.docx)
+- [ ] Document date format conventions (YYYY-MM-DD for storage, DD.MM.YYYY for display)
+- [ ] Document timestamp format (ISO 8601)
+- [ ] Document comments and documentation style
+- [ ] Document error message patterns (Ukrainian language for user-facing messages)
+- [ ] Document console.log conventions for debugging
+
+---
+
+## TASK 10: Document Future Enhancement Patterns
+
+**Files:**
+- Modify: `CLAUDE.md`
+
+**Steps:**
+- [ ] Add "Future Enhancements" section
+- [ ] Document migration path to database (SQLite, PostgreSQL)
+- [ ] Reference docs/templates-system-improvements.md for backlog
+- [ ] Document scalability considerations
+- [ ] Document potential performance optimizations
+- [ ] Add note about maintaining documentation when adding features
+
+---
+
+## Verification
+
+- [ ] CLAUDE.md file exists in root directory
+- [ ] All major sections are complete and comprehensive
+- [ ] Documentation accurately reflects current implementation
+- [ ] Cross-references to README.md are correct
+- [ ] Code examples (if any) are valid
+- [ ] Markdown formatting is correct and renders properly
+
+---
+
+## Post-completion
+
+- [ ] No README.md update needed (this is internal documentation)
+- [ ] Move this plan to `docs/plans/completed/`
