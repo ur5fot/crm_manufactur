@@ -2047,3 +2047,209 @@ For detailed API endpoint documentation with request/response examples, query pa
 
 ---
 
+## Development Workflow
+
+This section documents the standard development workflow and practices for working on the CRM Manufacturing System project.
+
+### Running the Application
+
+The application provides scripts for easy startup and shutdown of both server and client components.
+
+**Quick Start** (recommended for development):
+```bash
+./run.sh
+```
+
+This script:
+1. Checks for npm installation
+2. Installs dependencies if node_modules/ is missing (both server and client)
+3. Initializes config.csv from config.template.csv if not exists
+4. Runs CSV template synchronization (sync-template.js)
+5. Starts server in watch mode (port 3000)
+6. Starts client in development mode (port 5173)
+7. Runs both services in parallel
+8. Handles cleanup on exit (Ctrl+C)
+
+**Production Mode**:
+```bash
+./run.sh prod
+```
+
+Production mode uses different ports:
+- Server: port 3001 (instead of 3000)
+- Client: port 5174 (instead of 5173)
+
+**Manual Start** (alternative for debugging):
+```bash
+# Terminal 1 - Start server
+cd server
+npm install
+npm run dev
+
+# Terminal 2 - Start client
+cd client
+npm install
+npm run dev
+```
+
+### Stopping the Application
+
+**Quick Stop**:
+```bash
+./stop.sh
+```
+
+This script:
+1. Finds processes using ports 3000 (server) and 5173 (client)
+2. Terminates both processes
+3. Provides confirmation messages
+
+**Production Mode Stop**:
+```bash
+./stop.sh prod
+```
+
+Stops services running on production ports (3001, 5174).
+
+**Manual Stop**:
+- Ctrl+C in each terminal running server/client
+- Or use `lsof -ti:3000 | xargs kill -9` for manual port cleanup
+
+### Development Mode Details
+
+**Server Development Mode**:
+- Command: `npm run dev` (runs `node --watch src/index.js`)
+- Port: 3000 (configurable via PORT environment variable)
+- Features:
+  - Automatic restart on file changes (--watch flag)
+  - Logs all requests to console
+  - CORS enabled for cross-origin requests from client
+  - No build step required (ES modules directly executed)
+
+**Client Development Mode**:
+- Command: `npm run dev` (runs Vite dev server)
+- Port: 5173 (configurable via VITE_PORT environment variable)
+- Features:
+  - Hot module replacement (instant updates on save)
+  - Fast cold start (Vite's native ESM approach)
+  - Source maps for debugging
+  - Proxy API requests to backend server
+  - Accessible at: http://localhost:5173
+
+**Production Build** (client):
+```bash
+cd client
+npm run build
+```
+
+Generates optimized production bundle in `client/dist/`.
+
+### Port Configuration
+
+The application uses standard ports for development:
+
+**Development Ports** (default):
+- Server: 3000
+- Client: 5173
+- Configure via PORT and VITE_PORT environment variables
+
+**Production Ports** (with `./run.sh prod`):
+- Server: 3001
+- Client: 5174
+
+**Port Conflicts**:
+If ports are already in use:
+1. Use `./stop.sh` to clean up previous instances
+2. Or change PORT/VITE_PORT environment variables before starting
+3. Or manually kill processes: `lsof -ti:PORT | xargs kill -9`
+
+### Plan-Based Development Approach
+
+This project uses a structured plan-based development workflow:
+
+**Plan Location**:
+- Active plans: `docs/plans/`
+- Completed plans: `docs/plans/completed/`
+
+**Plan Structure**:
+
+Each plan file follows this structure:
+
+1. **Header**: Title and brief description
+2. **Metadata**:
+   - Files involved (create/modify/delete)
+   - Related patterns (existing code patterns to follow)
+   - Dependencies (other plans or features required)
+3. **Implementation Approach**:
+   - Testing approach (Regular: code first, then tests)
+   - High-level strategy
+   - Critical constraints or requirements
+4. **Tasks**: Broken down into numbered task sections
+   - Each task has specific files and steps
+   - Steps are checkboxes ([ ] uncompleted, [x] completed)
+   - One task section implemented per iteration
+5. **Validation**: Manual or automated tests to verify implementation
+6. **Completion**: Post-completion checklist (documentation, plan archival)
+
+**Task Completion Workflow**:
+
+1. **Select Plan**: Choose active plan from docs/plans/
+2. **Find First Uncompleted Task**: Locate first task section with [ ] checkboxes
+3. **Implement Task**:
+   - Read plan overview and context
+   - Implement ALL checkboxes in current task section
+   - Write tests if testing approach requires
+4. **Validate**:
+   - Run test commands (e.g., npm run test:e2e, cd server && npm test)
+   - Fix failures until all tests pass
+   - CRITICAL: All tests must pass before proceeding
+5. **Complete Task**:
+   - Edit plan file: change [ ] to [x] for implemented checkboxes
+   - Commit changes with message: `feat: <task description>`
+   - If all tasks complete, move plan to docs/plans/completed/
+6. **Next Task**: Repeat for next task section with [ ] checkboxes
+
+**Plan Naming Convention**:
+- Format: `YYYY-MM-DD-short-description.md`
+- Example: `2026-02-10-move-new-employee-button-to-cards-sidebar.md`
+
+**Critical Rules**:
+- ONE task section per iteration (do not skip ahead)
+- ALL checkboxes in a task must be completed before moving to next task
+- ALL tests must pass before marking task complete
+- Commit after each task completion (not after each checkbox)
+- Mark checkboxes [x] in plan file before committing
+
+### When to Update Documentation
+
+**Update CLAUDE.md** (this file):
+- When internal architecture changes (new patterns, data structures)
+- When adding new backend code patterns (store functions, API routes)
+- When adding new frontend code patterns (Vue components, routing)
+- When technical decisions change (e.g., switch from CSV to database)
+- When testing approach changes
+- When development workflow changes
+
+**Update README.md**:
+- When user-facing features change (new views, functionality)
+- When API endpoints change (new endpoints, parameter changes)
+- When installation or setup steps change
+- When configuration options change (config.csv fields)
+- When user workflow changes (how to use the system)
+- When screenshots or UI examples need updates
+
+**Update Plan Files**:
+- Mark checkboxes [x] as tasks are completed
+- Move to completed/ when all tasks done
+- NEVER modify plan structure mid-implementation (breaks iteration tracking)
+
+**Documentation Best Practices**:
+- Document WHILE implementing, not after (fresher context)
+- Keep CLAUDE.md focused on patterns and technical decisions
+- Keep README.md focused on user perspective and usage
+- Include code examples in CLAUDE.md for complex patterns
+- Link between CLAUDE.md and README.md when topics overlap
+- Update documentation in same commit as code changes when possible
+
+---
+

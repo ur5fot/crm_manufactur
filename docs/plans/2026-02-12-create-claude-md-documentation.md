@@ -127,15 +127,15 @@ Create a CLAUDE.md file that documents the architecture, technical decisions, co
 - Modify: `CLAUDE.md`
 
 **Steps:**
-- [ ] Add "Development Workflow" section
-- [ ] Document how to run the application (./run.sh, or separate server/client commands)
-- [ ] Document how to stop the application (./stop.sh)
-- [ ] Document development mode (npm run dev)
-- [ ] Document port configuration (server: 3000, client: 5173)
-- [ ] Document plan-based development approach (docs/plans/)
-- [ ] Document plan structure and completion checklist
-- [ ] Document when to update CLAUDE.md (internal patterns change)
-- [ ] Document when to update README.md (user-facing changes)
+- [x] Add "Development Workflow" section
+- [x] Document how to run the application (./run.sh, or separate server/client commands)
+- [x] Document how to stop the application (./stop.sh)
+- [x] Document development mode (npm run dev)
+- [x] Document port configuration (server: 3000, client: 5173)
+- [x] Document plan-based development approach (docs/plans/)
+- [x] Document plan structure and completion checklist
+- [x] Document when to update CLAUDE.md (internal patterns change)
+- [x] Document when to update README.md (user-facing changes)
 
 ---
 
