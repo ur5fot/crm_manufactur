@@ -1677,13 +1677,18 @@ async function deleteEmployee() {
 
 function openDocument(fieldKey) {
   const filePath = form[fieldKey];
-  if (!filePath) return;
+  console.log('Opening document - fieldKey:', fieldKey, 'filePath:', filePath);
+  if (!filePath) {
+    console.log('No file path found for field:', fieldKey);
+    return;
+  }
   // SECURITY: Validate file path starts with expected prefix to prevent XSS
   if (!filePath.startsWith('files/')) {
-    console.error('Invalid file path:', filePath);
+    console.error('Invalid file path (must start with "files/"):', filePath);
     return;
   }
   const url = `${import.meta.env.VITE_API_URL || ""}/${filePath}`;
+  console.log('Opening document URL:', url);
   window.open(url, "_blank");
 }
 

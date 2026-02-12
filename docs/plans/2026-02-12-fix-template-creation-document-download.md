@@ -96,11 +96,11 @@ Additionally, need to verify that document file paths are correctly constructed 
 **Files:**
 - client/src/App.vue
 
-- [ ] Review openDocument function (line 1678-1688)
-- [ ] Verify form[fieldKey] contains correct file path format (should start with 'files/')
-- [ ] Add console.log to debug: console.log('Opening document:', filePath, 'URL:', url)
-- [ ] Test with actual employee that has uploaded documents
-- [ ] If path validation fails, check where file paths are set during upload
+- [x] Review openDocument function (line 1678-1688)
+- [x] Verify form[fieldKey] contains correct file path format (should start with 'files/')
+- [x] Add console.log to debug: console.log('Opening document:', filePath, 'URL:', url)
+- [x] Test with actual employee that has uploaded documents
+- [x] If path validation fails, check where file paths are set during upload
 
 ## Validation
 
