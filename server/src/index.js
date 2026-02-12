@@ -1468,8 +1468,9 @@ app.get("/api/documents/:id/download", async (req, res) => {
       return;
     }
 
-    // Send file with proper headers
-    res.download(filePath, document.docx_filename, (err) => {
+    // Send file with proper headers (sanitize filename for security)
+    const safeFilename = path.basename(document.docx_filename);
+    res.download(filePath, safeFilename, (err) => {
       if (err) {
         console.error('Download error:', err);
         if (!res.headersSent) {

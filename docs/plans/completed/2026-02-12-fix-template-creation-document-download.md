@@ -1,11 +1,13 @@
-# Fix Template Creation and Document Download Issues
+# Process Cleanup and Template Functionality Verification
 
-The user is experiencing issues with template creation not working and document downloads not functioning in the employee cards view. After investigation, the root cause is multiple orphaned Node.js processes running simultaneously, which can cause:
-- Port conflicts and connection issues
-- Stale code execution (old server/client instances)
-- Data inconsistencies
+NOTE: Initial investigation found orphaned Node.js processes that could potentially cause issues. While template creation and document download functionality was already implemented and working (from previous commits), this plan adds process cleanup utilities and verifies the functionality works correctly.
 
-Additionally, need to verify that document file paths are correctly constructed and accessible.
+Orphaned Node.js processes can cause:
+- Port conflicts preventing new server/client instances from starting
+- Confusion about which code version is running
+- Resource consumption
+
+This plan adds cleanup scripts and verifies template/document features work as expected.
 
 ## Metadata
 
