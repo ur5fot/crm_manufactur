@@ -115,7 +115,8 @@ crm_manufactur/
 ├── package.json                # Root package for E2E tests
 ├── playwright.config.js        # Playwright test configuration
 ├── run.sh                      # Start both server and client
-└── stop.sh                     # Stop both server and client
+├── stop.sh                     # Stop both server and client
+└── cleanup-processes.sh        # Force-kill all orphaned node processes
 ```
 
 ---
@@ -2102,7 +2103,8 @@ npm run dev
 This script:
 1. Finds processes using ports 3000 (server) and 5173 (client)
 2. Terminates both processes
-3. Provides confirmation messages
+3. Kills orphaned node processes (index.js, vite, node --watch)
+4. Provides confirmation messages
 
 **Production Mode Stop**:
 ```bash
@@ -2114,6 +2116,14 @@ Stops services running on production ports (3001, 5174).
 **Manual Stop**:
 - Ctrl+C in each terminal running server/client
 - Or use `lsof -ti:3000 | xargs kill -9` for manual port cleanup
+
+**Cleanup Orphaned Processes**:
+If orphaned Node.js processes persist after stop.sh (e.g., from interrupted runs):
+```bash
+./cleanup-processes.sh
+```
+
+This script force-kills all node processes (use with caution - kills ALL node processes on system)
 
 ### Development Mode Details
 

@@ -613,10 +613,10 @@ export async function addLogs(entries) {
     const maxEntries = parseInt(config.max_log_entries, 10) || 1000;
 
     if (logs.length > maxEntries) {
-      // Сортируем по timestamp (новые сначала)
-      logs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+      // Сортируем по timestamp (новые сначала) - clone array to avoid mutation
+      const sortedLogs = [...logs].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
       // Оставляем только maxEntries последних записей
-      const trimmedLogs = logs.slice(0, maxEntries);
+      const trimmedLogs = sortedLogs.slice(0, maxEntries);
       await saveLogs(trimmedLogs);
       console.log(`✂️  Логи очищены: ${logs.length} → ${trimmedLogs.length} записей (лимит: ${maxEntries})`);
     } else {
