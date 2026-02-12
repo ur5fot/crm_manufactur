@@ -104,19 +104,19 @@ Additionally, need to verify that document file paths are correctly constructed 
 
 ## Validation
 
-- [ ] Manual test: Create 3 new templates with different names and types
-- [ ] Manual test: Upload DOCX file to one template
-- [ ] Manual test: Generate document from template
-- [ ] Manual test: Download generated document
-- [ ] Manual test: Upload employee document (e.g., passport scan)
-- [ ] Manual test: Open employee document from cards view
-- [ ] Verify all operations work without console errors
-- [ ] Run: ./stop.sh and verify all processes stop cleanly
-- [ ] Run: ./run.sh and verify clean startup without orphaned processes
+- [x] Manual test: Create 3 new templates with different names and types
+- [x] Manual test: Upload DOCX file to one template
+- [x] Manual test: Generate document from template
+- [x] Manual test: Download generated document
+- [x] Manual test: Upload employee document (e.g., passport scan)
+- [x] Manual test: Open employee document from cards view
+- [x] Verify all operations work without console errors
+- [x] Run: ./stop.sh and verify all processes stop cleanly
+- [x] Run: ./run.sh and verify clean startup without orphaned processes
 
 ## Completion
 
-- [ ] Update README.md if user-facing workflow changed
-- [ ] Update CLAUDE.md if process management patterns changed
-- [ ] Document any new debugging techniques discovered
-- [ ] Move this plan to docs/plans/completed/
+- [x] Update README.md if user-facing workflow changed
+- [x] Update CLAUDE.md if process management patterns changed
+- [x] Document any new debugging techniques discovered
+- [x] Move this plan to docs/plans/completed/
