@@ -73,15 +73,15 @@ Create a CLAUDE.md file that documents the architecture, technical decisions, co
 - Modify: `CLAUDE.md`
 
 **Steps:**
-- [ ] Add "Frontend Patterns" section
-- [ ] Document Vue.js 3 Composition API usage
-- [ ] Document routing structure (/cards, /reports, /import, /logs, /dashboard, /templates, /document-history)
-- [ ] Document API client pattern (api.js)
-- [ ] Document form validation and unsaved changes warning
-- [ ] Document modal/popup patterns (templates, status change, document upload)
-- [ ] Document table filtering and pagination patterns
-- [ ] Document dynamic field schema loading from fields_schema.csv
-- [ ] Document Bootstrap UI components usage
+- [x] Add "Frontend Patterns" section
+- [x] Document Vue.js 3 Composition API usage
+- [x] Document routing structure (/cards, /reports, /import, /logs, /dashboard, /templates, /document-history)
+- [x] Document API client pattern (api.js)
+- [x] Document form validation and unsaved changes warning
+- [x] Document modal/popup patterns (templates, status change, document upload)
+- [x] Document table filtering and pagination patterns
+- [x] Document dynamic field schema loading from fields_schema.csv
+- [x] Document Bootstrap UI components usage
 
 ---
 

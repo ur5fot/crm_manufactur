@@ -852,3 +852,604 @@ app.post("/api/templates/:id/upload", templateUpload.single('file'), async (req,
 
 ---
 
+## Frontend Patterns
+
+This section documents common code patterns and conventions used throughout the Vue.js frontend application.
+
+### Vue.js 3 Composition API Usage
+
+The application uses Vue.js 3 with the Composition API and script setup syntax for all components.
+
+**Component Structure Pattern**:
+```vue
+<script setup>
+import { ref, computed, onMounted, watch } from "vue";
+import { useRouter, useRoute } from "vue-router";
+import { api } from "./api";
+
+const router = useRouter();
+const route = useRoute();
+
+// Reactive state
+const employees = ref([]);
+const loading = ref(false);
+const errorMessage = ref("");
+
+// Computed properties
+const currentView = computed(() => route.name);
+
+// Watchers
+watch(() => route.params.id, (newId) => {
+  if (newId) {
+    loadEmployee(newId);
+  }
+});
+
+// Lifecycle hooks
+onMounted(async () => {
+  await loadData();
+});
+
+// Methods
+async function loadData() {
+  loading.value = true;
+  try {
+    const response = await api.getEmployees();
+    employees.value = response.employees;
+  } catch (err) {
+    errorMessage.value = err.message;
+  } finally {
+    loading.value = false;
+  }
+}
+</script>
+
+<template>
+  <div class="container">
+    <!-- Template content -->
+  </div>
+</template>
+```
+
+**Key Conventions**:
+- Use `ref()` for primitive reactive state
+- Use `computed()` for derived state
+- Use `watch()` for side effects on state changes
+- Async/await for all API calls
+- Try/catch/finally for error handling with loading states
+- Arrow functions for reactive dependencies in watch/computed
+
+### Application Routing Structure
+
+The application uses Vue Router 5 with history mode for SPA navigation.
+
+**Routes Configuration** (from main.js):
+```javascript
+const routes = [
+  { path: "/", name: "dashboard", component: App },
+  { path: "/cards/:id?", name: "cards", component: App },
+  { path: "/table", name: "table", component: App },
+  { path: "/reports", name: "reports", component: App },
+  { path: "/import", name: "import", component: App },
+  { path: "/templates", name: "templates", component: App },
+  { path: "/document-history", name: "document-history", component: App },
+  { path: "/logs", name: "logs", component: App }
+];
+```
+
+**Route Descriptions**:
+- `/` (dashboard): Main dashboard with statistics and notifications
+- `/cards/:id?`: Employee card view with optional employee ID parameter
+- `/table`: Employee list in table format
+- `/reports`: Reporting interface with status reports and custom filters
+- `/import`: CSV import interface for bulk employee operations
+- `/templates`: Document template management
+- `/document-history`: History of all generated documents
+- `/logs`: Audit log viewer
+
+**Navigation Patterns**:
+```javascript
+// Programmatic navigation
+router.push({ name: 'cards', params: { id: employeeId } });
+
+// Route parameter access
+const employeeId = route.params.id;
+
+// Route name access
+const currentView = computed(() => route.name);
+
+// Navigation with query parameters
+router.push({ name: 'document-history', query: { employee_id: id } });
+```
+
+**Navigation Guards**:
+- beforeEach guard checks for unsaved changes when leaving cards view
+- Prompts user confirmation before discarding unsaved data
+- Supports pending navigation that executes after user confirms
+
+### API Client Pattern
+
+The application uses a centralized API client module (api.js) with fetch-based requests.
+
+**API Client Structure**:
+```javascript
+const BASE_URL = import.meta.env.VITE_API_URL || "/api";
+
+async function request(path, options = {}) {
+  const response = await fetch(`${BASE_URL}${path}`, options);
+  if (!response.ok) {
+    let text = '';
+    try {
+      text = await response.text();
+    } catch (err) {
+      // Ignore text extraction errors
+    }
+    throw new Error(text || `Request failed: ${response.status}`);
+  }
+  if (response.status === 204) {
+    return null;
+  }
+  return response.json();
+}
+
+export const api = {
+  getEmployees() {
+    return request("/employees");
+  },
+  createEmployee(payload) {
+    return request("/employees", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+  },
+  // ... more methods
+};
+```
+
+**Usage Pattern in Components**:
+```javascript
+import { api } from "./api";
+
+async function saveEmployee() {
+  saving.value = true;
+  try {
+    if (selectedId.value) {
+      await api.updateEmployee(selectedId.value, form);
+    } else {
+      const response = await api.createEmployee(form);
+      selectedId.value = response.employee.employee_id;
+    }
+    await loadEmployees();
+    errorMessage.value = "";
+  } catch (err) {
+    errorMessage.value = err.message;
+  } finally {
+    saving.value = false;
+  }
+}
+```
+
+**Key Features**:
+- Centralized error handling in request() function
+- Automatic JSON parsing for successful responses
+- 204 No Content handled explicitly
+- Environment-based BASE_URL configuration
+- Consistent error throwing with response text
+
+### Form Validation and Unsaved Changes Warning
+
+The application implements comprehensive form change tracking and user warnings.
+
+**Form State Tracking**:
+```javascript
+// Form snapshot for dirty checking
+const savedFormSnapshot = ref(null);
+
+// Computed dirty state
+const isFormDirty = computed(() => {
+  if (!savedFormSnapshot.value) return false;
+
+  // Compare current form with saved snapshot
+  for (const key of employeeFields) {
+    const currentValue = form[key] || '';
+    const savedValue = savedFormSnapshot.value[key] || '';
+    if (currentValue !== savedValue) {
+      return true;
+    }
+  }
+  return false;
+});
+
+// Track which fields changed
+const changedFields = computed(() => {
+  if (!savedFormSnapshot.value || !isFormDirty.value) return [];
+
+  const changes = [];
+  for (const key of employeeFields) {
+    const currentValue = form[key] || '';
+    const savedValue = savedFormSnapshot.value[key] || '';
+    if (currentValue !== savedValue) {
+      const field = allFieldsSchema.value.find(f => f.key === key);
+      changes.push({
+        key,
+        label: field?.label || key,
+        oldValue: savedValue,
+        newValue: currentValue
+      });
+    }
+  }
+  return changes;
+});
+```
+
+**Unsaved Changes Protection**:
+```javascript
+// Navigation guard (in router.beforeEach)
+router.beforeEach((to, from, next) => {
+  if (from.name === 'cards' && to.name !== 'cards' && isFormDirty.value) {
+    pendingNavigation.value = to;
+    showUnsavedChangesPopup.value = true;
+    next(false); // Block navigation
+  } else {
+    next(); // Allow navigation
+  }
+});
+
+// Browser refresh/close warning
+window.addEventListener('beforeunload', (e) => {
+  if (isFormDirty.value && route.name === 'cards') {
+    e.preventDefault();
+    e.returnValue = ''; // Chrome requires returnValue to be set
+  }
+});
+
+// Watch route params for employee switching
+watch(() => route.params.id, (newId) => {
+  if (route.name === 'cards' && newId && newId !== selectedId.value) {
+    if (isFormDirty.value) {
+      pendingNavigation.value = { name: 'cards', params: { id: newId } };
+      showUnsavedChangesPopup.value = true;
+      return;
+    }
+    loadEmployee(newId);
+  }
+});
+```
+
+**Snapshot Management**:
+```javascript
+// Save snapshot after successful save or load
+function updateFormSnapshot() {
+  savedFormSnapshot.value = { ...form };
+}
+
+// Called after:
+// - Employee loaded from server
+// - Employee successfully saved
+// - User discards changes
+```
+
+### Modal/Popup Patterns
+
+The application uses custom modal overlays for dialogs and confirmations.
+
+**Modal Structure Pattern**:
+```vue
+<template>
+  <!-- Modal trigger -->
+  <button @click="showUploadTemplateModal = true">Upload Template</button>
+
+  <!-- Modal overlay -->
+  <div v-if="showUploadTemplateModal" class="vacation-notification-overlay" @click="closeUploadTemplateModal">
+    <div class="vacation-notification-card" @click.stop>
+      <div class="card-header">
+        <h3>Upload Template File</h3>
+        <button class="close-btn" @click="closeUploadTemplateModal">&times;</button>
+      </div>
+
+      <form @submit.prevent="handleUploadTemplate">
+        <div class="form-group">
+          <label>DOCX File:</label>
+          <input type="file" accept=".docx" required />
+        </div>
+
+        <div class="button-group">
+          <button type="submit" class="primary">Upload</button>
+          <button type="button" class="secondary" @click="closeUploadTemplateModal">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</template>
+
+<script setup>
+const showUploadTemplateModal = ref(false);
+
+function closeUploadTemplateModal() {
+  showUploadTemplateModal.value = false;
+}
+
+async function handleUploadTemplate(event) {
+  // Process upload
+  await uploadTemplate(formData);
+  closeUploadTemplateModal();
+}
+</script>
+```
+
+**Common Modal Types**:
+- Template upload modal: File upload for DOCX templates
+- Document generation modal: Employee selection and custom data input
+- Unsaved changes confirmation: Warning before discarding form changes
+- Delete confirmation: Confirmation before soft delete operations
+
+**Modal Patterns**:
+- Overlay with click-to-close background (vacation-notification-overlay)
+- Card with click.stop to prevent close (vacation-notification-card)
+- Close button in header (&times; character)
+- Form submission with @submit.prevent
+- Cancel button to close without action
+- Modal state tracked with ref boolean
+
+### Table Filtering and Pagination Patterns
+
+The application implements client-side and server-side filtering with pagination.
+
+**Client-Side Filtering** (for small datasets):
+```javascript
+// Search term filter
+const searchTerm = ref("");
+
+const filteredEmployees = computed(() => {
+  if (!searchTerm.value) return employees.value;
+
+  const term = searchTerm.value.toLowerCase();
+  return employees.value.filter(emp => {
+    return employeeFields.some(field => {
+      const value = emp[field] || '';
+      return String(value).toLowerCase().includes(term);
+    });
+  });
+});
+```
+
+**Advanced Filter Builder** (for reports):
+```javascript
+// Filter structure
+const customFilters = ref([
+  {
+    field: 'employment_status',
+    condition: 'contains',
+    value: 'Працює',
+    value2: '' // For date_range condition
+  }
+]);
+
+// Dynamic condition options based on field type
+const filterConditionOptions = (filter) => {
+  const fieldType = getFieldType(filter.field);
+
+  if (fieldType === 'number') {
+    return [
+      { value: 'greater_than', label: 'Більше ніж' },
+      { value: 'less_than', label: 'Менше ніж' },
+      { value: 'equals', label: 'Дорівнює' }
+    ];
+  }
+
+  if (fieldType === 'date') {
+    return [
+      { value: 'date_range', label: 'Період від-до' },
+      { value: 'empty', label: 'Порожнє' }
+    ];
+  }
+
+  // Default text filters
+  return [
+    { value: 'contains', label: 'Містить' },
+    { value: 'not_contains', label: 'Не містить' },
+    { value: 'empty', label: 'Порожнє' }
+  ];
+};
+```
+
+**Pagination Pattern** (document history):
+```javascript
+const documentHistoryOffset = ref(0);
+const documentHistoryLimit = ref(50);
+const documentHistoryTotal = ref(0);
+
+async function loadDocumentHistory() {
+  const response = await api.getGeneratedDocuments({
+    template_id: templateIdFilter.value,
+    employee_id: employeeIdFilter.value,
+    start_date: startDateFilter.value,
+    end_date: endDateFilter.value,
+    offset: documentHistoryOffset.value,
+    limit: documentHistoryLimit.value
+  });
+
+  generatedDocuments.value = response.documents;
+  documentHistoryTotal.value = response.total;
+}
+
+// Pagination controls
+function nextPage() {
+  if (documentHistoryOffset.value + documentHistoryLimit.value < documentHistoryTotal.value) {
+    documentHistoryOffset.value += documentHistoryLimit.value;
+    loadDocumentHistory();
+  }
+}
+
+function prevPage() {
+  if (documentHistoryOffset.value > 0) {
+    documentHistoryOffset.value = Math.max(0, documentHistoryOffset.value - documentHistoryLimit.value);
+    loadDocumentHistory();
+  }
+}
+```
+
+**Server-Side Filtering**:
+- Filters serialized to JSON and sent as query parameters
+- Server applies filters and returns matching subset
+- Total count returned for pagination UI
+- Offset/limit parameters for pagination
+
+### Dynamic Field Schema Loading
+
+The application loads field schema from the backend to dynamically render forms and filters.
+
+**Schema Loading Pattern**:
+```javascript
+const allFieldsSchema = ref([]);
+const fieldGroups = ref([]);
+
+async function loadSchema() {
+  const response = await api.getFieldsSchema();
+
+  // Store all fields
+  allFieldsSchema.value = response.fields.map(field => ({
+    key: field.field_name,
+    label: field.field_label,
+    type: field.field_type,
+    options: field.field_options?.split('|') || [],
+    group: field.field_group,
+    required: field.required === 'yes'
+  }));
+
+  // Group fields for form layout
+  fieldGroups.value = response.groups;
+}
+```
+
+**Dynamic Form Rendering**:
+```vue
+<template>
+  <div v-for="group in fieldGroups" :key="group.name" class="form-section">
+    <h4>{{ group.label }}</h4>
+
+    <div class="form-grid">
+      <div v-for="field in group.fields" :key="field.key" class="form-group">
+        <label>{{ field.label }}</label>
+
+        <!-- Text input -->
+        <input v-if="field.type === 'text'" v-model="form[field.key]" type="text" />
+
+        <!-- Select dropdown -->
+        <select v-else-if="field.type === 'select'" v-model="form[field.key]">
+          <option value="">— Виберіть —</option>
+          <option v-for="opt in field.options" :key="opt" :value="opt">{{ opt }}</option>
+        </select>
+
+        <!-- Date input -->
+        <input v-else-if="field.type === 'date'" v-model="form[field.key]" type="date" />
+
+        <!-- File upload -->
+        <div v-else-if="field.type === 'file'">
+          <input type="file" @change="handleFileUpload($event, field.key)" />
+          <a v-if="form[field.key]" :href="getFileUrl(field.key)" target="_blank">View</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+```
+
+**Schema-Based Utilities**:
+```javascript
+// Get field type by name
+const getFieldType = (fieldName) => {
+  const field = allFieldsSchema.value.find(f => f.key === fieldName);
+  return field?.type || 'text';
+};
+
+// Get field label by name
+const getFieldLabel = (fieldName) => {
+  const field = allFieldsSchema.value.find(f => f.key === fieldName);
+  return field?.label || fieldName;
+};
+
+// Get select options by field name
+const getFieldOptions = (fieldName) => {
+  const field = allFieldsSchema.value.find(f => f.key === fieldName);
+  return field?.options || [];
+};
+```
+
+**Benefits**:
+- Single source of truth for field definitions (fields_schema.csv)
+- No hardcoded field lists in frontend (except fallback)
+- Automatic UI updates when schema changes
+- Type-aware filtering and validation
+
+### Bootstrap UI Components Usage
+
+The application uses Bootstrap 5 utility classes and custom CSS for styling.
+
+**Common Bootstrap Patterns**:
+
+**Buttons**:
+```vue
+<button class="btn btn-primary">Primary Action</button>
+<button class="btn btn-secondary">Secondary Action</button>
+<button class="btn btn-danger">Delete</button>
+```
+
+**Cards**:
+```vue
+<div class="card">
+  <div class="card-header">
+    <h3>Card Title</h3>
+  </div>
+  <div class="card-body">
+    <p>Card content</p>
+  </div>
+</div>
+```
+
+**Forms**:
+```vue
+<div class="form-group">
+  <label for="field">Field Label</label>
+  <input id="field" class="form-control" type="text" v-model="form.field" />
+</div>
+
+<div class="form-grid">
+  <!-- Multiple form-group elements in grid layout -->
+</div>
+```
+
+**Tables**:
+```vue
+<table class="table table-striped table-hover">
+  <thead>
+    <tr>
+      <th>Column 1</th>
+      <th>Column 2</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr v-for="item in items" :key="item.id">
+      <td>{{ item.col1 }}</td>
+      <td>{{ item.col2 }}</td>
+    </tr>
+  </tbody>
+</table>
+```
+
+**Custom CSS Extensions**:
+- `vacation-notification-overlay`: Full-screen modal overlay with semi-transparent background
+- `vacation-notification-card`: Centered modal card with white background and shadow
+- `form-grid`: Responsive grid layout for form fields (2-3 columns)
+- `button-group`: Horizontal button layout with spacing
+- `card-header`: Custom header styling with flex layout
+
+**Responsive Design**:
+- Bootstrap grid system used for layout
+- Custom media queries for mobile-specific adjustments
+- Form grids collapse to single column on mobile
+- Tables use horizontal scroll on small screens
+
+---
+
