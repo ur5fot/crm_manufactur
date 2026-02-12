@@ -109,15 +109,15 @@ Create a CLAUDE.md file that documents the architecture, technical decisions, co
 - Modify: `CLAUDE.md`
 
 **Steps:**
-- [ ] Add "API Structure" section
-- [ ] Document employees API endpoints (CRUD, import, export)
-- [ ] Document templates API endpoints (CRUD, upload, generate)
-- [ ] Document documents API endpoints (list with filters, download)
-- [ ] Document logs API endpoint
-- [ ] Document dashboard/stats API endpoints
-- [ ] Document config API endpoints
-- [ ] Document file management endpoints (open folder)
-- [ ] Reference README.md for detailed API documentation
+- [x] Add "API Structure" section
+- [x] Document employees API endpoints (CRUD, import, export)
+- [x] Document templates API endpoints (CRUD, upload, generate)
+- [x] Document documents API endpoints (list with filters, download)
+- [x] Document logs API endpoint
+- [x] Document dashboard/stats API endpoints
+- [x] Document config API endpoints
+- [x] Document file management endpoints (open folder)
+- [x] Reference README.md for detailed API documentation
 
 ---
 

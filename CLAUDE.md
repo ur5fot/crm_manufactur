@@ -1714,3 +1714,336 @@ function createTestDocx(filePath, placeholders) {
 
 ---
 
+## API Structure
+
+This section documents the REST API endpoints provided by the Express.js backend. For detailed request/response schemas and examples, see the API Documentation section in README.md.
+
+### API Base URL and Configuration
+
+All API endpoints are served under the `/api` prefix:
+- Base URL: `http://localhost:3000/api`
+- Configurable port via PORT environment variable (default: 3000)
+- CORS enabled for cross-origin requests
+- JSON body parser with 10MB limit
+
+### Health Check and Configuration Endpoints
+
+**GET /api/health**
+- Health check endpoint for server status
+- Returns: `{ status: "ok" }`
+- Used by monitoring tools and E2E tests
+
+**GET /api/config**
+- Retrieve application configuration settings
+- Returns: Configuration object from config.csv
+- Fields: max_file_upload_mb, retirement_age_years, max_log_entries, max_report_preview_rows
+
+### Dashboard and Statistics Endpoints
+
+**GET /api/dashboard/stats**
+- Get dashboard statistics and metrics
+- Returns: Total employees count, status breakdown (Працює, На лікарняному, etc.)
+- Used by dashboard view for real-time statistics
+
+**GET /api/dashboard/events**
+- Get all dashboard notification events (combined)
+- Returns: Array of events with types: birthday, retirement, status_change
+- Each event includes: type, employee data, date, days_until (for future events)
+- Used by dashboard notifications section
+
+**GET /api/birthday-events**
+- Get birthday notification events
+- Query parameters:
+  - type: 'current' (this month) or 'month' (specific month)
+  - month: Month number (1-12, required if type='month')
+- Returns: Array of employees with birthdays in specified period
+- Each employee includes: birth_date, full_name, days_until
+
+**GET /api/retirement-events**
+- Get retirement notification events
+- Query parameters: Same as birthday-events
+- Returns: Array of employees approaching retirement age
+- Each employee includes: retirement_date, full_name, days_until
+
+**GET /api/document-expiry**
+- Get document expiry notification events
+- Returns: Array of employees with documents expiring soon
+- Each employee includes: document field, expiry date, days_until
+
+**GET /api/document-overdue**
+- Get overdue document notification events
+- Returns: Array of employees with expired documents
+- Each employee includes: document field, expiry date, days_overdue
+
+### Reporting Endpoints
+
+**GET /api/reports/statuses**
+- Get employment status report
+- Returns: Count of employees by employment_status
+- Fields: status name, count
+- Used by reports view status breakdown
+
+**GET /api/reports/custom**
+- Generate custom report with dynamic filters
+- Query parameters:
+  - filters: JSON array of filter objects
+  - limit: Max rows to return (default: 100, max: 1000)
+  - preview: Boolean, if true returns limited rows for preview
+- Filter object structure:
+  - field: Field name from fields_schema.csv
+  - condition: 'contains', 'not_contains', 'empty', 'greater_than', 'less_than', 'equals', 'date_range'
+  - value: Filter value (string, number, or date)
+  - value2: Second value for date_range condition
+- Returns: Filtered employee list
+- Used by reports view with custom filter builder
+
+### Employee CRUD Endpoints
+
+**GET /api/employees**
+- List all active employees (active='yes')
+- Returns: Array of employee objects with all fields
+- Used by table view and employee lists
+
+**GET /api/employees/:id**
+- Get single employee by ID
+- Returns: Employee object with all fields
+- 404 if not found
+
+**POST /api/employees**
+- Create new employee
+- Request body: Employee object with required fields
+- Response: Created employee object with assigned employee_id
+- Auto-generates employee_id, creates audit log entry
+
+**PUT /api/employees/:id**
+- Update existing employee
+- Request body: Employee object with updated fields
+- Response: Updated employee object
+- Creates audit log entry with field changes
+- 404 if not found
+
+**DELETE /api/employees/:id**
+- Soft delete employee (set active='no')
+- Response: 204 No Content
+- Creates audit log entry
+- 404 if not found
+
+### Employee File Management Endpoints
+
+**POST /api/employees/:id/files**
+- Upload file for specific employee document field
+- Request: Multipart form with file and fieldName
+- File saved to: `files/employee_{id}/` directory
+- Updates employee record with file path
+- Creates audit log entry
+- Security: Path traversal validation, file size limits
+- Returns: Updated employee object
+
+**DELETE /api/employees/:id/files/:fieldName**
+- Delete file for specific employee document field
+- Removes physical file from disk
+- Updates employee record (clears field value)
+- Creates audit log entry
+- Security: Path traversal validation
+- Returns: 204 No Content
+
+**POST /api/employees/:id/open-folder**
+- Open employee folder in system file manager
+- Creates folder if not exists
+- Uses platform-specific command (open/explorer/xdg-open)
+- Graceful degradation in headless environments
+- Security: Path traversal validation
+
+### Data Import and Export Endpoints
+
+**GET /api/export**
+- Export filtered employees to CSV
+- Query parameters:
+  - filters: JSON array of filter objects (same as /api/reports/custom)
+  - format: Export format (currently only 'csv')
+- Returns: CSV file download with UTF-8 BOM and semicolon delimiter
+- Filename: employees_export_YYYYMMDD_HHMMSS.csv
+- Creates audit log entry
+
+**POST /api/employees/import**
+- Import employees from CSV file
+- Request: Multipart form with CSV file
+- Validates CSV structure matches fields_schema.csv
+- Creates or updates employees based on employee_id presence
+- Creates audit log entries for each operation
+- Returns: Summary with created/updated counts
+- File size limit from config.csv (max_file_upload_mb)
+
+**GET /api/download/import-template**
+- Download CSV template for import
+- Returns: CSV file with headers from fields_schema.csv
+- Filename: employee_import_template.csv
+- Used to ensure correct format for imports
+
+### Field Schema Endpoint
+
+**GET /api/fields-schema**
+- Get dynamic field schema for employees
+- Returns: Array of field definitions from fields_schema.csv
+- Fields grouped by field_group for UI rendering
+- Each field includes:
+  - field_name: Database column name
+  - field_label: Ukrainian display label
+  - field_type: Data type (text, select, date, file, textarea, number)
+  - field_options: Pipe-delimited options for select fields
+  - field_group: Group name for form sections
+  - required: 'yes' or 'no'
+  - visible_in_card: 'yes' or 'no'
+  - visible_in_table: 'yes' or 'no'
+- Used by frontend to dynamically render forms and tables
+
+### Template CRUD Endpoints
+
+**GET /api/templates**
+- List all active templates (active='yes')
+- Returns: Array of template objects
+- Fields: template_id, template_name, template_type, description, placeholder_fields, active
+
+**GET /api/templates/:id**
+- Get single template by ID
+- Returns: Template object with metadata
+- 404 if not found
+
+**POST /api/templates**
+- Create new template
+- Request body: Template object
+- Required fields: template_name, template_type
+- Auto-generates template_id
+- Creates audit log entry
+- Returns: Created template object
+
+**PUT /api/templates/:id**
+- Update existing template metadata
+- Request body: Template object with updated fields
+- Creates audit log entry
+- Returns: Updated template object
+- 404 if not found
+
+**DELETE /api/templates/:id**
+- Soft delete template (set active='no')
+- Response: 204 No Content
+- Creates audit log entry
+- 404 if not found
+
+### Template File Management Endpoints
+
+**POST /api/templates/:id/upload**
+- Upload DOCX template file
+- Request: Multipart form with .docx file
+- Validates file extension (.docx only)
+- Extracts placeholders from DOCX using docxtemplater
+- Saves file as: `files/templates/template_{id}_{timestamp}.docx`
+- Updates template metadata with placeholder_fields
+- Deletes old template file if exists
+- Creates audit log entry
+- File size limit from config.csv
+- Security: File type validation, path traversal protection
+- Returns: Template object with extracted placeholders array
+
+**POST /api/templates/:id/generate**
+- Generate DOCX document from template for employee
+- Request body:
+  - employee_id: Target employee ID
+  - custom_data: Optional object with additional placeholder values
+- Merges employee data with custom_data
+- Replaces placeholders in template DOCX
+- Adds special placeholders: {current_date}, {current_datetime}
+- Saves generated document to: `files/documents/{TemplateName}_emp{id}_{timestamp}.docx`
+- Records generation in generated_documents.csv with data snapshot
+- Creates audit log entry
+- Returns: Document object with download URL
+- 404 if template or employee not found
+
+### Document History Endpoints
+
+**GET /api/documents**
+- List generated documents with filters and pagination
+- Query parameters:
+  - template_id: Filter by template ID
+  - employee_id: Filter by employee ID
+  - start_date: Filter by generation date (from)
+  - end_date: Filter by generation date (to)
+  - offset: Pagination offset (default: 0)
+  - limit: Pagination limit (default: 50, max: 1000)
+- Returns: Object with:
+  - documents: Array of document objects with joined employee/template data
+  - total: Total count of matching documents
+- Each document includes:
+  - document_id, template_id, employee_id, filename, generated_at
+  - data_snapshot: JSON string of employee data at generation time
+  - employee: Joined employee object (current data)
+  - template: Joined template object
+- Used by document history view with pagination
+
+**GET /api/documents/:id/download**
+- Download generated document by ID
+- Returns: DOCX file download
+- Filename from generated_documents.csv record
+- Security: Path traversal validation
+- 404 if document not found or file missing
+
+### Audit Log Endpoint
+
+**GET /api/logs**
+- List audit log entries
+- Query parameters:
+  - offset: Pagination offset (default: 0)
+  - limit: Pagination limit (default: 100, max: 1000)
+- Returns: Object with:
+  - logs: Array of log entries (newest first)
+  - total: Total count of log entries
+- Each log entry includes:
+  - log_id, timestamp, user, action, entity_type, entity_id, details
+- Action types: CREATE, UPDATE, DELETE, IMPORT, EXPORT, GENERATE
+- Entity types: employee, template, document, status
+- Used by logs view with pagination
+
+### File Management Utility Endpoint
+
+**POST /api/open-data-folder**
+- Open data directory in system file manager
+- Opens: data/ directory containing CSV files
+- Uses platform-specific command (open/explorer/xdg-open)
+- Graceful degradation in headless environments
+- Security: Path validation to prevent command injection
+- Returns: { success: true }
+
+### API Error Handling
+
+All endpoints follow consistent error handling patterns:
+
+**Error Response Format**:
+```json
+{
+  "error": "Error message in Ukrainian for user-facing errors"
+}
+```
+
+**HTTP Status Codes**:
+- 200 OK: Successful GET request
+- 201 Created: Successful POST creating new resource
+- 204 No Content: Successful DELETE or update with no response body
+- 400 Bad Request: Validation errors, missing required fields, invalid input
+- 403 Forbidden: Security violations (path traversal, unauthorized access)
+- 404 Not Found: Resource not found by ID
+- 500 Internal Server Error: Unexpected errors, exceptions
+
+**Validation Patterns**:
+- Required field validation (template_name, employee_id, etc.)
+- Type validation (date format, numeric fields)
+- File type validation (DOCX extension for templates)
+- JSON parsing validation (filters parameter)
+- Pagination limits enforced (max 1000 rows)
+- Path traversal protection on all file operations
+
+### API Documentation Reference
+
+For detailed API endpoint documentation with request/response examples, query parameters, and usage scenarios, see the "API Documentation" section in README.md. The README provides user-facing documentation while this section focuses on internal implementation patterns and route organization.
+
+---
+
