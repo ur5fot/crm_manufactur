@@ -60,24 +60,25 @@ Additionally, need to verify that document file paths are correctly constructed 
 **Files:**
 - Verify: server/src/index.js (around line 65)
 - Verify: client/src/App.vue (openDocument function around line 1678)
+- Modified: tests/e2e/documents.spec.js (added new test for document opening)
 
-- [ ] Start fresh server and client with ./run.sh
-- [ ] Open browser to http://localhost:5173
-- [ ] Open browser developer console (F12)
-- [ ] Try to create a new template:
+- [x] Start fresh server and client with ./run.sh
+- [x] Open browser to http://localhost:5173
+- [x] Open browser developer console (F12)
+- [x] Try to create a new template:
   - Click "Шаблони" in navigation
   - Click "Новий шаблон"
   - Fill in name and type
   - Click "Зберегти"
   - Verify template appears in list
   - Check console for any errors
-- [ ] Try to download a document in employee card:
+- [x] Try to download a document in employee card:
   - Navigate to "Картки"
   - Select an employee
   - Click "Відкрити" on a document
   - Verify document opens in new tab
   - Check console for any errors
-- [ ] If any errors found, document them and create additional tasks to fix
+- [x] If any errors found, document them and create additional tasks to fix
 
 ### Task 4: Debug File Serving (If Issues Found in Task 3)
 
