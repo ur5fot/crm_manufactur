@@ -85,11 +85,11 @@ Additionally, need to verify that document file paths are correctly constructed 
 **Files:**
 - server/src/index.js
 
-- [ ] Review app.use("/files", express.static(FILES_DIR)) route (line 65)
-- [ ] Verify FILES_DIR path is correct
-- [ ] Test file serving: curl http://localhost:3000/files/templates/template_1_*.docx
-- [ ] If 404 errors, check if files directory exists and has correct permissions
-- [ ] If errors persist, add debugging logs to index.js
+- [x] Review app.use("/files", express.static(FILES_DIR)) route (line 65)
+- [x] Verify FILES_DIR path is correct
+- [x] Test file serving: curl http://localhost:3000/files/templates/template_1_*.docx
+- [x] If 404 errors, check if files directory exists and has correct permissions
+- [x] If errors persist, add debugging logs to index.js
 
 ### Task 5: Debug Document Opening (If Issues Found in Task 3)
 
