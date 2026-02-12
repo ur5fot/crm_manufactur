@@ -3106,3 +3106,329 @@ import {
 
 ---
 
+## Future Enhancements
+
+This section documents potential improvements and migration paths for the CRM Manufacturing System. These are not currently planned for implementation but represent opportunities for system evolution as requirements grow.
+
+### Migration Path to Database
+
+The current CSV-based storage system is suitable for organizations with up to 10,000 employees. For larger organizations or those requiring advanced features, migration to a relational database is recommended.
+
+**Recommended Database Options**:
+
+**SQLite** (recommended for most cases):
+- File-based database, no server required
+- Significantly better performance than CSV for complex queries
+- ACID transactions prevent data corruption
+- Full-text search capabilities
+- Supports 100k+ employees with good performance
+- Easy migration: single .sqlite file replaces CSV files
+- Native Node.js drivers available (better-sqlite3, sqlite3)
+
+**PostgreSQL** (for enterprise deployments):
+- Client-server architecture with connection pooling
+- Advanced features: JSON columns, full-text search, materialized views
+- Horizontal scalability with replication
+- Robust backup and recovery tools
+- Industry standard for production systems
+- Requires server installation and maintenance
+
+**Migration Steps**:
+1. Create database schema matching current CSV structure
+2. Write migration script to import CSV data into database tables
+3. Update store.js functions to use SQL queries instead of CSV operations
+4. Add database connection pooling and error handling
+5. Create indexes for frequently queried fields (employee_id, template_id, etc.)
+6. Update tests to use test database or in-memory database
+7. Implement database backup strategy
+8. Train team on database administration basics
+
+**Schema Design Considerations**:
+- Use foreign keys to enforce referential integrity (template_id -> templates, employee_id -> employees)
+- Add indexes on: employee_id, template_id, birth_date, employment_status, hire_date
+- Store audit logs in separate table with timestamp index
+- Use TEXT/JSON column for data_snapshot in generated_documents
+- Add created_at/updated_at timestamps for all tables
+- Consider soft delete with deleted_at timestamp instead of active='yes'/'no'
+
+**Benefits of Database Migration**:
+- Faster queries (especially with filters and joins)
+- True ACID transactions (no need for in-memory locks)
+- Better concurrency handling (row-level locking)
+- Advanced querying (aggregations, complex joins, subqueries)
+- Data integrity constraints (foreign keys, unique constraints)
+- Backup and restore tools
+- Full-text search capabilities
+- Query optimization and analysis tools
+
+### Scalability Considerations
+
+**Current System Limitations** (CSV-based storage):
+- All data loaded into memory for each query (not suitable for 100k+ employees)
+- In-memory file locks don't work across multiple server instances
+- Sequential processing (no parallelization of requests)
+- No query optimization (full table scans for every filter)
+- Limited filtering capabilities (no complex queries)
+- File I/O becomes bottleneck with frequent writes
+
+**Scaling Strategies**:
+
+**For 10k-50k employees (CSV optimization)**:
+- Implement lazy loading (load only needed CSV files)
+- Add in-memory caching for frequently accessed data
+- Use streaming CSV parsing for large exports
+- Compress old CSV files (archived logs, old document history)
+- Separate hot data (active employees) from cold data (retired employees)
+
+**For 50k-100k employees (database required)**:
+- Migrate to SQLite or PostgreSQL
+- Add database indexes for common queries
+- Implement pagination at database level (LIMIT/OFFSET)
+- Use prepared statements to prevent SQL injection
+- Add connection pooling for concurrent requests
+
+**For 100k+ employees (enterprise architecture)**:
+- Use PostgreSQL with read replicas
+- Implement caching layer (Redis) for frequently accessed data
+- Add background job queue (Bull, BullMQ) for long-running operations
+- Use CDN for static assets and generated documents
+- Consider microservices architecture (separate document generation service)
+- Implement horizontal scaling with load balancer
+
+### Performance Optimization Opportunities
+
+**Backend Optimizations**:
+
+**Database Queries** (after migration):
+- Add indexes on frequently filtered fields
+- Use EXPLAIN ANALYZE to identify slow queries
+- Implement query result caching (Redis, in-memory)
+- Use database views for complex joins
+- Batch database operations (bulk inserts/updates)
+
+**Document Generation**:
+- Implement background job queue for document generation
+- Add worker processes to parallelize generation
+- Cache template DOCX parsing (don't re-parse for every generation)
+- Use streaming for large document downloads
+- Compress generated documents (zip multiple documents)
+- Add generation status polling endpoint (for async generation)
+
+**File System**:
+- Use cloud storage (S3, Azure Blob) for generated documents
+- Implement CDN for static file serving
+- Archive old documents to cheaper storage tier
+- Add file cleanup job (delete old temporary files)
+
+**API Performance**:
+- Add response compression (gzip, brotli)
+- Implement ETag headers for caching
+- Use HTTP/2 for better multiplexing
+- Add rate limiting to prevent abuse
+- Implement API result pagination everywhere
+
+**Frontend Optimizations**:
+
+**Loading Performance**:
+- Code splitting (lazy load routes with dynamic imports)
+- Tree shaking to remove unused code
+- Minification and compression
+- Optimize images and assets
+- Use service worker for offline support
+
+**Runtime Performance**:
+- Virtualize long lists (vue-virtual-scroller for employee tables)
+- Debounce search inputs to reduce API calls
+- Implement infinite scroll instead of pagination
+- Use computed properties effectively (avoid unnecessary recalculations)
+- Lazy load form fields (render visible sections first)
+
+**Caching**:
+- Cache field schema in localStorage
+- Cache dropdown options (employment statuses, etc.)
+- Implement stale-while-revalidate strategy
+- Use HTTP caching headers for API responses
+
+### Templates System Backlog
+
+The templates system has a comprehensive backlog of potential enhancements. For full details, see `docs/plans/completed/templates-system-improvements.md` (Future Enhancements Backlog section).
+
+**High Priority Enhancements**:
+
+**1. Batch Document Generation**:
+- Generate documents for multiple employees at once
+- Background job queue for large batches
+- Progress tracking UI with percentage complete
+- Email notification on completion
+- Use case: Generate contracts for all new hires at once
+
+**2. Custom Fields Beyond Employee Data**:
+- Add custom placeholder fields to template definition
+- User input form for custom fields during generation
+- Store custom field values in data_snapshot
+- Validate required custom fields
+- Use case: Contract with custom salary or probation period
+
+**3. Template Usage Statistics**:
+- Track generation count per template
+- Most/least used templates report
+- Generation trends over time (chart)
+- Employee document count report
+- Use case: Identify which templates to improve or retire
+
+**4. Document Re-generation**:
+- Regenerate document with current employee data
+- Compare old vs new data snapshot (diff view)
+- Audit trail for regenerations
+- Version history for regenerated documents
+- Use case: Update contract after employee promotion
+
+**Medium Priority Enhancements**:
+
+**5. Template Versioning**:
+- Track template file versions over time
+- Allow regeneration with specific template version
+- Version comparison UI
+- Rollback to previous version
+- Use case: Maintain compliance with historical contract templates
+
+**6. Automatic Cleanup of Old Documents**:
+- Configurable retention period (e.g., 90 days)
+- Scheduled cleanup job (cron)
+- Archive to ZIP before deletion
+- Cleanup report in admin UI
+- Use case: Prevent disk space exhaustion
+
+**7. Template Preview**:
+- Preview template with sample data
+- Highlight missing placeholders in red
+- Preview in browser (convert DOCX to HTML)
+- Print preview
+- Use case: Validate template before using with real employees
+
+**Low Priority Enhancements**:
+
+**8. Advanced Placeholder Features**:
+- Conditional placeholders: {if:employment_status=='Працює'}Active{/if}
+- Loops for repeating data: {loop:certifications}...{/loop}
+- Calculated fields: {age_years} from birth_date
+- Format specifiers: {hire_date:DD.MM.YYYY}
+- Use case: Complex contracts with conditional clauses
+
+**9. Multi-language Support**:
+- Template language field (Ukrainian, English, Russian)
+- Locale-aware date formatting
+- Translatable UI labels
+- Language-specific placeholder names
+- Use case: International organization with multi-language contracts
+
+**10. Email Integration**:
+- Send generated document via email
+- Email template configuration
+- Attachment support
+- Email delivery log
+- Use case: Automatically send contract to new hire's email
+
+For the complete backlog with detailed descriptions, see the Future Enhancements Backlog section in `docs/plans/completed/templates-system-improvements.md`.
+
+### Other Feature Enhancements
+
+**User Authentication and Authorization**:
+- Currently the system has no user authentication (single-user assumed)
+- Track generated_by with real username instead of 'system'
+- Role-based access control (admin, manager, HR, employee)
+- Employee self-service portal (view own documents, download payslips)
+- Approval workflow for sensitive operations (salary changes, termination)
+- Audit trail with real usernames
+
+**Advanced Reporting**:
+- Saved reports (store filter configurations)
+- Scheduled reports (email daily/weekly/monthly reports)
+- Export to multiple formats (PDF, Excel, JSON)
+- Report charts and visualizations
+- Pivot tables for cross-tabulation
+- Report builder with drag-and-drop interface
+
+**Integration Capabilities**:
+- REST API for external systems
+- Webhook notifications for events (new hire, status change)
+- Import from HR systems (SAP, Workday, etc.)
+- Export to payroll systems
+- Single sign-on (SSO) integration (SAML, OAuth)
+- Active Directory integration for user management
+
+**Advanced Dashboard**:
+- Customizable widgets (user can choose what to display)
+- Drag-and-drop dashboard layout
+- Chart visualizations (bar, line, pie charts)
+- Drill-down capabilities (click to see details)
+- Real-time updates (WebSocket or SSE)
+- Dashboard export to PDF
+
+**Mobile Support**:
+- Responsive design improvements for mobile browsers
+- Progressive Web App (PWA) for offline support
+- Native mobile apps (React Native, Flutter)
+- Push notifications for important events
+- Mobile-optimized forms (larger touch targets)
+- Camera integration for document scanning
+
+### Maintaining Documentation
+
+As the system evolves, it's critical to keep documentation up-to-date and accurate.
+
+**When to Update CLAUDE.md** (this file):
+- When adding new backend code patterns (store functions, API routes, utilities)
+- When adding new frontend code patterns (Vue components, routing, state management)
+- When technical architecture changes (CSV to database, new libraries, etc.)
+- When adding new development workflows or tools
+- When technical decisions change (e.g., switching testing frameworks)
+- When adding new file organization patterns
+- When security patterns change
+
+**When to Update README.md**:
+- When adding new user-facing features (new views, functionality)
+- When API endpoints change (new endpoints, parameter changes)
+- When installation or setup steps change
+- When configuration options change (config.csv fields)
+- When user workflow changes (how to use the system)
+- When screenshots or UI examples need updates
+- When deployment instructions change
+
+**Documentation Best Practices**:
+- Document WHILE implementing, not after (context is fresher)
+- Keep CLAUDE.md focused on patterns and technical decisions (for developers/AI)
+- Keep README.md focused on user perspective and usage (for end users)
+- Include code examples in CLAUDE.md for complex patterns
+- Link between CLAUDE.md and README.md when topics overlap
+- Update documentation in same commit as code changes when possible
+- Review documentation during code review process
+- Use consistent terminology across all documentation
+- Keep table of contents updated (if added)
+
+**Documentation Sections to Update**:
+- Backend Patterns: When adding new store functions, API routes, or utilities
+- Frontend Patterns: When adding new Vue patterns, components, or workflows
+- API Structure: When adding/modifying API endpoints
+- Special Features: When adding new major features
+- Code Style: When establishing new naming or coding conventions
+- Testing: When adding new test types or changing test approach
+
+**Avoiding Documentation Drift**:
+- Make documentation updates part of definition of done
+- Include documentation review in pull request checklist
+- Run periodic documentation audits (quarterly)
+- Keep examples minimal and focused (don't duplicate code)
+- Link to code files instead of duplicating long code blocks
+- Use automated tools to validate code examples (if possible)
+
+**Documentation Organization**:
+- CLAUDE.md: Internal technical documentation (this file)
+- README.md: User-facing documentation and getting started guide
+- docs/plans/: Development plans and task breakdowns
+- docs/plans/completed/: Completed plans (archived for reference)
+- Code comments: Inline explanations for complex logic only
+- API documentation: In README.md or separate API.md if it grows large
+
+---
+
