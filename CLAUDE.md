@@ -2253,3 +2253,568 @@ Each plan file follows this structure:
 
 ---
 
+## Special Features
+
+This section documents the specialized functionality that makes the CRM Manufacturing System unique and powerful for employee management workflows.
+
+### Document Templates System
+
+The templates system allows users to create standardized documents (contracts, certificates, notices) that automatically populate with employee data.
+
+**DOCX Template Upload**:
+- Users upload DOCX files with placeholder syntax
+- Placeholders are automatically extracted during upload
+- Template metadata stored in templates.csv
+- DOCX files stored in files/templates/
+
+**Template Management**:
+- Template metadata: name, type, description
+- Placeholder fields stored as comma-separated list
+- Soft delete support (active='yes'/'no')
+- One DOCX file per template (old file replaced on re-upload)
+
+**DOCX File Storage**:
+```
+files/templates/template_{template_id}_{timestamp}.docx
+```
+
+### Placeholder Syntax and Replacement
+
+Placeholders in DOCX templates follow a simple, consistent syntax that gets replaced with real data during document generation.
+
+**Placeholder Format**:
+- Syntax: `{field_name}` (curly braces around field name)
+- Field names must match fields from fields_schema.csv
+- Case-sensitive matching
+- Alphanumeric and underscores only (no hyphens)
+
+**Standard Placeholders** (from employee data):
+- `{full_name}` - Employee full name
+- `{birth_date}` - Birth date in YYYY-MM-DD format
+- `{employment_status}` - Current employment status
+- `{hire_date}` - Date of hire
+- Any field from fields_schema.csv can be used as placeholder
+
+**Special Placeholders** (auto-generated):
+- `{current_date}` - Current date in DD.MM.YYYY format
+- `{current_datetime}` - Current date and time in DD.MM.YYYY HH:MM format
+
+**Placeholder Extraction** (from docx-generator.js):
+```javascript
+export async function extractPlaceholders(templatePath) {
+  const content = fs.readFileSync(templatePath, 'binary');
+  const zip = new PizZip(content);
+  const documentXml = zip.file('word/document.xml').asText();
+
+  // Extract placeholders using regex
+  const placeholderRegex = /\{([a-zA-Z0-9_]+)\}/g;
+  const placeholders = new Set();
+  let match;
+
+  while ((match = placeholderRegex.exec(documentXml)) !== null) {
+    placeholders.add(match[1]);
+  }
+
+  return Array.from(placeholders).sort();
+}
+```
+
+**Placeholder Replacement**:
+- All employee fields merged with custom data (if provided)
+- Null/undefined values replaced with empty strings
+- Special placeholders added with current timestamp
+- Unknown placeholders replaced with empty strings (no error)
+
+**Data Preparation Pattern** (from docx-generator.js):
+```javascript
+function prepareData(data) {
+  const prepared = {};
+
+  // Handle user-provided data (null safety)
+  for (const key in data) {
+    const value = data[key];
+    prepared[key] = (value === null || value === undefined) ? '' : String(value);
+  }
+
+  // Add special placeholders
+  const now = new Date();
+  const day = String(now.getDate()).padStart(2, '0');
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const year = now.getFullYear();
+  prepared.current_date = `${day}.${month}.${year}`;
+
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  prepared.current_datetime = `${day}.${month}.${year} ${hours}:${minutes}`;
+
+  return prepared;
+}
+```
+
+### Document Generation Workflow
+
+The document generation workflow combines templates, employee data, and optional custom data to create final DOCX documents.
+
+**Generation Process**:
+1. User selects template and employee from UI
+2. Optionally provides custom data in modal form (overrides employee fields)
+3. Frontend sends POST request to /api/templates/:id/generate
+4. Backend loads template DOCX and employee data
+5. Merges employee data with custom data (custom data takes precedence)
+6. Replaces placeholders in DOCX using docxtemplater
+7. Generates output DOCX with unique filename
+8. Records generation in generated_documents.csv with data snapshot
+9. Creates audit log entry
+10. Returns document metadata with download URL
+
+**Generated Document Filename**:
+```
+{TemplateName}_emp{employee_id}_{timestamp}.docx
+```
+Example: `Contract_emp123_1707845123456.docx`
+
+**Custom Data Pattern**:
+- User can override any employee field during generation
+- Useful for document-specific variations (e.g., custom salary, position)
+- Custom data not saved to employee record (one-time use)
+- Original employee data preserved in data snapshot
+
+**Generation API Route** (from index.js):
+```javascript
+app.post("/api/templates/:id/generate", async (req, res) => {
+  const { employee_id, custom_data } = req.body;
+
+  // Load template and employee
+  const template = await loadTemplate(templateId);
+  const employee = await loadEmployee(employee_id);
+
+  // Merge employee data with custom overrides
+  const mergedData = { ...employee, ...custom_data };
+
+  // Generate DOCX
+  const outputPath = path.join(FILES_DIR, 'documents', outputFilename);
+  await generateDocx(templatePath, mergedData, outputPath);
+
+  // Record generation
+  await addGeneratedDocument({
+    template_id: templateId,
+    employee_id: employee_id,
+    filename: outputFilename,
+    generated_at: new Date().toISOString(),
+    data_snapshot: JSON.stringify(mergedData)
+  });
+
+  res.json({ document, download_url: `/files/documents/${outputFilename}` });
+});
+```
+
+### Document History Tracking with Data Snapshots
+
+Every generated document is recorded in generated_documents.csv with a complete snapshot of the data used for generation.
+
+**Why Data Snapshots**:
+- Employee data changes over time (name changes, position updates, etc.)
+- Generated documents must reflect data at time of generation
+- Snapshots enable document audit trail and compliance
+- Snapshots allow document regeneration with original data if needed
+
+**Document History Record Structure** (from schema.js):
+```javascript
+export const GENERATED_DOCUMENT_COLUMNS = [
+  "document_id",        // Auto-increment ID
+  "template_id",        // Link to template
+  "employee_id",        // Link to employee
+  "filename",           // Generated DOCX filename
+  "generated_at",       // ISO 8601 timestamp
+  "data_snapshot",      // JSON string of merged data used
+  "active"              // Soft delete flag
+];
+```
+
+**Data Snapshot Content**:
+- All employee fields at time of generation
+- Custom data overrides (if provided)
+- Stored as JSON string in CSV field
+- Can be parsed to reconstruct exact document content
+
+**Document History Viewing**:
+- Frontend displays all generated documents in table
+- Filters available: template, employee, date range
+- Pagination support (offset/limit)
+- Each row shows: template name, employee name, generation date
+- Download button for each document
+- Data snapshot viewable on click (shows what data was used)
+
+**Document History API Pattern**:
+```javascript
+app.get("/api/documents", async (req, res) => {
+  const { template_id, employee_id, start_date, end_date, offset, limit } = req.query;
+
+  // Load and filter documents
+  let documents = await loadGeneratedDocuments();
+
+  // Apply filters
+  if (template_id) {
+    documents = documents.filter(d => d.template_id === template_id);
+  }
+  if (employee_id) {
+    documents = documents.filter(d => d.employee_id === employee_id);
+  }
+  if (start_date || end_date) {
+    documents = documents.filter(d => {
+      const genDate = new Date(d.generated_at);
+      if (start_date && genDate < new Date(start_date)) return false;
+      if (end_date && genDate > new Date(end_date)) return false;
+      return true;
+    });
+  }
+
+  // Join with employees and templates for display
+  const employees = await loadEmployees();
+  const templates = await loadTemplates();
+  const employeeMap = new Map(employees.map(e => [e.employee_id, e]));
+  const templateMap = new Map(templates.map(t => [t.template_id, t]));
+
+  const enriched = documents.map(doc => ({
+    ...doc,
+    employee: employeeMap.get(doc.employee_id),
+    template: templateMap.get(doc.template_id)
+  }));
+
+  // Apply pagination
+  const total = enriched.length;
+  const paginated = enriched.slice(offset, offset + limit);
+
+  res.json({ documents: paginated, total });
+});
+```
+
+### Employment Status Change System
+
+The application supports tracking temporary and permanent employment status changes with optional automatic expiration.
+
+**Status Change Fields** (from fields_schema.csv):
+- `employment_status` - Current status (select field with values like Працює, На лікарняному, У відпустці, etc.)
+- `status_start_date` - When the current status began (date field)
+- `status_end_date` - When the status will end (optional, date field)
+
+**Status Change Workflow**:
+1. User updates employment_status field in employee card
+2. Optionally sets status_start_date (defaults to today)
+3. Optionally sets status_end_date for temporary statuses
+4. Backend validates and saves changes
+5. Audit log created with status change details
+
+**Automatic Status Reset**:
+- System checks for expired statuses on dashboard load
+- If status_end_date < current_date, status automatically resets
+- Reset status value configured in config.csv or defaults to "Працює"
+- Audit log created for automatic reset
+- User notified of automatic status changes
+
+**Status Reset Implementation** (from store.js):
+```javascript
+export async function checkAndResetExpiredStatuses() {
+  const employees = await loadEmployees();
+  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+
+  const changes = [];
+  for (const emp of employees) {
+    if (emp.status_end_date && emp.status_end_date < today) {
+      const oldStatus = emp.employment_status;
+      emp.employment_status = 'Працює'; // Default reset value
+      emp.status_start_date = today;
+      emp.status_end_date = '';
+
+      changes.push({
+        employee_id: emp.employee_id,
+        full_name: emp.full_name,
+        old_status: oldStatus,
+        new_status: emp.employment_status
+      });
+    }
+  }
+
+  if (changes.length > 0) {
+    await saveEmployees(employees);
+
+    // Create audit log entries
+    for (const change of changes) {
+      await addLog({
+        user: 'system',
+        action: 'UPDATE',
+        entity_type: 'employee',
+        entity_id: change.employee_id,
+        details: `Automatic status reset: ${change.old_status} → ${change.new_status}`
+      });
+    }
+  }
+
+  return changes;
+}
+```
+
+**Status Change Notifications**:
+- Dashboard shows recent status changes
+- Includes manual changes and automatic resets
+- Shows: employee name, old status, new status, change date
+- Sorted by change date (most recent first)
+
+### Dashboard Notifications
+
+The dashboard provides real-time notifications for important events and upcoming dates.
+
+**Notification Types**:
+1. **Birthdays**: Employees with birthdays this month
+2. **Retirements**: Employees approaching retirement age
+3. **Document Expiry**: Documents expiring within configured threshold
+4. **Document Overdue**: Documents already expired
+5. **Status Changes**: Recent employment status changes
+
+**Combined Events API** (from index.js):
+```javascript
+app.get("/api/dashboard/events", async (_req, res) => {
+  try {
+    const events = await getDashboardEvents();
+    res.json(events);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+```
+
+**Event Structure**:
+Each event object includes:
+- `type`: Event type identifier (birthday, retirement, document_expiry, status_change)
+- `employee`: Full employee object or relevant subset
+- `date`: Event date (birth_date, retirement_date, expiry_date, change_date)
+- `days_until`: Days until event (positive for future, negative for past)
+- Additional fields depending on type
+
+**Birthday Events**:
+- Calculated from birth_date field
+- Shows employees with birthdays in current month
+- Supports filtering by specific month
+- Displays days until birthday (for current month view)
+
+**Retirement Events**:
+- Calculated from birth_date + retirement_age_years configuration
+- Shows employees approaching retirement (within configured threshold, e.g., 6 months)
+- Retirement age configurable in config.csv (default: 60 years)
+- Displays days until retirement date
+
+**Retirement Calculation** (from store.js):
+```javascript
+export async function getRetirementEvents(retirementAge = 60) {
+  const employees = await loadEmployees();
+  const today = new Date();
+  const sixMonthsLater = new Date();
+  sixMonthsLater.setMonth(today.getMonth() + 6);
+
+  const events = [];
+  for (const emp of employees) {
+    if (!emp.birth_date) continue;
+
+    // Calculate retirement date
+    const birthDate = new Date(emp.birth_date);
+    const retirementDate = new Date(birthDate);
+    retirementDate.setFullYear(birthDate.getFullYear() + retirementAge);
+
+    // Check if retirement is within next 6 months
+    if (retirementDate >= today && retirementDate <= sixMonthsLater) {
+      const daysUntil = Math.floor((retirementDate - today) / (1000 * 60 * 60 * 24));
+      events.push({
+        type: 'retirement',
+        employee: emp,
+        retirement_date: retirementDate.toISOString().split('T')[0],
+        days_until: daysUntil
+      });
+    }
+  }
+
+  return events.sort((a, b) => a.days_until - b.days_until);
+}
+```
+
+**Document Expiry Tracking**:
+- Tracks expiry dates for document fields (e.g., passport_expiry_date, medical_cert_expiry_date)
+- Document fields identified by field_type='file' and companion expiry field (field_name_expiry_date)
+- Shows documents expiring within configured threshold (e.g., 30 days)
+- Shows overdue documents separately
+
+**Document Expiry Pattern**:
+```javascript
+export async function getDocumentExpiryEvents(threshold_days = 30) {
+  const employees = await loadEmployees();
+  const schema = await loadFieldsSchema();
+  const today = new Date();
+  const thresholdDate = new Date();
+  thresholdDate.setDate(today.getDate() + threshold_days);
+
+  // Find file fields with expiry dates
+  const fileFields = schema.filter(f => f.field_type === 'file');
+  const expiryFields = fileFields
+    .map(f => ({ field: f.field_name, expiry: f.field_name + '_expiry_date' }))
+    .filter(f => schema.some(s => s.field_name === f.expiry));
+
+  const events = [];
+  for (const emp of employees) {
+    for (const { field, expiry } of expiryFields) {
+      const expiryDate = emp[expiry];
+      if (!expiryDate) continue;
+
+      const expDate = new Date(expiryDate);
+      if (expDate >= today && expDate <= thresholdDate) {
+        const daysUntil = Math.floor((expDate - today) / (1000 * 60 * 60 * 24));
+        events.push({
+          type: 'document_expiry',
+          employee: emp,
+          document_field: field,
+          expiry_date: expiryDate,
+          days_until: daysUntil
+        });
+      }
+    }
+  }
+
+  return events.sort((a, b) => a.days_until - b.days_until);
+}
+```
+
+**Status Change Events**:
+- Shows recent status changes (manual and automatic)
+- Includes change date, old status, new status
+- Sourced from audit logs (action='UPDATE', entity_type='employee', details contains status change)
+- Limited to recent changes (e.g., last 30 days)
+
+**Dashboard UI Pattern**:
+- Notifications displayed in cards/sections by type
+- Color coding: green (upcoming), yellow (soon), red (overdue)
+- Click to navigate to employee card for details
+- Refresh button to reload events
+- Event counts displayed in dashboard stats
+
+### Custom Reports with Dynamic Filters
+
+The reporting system allows users to create ad-hoc queries with multiple filter conditions across all employee fields.
+
+**Filter Builder UI**:
+- Add/remove filter rows dynamically
+- Select field from fields_schema.csv
+- Select condition based on field type (text, number, date)
+- Enter filter value(s)
+- AND logic between filters (all must match)
+
+**Filter Condition Types**:
+
+**Text Filters**:
+- `contains` - Field contains value (case-insensitive substring match)
+- `not_contains` - Field does not contain value
+- `empty` - Field is empty or null
+
+**Number Filters**:
+- `greater_than` - Field value > filter value
+- `less_than` - Field value < filter value
+- `equals` - Field value = filter value
+
+**Date Filters**:
+- `date_range` - Field value between value and value2 (inclusive)
+- `empty` - Field is empty or null
+
+**Filter Object Structure** (from frontend):
+```javascript
+const customFilters = ref([
+  {
+    field: 'employment_status',
+    condition: 'contains',
+    value: 'Працює',
+    value2: '' // Used for date_range condition
+  },
+  {
+    field: 'hire_date',
+    condition: 'date_range',
+    value: '2023-01-01',
+    value2: '2023-12-31'
+  }
+]);
+```
+
+**Server-Side Filter Application** (from index.js):
+```javascript
+app.get("/api/reports/custom", async (req, res) => {
+  let { filters, limit, preview } = req.query;
+
+  // Parse filters JSON
+  if (filters) {
+    try {
+      filters = JSON.parse(filters);
+    } catch (err) {
+      res.status(400).json({ error: 'Invalid filters JSON' });
+      return;
+    }
+  }
+
+  // Load employees
+  let employees = await loadEmployees();
+
+  // Apply each filter
+  for (const filter of filters || []) {
+    employees = employees.filter(emp => {
+      const fieldValue = emp[filter.field];
+
+      switch (filter.condition) {
+        case 'contains':
+          return String(fieldValue || '').toLowerCase().includes(String(filter.value).toLowerCase());
+
+        case 'not_contains':
+          return !String(fieldValue || '').toLowerCase().includes(String(filter.value).toLowerCase());
+
+        case 'empty':
+          return !fieldValue || fieldValue.trim() === '';
+
+        case 'greater_than':
+          return parseFloat(fieldValue) > parseFloat(filter.value);
+
+        case 'less_than':
+          return parseFloat(fieldValue) < parseFloat(filter.value);
+
+        case 'equals':
+          return parseFloat(fieldValue) === parseFloat(filter.value);
+
+        case 'date_range':
+          return fieldValue >= filter.value && fieldValue <= filter.value2;
+
+        default:
+          return true;
+      }
+    });
+  }
+
+  // Apply preview/limit
+  const maxLimit = 1000;
+  const previewLimit = parseInt(req.query.preview_limit || 100, 10);
+  const resultLimit = preview ? previewLimit : Math.min(parseInt(limit || maxLimit, 10), maxLimit);
+
+  res.json({
+    employees: employees.slice(0, resultLimit),
+    total: employees.length,
+    preview: !!preview
+  });
+});
+```
+
+**Export with Filters**:
+- Same filter structure applies to export endpoint
+- Filtered results exported to CSV file
+- Filename includes timestamp: `employees_export_YYYYMMDD_HHMMSS.csv`
+- All fields included in export (not just visible columns)
+
+**Report Preview**:
+- Preview mode limits results to configured preview_limit (default: 100 rows)
+- Allows users to validate filters before exporting large datasets
+- Preview indicator shown in UI
+- Full export requires explicit user action
+
+---
+

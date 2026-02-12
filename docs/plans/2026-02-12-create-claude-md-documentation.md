@@ -145,15 +145,15 @@ Create a CLAUDE.md file that documents the architecture, technical decisions, co
 - Modify: `CLAUDE.md`
 
 **Steps:**
-- [ ] Add "Special Features" section
-- [ ] Document templates system (DOCX upload, placeholder extraction, generation)
-- [ ] Document placeholder syntax ({field_name}, {current_date}, {current_datetime})
-- [ ] Document document history tracking with data snapshots
-- [ ] Document status change system (employment_status, status_start_date, status_end_date)
-- [ ] Document automatic status reset when end date expires
-- [ ] Document dashboard notifications (birthdays, retirements, document expiry, status changes)
-- [ ] Document document expiry tracking and notifications
-- [ ] Document custom reports with dynamic filters
+- [x] Add "Special Features" section
+- [x] Document templates system (DOCX upload, placeholder extraction, generation)
+- [x] Document placeholder syntax ({field_name}, {current_date}, {current_datetime})
+- [x] Document document history tracking with data snapshots
+- [x] Document status change system (employment_status, status_start_date, status_end_date)
+- [x] Document automatic status reset when end date expires
+- [x] Document dashboard notifications (birthdays, retirements, document expiry, status changes)
+- [x] Document document expiry tracking and notifications
+- [x] Document custom reports with dynamic filters
 
 ---
 
