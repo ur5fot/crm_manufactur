@@ -2818,3 +2818,291 @@ app.get("/api/reports/custom", async (req, res) => {
 
 ---
 
+## Code Style and Conventions
+
+This section documents the naming conventions, formatting standards, and coding patterns used throughout the codebase.
+
+### Naming Conventions
+
+The application follows consistent naming patterns across different layers and file types.
+
+**CSV Field Names** (snake_case):
+- All CSV column names use snake_case: lowercase with underscores
+- Examples: `employee_id`, `full_name`, `birth_date`, `employment_status`
+- Pattern applies to all CSV files: employees.csv, templates.csv, logs.csv, etc.
+- Field names defined in fields_schema.csv are the canonical source
+
+**JavaScript Variables and Functions** (camelCase):
+- JavaScript code uses camelCase for variables, functions, and methods
+- Examples: `loadEmployees()`, `saveTemplates()`, `employeeFields`, `fieldGroups`
+- Vue.js refs and reactive variables: `const employees = ref([])`, `const selectedId = ref(null)`
+- Computed properties: `const isFormDirty = computed(() => ...)`
+
+**Vue.js Component Names** (PascalCase for files, kebab-case in templates):
+- Component files use PascalCase: `App.vue` (single component per file in this project)
+- Template element names use kebab-case: `<router-view>`, `<router-link>`
+
+**CSS Class Names** (kebab-case):
+- CSS classes use kebab-case: `.vacation-notification-overlay`, `.form-group`, `.button-group`
+- Bootstrap classes follow Bootstrap conventions: `.btn`, `.card`, `.table`, `.form-control`
+
+**Constants** (UPPER_SNAKE_CASE):
+- Constants and configuration values use UPPER_SNAKE_CASE
+- Examples: `DATA_DIR`, `FILES_DIR`, `EMPLOYEES_PATH`, `TEMPLATE_COLUMNS`
+- Defined in schema.js and store.js
+
+### File Naming Patterns
+
+The application uses specific naming conventions for generated files to ensure uniqueness and traceability.
+
+**Template DOCX Files**:
+- Pattern: `template_{template_id}_{timestamp}.docx`
+- Example: `template_1_1707845123456.docx`
+- Location: `files/templates/`
+- Timestamp: Unix timestamp in milliseconds (Date.now())
+- One DOCX file per template (old file replaced on re-upload)
+
+**Generated Documents**:
+- Pattern: `{TemplateName}_emp{employee_id}_{timestamp}.docx`
+- Example: `Contract_emp123_1707845123456.docx`
+- Location: `files/documents/`
+- Template name sanitized to remove special characters (replaced with underscores)
+- Sanitization regex: `/[^a-zA-Z0-9а-яА-ЯіїєґІЇЄҐ]/g` (alphanumeric + Ukrainian letters only)
+
+**Employee Document Folders**:
+- Pattern: `employee_{employee_id}/`
+- Example: `employee_123/`
+- Location: `files/`
+- Created on-demand when first document is uploaded for employee
+- Contains employee-specific uploaded files (certificates, documents, etc.)
+
+**Export Files**:
+- Pattern: `employees_export_{YYYYMMDD}_{HHMMSS}.csv`
+- Example: `employees_export_20260212_143022.csv`
+- Generated dynamically on export request
+- Timestamp uses local time in compact format
+
+### Date and Time Format Conventions
+
+The application uses different date formats for storage, display, and API communication.
+
+**Storage Format** (YYYY-MM-DD):
+- All dates stored in CSV files use ISO 8601 date format: YYYY-MM-DD
+- Examples: `2023-05-15`, `1990-12-31`
+- Applies to: birth_date, hire_date, status_start_date, status_end_date, etc.
+- Standard format for parsing and comparison
+
+**Display Format** (DD.MM.YYYY):
+- Dates displayed to users use European format: DD.MM.YYYY
+- Examples: `15.05.2023`, `31.12.1990`
+- Used in generated documents via {current_date} placeholder
+- Common format in Ukraine and Europe
+
+**Timestamp Format** (ISO 8601):
+- All timestamps use ISO 8601 format with timezone: YYYY-MM-DDTHH:MM:SS.sssZ
+- Examples: `2023-05-15T14:30:22.123Z`, `2026-02-12T09:15:00.000Z`
+- Applies to: generated_at (documents), timestamp (logs)
+- Generated via `new Date().toISOString()`
+- UTC timezone (Z suffix)
+
+**Date/Time Display in Documents**:
+- `{current_date}`: DD.MM.YYYY format (e.g., `12.02.2026`)
+- `{current_datetime}`: DD.MM.YYYY HH:MM format (e.g., `12.02.2026 14:30`)
+- Special placeholders automatically added during document generation
+
+**Date Parsing and Validation**:
+- HTML date inputs use YYYY-MM-DD format (browser standard)
+- Backend validates date format before storage
+- Invalid dates cleared to empty string (not stored as invalid values)
+- Date comparison uses string comparison (works correctly with YYYY-MM-DD format)
+
+### Comments and Documentation Style
+
+The application follows consistent patterns for code comments and documentation.
+
+**Function Documentation**:
+- No JSDoc or formal documentation comments in most files
+- Function names are descriptive and self-documenting
+- Complex logic explained with inline comments where necessary
+
+**Inline Comments**:
+- Use `//` for single-line comments in JavaScript
+- Use `/* */` for multi-line comments when needed
+- Comments explain "why", not "what" (code should be self-explanatory)
+- Ukrainian comments acceptable for business logic explanations
+
+**Example Comment Patterns**:
+```javascript
+// Check if retirement is within next 6 months
+if (retirementDate >= today && retirementDate <= sixMonthsLater) {
+  // Add to events list
+}
+
+// Acquire lock: wait for previous write to complete
+const previousLock = employeeWriteLock;
+```
+
+**TODO Comments**:
+- Format: `// TODO: description`
+- Used sparingly for known technical debt or planned improvements
+- Should reference issue number or plan file when possible
+
+**Code Section Headers**:
+- Major sections in large files separated with comment blocks
+- Example:
+```javascript
+// ===========================
+// Employee CRUD endpoints
+// ===========================
+```
+
+### Error Message Patterns
+
+The application uses different languages for different audiences: Ukrainian for end users, English for developers.
+
+**User-Facing Error Messages** (Ukrainian):
+- All error messages returned to frontend are in Ukrainian
+- Examples:
+  - `"Назва шаблону обов'язкова"` (Template name required)
+  - `"Шаблон не знайдено"` (Template not found)
+  - `"Недозволений шлях до файлу"` (Forbidden file path)
+  - `"employee_id обов'язковий"` (employee_id required)
+- Pattern: `res.status(400).json({ error: "Українське повідомлення" })`
+
+**Developer/Technical Messages** (English):
+- Console logs and technical errors use English
+- Examples:
+  - `console.error('Invalid filters JSON:', err)`
+  - `throw new Error('Request failed: ' + response.status)`
+  - `console.log('Starting server on port', port)`
+- Helps with debugging and international developer collaboration
+
+**Mixed Messages**:
+- Some validation errors mix Ukrainian (user field names) with English structure
+- Example: `"Query parameter 'type' must be 'current' or 'month'"`
+- Technical field names (employee_id, template_id) left in English even in Ukrainian messages
+
+**Error Response Structure**:
+```javascript
+// Consistent error response format
+{
+  "error": "Error message string"
+}
+```
+
+### Console Logging Conventions
+
+The application uses console logging for debugging and monitoring during development.
+
+**Log Levels**:
+- `console.log()` - Informational messages, startup notifications, success messages
+- `console.error()` - Error conditions, exceptions, validation failures
+
+**Startup Logging**:
+```javascript
+console.log('✅ Server started on port', port);
+console.log('📁 Data directory:', DATA_DIR);
+console.log('📂 Files directory:', FILES_DIR);
+```
+
+**Error Logging Pattern**:
+```javascript
+try {
+  // Operation
+} catch (err) {
+  console.error(err);
+  res.status(500).json({ error: err.message });
+}
+```
+
+**Request Logging**:
+- No automatic request logging middleware
+- Critical operations logged manually
+- Example: `console.log('Generating document for employee:', employee_id)`
+
+**Emoji Usage in Logs**:
+- Emojis used in migration/utility scripts for visual clarity
+- Examples: ✅ (success), ❌ (error), 📅 (date), 🔄 (processing)
+- Not used in main server logs (keep production logs clean)
+
+**Debug Logging**:
+- Temporary debug logs acceptable during development
+- Should be removed before commit (not left in production code)
+- Use descriptive messages: `console.log('Employee before save:', employee)`
+
+### Code Formatting and Whitespace
+
+**Indentation**:
+- 2 spaces for JavaScript, Vue.js, and JSON files
+- No tabs (spaces only)
+- Consistent across frontend and backend
+
+**Line Length**:
+- No strict line length limit
+- Break long lines for readability (generally around 100-120 characters)
+- Break long function calls at parameter boundaries
+
+**Semicolons**:
+- Semicolons used consistently in backend JavaScript code
+- Vue.js frontend code uses semicolons for consistency
+- Required after statements, not after function declarations
+
+**Quotes**:
+- Double quotes (`"`) preferred for strings in JavaScript
+- Single quotes (`'`) acceptable, but be consistent within a file
+- Template literals (backticks) for string interpolation
+
+**Function Declarations**:
+```javascript
+// Named function declaration
+export async function loadEmployees() {
+  // ...
+}
+
+// Arrow function for callbacks
+const filtered = employees.filter(emp => emp.active === 'yes');
+
+// Async arrow function
+const loadData = async () => {
+  // ...
+};
+```
+
+**Object and Array Formatting**:
+```javascript
+// Short objects on one line
+const obj = { id: 1, name: 'Test' };
+
+// Long objects on multiple lines
+const employee = {
+  employee_id: '1',
+  full_name: 'John Doe',
+  birth_date: '1990-01-01',
+  employment_status: 'Працює'
+};
+
+// Arrays with multiple items
+const fields = [
+  'employee_id',
+  'last_name',
+  'first_name'
+];
+```
+
+**Import Statements**:
+```javascript
+// Standard imports at top of file
+import express from "express";
+import cors from "cors";
+import path from "path";
+
+// Named imports grouped
+import {
+  loadEmployees,
+  saveEmployees,
+  loadLogs
+} from "./store.js";
+```
+
+---
+

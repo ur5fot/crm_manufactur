@@ -163,14 +163,14 @@ Create a CLAUDE.md file that documents the architecture, technical decisions, co
 - Modify: `CLAUDE.md`
 
 **Steps:**
-- [ ] Add "Code Style and Conventions" section
-- [ ] Document naming conventions (snake_case for CSV fields, camelCase for JS)
-- [ ] Document file naming patterns (employee_{id}, template_{id}_{timestamp}.docx)
-- [ ] Document date format conventions (YYYY-MM-DD for storage, DD.MM.YYYY for display)
-- [ ] Document timestamp format (ISO 8601)
-- [ ] Document comments and documentation style
-- [ ] Document error message patterns (Ukrainian language for user-facing messages)
-- [ ] Document console.log conventions for debugging
+- [x] Add "Code Style and Conventions" section
+- [x] Document naming conventions (snake_case for CSV fields, camelCase for JS)
+- [x] Document file naming patterns (employee_{id}, template_{id}_{timestamp}.docx)
+- [x] Document date format conventions (YYYY-MM-DD for storage, DD.MM.YYYY for display)
+- [x] Document timestamp format (ISO 8601)
+- [x] Document comments and documentation style
+- [x] Document error message patterns (Ukrainian language for user-facing messages)
+- [x] Document console.log conventions for debugging
 
 ---
 
