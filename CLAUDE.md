@@ -1453,3 +1453,264 @@ The application uses Bootstrap 5 utility classes and custom CSS for styling.
 
 ---
 
+## Testing
+
+The application uses a two-tier testing strategy: E2E tests with Playwright for user-facing workflows, and unit/integration tests with Node.js native test runner for backend business logic.
+
+### Testing Approach
+
+The project follows a regular testing approach:
+
+1. **Write Code First**: Implement the feature or fix the bug
+2. **Write Tests**: Create tests to verify the implementation
+3. **Validate**: Run all tests to ensure nothing is broken
+4. **Commit**: Only commit when all tests pass
+
+**Critical Rule**: All tests must pass before marking a task as complete or moving to the next task. If tests fail, fix the issues before proceeding.
+
+### E2E Testing with Playwright
+
+End-to-end tests validate complete user workflows across the full stack (database, backend API, frontend UI).
+
+**Location**: `tests/e2e/`
+
+**Test Files**:
+- `setup.spec.js`: Server connectivity and basic API response tests
+- `employee-crud.spec.js`: Employee create, read, update operations
+- `table-filters.spec.js`: Table search and filtering functionality
+- `reports.spec.js`: Custom report generation with filters
+- `import.spec.js`: CSV import workflow
+- `dashboard.spec.js`: Dashboard statistics and notifications
+- `status-retirement.spec.js`: Employment status changes and retirement processing
+- `logs.spec.js`: Audit log viewing and filtering
+- `birth-date-validation.spec.js`: Form validation for birth dates
+- `documents.spec.js`: Employee document upload and viewing
+- `templates-crud.spec.js`: Template create, read, update, delete operations
+- `templates-upload.spec.js`: Template DOCX file upload and placeholder extraction
+- `templates-generation.spec.js`: Document generation from templates
+- `document-history.spec.js`: Document history viewing with filters
+- `templates-modal-simple.spec.js`: Template modal UI interactions
+
+**Configuration** (`playwright.config.js`):
+- Test directory: `./tests/e2e`
+- Sequential execution (workers: 1) for data consistency
+- Browser: Chromium (Desktop Chrome)
+- Base URL: http://localhost:5173 (client)
+- Timeout: 30 seconds per test
+- Screenshots on failure
+- Trace on first retry
+- HTML reporter
+
+**Test Structure Pattern**:
+```javascript
+const { test, expect } = require('@playwright/test');
+
+test.describe('Feature Name', () => {
+  test('should perform specific action', async ({ page, request }) => {
+    // Navigate to page
+    await page.goto('http://localhost:5173/route');
+
+    // Interact with UI
+    await page.click('button:has-text("Action")');
+    await page.fill('input[name="field"]', 'value');
+
+    // Make assertions
+    const element = await page.locator('.result');
+    await expect(element).toBeVisible();
+    await expect(element).toHaveText('Expected Text');
+  });
+
+  test('should validate API response', async ({ request }) => {
+    const response = await request.get('http://localhost:3000/api/endpoint');
+    expect(response.ok()).toBeTruthy();
+    expect(response.status()).toBe(200);
+
+    const data = await response.json();
+    expect(data).toHaveProperty('field');
+  });
+});
+```
+
+**Test Commands**:
+```bash
+# Run all E2E tests
+npm run test:e2e
+
+# Run with UI mode (interactive)
+npm run test:e2e:ui
+
+# Run with browser visible (headed mode)
+npm run test:e2e:headed
+```
+
+**Prerequisites**:
+- Server must be running on http://localhost:3000
+- Client must be running on http://localhost:5173
+- Use `./run.sh` to start both before running tests
+
+### Unit and Integration Testing
+
+Unit and integration tests focus on backend business logic, API endpoints, and data processing functions.
+
+**Location**: `server/test/`
+
+**Test Files**:
+- `config.test.js`: Configuration loading and validation
+- `upload-limit.test.js`: File upload size limit enforcement
+- `docx-generator.test.js`: DOCX template processing and placeholder replacement
+- `templates-api.test.js`: Template API endpoint validation
+- `retirement-events.test.js`: Retirement event processing logic
+- `retirement-api.test.js`: Retirement API endpoint validation
+
+**Test Framework**: Node.js native test runner (no external dependencies)
+
+**Test Structure Pattern**:
+```javascript
+/**
+ * Unit tests for Module Name
+ * Run with: node server/test/module.test.js
+ */
+
+import { functionToTest } from '../src/module.js';
+
+let testsPassed = 0;
+let testsFailed = 0;
+
+// Helper function to run a test
+async function runTest(name, testFn) {
+  try {
+    await testFn();
+    console.log(`✓ ${name}`);
+    testsPassed++;
+    return true;
+  } catch (error) {
+    console.error(`✗ ${name}`);
+    console.error(`  Error: ${error.message}`);
+    testsFailed++;
+    return false;
+  }
+}
+
+// Test case
+async function testFeatureWorks() {
+  const result = await functionToTest(input);
+
+  if (result !== expected) {
+    throw new Error(`Expected ${expected}, got ${result}`);
+  }
+}
+
+// Main test runner
+async function runAllTests() {
+  console.log('Starting tests...\n');
+
+  await runTest('Feature works correctly', testFeatureWorks);
+  // ... more tests
+
+  console.log(`\nTests passed: ${testsPassed}`);
+  console.log(`Tests failed: ${testsFailed}`);
+
+  return testsFailed === 0;
+}
+
+// Run tests
+runAllTests()
+  .then(success => process.exit(success ? 0 : 1))
+  .catch(error => {
+    console.error('Unexpected error:', error);
+    process.exit(1);
+  });
+```
+
+**Test Commands**:
+```bash
+# Run all unit/integration tests
+cd server && npm test
+
+# Run specific test file
+node server/test/config.test.js
+node server/test/docx-generator.test.js
+```
+
+### Test Data Fixtures
+
+**E2E Test Data**:
+- E2E tests use the actual `data/` CSV files
+- Tests run sequentially (workers: 1) to avoid data conflicts
+- Some tests create temporary employees/templates and clean up afterward
+- Data state persists between test runs (no automatic cleanup)
+
+**Unit Test Data**:
+- Unit tests create temporary fixtures in `server/fixtures/` or `temp/test-output/`
+- Fixtures are generated programmatically (e.g., createTestDocx in docx-generator.test.js)
+- Cleanup functions remove fixtures after test completion
+- Tests are isolated and do not modify production data files
+
+**Fixture Pattern** (from docx-generator.test.js):
+```javascript
+const TEST_FIXTURES_DIR = path.resolve(__dirname, '../fixtures');
+
+function setup() {
+  fs.mkdirSync(TEST_FIXTURES_DIR, { recursive: true });
+}
+
+function cleanup() {
+  if (fs.existsSync(TEST_FIXTURES_DIR)) {
+    fs.rmSync(TEST_FIXTURES_DIR, { recursive: true, force: true });
+  }
+}
+
+// Create test fixture
+function createTestDocx(filePath, placeholders) {
+  // Generate minimal valid DOCX file with placeholders
+  // ...
+}
+```
+
+### Test Naming Conventions
+
+**E2E Test Files**:
+- Pattern: `feature-name.spec.js`
+- Examples: `employee-crud.spec.js`, `templates-generation.spec.js`
+- Location: `tests/e2e/`
+
+**Unit Test Files**:
+- Pattern: `module-name.test.js`
+- Examples: `config.test.js`, `docx-generator.test.js`
+- Location: `server/test/`
+
+**Test Case Naming**:
+- E2E: Descriptive sentences with "should" (e.g., "should create new employee")
+- Unit: Descriptive function names (e.g., "testExtractPlaceholdersSuccess")
+- Use clear, specific descriptions that explain what is being tested
+
+### Test Coverage Expectations
+
+**Coverage Target**: 80%+ for critical business logic paths
+
+**Critical Paths** (must be tested):
+- Employee CRUD operations
+- Template CRUD operations
+- Document generation from templates
+- Placeholder extraction and replacement
+- CSV import and export
+- Status change workflows
+- Audit logging
+- Configuration loading
+- File upload limits
+- Data validation
+
+**Lower Priority** (optional coverage):
+- UI styling and layout
+- Error message text
+- Console logging
+- Static file serving
+
+**Coverage Validation**:
+- No automated coverage reports (manual review)
+- Test all happy paths and critical error paths
+- Test edge cases (null values, empty inputs, invalid data)
+- Test security validations (path traversal, file size limits)
+
+---
+

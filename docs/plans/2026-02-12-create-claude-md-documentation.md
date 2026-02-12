@@ -91,15 +91,15 @@ Create a CLAUDE.md file that documents the architecture, technical decisions, co
 - Modify: `CLAUDE.md`
 
 **Steps:**
-- [ ] Add "Testing" section
-- [ ] Document E2E testing with Playwright (tests/e2e/)
-- [ ] Document test structure and naming conventions
-- [ ] Document unit/integration tests (server/test/)
-- [ ] Document test data fixtures pattern
-- [ ] Document test commands (npm run test:e2e, cd server && npm test)
-- [ ] Document testing approach: Regular (code first, then tests)
-- [ ] Document test coverage expectations (80%+)
-- [ ] Document critical rule: all tests must pass before moving to next task
+- [x] Add "Testing" section
+- [x] Document E2E testing with Playwright (tests/e2e/)
+- [x] Document test structure and naming conventions
+- [x] Document unit/integration tests (server/test/)
+- [x] Document test data fixtures pattern
+- [x] Document test commands (npm run test:e2e, cd server && npm test)
+- [x] Document testing approach: Regular (code first, then tests)
+- [x] Document test coverage expectations (80%+)
+- [x] Document critical rule: all tests must pass before moving to next task
 
 ---
 
