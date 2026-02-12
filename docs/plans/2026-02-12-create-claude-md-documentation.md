@@ -38,14 +38,14 @@ Create a CLAUDE.md file that documents the architecture, technical decisions, co
 - Modify: `CLAUDE.md`
 
 **Steps:**
-- [ ] Add "Key Technical Decisions" section
-- [ ] Document CSV-based storage rationale and limitations (suitable for <10k employees)
-- [ ] Document file locking pattern for concurrent writes (employeeWriteLock, templatesWriteLock, etc.)
-- [ ] Document soft delete pattern (active='yes'/'no' instead of hard deletes)
-- [ ] Document audit logging for all operations (logs.csv)
-- [ ] Document UTF-8 BOM and semicolon delimiter conventions
-- [ ] Document auto-increment ID pattern for entities
-- [ ] Document security decisions (path traversal protection, input validation, file size limits)
+- [x] Add "Key Technical Decisions" section
+- [x] Document CSV-based storage rationale and limitations (suitable for <10k employees)
+- [x] Document file locking pattern for concurrent writes (employeeWriteLock, templatesWriteLock, etc.)
+- [x] Document soft delete pattern (active='yes'/'no' instead of hard deletes)
+- [x] Document audit logging for all operations (logs.csv)
+- [x] Document UTF-8 BOM and semicolon delimiter conventions
+- [x] Document auto-increment ID pattern for entities
+- [x] Document security decisions (path traversal protection, input validation, file size limits)
 
 ---
 
