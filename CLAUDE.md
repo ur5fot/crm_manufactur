@@ -433,3 +433,422 @@ const sanitizedName = template.template_name.replace(/[^a-zA-Z0-9а-яА-Яії�
 
 ---
 
+## Backend Patterns
+
+This section documents common code patterns and conventions used throughout the backend codebase.
+
+### API Route Structure and Conventions
+
+All API routes follow consistent patterns for clarity and maintainability.
+
+**Route Naming**:
+- Base path: `/api/`
+- Resource-based routing: `/api/employees`, `/api/templates`, `/api/logs`
+- ID-based routes: `/api/templates/:id`, `/api/employees/:id`
+- Action routes: `/api/templates/:id/upload`, `/api/templates/:id/generate`
+- Utility routes: `/api/health`, `/api/dashboard/stats`, `/api/export`
+
+**HTTP Methods**:
+- GET: Retrieve data (lists or single items)
+- POST: Create new resources or trigger actions
+- PUT: Update existing resources
+- DELETE: Soft delete resources (set active='no')
+
+**Route Organization** (in index.js):
+1. Health check and configuration routes
+2. Dashboard and reporting routes
+3. Employee CRUD routes
+4. Templates CRUD routes
+5. Documents and file management routes
+6. Utility routes (folder opening, import/export)
+
+**Example Route Pattern**:
+```javascript
+app.get("/api/templates", async (req, res) => {
+  try {
+    const templates = await loadTemplates();
+    const activeTemplates = templates.filter((t) => t.active !== 'no');
+    res.json({ templates: activeTemplates });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+```
+
+### CSV Read/Write Patterns
+
+All CSV operations follow a consistent pattern through store.js functions.
+
+**Load Pattern** (Read Operations):
+```javascript
+export async function loadEmployees() {
+  const columns = await getEmployeeColumns();
+  return readCsv(EMPLOYEES_PATH, columns);
+}
+
+export async function loadTemplates() {
+  return readCsv(TEMPLATES_PATH, TEMPLATE_COLUMNS);
+}
+```
+
+**Save Pattern** (Write Operations with Locking):
+```javascript
+export async function saveEmployees(rows) {
+  // Acquire lock: wait for previous write to complete
+  const previousLock = employeeWriteLock;
+  let releaseLock;
+  employeeWriteLock = new Promise(resolve => { releaseLock = resolve; });
+
+  try {
+    await previousLock;
+    const columns = await getEmployeeColumns();
+    await writeCsv(EMPLOYEES_PATH, columns, rows);
+  } finally {
+    releaseLock();
+  }
+}
+```
+
+**Key Points**:
+- All reads use readCsv() from csv.js (handles BOM, delimiter, parsing)
+- All writes use writeCsv() from csv.js (handles BOM, delimiter, quoting)
+- Writes always use file locks to prevent race conditions
+- Schema columns loaded from fields_schema.csv for dynamic fields
+- Hard-coded columns for fixed-schema files (logs, templates, config)
+
+### Multer File Upload Pattern and Configuration
+
+File uploads are handled using multer middleware with size limit validation.
+
+**Basic Upload Configuration**:
+```javascript
+const importUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: parseInt(appConfig.max_file_upload_mb || 10) * 1024 * 1024 }
+});
+```
+
+**Template Upload Configuration** (in index.js):
+```javascript
+const templateStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const templateDir = path.join(FILES_DIR, 'templates');
+    fs.mkdirSync(templateDir, { recursive: true });
+    cb(null, templateDir);
+  },
+  filename: (req, file, cb) => {
+    const templateId = req.params.id;
+    const timestamp = Date.now();
+    cb(null, `template_${templateId}_${timestamp}.docx`);
+  }
+});
+
+const templateUpload = multer({
+  storage: templateStorage,
+  limits: { fileSize: parseInt(appConfig.max_file_upload_mb || 10) * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (!file.originalname.toLowerCase().endsWith('.docx')) {
+      cb(new Error('Only DOCX files allowed'));
+      return;
+    }
+    cb(null, true);
+  }
+});
+```
+
+**Usage in Routes**:
+```javascript
+app.post("/api/employees/import", importUpload.single("file"), async (req, res) => {
+  if (!req.file) {
+    res.status(400).json({ error: "File not found" });
+    return;
+  }
+  // Process req.file.buffer for memory storage
+  // or req.file.path for disk storage
+});
+```
+
+**Key Features**:
+- Memory storage for CSV imports (small files, temporary processing)
+- Disk storage for template DOCX files (permanent storage)
+- File size limits from config.csv (default 10 MB)
+- File type validation via fileFilter
+- Automatic directory creation for template uploads
+
+### Error Handling and HTTP Status Codes
+
+The application follows consistent error handling patterns across all routes.
+
+**Standard Error Pattern**:
+```javascript
+app.get("/api/resource/:id", async (req, res) => {
+  try {
+    // Business logic here
+    const item = await loadItem(req.params.id);
+
+    if (!item) {
+      res.status(404).json({ error: "Item not found" });
+      return;
+    }
+
+    res.json({ item });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+```
+
+**HTTP Status Code Conventions**:
+- 200 OK: Successful GET request
+- 201 Created: Successful POST creating new resource
+- 400 Bad Request: Validation errors, missing required fields, invalid input
+- 403 Forbidden: Security violations (path traversal, unauthorized access)
+- 404 Not Found: Resource not found by ID
+- 500 Internal Server Error: Unexpected errors, exceptions
+
+**Error Message Conventions**:
+- Ukrainian language for user-facing error messages
+- English for technical/developer error messages in console.error()
+- Include entity type in error messages (e.g., "Шаблон не найден")
+- Return error objects with `error` field: `{ error: "message" }`
+
+### Data Validation Patterns
+
+Validation occurs at multiple levels throughout the backend.
+
+**Required Field Validation**:
+```javascript
+if (!payload.template_name || !payload.template_name.trim()) {
+  res.status(400).json({ error: "Назва шаблону обов'язкова" });
+  return;
+}
+```
+
+**Type Validation**:
+```javascript
+// Query parameter validation
+const type = req.query.type;
+if (type !== 'current' && type !== 'month') {
+  res.status(400).json({ error: 'Query parameter "type" must be "current" or "month"' });
+  return;
+}
+```
+
+**JSON Parsing Validation**:
+```javascript
+let filters = [];
+if (req.query.filters) {
+  try {
+    filters = JSON.parse(req.query.filters);
+  } catch (err) {
+    console.error('Invalid filters JSON:', err);
+    res.status(400).json({ error: 'Invalid filters JSON' });
+    return;
+  }
+}
+```
+
+**Field Schema Validation**:
+- Fields_schema.csv defines allowed values for select fields
+- field_options column contains pipe-delimited values (e.g., "value1|value2|value3")
+- Schema loaded at startup and used for validation
+
+**Data Normalization**:
+```javascript
+function normalizeEmployeeInput(payload) {
+  const input = payload && typeof payload === "object" ? payload : {};
+  return normalizeRows(getEmployeeColumnsSync(), [input])[0];
+}
+```
+
+### Joining Data from Multiple CSV Files
+
+Data from different CSV files is often combined in memory to create complete responses.
+
+**Dashboard Stats Pattern** (joining employees with schema):
+```javascript
+export async function getDashboardStats() {
+  const employees = await loadEmployees();
+  const schema = await loadFieldsSchema();
+
+  // Find employment_status field definition from schema
+  const statusField = schema.find(f => f.field_name === 'employment_status');
+  const options = statusField?.field_options?.split('|') || [];
+
+  // Count employees by status
+  const statusCounts = options.map(opt => ({
+    label: opt,
+    count: employees.filter(e => e.employment_status === opt).length
+  }));
+
+  return { total: employees.length, statusCounts };
+}
+```
+
+**Document History Pattern** (joining documents with employees and templates):
+```javascript
+export async function loadDocumentHistory() {
+  const documents = await loadGeneratedDocuments();
+  const employees = await loadEmployees();
+  const templates = await loadTemplates();
+
+  // Create lookup maps for efficient joining
+  const employeeMap = new Map(employees.map(e => [e.employee_id, e]));
+  const templateMap = new Map(templates.map(t => [t.template_id, t]));
+
+  // Join data
+  return documents.map(doc => ({
+    ...doc,
+    employee: employeeMap.get(doc.employee_id),
+    template: templateMap.get(doc.template_id)
+  }));
+}
+```
+
+**Key Patterns**:
+- Load all required CSV files in parallel when possible
+- Create Map objects for O(1) lookup when joining
+- Filter active records (active='yes') before joining
+- Preserve original data structure, add joined fields as nested objects
+
+### DOCX Generation Pattern
+
+Document generation uses docxtemplater to replace placeholders in DOCX templates.
+
+**Core Functions** (from docx-generator.js):
+
+**Generate Document**:
+```javascript
+export async function generateDocx(templatePath, data, outputPath) {
+  // Read template file
+  const content = fs.readFileSync(templatePath, 'binary');
+  const zip = new PizZip(content);
+
+  // Initialize docxtemplater
+  const doc = new Docxtemplater(zip, {
+    paragraphLoop: true,
+    linebreaks: true,
+  });
+
+  // Prepare data with null handling and special placeholders
+  const preparedData = prepareData(data);
+
+  // Render document
+  doc.render(preparedData);
+
+  // Generate output buffer
+  const buf = doc.getZip().generate({
+    type: 'nodebuffer',
+    compression: 'DEFLATE',
+  });
+
+  // Write to file
+  fs.writeFileSync(outputPath, buf);
+}
+```
+
+**Data Preparation**:
+```javascript
+function prepareData(data) {
+  const prepared = {};
+
+  // Handle user-provided data (null safety)
+  for (const key in data) {
+    const value = data[key];
+    prepared[key] = (value === null || value === undefined) ? '' : String(value);
+  }
+
+  // Add special placeholders
+  const now = new Date();
+  prepared.current_date = `${day}.${month}.${year}`;  // DD.MM.YYYY
+  prepared.current_datetime = `${day}.${month}.${year} ${hours}:${minutes}`;  // DD.MM.YYYY HH:MM
+
+  return prepared;
+}
+```
+
+**Usage Pattern in API Routes**:
+```javascript
+app.post("/api/templates/:id/generate", async (req, res) => {
+  // Load template metadata
+  const template = await loadTemplate(templateId);
+
+  // Load employee data
+  const employee = await loadEmployee(employeeId);
+
+  // Generate unique filename
+  const sanitizedName = template.template_name.replace(/[^a-zA-Z0-9а-яА-ЯіїєґІЇЄҐ]/g, '_');
+  const outputFilename = `${sanitizedName}_emp${employeeId}_${timestamp}.docx`;
+  const outputPath = path.join(FILES_DIR, 'documents', outputFilename);
+
+  // Generate DOCX
+  await generateDocx(templatePath, employee, outputPath);
+
+  // Save generation record to generated_documents.csv
+  await addGeneratedDocument({
+    template_id: templateId,
+    employee_id: employeeId,
+    filename: outputFilename,
+    generated_at: new Date().toISOString(),
+    data_snapshot: JSON.stringify(employee)
+  });
+});
+```
+
+### Placeholder Extraction and Replacement
+
+Placeholders are extracted from DOCX templates and validated against employee schema.
+
+**Extract Placeholders**:
+```javascript
+export async function extractPlaceholders(templatePath) {
+  // Read template file
+  const content = fs.readFileSync(templatePath, 'binary');
+  const zip = new PizZip(content);
+
+  // Extract document.xml content
+  const documentXml = zip.file('word/document.xml').asText();
+
+  // Extract placeholders using regex
+  const placeholderRegex = /\{([a-zA-Z0-9_]+)\}/g;
+  const placeholders = new Set();
+  let match;
+
+  while ((match = placeholderRegex.exec(documentXml)) !== null) {
+    placeholders.add(match[1]);
+  }
+
+  // Return sorted array
+  return Array.from(placeholders).sort();
+}
+```
+
+**Usage in Template Upload**:
+```javascript
+app.post("/api/templates/:id/upload", templateUpload.single('file'), async (req, res) => {
+  // Extract placeholders from uploaded DOCX
+  const placeholders = await extractPlaceholders(req.file.path);
+
+  // Update template metadata with placeholder list
+  template.placeholder_fields = placeholders.join(',');
+  await saveTemplates(templates);
+
+  res.json({ template, placeholders });
+});
+```
+
+**Placeholder Types**:
+- Employee fields: Any field from fields_schema.csv (e.g., {full_name}, {birth_date})
+- Special placeholders: {current_date}, {current_datetime}
+- Custom text: Any alphanumeric placeholder is allowed, replaced with empty string if not found
+
+**Placeholder Naming Rules**:
+- Must match regex: /\{([a-zA-Z0-9_]+)\}/
+- Case-sensitive matching
+- Underscores allowed, hyphens not
+- Must be wrapped in curly braces in DOCX template
+
+---
+

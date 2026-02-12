@@ -55,15 +55,15 @@ Create a CLAUDE.md file that documents the architecture, technical decisions, co
 - Modify: `CLAUDE.md`
 
 **Steps:**
-- [ ] Add "Backend Patterns" section
-- [ ] Document API route structure and conventions
-- [ ] Document CSV read/write patterns (loadX, saveX functions in store.js)
-- [ ] Document multer file upload pattern and configuration
-- [ ] Document error handling and HTTP status codes
-- [ ] Document data validation patterns
-- [ ] Document joining data from multiple CSV files pattern
-- [ ] Document DOCX generation pattern (docxtemplater usage)
-- [ ] Document placeholder extraction and replacement
+- [x] Add "Backend Patterns" section
+- [x] Document API route structure and conventions
+- [x] Document CSV read/write patterns (loadX, saveX functions in store.js)
+- [x] Document multer file upload pattern and configuration
+- [x] Document error handling and HTTP status codes
+- [x] Document data validation patterns
+- [x] Document joining data from multiple CSV files pattern
+- [x] Document DOCX generation pattern (docxtemplater usage)
+- [x] Document placeholder extraction and replacement
 
 ---
 
