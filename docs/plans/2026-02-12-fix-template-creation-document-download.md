@@ -50,10 +50,10 @@ Additionally, need to verify that document file paths are correctly constructed 
 **Files:**
 - Modify: stop.sh
 
-- [ ] Enhance stop.sh to kill ALL matching node processes (not just those on specific ports)
-- [ ] Add process cleanup for orphaned vite and node --watch processes
-- [ ] Test: run ./stop.sh and verify all processes are killed
-- [ ] Test: run ./run.sh and verify clean startup
+- [x] Enhance stop.sh to kill ALL matching node processes (not just those on specific ports)
+- [x] Add process cleanup for orphaned vite and node --watch processes
+- [x] Test: run ./stop.sh and verify all processes are killed
+- [x] Test: run ./run.sh and verify clean startup
 
 ### Task 3: Verify Template Creation and Document Download
 
