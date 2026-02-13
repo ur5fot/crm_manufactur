@@ -37,6 +37,7 @@ The system is optimized for organizations with up to 10,000 employees and emphas
 - **Storage**: CSV files with UTF-8 BOM encoding and semicolon delimiters
 - **File Uploads**: Multer with configurable size limits
 - **Document Generation**: Docxtemplater + PizzipJS for DOCX manipulation
+- **Declension**: shevchenko (name declension) + shevchenko-ext-military (grade/position declension)
 - **Validation**: Zod for input validation schemas
 - **CSV Parsing**: csv-parse and csv-stringify libraries
 - **Testing**: Node.js native test runner for unit/integration tests
@@ -78,7 +79,7 @@ crm_manufactur/
 │   │   ├── csv.js              # Low-level CSV read/write utilities
 │   │   ├── schema.js           # Dynamic field schema loading from fields_schema.csv
 │   │   ├── docx-generator.js   # DOCX template processing and placeholder replacement
-│   │   ├── declension.js       # Ukrainian name declension (shevchenko library)
+│   │   ├── declension.js       # Ukrainian name/grade/position declension (shevchenko + shevchenko-ext-military)
 │   │   └── upload-config.js    # Multer configuration for file uploads
 │   ├── test/                   # Unit and integration tests
 │   │   ├── config.test.js
@@ -1561,7 +1562,7 @@ Unit and integration tests focus on backend business logic, API endpoints, and d
 - `config.test.js`: Configuration loading and validation
 - `upload-limit.test.js`: File upload size limit enforcement
 - `docx-generator.test.js`: DOCX template processing and placeholder replacement
-- `declension.test.js`: Ukrainian name declension with per-field indeclinable flags
+- `declension.test.js`: Ukrainian name and grade/position declension with per-field indeclinable flags
 - `templates-api.test.js`: Template API endpoint validation
 - `retirement-events.test.js`: Retirement event processing logic
 - `retirement-api.test.js`: Retirement API endpoint validation
@@ -2354,6 +2355,24 @@ The system automatically generates 24 declined name placeholders (6 grammatical 
 - `full_name_*` is assembled from parts respecting individual flags
 - If both flags are set, all parts stay in nominative (early return optimization)
 - Gender is detected from the `gender` field or auto-detected via shevchenko
+
+**Grade/Position Declension Placeholders** (from declension.js):
+
+The system generates 12 additional declined placeholders (6 cases × 2 fields) for military grade and position using the [shevchenko-ext-military](https://github.com/tooleks/shevchenko-ext-military) extension:
+
+- `grade` field (Посада) → mapped to `militaryAppointment` in shevchenko-ext-military
+  - Placeholders: `{grade_genitive}`, `{grade_dative}`, `{grade_accusative}`, `{grade_vocative}`, `{grade_locative}`, `{grade_ablative}`
+- `position` field (Звання) → mapped to `militaryRank` in shevchenko-ext-military
+  - Placeholders: `{position_genitive}`, `{position_dative}`, `{position_accusative}`, `{position_vocative}`, `{position_locative}`, `{position_ablative}`
+
+**Indeclinable Grade/Position Flags**:
+- `indeclinable_grade` — when 'yes', grade stays in nominative for all cases
+- `indeclinable_position` — when 'yes', position stays in nominative for all cases
+- These are checkbox fields in fields_schema.csv (same pattern as indeclinable_name/indeclinable_first_name)
+
+**Placeholder Reference Page Groups**:
+- Name declension placeholders displayed under "Відмінювання імен" group
+- Grade/position declension placeholders displayed under "Відмінювання посади та звання" group (separate section)
 
 **Data Preparation Pattern** (from docx-generator.js):
 ```javascript

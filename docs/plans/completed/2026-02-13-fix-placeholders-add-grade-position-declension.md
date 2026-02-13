@@ -80,5 +80,5 @@ Two changes:
 
 ### Task 5: Update documentation
 
-- [ ] Update CLAUDE.md: add grade/position declension to "Name Declension Placeholders" section, mention shevchenko-ext-military dependency, document indeclinable_grade and indeclinable_position fields
-- [ ] Move this plan to `docs/plans/completed/`
+- [x] Update CLAUDE.md: add grade/position declension to "Name Declension Placeholders" section, mention shevchenko-ext-military dependency, document indeclinable_grade and indeclinable_position fields
+- [x] Move this plan to `docs/plans/completed/`
