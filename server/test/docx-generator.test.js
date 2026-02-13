@@ -322,6 +322,68 @@ async function testGenerateDocxCreateDir() {
   }
 }
 
+// Helper function to create a DOCX with placeholders split across XML runs
+// Simulates what Word does when it splits {placeholder} into separate <w:t> elements
+function createSplitRunDocx(filePath) {
+  const zip = new PizZip();
+
+  // Placeholder {full_name} split across 3 runs: "{" + "full_name" + "}"
+  // Placeholder {birth_date} split across 2 runs: "{birth_" + "date}"
+  // Placeholder {position} in a single run (normal)
+  let documentContent = '<?xml version="1.0" encoding="UTF-8"?>';
+  documentContent += '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">';
+  documentContent += '<w:body>';
+  // Split {full_name} across 3 runs
+  documentContent += '<w:p>';
+  documentContent += '<w:r><w:t>{</w:t></w:r>';
+  documentContent += '<w:r><w:t>full_name</w:t></w:r>';
+  documentContent += '<w:r><w:t>}</w:t></w:r>';
+  documentContent += '</w:p>';
+  // Split {birth_date} across 2 runs
+  documentContent += '<w:p>';
+  documentContent += '<w:r><w:t>{birth_</w:t></w:r>';
+  documentContent += '<w:r><w:t>date}</w:t></w:r>';
+  documentContent += '</w:p>';
+  // Normal single-run {position}
+  documentContent += '<w:p><w:r><w:t>{position}</w:t></w:r></w:p>';
+  documentContent += '</w:body></w:document>';
+
+  zip.folder('word').file('document.xml', documentContent);
+
+  const contentTypes = '<?xml version="1.0" encoding="UTF-8"?>' +
+    '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+    '<Default Extension="xml" ContentType="application/xml"/>' +
+    '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>' +
+    '</Types>';
+  zip.file('[Content_Types].xml', contentTypes);
+
+  const rels = '<?xml version="1.0" encoding="UTF-8"?>' +
+    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+    '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>' +
+    '</Relationships>';
+  zip.folder('_rels').file('.rels', rels);
+
+  const buffer = zip.generate({ type: 'nodebuffer', compression: 'DEFLATE' });
+  fs.writeFileSync(filePath, buffer);
+}
+
+// Test 12: extractPlaceholders() finds placeholders split across XML runs
+async function testExtractPlaceholdersSplitRuns() {
+  const testPath = path.join(TEST_FIXTURES_DIR, 'test-split-runs.docx');
+  createSplitRunDocx(testPath);
+
+  const placeholders = await extractPlaceholders(testPath);
+
+  if (!Array.isArray(placeholders)) {
+    throw new Error('Expected array of placeholders');
+  }
+
+  const expected = ['birth_date', 'full_name', 'position'];
+  if (JSON.stringify(placeholders) !== JSON.stringify(expected)) {
+    throw new Error(`Expected ${JSON.stringify(expected)}, got ${JSON.stringify(placeholders)}`);
+  }
+}
+
 // Main test runner
 async function runAllTests() {
   console.log('Starting DOCX Generator unit tests...\n');
@@ -340,6 +402,7 @@ async function runAllTests() {
   await runTest('generateDocx() adds current_datetime placeholder', testGenerateDocxCurrentDatetime);
   await runTest('generateDocx() throws error for non-existent template', testGenerateDocxNonExistent);
   await runTest('generateDocx() creates output directory if missing', testGenerateDocxCreateDir);
+  await runTest('extractPlaceholders() finds placeholders split across XML runs', testExtractPlaceholdersSplitRuns);
 
   // Cleanup
   cleanup();
