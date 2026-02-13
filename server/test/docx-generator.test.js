@@ -437,6 +437,11 @@ async function testGenerateDocxCaseVariantsEmpty() {
   if (documentXml.includes('{name_upper}') || documentXml.includes('{name_cap}')) {
     throw new Error('Empty value _upper/_cap placeholders should still be replaced (with empty string)');
   }
+
+  // Must not contain literal "undefined" text (docxtemplater renders "undefined" for missing keys)
+  if (documentXml.includes('>undefined<')) {
+    throw new Error('Empty _upper/_cap should not produce literal "undefined" text in document');
+  }
 }
 
 // Main test runner

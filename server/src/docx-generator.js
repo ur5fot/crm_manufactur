@@ -104,9 +104,14 @@ async function prepareData(data) {
   // Add uppercase and capitalized variants for all text placeholders
   const caseVariants = {};
   for (const [key, value] of Object.entries(prepared)) {
-    if (typeof value === 'string' && value.length > 0) {
-      caseVariants[`${key}_upper`] = value.toUpperCase();
-      caseVariants[`${key}_cap`] = value.charAt(0).toUpperCase() + value.slice(1);
+    if (typeof value === 'string') {
+      if (value.length > 0) {
+        caseVariants[`${key}_upper`] = value.toUpperCase();
+        caseVariants[`${key}_cap`] = value.charAt(0).toUpperCase() + value.slice(1);
+      } else {
+        caseVariants[`${key}_upper`] = '';
+        caseVariants[`${key}_cap`] = '';
+      }
     }
   }
   Object.assign(prepared, caseVariants);
