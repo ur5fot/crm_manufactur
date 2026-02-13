@@ -2015,11 +2015,7 @@ const filteredPlaceholders = computed(() => {
 });
 
 function copyPlaceholder(text) {
-  navigator.clipboard.writeText(text).then(() => {
-    // brief visual feedback handled via CSS :active
-  }).catch(() => {
-    // fallback: select text
-  });
+  navigator.clipboard.writeText(text).catch(() => {});
 }
 
 async function loadFieldsSchema() {

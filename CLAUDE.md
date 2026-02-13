@@ -808,23 +808,26 @@ Placeholders are extracted from DOCX templates and validated against employee sc
 **Extract Placeholders**:
 ```javascript
 export async function extractPlaceholders(templatePath) {
-  // Read template file
   const content = fs.readFileSync(templatePath, 'binary');
   const zip = new PizZip(content);
 
-  // Extract document.xml content
-  const documentXml = zip.file('word/document.xml').asText();
+  // Use Docxtemplater's getFullText() to get merged plain text.
+  // This handles cases where Word splits {placeholder} across multiple XML runs.
+  const doc = new Docxtemplater(zip, {
+    paragraphLoop: true,
+    linebreaks: true,
+  });
+  const fullText = doc.getFullText();
 
-  // Extract placeholders using regex
+  // Extract placeholders using regex on merged text
   const placeholderRegex = /\{([a-zA-Z0-9_]+)\}/g;
   const placeholders = new Set();
   let match;
 
-  while ((match = placeholderRegex.exec(documentXml)) !== null) {
+  while ((match = placeholderRegex.exec(fullText)) !== null) {
     placeholders.add(match[1]);
   }
 
-  // Return sorted array
   return Array.from(placeholders).sort();
 }
 ```
@@ -937,6 +940,7 @@ const routes = [
   { path: "/import", name: "import", component: App },
   { path: "/templates", name: "templates", component: App },
   { path: "/document-history", name: "document-history", component: App },
+  { path: "/placeholder-reference/:employeeId?", name: "placeholder-reference", component: App },
   { path: "/logs", name: "logs", component: App }
 ];
 ```
@@ -949,6 +953,7 @@ const routes = [
 - `/import`: CSV import interface for bulk employee operations
 - `/templates`: Document template management
 - `/document-history`: History of all generated documents
+- `/placeholder-reference/:employeeId?`: Placeholder reference page showing all available placeholders with preview values
 - `/logs`: Audit log viewer
 
 **Navigation Patterns**:
@@ -1964,6 +1969,27 @@ All API endpoints are served under the `/api` prefix:
 - Returns: Document object with download URL
 - 404 if template or employee not found
 
+### Placeholder Reference Endpoint
+
+**GET /api/placeholder-preview/:employeeId?**
+- Get all available placeholders with preview values for a specific employee
+- Optional path parameter: employeeId (uses first active employee if omitted)
+- Returns: Object with:
+  - employee_name: Full name of the selected employee
+  - employee_id: ID of the selected employee
+  - placeholders: Array of placeholder objects, each with:
+    - placeholder: Placeholder syntax (e.g., `{full_name}`)
+    - label: Ukrainian display label
+    - value: Preview value from the selected employee's data
+    - group: Category ('fields', 'declension', 'declension_fields', 'special')
+- Groups:
+  - 'fields': All fields from fields_schema.csv
+  - 'declension': Name declension placeholders (24 items)
+  - 'declension_fields': Grade/position declension placeholders (12 items)
+  - 'special': Auto-generated placeholders (current_date, current_datetime)
+- 404 if specific employeeId not found or no active employees exist
+- Used by placeholder reference page
+
 ### Document History Endpoints
 
 **GET /api/documents**
@@ -2319,14 +2345,20 @@ Placeholders in DOCX templates follow a simple, consistent syntax that gets repl
 export async function extractPlaceholders(templatePath) {
   const content = fs.readFileSync(templatePath, 'binary');
   const zip = new PizZip(content);
-  const documentXml = zip.file('word/document.xml').asText();
 
-  // Extract placeholders using regex
+  // Use Docxtemplater's getFullText() to get merged plain text.
+  // This handles cases where Word splits {placeholder} across multiple XML runs.
+  const doc = new Docxtemplater(zip, {
+    paragraphLoop: true,
+    linebreaks: true,
+  });
+  const fullText = doc.getFullText();
+
   const placeholderRegex = /\{([a-zA-Z0-9_]+)\}/g;
   const placeholders = new Set();
   let match;
 
-  while ((match = placeholderRegex.exec(documentXml)) !== null) {
+  while ((match = placeholderRegex.exec(fullText)) !== null) {
     placeholders.add(match[1]);
   }
 

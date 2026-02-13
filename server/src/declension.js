@@ -162,7 +162,7 @@ export async function generateDeclinedGradePosition(data) {
     return result;
   }
 
-  // If both are indeclinable, return nominative for all cases
+  // If all non-empty fields are indeclinable, return nominative for all cases
   if ((!grade || skipGrade) && (!position || skipPosition)) {
     for (const { suffix } of CASES) {
       result[`grade_${suffix}`] = grade;
