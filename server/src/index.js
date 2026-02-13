@@ -1455,7 +1455,7 @@ app.get("/api/documents/:id/download", async (req, res) => {
 
     // SECURITY: Sanitize filename from database before using in path
     // Prevents path traversal if CSV is manually edited with malicious filename
-    const sanitizedFilename = document.docx_filename.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const sanitizedFilename = document.docx_filename.replace(/[^a-zA-Z0-9а-яА-ЯіїєґІЇЄҐ._-]/g, '_');
 
     // Validate file exists and prevent path traversal
     const filePath = path.join(FILES_DIR, 'documents', sanitizedFilename);

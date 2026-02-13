@@ -1037,6 +1037,20 @@ export async function saveGeneratedDocuments(rows) {
   }
 }
 
+function getNextId(items, idField) {
+  if (items.length === 0) {
+    return "1";
+  }
+  const ids = items
+    .map((item) => parseInt(item[idField], 10))
+    .filter((id) => !isNaN(id));
+  if (ids.length === 0) {
+    return "1";
+  }
+  const maxId = ids.reduce((max, id) => Math.max(max, id), 0);
+  return String(maxId + 1);
+}
+
 /**
  * Atomically adds a new generated document with race condition protection
  * @param {Object} documentData - Document data without document_id

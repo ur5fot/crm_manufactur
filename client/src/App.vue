@@ -1728,7 +1728,7 @@ async function loadTemplates() {
   errorMessage.value = "";
   try {
     const data = await api.getTemplates();
-    templates.value = data || [];
+    templates.value = data.templates || [];
   } catch (error) {
     errorMessage.value = error.message;
   } finally {
