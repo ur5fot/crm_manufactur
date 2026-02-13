@@ -1235,6 +1235,91 @@ app.post("/api/templates/:id/upload", templateUpload.single('file'), async (req,
   }
 });
 
+// Open template DOCX file in default application
+app.post("/api/templates/:id/open-file", async (req, res) => {
+  try {
+    const templates = await loadTemplates();
+    const template = templates.find((t) => t.template_id === req.params.id && t.active !== 'no');
+
+    if (!template) {
+      res.status(404).json({ error: "Шаблон не найден" });
+      return;
+    }
+
+    if (!template.docx_filename) {
+      res.status(400).json({ error: "Шаблон не имеет загруженного DOCX файла" });
+      return;
+    }
+
+    const filePath = path.join(FILES_DIR, 'templates', template.docx_filename);
+    const resolvedPath = path.resolve(filePath);
+    const allowedDir = path.resolve(path.join(FILES_DIR, 'templates'));
+
+    if (!resolvedPath.startsWith(allowedDir + path.sep) && resolvedPath !== allowedDir) {
+      res.status(403).json({ error: "Недопустимый путь к файлу" });
+      return;
+    }
+
+    if (!fs.existsSync(resolvedPath)) {
+      res.status(404).json({ error: "Файл DOCX не найден на диске" });
+      return;
+    }
+
+    const command = getOpenCommand();
+    execFile(command, [resolvedPath], (error) => {
+      if (error) {
+        console.warn(`Could not open file (expected in headless environments): ${error.message}`);
+      }
+    });
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Re-extract placeholders from template DOCX file
+app.post("/api/templates/:id/reextract", async (req, res) => {
+  try {
+    const templates = await loadTemplates();
+    const template = templates.find((t) => t.template_id === req.params.id && t.active !== 'no');
+
+    if (!template) {
+      res.status(404).json({ error: "Шаблон не найден" });
+      return;
+    }
+
+    if (!template.docx_filename) {
+      res.status(400).json({ error: "Шаблон не имеет загруженного DOCX файла" });
+      return;
+    }
+
+    const filePath = path.join(FILES_DIR, 'templates', template.docx_filename);
+    const resolvedPath = path.resolve(filePath);
+    const allowedDir = path.resolve(path.join(FILES_DIR, 'templates'));
+
+    if (!resolvedPath.startsWith(allowedDir + path.sep) && resolvedPath !== allowedDir) {
+      res.status(403).json({ error: "Недопустимый путь к файлу" });
+      return;
+    }
+
+    if (!fs.existsSync(resolvedPath)) {
+      res.status(404).json({ error: "Файл DOCX не найден на диске" });
+      return;
+    }
+
+    const placeholders = await extractPlaceholders(resolvedPath);
+    template.placeholder_fields = placeholders.join(', ');
+    await saveTemplates(templates);
+
+    res.json({ placeholders });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Generate document from template
 app.post("/api/templates/:id/generate", async (req, res) => {
   try {

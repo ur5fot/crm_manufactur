@@ -335,7 +335,8 @@ const templateForm = reactive({
   template_name: '',
   template_type: '',
   description: '',
-  placeholder_fields: ''
+  placeholder_fields: '',
+  docx_filename: ''
 });
 
 // Template upload modal
@@ -1743,7 +1744,8 @@ function openCreateTemplateDialog() {
     template_name: '',
     template_type: '',
     description: '',
-    placeholder_fields: ''
+    placeholder_fields: '',
+    docx_filename: ''
   });
   showTemplateDialog.value = true;
 }
@@ -1755,7 +1757,8 @@ function editTemplate(template) {
     template_name: template.template_name,
     template_type: template.template_type,
     description: template.description || '',
-    placeholder_fields: template.placeholder_fields || ''
+    placeholder_fields: template.placeholder_fields || '',
+    docx_filename: template.docx_filename || ''
   });
   showTemplateDialog.value = true;
 }
@@ -1790,7 +1793,8 @@ function closeTemplateDialog() {
     template_name: '',
     template_type: '',
     description: '',
-    placeholder_fields: ''
+    placeholder_fields: '',
+    docx_filename: ''
   });
 }
 
@@ -1854,6 +1858,25 @@ async function deleteTemplate(template) {
     await loadTemplates();
   } catch (error) {
     alert('Помилка видалення шаблону: ' + error.message);
+  }
+}
+
+async function openTemplateDocx(template) {
+  try {
+    await api.openTemplateFile(template.template_id);
+  } catch (error) {
+    alert('Ошибка открытия файла: ' + error.message);
+  }
+}
+
+async function reextractTemplatePlaceholders() {
+  try {
+    const result = await api.reextractPlaceholders(templateForm.template_id);
+    templateForm.placeholder_fields = result.placeholders.join(', ');
+    alert(`Плейсхолдеры обновлены: ${result.placeholders.join(', ') || '(нет)'}`);
+    await loadTemplates();
+  } catch (error) {
+    alert('Ошибка обновления плейсхолдеров: ' + error.message);
   }
 }
 
@@ -2845,8 +2868,9 @@ onUnmounted(() => {
             <div v-for="group in fieldGroups" :key="group.title" class="section">
               <div class="section-title">{{ group.title }}</div>
               <div class="form-grid">
-                <div v-for="field in group.fields" :key="field.key" class="field">
-                  <label :for="field.key">{{ field.label }}</label>
+                <template v-for="field in group.fields" :key="field.key">
+                <div class="field">
+                  <label :for="field.key">{{ field.label }}<span v-if="field.key === 'first_name' || field.key === 'last_name' || field.key === 'gender'" style="color: red;"> *</span></label>
                   <!-- employment_status: readonly display + buttons -->
                   <template v-if="field.key === 'employment_status'">
                     <div class="status-field-row">
@@ -2880,6 +2904,7 @@ onUnmounted(() => {
                     v-else-if="field.type === 'select'"
                     :id="field.key"
                     v-model="form[field.key]"
+                    :required="field.key === 'gender'"
                   >
                     <option value="">--</option>
                     <option
@@ -2904,6 +2929,19 @@ onUnmounted(() => {
                     :required="field.key === 'first_name' || field.key === 'last_name'"
                   />
                 </div>
+                <div v-if="field.key === 'last_name'" class="field" style="display: flex; align-items: center; padding-top: 1.4em;">
+                  <label style="display: flex; align-items: center; gap: 6px; margin: 0; cursor: pointer; white-space: nowrap;">
+                    <input type="checkbox" v-model="form.indeclinable_name" true-value="yes" false-value="" style="width: auto;" />
+                    Прізвище не склоняється
+                  </label>
+                </div>
+                <div v-if="field.key === 'first_name'" class="field" style="display: flex; align-items: center; padding-top: 1.4em;">
+                  <label style="display: flex; align-items: center; gap: 6px; margin: 0; cursor: pointer; white-space: nowrap;">
+                    <input type="checkbox" v-model="form.indeclinable_first_name" true-value="yes" false-value="" style="width: auto;" />
+                    Ім'я не склоняється
+                  </label>
+                </div>
+                </template>
               </div>
             </div>
 
@@ -3006,12 +3044,14 @@ onUnmounted(() => {
             <div class="section">
               <div class="panel-header">
                 <div class="section-title">Генерування документів</div>
+                <button class="secondary small" type="button" @click="openCreateTemplateDialog">➕ Новий шаблон</button>
               </div>
               <div v-if="isNew" class="inline-note">
                 Спочатку збережіть співробітника, потім згенеруйте документи.
               </div>
               <div v-else-if="templates.length === 0" class="empty-state">
-                Немає доступних шаблонів документів
+                Немає доступних шаблонів документів.
+                <a href="#" @click.prevent="openCreateTemplateDialog">Створити шаблон</a>
               </div>
               <div v-else class="document-generation-grid">
                 <div
@@ -3027,6 +3067,12 @@ onUnmounted(() => {
                     <div v-if="!template.docx_filename" class="warning-text">
                       ⚠ Файл DOCX не завантажено
                     </div>
+                  </div>
+                  <div class="template-card-actions">
+                    <button class="icon-btn" title="Редагувати" @click="editTemplate(template)">✎</button>
+                    <button class="icon-btn" title="Відкрити DOCX" @click="openTemplateDocx(template)" :disabled="!template.docx_filename">📄</button>
+                    <button class="icon-btn" title="Завантажити DOCX" @click="uploadTemplateFile(template)">📁</button>
+                    <button class="icon-btn" title="Видалити" @click="deleteTemplate(template)">🗑</button>
                   </div>
                   <button
                     class="primary small"
@@ -3502,6 +3548,9 @@ onUnmounted(() => {
                     <button class="icon-btn" title="Редагувати" @click="editTemplate(template)">
                       ✎
                     </button>
+                    <button class="icon-btn" title="Открыть DOCX" @click="openTemplateDocx(template)" :disabled="!template.docx_filename">
+                      📄
+                    </button>
                     <button class="icon-btn" title="Завантажити DOCX" @click="uploadTemplateFile(template)">
                       📁
                     </button>
@@ -3754,7 +3803,7 @@ onUnmounted(() => {
             ></textarea>
           </div>
 
-          <div v-if="templateForm.placeholder_fields" class="form-group">
+          <div v-if="templateForm.placeholder_fields || templateForm.docx_filename" class="form-group">
             <label>Плейсхолдери (автоматично з DOCX)</label>
             <input
               v-model="templateForm.placeholder_fields"
@@ -3762,6 +3811,15 @@ onUnmounted(() => {
               readonly
               style="background-color: #f5f5f5; cursor: not-allowed;"
             />
+            <button
+              v-if="templateDialogMode === 'edit' && templateForm.docx_filename"
+              class="secondary small"
+              type="button"
+              style="margin-top: 6px;"
+              @click="reextractTemplatePlaceholders"
+            >
+              Обновить плейсхолдеры
+            </button>
           </div>
         </div>
         <div class="vacation-notification-footer status-change-footer">
@@ -3797,7 +3855,17 @@ onUnmounted(() => {
               <li>Використовуйте плейсхолдери у форматі <code>{{'{'}}field_name{{'}'}}</code></li>
               <li>Доступні поля співробітника: <code>{{'{'}}last_name{{'}'}}</code>, <code>{{'{'}}first_name{{'}'}}</code>, <code>{{'{'}}position{{'}'}}</code>, та ін.</li>
               <li>Спеціальні плейсхолдери: <code>{{'{'}}current_date{{'}'}}</code>, <code>{{'{'}}current_datetime{{'}'}}</code></li>
-              <li>Приклад: "Я, <code>{{'{'}}last_name{{'}'}} {{'{'}}first_name{{'}'}}</code>, прошу надати відпустку..."</li>
+              <li>
+                Відмінювання ПІБ — додайте суфікс падежу до <code>last_name</code>, <code>first_name</code>, <code>middle_name</code>, <code>full_name</code>:
+                <br/>
+                <code style="font-size: 0.85em;">_genitive</code> (родовий: Іванова),
+                <code style="font-size: 0.85em;">_dative</code> (давальний: Іванову),
+                <code style="font-size: 0.85em;">_accusative</code> (знахідний),
+                <code style="font-size: 0.85em;">_vocative</code> (кличний),
+                <code style="font-size: 0.85em;">_locative</code> (місцевий),
+                <code style="font-size: 0.85em;">_ablative</code> (орудний)
+              </li>
+              <li>Приклад: "Надати <code>{{'{'}}full_name_dative{{'}'}}</code> відпустку" → "Надати Іванову Петру Миколайовичу відпустку"</li>
             </ul>
           </div>
 

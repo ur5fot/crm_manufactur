@@ -1846,6 +1846,16 @@ button.small {
   margin-top: 16px;
 }
 
+.empty-state a {
+  color: var(--accent);
+  text-decoration: none;
+  font-style: normal;
+}
+
+.empty-state a:hover {
+  text-decoration: underline;
+}
+
 .template-dialog {
   position: fixed;
   top: 0;
@@ -1986,6 +1996,17 @@ button.small {
   font-size: 13px;
   color: var(--muted);
   line-height: 1.4;
+}
+
+.template-card-actions {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+}
+
+.template-card-actions .icon-btn {
+  font-size: 16px;
+  padding: 4px 6px;
 }
 
 .warning-text {

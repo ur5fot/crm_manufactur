@@ -9,6 +9,7 @@ import fs from 'fs';
 import path from 'path';
 import Docxtemplater from 'docxtemplater';
 import PizZip from 'pizzip';
+import { generateDeclinedNames } from './declension.js';
 
 /**
  * Generate DOCX document from template
@@ -37,7 +38,7 @@ export async function generateDocx(templatePath, data, outputPath) {
     });
 
     // Prepare data with null handling and special placeholders
-    const preparedData = prepareData(data);
+    const preparedData = await prepareData(data);
 
     // Render document
     doc.render(preparedData);
@@ -67,9 +68,9 @@ export async function generateDocx(templatePath, data, outputPath) {
  * - Add special placeholders
  *
  * @param {object} data - Raw data object
- * @returns {object} Prepared data object
+ * @returns {Promise<object>} Prepared data object
  */
-function prepareData(data) {
+async function prepareData(data) {
   const prepared = {};
 
   // Handle user-provided data (null safety)
@@ -91,6 +92,10 @@ function prepareData(data) {
   const hours = String(now.getHours()).padStart(2, '0');
   const minutes = String(now.getMinutes()).padStart(2, '0');
   prepared.current_datetime = `${day}.${month}.${year} ${hours}:${minutes}`;
+
+  // Add declined name placeholders (all grammatical cases)
+  const declinedNames = await generateDeclinedNames(data);
+  Object.assign(prepared, declinedNames);
 
   return prepared;
 }

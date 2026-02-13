@@ -159,6 +159,12 @@ export const api = {
       body: formData
     });
   },
+  openTemplateFile(id) {
+    return request(`/templates/${id}/open-file`, { method: "POST" });
+  },
+  reextractPlaceholders(id) {
+    return request(`/templates/${id}/reextract`, { method: "POST" });
+  },
   generateDocument(templateId, employeeId, customData = {}) {
     return request(`/templates/${templateId}/generate`, {
       method: "POST",

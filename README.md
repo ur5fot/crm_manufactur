@@ -242,18 +242,37 @@ Auto-generated placeholders available in all templates:
 - {current_date} - Current date in DD.MM.YYYY format
 - {current_datetime} - Current date/time in DD.MM.YYYY HH:MM format
 
+### Склонение ФИО по падежам
+
+При генерации документа система автоматически склоняет ФИО сотрудника по всем 6 падежам украинского языка (библиотека [shevchenko](https://github.com/tooleks/shevchenko-js)). Доступно 24 плейсхолдера (6 падежей × 4 поля):
+
+| Падеж | last_name | first_name | middle_name | full_name |
+|---|---|---|---|---|
+| Родовий (кого?) | `{last_name_genitive}` | `{first_name_genitive}` | `{middle_name_genitive}` | `{full_name_genitive}` |
+| Давальний (кому?) | `{last_name_dative}` | `{first_name_dative}` | `{middle_name_dative}` | `{full_name_dative}` |
+| Знахідний (кого?) | `{last_name_accusative}` | `{first_name_accusative}` | `{middle_name_accusative}` | `{full_name_accusative}` |
+| Кличний (звертання) | `{last_name_vocative}` | `{first_name_vocative}` | `{middle_name_vocative}` | `{full_name_vocative}` |
+| Місцевий (на кому?) | `{last_name_locative}` | `{first_name_locative}` | `{middle_name_locative}` | `{full_name_locative}` |
+| Орудний (ким?) | `{last_name_ablative}` | `{first_name_ablative}` | `{middle_name_ablative}` | `{full_name_ablative}` |
+
+**Примечания:**
+- Пол определяется из поля `gender` сотрудника или автоматически по имени/отчеству
+- Если у сотрудника установлен флаг `indeclinable_name = "yes"` — все падежи совпадают с именительным (для несклоняемых иностранных имён)
+- Плейсхолдеры добавляются автоматически — просто используйте их в DOCX шаблоне
+
 ### Example Template
 
 ```
-CONTRACT OF EMPLOYMENT
+ТРУДОВИЙ ДОГОВІР
 
-Employee: {last_name} {first_name} {middle_name}
-Position: {position}
-Start Date: {employment_start_date}
-Passport: {passport_series} {passport_number}
-INN: {inn}
+Прийняти на роботу {full_name_genitive} на посаду {position}.
+Видано {full_name_dative}.
 
-Date of Agreement: {current_date}
+Працівник: {last_name} {first_name} {middle_name}
+Посада: {position}
+Дата початку: {employment_start_date}
+
+Дата укладання: {current_date}
 ```
 
 ## Testing
