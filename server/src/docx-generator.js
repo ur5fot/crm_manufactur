@@ -9,7 +9,7 @@ import fs from 'fs';
 import path from 'path';
 import Docxtemplater from 'docxtemplater';
 import PizZip from 'pizzip';
-import { generateDeclinedNames } from './declension.js';
+import { generateDeclinedNames, generateDeclinedGradePosition } from './declension.js';
 
 /**
  * Generate DOCX document from template
@@ -96,6 +96,10 @@ async function prepareData(data) {
   // Add declined name placeholders (all grammatical cases)
   const declinedNames = await generateDeclinedNames(data);
   Object.assign(prepared, declinedNames);
+
+  // Add declined grade/position placeholders (all grammatical cases)
+  const declinedGradePosition = await generateDeclinedGradePosition(data);
+  Object.assign(prepared, declinedGradePosition);
 
   return prepared;
 }

@@ -49,17 +49,17 @@ Two changes:
 - Modify: `server/test/declension.test.js`
 - Modify: `data/fields_schema.csv` (add indeclinable_grade, indeclinable_position fields)
 
-- [ ] Install `shevchenko-ext-military` package: `cd server && npm install shevchenko-ext-military`
-- [ ] Add two new fields to `data/fields_schema.csv`: `indeclinable_grade` (label: "Посада не відмінюється") and `indeclinable_position` (label: "Звання не відмінюється") as text fields, in the same style as existing `indeclinable_name` and `indeclinable_first_name`
-- [ ] In `declension.js`, add a new exported function `generateDeclinedGradePosition(data)` that:
+- [x] Install `shevchenko-ext-military` package: `cd server && npm install shevchenko-ext-military`
+- [x] Add two new fields to `data/fields_schema.csv`: `indeclinable_grade` (label: "Посада не відмінюється") and `indeclinable_position` (label: "Звання не відмінюється") as text fields, in the same style as existing `indeclinable_name` and `indeclinable_first_name`
+- [x] In `declension.js`, add a new exported function `generateDeclinedGradePosition(data)` that:
   - Imports and uses `shevchenko-ext-military` extension
   - Declines `grade` field (mapped to `militaryAppointment`) across 6 cases: `grade_genitive`, `grade_dative`, `grade_accusative`, `grade_vocative`, `grade_locative`, `grade_ablative`
   - Declines `position` field (mapped to `militaryRank`) across 6 cases: `position_genitive`, `position_dative`, etc.
   - Respects `indeclinable_grade` and `indeclinable_position` flags (when 'yes', return nominative for all cases)
   - Returns empty strings when source fields are empty
-- [ ] In `docx-generator.js` `prepareData()`, call `generateDeclinedGradePosition(data)` and merge results into prepared data (alongside existing name declension)
-- [ ] Add tests for grade/position declension: test with sample values like grade="командир роти", position="капітан"; test indeclinable flags; test empty values
-- [ ] Run `node server/test/declension.test.js` - must pass
+- [x] In `docx-generator.js` `prepareData()`, call `generateDeclinedGradePosition(data)` and merge results into prepared data (alongside existing name declension)
+- [x] Add tests for grade/position declension: test with sample values like grade="командир роти", position="капітан"; test indeclinable flags; test empty values
+- [x] Run `node server/test/declension.test.js` - must pass
 
 ### Task 3: Update placeholder-reference page with new declension group
 

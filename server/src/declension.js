@@ -8,7 +8,10 @@
  * _vocative, _locative, _ablative
  */
 
-import {
+import shevchenko from 'shevchenko';
+import { militaryExtension } from 'shevchenko-ext-military';
+
+const {
   inGenitive,
   inDative,
   inAccusative,
@@ -16,7 +19,11 @@ import {
   inLocative,
   inAblative,
   detectGender,
-} from 'shevchenko';
+  registerExtension,
+} = shevchenko;
+
+// Register military extension for grade/position declension
+registerExtension(militaryExtension);
 
 const CASES = [
   { suffix: 'genitive', fn: inGenitive },
@@ -121,6 +128,66 @@ export async function generateDeclinedNames(data) {
       result[`first_name_${suffix}`] = firstName;
       result[`middle_name_${suffix}`] = middleName;
       result[`full_name_${suffix}`] = [lastName, firstName, middleName].filter(Boolean).join(' ');
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Generate declined grade (Посада) and position (Звання) placeholders.
+ *
+ * Uses shevchenko-ext-military extension:
+ *   grade -> militaryAppointment
+ *   position -> militaryRank
+ *
+ * @param {object} data - Employee data with grade, position, gender fields
+ * @returns {Promise<object>} Object with 12 declined placeholders
+ *   (6 cases x 2 fields: grade, position)
+ */
+export async function generateDeclinedGradePosition(data) {
+  const result = {};
+  const grade = data.grade || '';
+  const position = data.position || '';
+
+  const skipGrade = data.indeclinable_grade === 'yes';
+  const skipPosition = data.indeclinable_position === 'yes';
+
+  // If both are empty, return empty placeholders
+  if (!grade && !position) {
+    for (const { suffix } of CASES) {
+      result[`grade_${suffix}`] = '';
+      result[`position_${suffix}`] = '';
+    }
+    return result;
+  }
+
+  // If both are indeclinable, return nominative for all cases
+  if ((!grade || skipGrade) && (!position || skipPosition)) {
+    for (const { suffix } of CASES) {
+      result[`grade_${suffix}`] = grade;
+      result[`position_${suffix}`] = position;
+    }
+    return result;
+  }
+
+  // Determine gender for declension
+  let gender = mapGender(data.gender);
+  if (!gender) gender = 'masculine';
+
+  // Build input with only declinable fields
+  const input = { gender };
+  if (grade && !skipGrade) input.militaryAppointment = grade;
+  if (position && !skipPosition) input.militaryRank = position;
+
+  for (const { suffix, fn } of CASES) {
+    try {
+      const declined = await fn(input);
+      result[`grade_${suffix}`] = skipGrade ? grade : (declined.militaryAppointment || grade);
+      result[`position_${suffix}`] = skipPosition ? position : (declined.militaryRank || position);
+    } catch {
+      result[`grade_${suffix}`] = grade;
+      result[`position_${suffix}`] = position;
     }
   }
 

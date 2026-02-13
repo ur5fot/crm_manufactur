@@ -3,7 +3,7 @@
  * Run with: node server/test/declension.test.js
  */
 
-import { generateDeclinedNames } from '../src/declension.js';
+import { generateDeclinedNames, generateDeclinedGradePosition } from '../src/declension.js';
 
 let testsPassed = 0;
 let testsFailed = 0;
@@ -295,6 +295,179 @@ async function testBothIndeclinable() {
   }
 }
 
+// Test 12: Grade/position declension produces all 12 placeholders with correct values
+async function testGradePositionAllPlaceholders() {
+  const data = {
+    grade: 'командир роти',
+    position: 'капітан',
+    gender: 'Чоловіча',
+  };
+
+  const result = await generateDeclinedGradePosition(data);
+
+  const suffixes = ['genitive', 'dative', 'accusative', 'vocative', 'locative', 'ablative'];
+  const fields = ['grade', 'position'];
+
+  for (const suffix of suffixes) {
+    for (const field of fields) {
+      const key = `${field}_${suffix}`;
+      if (!(key in result)) {
+        throw new Error(`Missing placeholder: ${key}`);
+      }
+      if (typeof result[key] !== 'string' || result[key].length === 0) {
+        throw new Error(`Placeholder ${key} is empty or not a string`);
+      }
+    }
+  }
+
+  const keys = Object.keys(result);
+  if (keys.length !== 12) {
+    throw new Error(`Expected 12 placeholders, got ${keys.length}`);
+  }
+}
+
+// Test 13: Grade/position genitive case values are correct
+async function testGradePositionGenitive() {
+  const data = {
+    grade: 'командир роти',
+    position: 'капітан',
+    gender: 'Чоловіча',
+  };
+
+  const result = await generateDeclinedGradePosition(data);
+
+  if (result.grade_genitive !== 'командира роти') {
+    throw new Error(`Expected grade_genitive "командира роти", got "${result.grade_genitive}"`);
+  }
+  if (result.position_genitive !== 'капітана') {
+    throw new Error(`Expected position_genitive "капітана", got "${result.position_genitive}"`);
+  }
+}
+
+// Test 14: Grade/position dative case values are correct
+async function testGradePositionDative() {
+  const data = {
+    grade: 'командир роти',
+    position: 'капітан',
+    gender: 'Чоловіча',
+  };
+
+  const result = await generateDeclinedGradePosition(data);
+
+  if (result.grade_dative !== 'командиру роти') {
+    throw new Error(`Expected grade_dative "командиру роти", got "${result.grade_dative}"`);
+  }
+  if (result.position_dative !== 'капітану') {
+    throw new Error(`Expected position_dative "капітану", got "${result.position_dative}"`);
+  }
+}
+
+// Test 15: Empty grade/position returns empty placeholders
+async function testGradePositionEmpty() {
+  const data = {
+    grade: '',
+    position: '',
+  };
+
+  const result = await generateDeclinedGradePosition(data);
+
+  const keys = Object.keys(result);
+  if (keys.length !== 12) {
+    throw new Error(`Expected 12 placeholders, got ${keys.length}`);
+  }
+
+  for (const key of keys) {
+    if (result[key] !== '') {
+      throw new Error(`Expected empty string for ${key}, got "${result[key]}"`);
+    }
+  }
+}
+
+// Test 16: No grade/position data returns empty placeholders
+async function testGradePositionNoData() {
+  const result = await generateDeclinedGradePosition({});
+
+  const keys = Object.keys(result);
+  if (keys.length !== 12) {
+    throw new Error(`Expected 12 placeholders, got ${keys.length}`);
+  }
+
+  for (const key of keys) {
+    if (result[key] !== '') {
+      throw new Error(`Expected empty string for ${key}, got "${result[key]}"`);
+    }
+  }
+}
+
+// Test 17: Indeclinable grade - grade stays nominative, position declined
+async function testIndeclinableGrade() {
+  const data = {
+    grade: 'командир роти',
+    position: 'капітан',
+    gender: 'Чоловіча',
+    indeclinable_grade: 'yes',
+  };
+
+  const result = await generateDeclinedGradePosition(data);
+
+  const suffixes = ['genitive', 'dative', 'accusative', 'vocative', 'locative', 'ablative'];
+  for (const suffix of suffixes) {
+    if (result[`grade_${suffix}`] !== 'командир роти') {
+      throw new Error(`Expected grade_${suffix} "командир роти", got "${result[`grade_${suffix}`]}"`);
+    }
+  }
+  // Position should be declined
+  if (result.position_genitive !== 'капітана') {
+    throw new Error(`Expected position_genitive "капітана", got "${result.position_genitive}"`);
+  }
+}
+
+// Test 18: Indeclinable position - position stays nominative, grade declined
+async function testIndeclinablePosition() {
+  const data = {
+    grade: 'командир роти',
+    position: 'капітан',
+    gender: 'Чоловіча',
+    indeclinable_position: 'yes',
+  };
+
+  const result = await generateDeclinedGradePosition(data);
+
+  const suffixes = ['genitive', 'dative', 'accusative', 'vocative', 'locative', 'ablative'];
+  for (const suffix of suffixes) {
+    if (result[`position_${suffix}`] !== 'капітан') {
+      throw new Error(`Expected position_${suffix} "капітан", got "${result[`position_${suffix}`]}"`);
+    }
+  }
+  // Grade should be declined
+  if (result.grade_genitive !== 'командира роти') {
+    throw new Error(`Expected grade_genitive "командира роти", got "${result.grade_genitive}"`);
+  }
+}
+
+// Test 19: Both grade and position indeclinable
+async function testBothGradePositionIndeclinable() {
+  const data = {
+    grade: 'командир роти',
+    position: 'капітан',
+    gender: 'Чоловіча',
+    indeclinable_grade: 'yes',
+    indeclinable_position: 'yes',
+  };
+
+  const result = await generateDeclinedGradePosition(data);
+
+  const suffixes = ['genitive', 'dative', 'accusative', 'vocative', 'locative', 'ablative'];
+  for (const suffix of suffixes) {
+    if (result[`grade_${suffix}`] !== 'командир роти') {
+      throw new Error(`Expected grade_${suffix} "командир роти", got "${result[`grade_${suffix}`]}"`);
+    }
+    if (result[`position_${suffix}`] !== 'капітан') {
+      throw new Error(`Expected position_${suffix} "капітан", got "${result[`position_${suffix}`]}"`);
+    }
+  }
+}
+
 // Main test runner
 async function runAllTests() {
   console.log('Starting declension module tests...\n');
@@ -310,6 +483,16 @@ async function runAllTests() {
   await runTest('Indeclinable last_name: only last_name stays nominative', testIndeclinableLastName);
   await runTest('Indeclinable first_name: only first_name stays nominative', testIndeclinableFirstName);
   await runTest('Both indeclinable: all names stay nominative', testBothIndeclinable);
+
+  // Grade/position declension tests
+  await runTest('Grade/position: all 12 placeholders present with values', testGradePositionAllPlaceholders);
+  await runTest('Grade/position: genitive case correct', testGradePositionGenitive);
+  await runTest('Grade/position: dative case correct', testGradePositionDative);
+  await runTest('Grade/position: empty values return empty placeholders', testGradePositionEmpty);
+  await runTest('Grade/position: no data returns empty placeholders', testGradePositionNoData);
+  await runTest('Grade/position: indeclinable grade stays nominative', testIndeclinableGrade);
+  await runTest('Grade/position: indeclinable position stays nominative', testIndeclinablePosition);
+  await runTest('Grade/position: both indeclinable stay nominative', testBothGradePositionIndeclinable);
 
   console.log('\n' + '='.repeat(50));
   console.log(`Tests passed: ${testsPassed}`);
