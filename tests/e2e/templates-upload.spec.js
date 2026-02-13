@@ -71,8 +71,8 @@ test.describe('Template DOCX Upload', () => {
       // Wait for modal
       await expect(page.locator('.vacation-notification-modal h3:has-text("Завантаження DOCX шаблону")')).toBeVisible();
 
-      // Use existing test template file
-      const templateFilePath = path.resolve(__dirname, '../../files/templates/template_3_1770817926113.docx');
+      // Use test fixture DOCX file
+      const templateFilePath = path.resolve(__dirname, '../fixtures/test-template.docx');
 
       // Set file input
       const fileInput = page.locator('#template-file-input');
