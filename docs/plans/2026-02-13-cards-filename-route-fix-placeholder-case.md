@@ -57,11 +57,11 @@ Three changes:
 
 ### Task 4: Verify acceptance criteria
 
-- [ ] Manual test: generate a document from the cards page and verify filename contains employee last name
-- [ ] Manual test: on cards page select employee #2, navigate to dashboard, click "Картки" in sidebar, refresh page - should stay on employee #2
-- [ ] Manual test: create a template with {full_name_upper} and {full_name_cap} placeholders, generate document, verify uppercase/capitalized output
-- [ ] Run full test suite: `cd server && npm test` and `npm run test:e2e`
-- [ ] Verify test coverage for new functionality
+- [x] Manual test: generate a document from the cards page and verify filename contains employee last name
+- [x] Manual test: on cards page select employee #2, navigate to dashboard, click "Картки" in sidebar, refresh page - should stay on employee #2
+- [x] Manual test: create a template with {full_name_upper} and {full_name_cap} placeholders, generate document, verify uppercase/capitalized output
+- [x] Run full test suite: `cd server && npm test` and `npm run test:e2e`
+- [x] Verify test coverage for new functionality
 
 ### Task 5: Update documentation
 
