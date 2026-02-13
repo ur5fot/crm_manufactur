@@ -65,5 +65,5 @@ Three changes:
 
 ### Task 5: Update documentation
 
-- [ ] Update CLAUDE.md if internal patterns changed (placeholder case variants section)
-- [ ] Move this plan to `docs/plans/completed/`
+- [x] Update CLAUDE.md if internal patterns changed (placeholder case variants section)
+- [x] Move this plan to `docs/plans/completed/`
