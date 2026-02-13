@@ -297,4 +297,71 @@ test.describe('Document Upload Operations', () => {
     // Note: We cannot verify that OS file explorer actually opened in E2E test
     // This is OS-level behavior that Playwright cannot detect
   });
+
+  test('Открыть документ (кнопка Відкрити)', async ({ page }) => {
+    // First, upload a document to view
+    const testFilePath = path.join(__dirname, '../fixtures/test-passport.pdf');
+    const fileBuffer = fs.readFileSync(testFilePath);
+
+    const response = await page.request.post(`${apiBaseUrl}/api/employees/${employeeId}/files`, {
+      multipart: {
+        file: {
+          name: 'test-passport.pdf',
+          mimeType: 'application/pdf',
+          buffer: fileBuffer
+        },
+        file_field: 'id_certificate_file',
+        issue_date: '2023-01-15',
+        expiry_date: '2033-01-15'
+      }
+    });
+    expect(response.ok()).toBeTruthy();
+
+    // Get the uploaded file path
+    const employeeResponse = await page.request.get(`${apiBaseUrl}/api/employees/${employeeId}`);
+    const employeeData = await employeeResponse.json();
+    const filePath = employeeData.employee.id_certificate_file;
+    expect(filePath).toBeTruthy();
+    expect(filePath).toContain('files/employee_');
+
+    // Navigate to employee card
+    await page.goto(`http://localhost:5173/cards/${employeeId}`);
+    await page.waitForLoadState('networkidle');
+
+    // Dismiss any notification popups
+    await page.waitForTimeout(1000);
+    for (let i = 0; i < 10; i++) {
+      try {
+        const overlay = page.locator('.vacation-notification-overlay').first();
+        const isVisible = await overlay.isVisible().catch(() => false);
+        if (!isVisible) break;
+        const closeButton = overlay.locator('button:has-text("Зрозуміло"), button.close-btn, button:has-text("×")').first();
+        await closeButton.click({ force: true, timeout: 2000 });
+        await page.waitForTimeout(500);
+      } catch (e) {
+        break;
+      }
+    }
+
+    // Find document row with uploaded file
+    const documentRow = page.locator('tr').filter({ hasText: 'Посвідчення особи' });
+    await documentRow.scrollIntoViewIfNeeded();
+    await expect(documentRow).toBeVisible();
+
+    // Find "Відкрити" button
+    const openButton = documentRow.locator('button:has-text("Відкрити")');
+    await expect(openButton).toBeVisible();
+
+    // Verify the button is clickable
+    await expect(openButton).toBeEnabled();
+
+    // Instead of checking window.open (which is hard in E2E), we verify:
+    // 1. The button exists and is clickable
+    // 2. The file path is correct in the backend
+    // 3. The file is accessible directly via HTTP
+    const fileUrl = `${apiBaseUrl}/${filePath}`;
+    const fileResponse = await page.request.get(fileUrl);
+    expect(fileResponse.ok()).toBeTruthy();
+    expect(fileResponse.headers()['content-type']).toContain('pdf');
+  });
 });

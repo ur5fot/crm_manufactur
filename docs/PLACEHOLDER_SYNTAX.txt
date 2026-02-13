@@ -1,0 +1,122 @@
+PLACEHOLDER SYNTAX FOR DOCX TEMPLATES
+======================================
+
+Templates use curly braces for placeholders: {placeholder_name}
+
+EMPLOYEE FIELD PLACEHOLDERS
+---------------------------
+Any field from the employee record can be used as a placeholder.
+
+Common employee fields:
+- {first_name}        - First name
+- {last_name}         - Last name
+- {middle_name}       - Middle name (patronymic)
+- {position}          - Job position
+- {birth_date}        - Date of birth
+- {address}           - Home address
+- {phone}             - Phone number
+- {email}             - Email address
+
+Passport fields:
+- {passport_series}   - Passport series
+- {passport_number}   - Passport number
+- {passport_issue_date} - Passport issue date
+- {passport_issued_by}  - Passport issuing authority
+
+Tax and identification:
+- {inn}               - Individual tax number (ІПН)
+- {snils}             - Social insurance number
+
+Employment fields:
+- {employment_start_date}  - Employment start date
+- {employment_end_date}    - Employment end date (if applicable)
+- {department}             - Department name
+- {manager}                - Manager name
+
+Document fields (example for passport):
+- {passport_issue_date}  - Issue date
+- {passport_expiry_date} - Expiry date
+
+Note: All employee fields defined in schema.csv can be used as placeholders.
+Use exact field names (case-sensitive).
+
+SPECIAL AUTO-GENERATED PLACEHOLDERS
+-----------------------------------
+These placeholders are automatically generated when creating documents:
+
+- {current_date}      - Current date in DD.MM.YYYY format (Ukrainian locale)
+- {current_datetime}  - Current date/time in DD.MM.YYYY HH:MM format
+
+Examples:
+- {current_date} → 11.02.2026
+- {current_datetime} → 11.02.2026 14:30
+
+PLACEHOLDER BEHAVIOR
+--------------------
+- Null/undefined values are replaced with empty string
+- Unknown placeholders (not in employee data) are left unchanged
+- Placeholders are case-sensitive: {First_Name} ≠ {first_name}
+- Placeholders can appear multiple times in the same template
+- Whitespace inside placeholders is ignored: { first_name } = {first_name}
+
+EXAMPLE TEMPLATE
+----------------
+See example_contract_template.docx for a complete working example.
+
+Sample content:
+```
+ТРУДОВИЙ ДОГОВІР
+№ _______ від {current_date}
+
+ПРАЦІВНИК:
+ПІБ: {last_name} {first_name} {middle_name}
+Дата народження: {birth_date}
+Паспорт: серія {passport_series} № {passport_number}
+ІПН: {inn}
+Адреса: {address}
+Телефон: {phone}
+
+Працівник приймається на посаду: {position}
+Дата початку роботи: {employment_start_date}
+```
+
+CREATING TEMPLATES
+------------------
+1. Create DOCX file in Microsoft Word or LibreOffice
+2. Insert placeholders using curly braces: {field_name}
+3. Save as .docx format
+4. Upload via Templates UI or API
+5. System will automatically extract placeholders
+6. Generate documents from template
+
+TIPS
+----
+- Test template with sample employee data before using
+- Use clear, descriptive placeholder names
+- Avoid special characters in placeholder names
+- Keep placeholder names short for readability
+- Document custom placeholders in template description
+
+TROUBLESHOOTING
+---------------
+Placeholder not replaced?
+- Check spelling matches employee field exactly
+- Verify employee has data for that field
+- Check placeholders list in template record
+
+Placeholder shows "{field_name}" in document?
+- Field doesn't exist in employee record
+- Typo in placeholder name
+- Field value is empty/null (expected behavior)
+
+ADVANCED USAGE (FUTURE)
+-----------------------
+Planned enhancements:
+- Conditional placeholders: {if:condition}...{/if}
+- Loops: {loop:items}...{/loop}
+- Calculated fields: {age_years}
+- Format specifiers: {salary:currency}
+
+For more information, see:
+- docs/templates-system-improvements.md
+- README.md (API Documentation section)

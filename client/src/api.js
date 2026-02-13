@@ -127,5 +127,63 @@ export const api = {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  },
+
+  // Templates API
+  getTemplates() {
+    return request("/templates");
+  },
+  getTemplate(id) {
+    return request(`/templates/${id}`);
+  },
+  createTemplate(payload) {
+    return request("/templates", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+  },
+  updateTemplate(id, payload) {
+    return request(`/templates/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+  },
+  deleteTemplate(id) {
+    return request(`/templates/${id}`, { method: "DELETE" });
+  },
+  uploadTemplateFile(id, formData) {
+    return request(`/templates/${id}/upload`, {
+      method: "POST",
+      body: formData
+    });
+  },
+  openTemplateFile(id) {
+    return request(`/templates/${id}/open-file`, { method: "POST" });
+  },
+  reextractPlaceholders(id) {
+    return request(`/templates/${id}/reextract`, { method: "POST" });
+  },
+  generateDocument(templateId, employeeId, customData = {}) {
+    return request(`/templates/${templateId}/generate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ employee_id: employeeId, custom_data: customData })
+    });
+  },
+  downloadDocument(documentId) {
+    return `${BASE_URL}/documents/${documentId}/download`;
+  },
+  getGeneratedDocuments(filters = {}) {
+    const queryParams = new URLSearchParams();
+    if (filters.template_id) queryParams.set('template_id', filters.template_id);
+    if (filters.employee_id) queryParams.set('employee_id', filters.employee_id);
+    if (filters.start_date) queryParams.set('start_date', filters.start_date);
+    if (filters.end_date) queryParams.set('end_date', filters.end_date);
+    if (filters.offset !== undefined) queryParams.set('offset', filters.offset);
+    if (filters.limit !== undefined) queryParams.set('limit', filters.limit);
+    const params = queryParams.toString() ? `?${queryParams.toString()}` : '';
+    return request(`/documents${params}`);
   }
 };

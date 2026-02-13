@@ -15,6 +15,8 @@ const EMPLOYEES_PATH = path.join(DATA_DIR, "employees.csv");
 const LOGS_PATH = path.join(DATA_DIR, "logs.csv");
 const FIELD_SCHEMA_PATH = path.join(DATA_DIR, "fields_schema.csv");
 const CONFIG_PATH = path.join(DATA_DIR, "config.csv");
+const TEMPLATES_PATH = path.join(DATA_DIR, "templates.csv");
+const GENERATED_DOCUMENTS_PATH = path.join(DATA_DIR, "generated_documents.csv");
 
 // Simple in-memory lock for log writes to prevent race conditions
 let logWriteLock = Promise.resolve();
@@ -22,6 +24,12 @@ let logWriteLock = Promise.resolve();
 // Simple in-memory lock for employee writes to prevent race conditions
 // when multiple requests try to update employees.csv concurrently
 let employeeWriteLock = Promise.resolve();
+
+// Simple in-memory lock for templates writes to prevent race conditions
+let templatesWriteLock = Promise.resolve();
+
+// Simple in-memory lock for generated_documents writes to prevent race conditions
+let generatedDocumentsWriteLock = Promise.resolve();
 
 export async function ensureDataDirs() {
   await fs.mkdir(DATA_DIR, { recursive: true });
@@ -605,10 +613,10 @@ export async function addLogs(entries) {
     const maxEntries = parseInt(config.max_log_entries, 10) || 1000;
 
     if (logs.length > maxEntries) {
-      // Сортируем по timestamp (новые сначала)
-      logs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+      // Сортируем по timestamp (новые сначала) - clone array to avoid mutation
+      const sortedLogs = [...logs].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
       // Оставляем только maxEntries последних записей
-      const trimmedLogs = logs.slice(0, maxEntries);
+      const trimmedLogs = sortedLogs.slice(0, maxEntries);
       await saveLogs(trimmedLogs);
       console.log(`✂️  Логи очищены: ${logs.length} → ${trimmedLogs.length} записей (лимит: ${maxEntries})`);
     } else {
@@ -950,6 +958,127 @@ export async function getCustomReport(filters = [], columns = null) {
   }
 
   return filtered;
+}
+
+// Templates CSV columns
+const TEMPLATE_COLUMNS = [
+  'template_id',
+  'template_name',
+  'template_type',
+  'docx_filename',
+  'placeholder_fields',
+  'description',
+  'created_date',
+  'active'
+];
+
+// Generated documents CSV columns
+const GENERATED_DOCUMENT_COLUMNS = [
+  'document_id',
+  'template_id',
+  'employee_id',
+  'docx_filename',
+  'generation_date',
+  'generated_by',
+  'data_snapshot'
+];
+
+/**
+ * Load templates from templates.csv
+ * @returns {Promise<Array>} Array of template records
+ */
+export async function loadTemplates() {
+  return readCsv(TEMPLATES_PATH, TEMPLATE_COLUMNS);
+}
+
+/**
+ * Save templates to templates.csv with write lock to prevent race conditions
+ * @param {Array} rows - Template records to save
+ * @returns {Promise<void>}
+ */
+export async function saveTemplates(rows) {
+  // Acquire lock: wait for previous write to complete, then execute our write
+  const previousLock = templatesWriteLock;
+  let releaseLock;
+  templatesWriteLock = new Promise(resolve => { releaseLock = resolve; });
+
+  try {
+    await previousLock;
+    await writeCsv(TEMPLATES_PATH, TEMPLATE_COLUMNS, rows);
+  } finally {
+    releaseLock();
+  }
+}
+
+/**
+ * Load generated documents from generated_documents.csv
+ * @returns {Promise<Array>} Array of generated document records
+ */
+export async function loadGeneratedDocuments() {
+  return readCsv(GENERATED_DOCUMENTS_PATH, GENERATED_DOCUMENT_COLUMNS);
+}
+
+/**
+ * Save generated documents to generated_documents.csv with write lock to prevent race conditions
+ * @param {Array} rows - Generated document records to save
+ * @returns {Promise<void>}
+ */
+export async function saveGeneratedDocuments(rows) {
+  // Acquire lock: wait for previous write to complete, then execute our write
+  const previousLock = generatedDocumentsWriteLock;
+  let releaseLock;
+  generatedDocumentsWriteLock = new Promise(resolve => { releaseLock = resolve; });
+
+  try {
+    await previousLock;
+    await writeCsv(GENERATED_DOCUMENTS_PATH, GENERATED_DOCUMENT_COLUMNS, rows);
+  } finally {
+    releaseLock();
+  }
+}
+
+function getNextId(items, idField) {
+  if (items.length === 0) {
+    return "1";
+  }
+  const ids = items
+    .map((item) => parseInt(item[idField], 10))
+    .filter((id) => !isNaN(id));
+  if (ids.length === 0) {
+    return "1";
+  }
+  const maxId = ids.reduce((max, id) => Math.max(max, id), 0);
+  return String(maxId + 1);
+}
+
+/**
+ * Atomically adds a new generated document with race condition protection
+ * @param {Object} documentData - Document data without document_id
+ * @returns {Promise<string>} The new document_id
+ */
+export async function addGeneratedDocument(documentData) {
+  // Acquire lock: wait for previous write to complete, then execute our write
+  const previousLock = generatedDocumentsWriteLock;
+  let releaseLock;
+  generatedDocumentsWriteLock = new Promise(resolve => { releaseLock = resolve; });
+
+  try {
+    await previousLock;
+    const documents = await loadGeneratedDocuments();
+    const newDocId = getNextId(documents, "document_id");
+
+    const newDocument = {
+      document_id: newDocId,
+      ...documentData
+    };
+
+    documents.push(newDocument);
+    await writeCsv(GENERATED_DOCUMENTS_PATH, GENERATED_DOCUMENT_COLUMNS, documents);
+
+    return newDocId;
+  } finally {
+    releaseLock();
+  }
 }
 
 /**

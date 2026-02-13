@@ -183,6 +183,8 @@ const currentView = computed(() => {
   if (name === 'table') return 'table';
   if (name === 'reports') return 'reports';
   if (name === 'import') return 'import';
+  if (name === 'templates') return 'templates';
+  if (name === 'document-history') return 'document-history';
   if (name === 'logs') return 'logs';
   return 'dashboard';
 });
@@ -193,6 +195,8 @@ const tabs = [
   { key: 'table', label: 'Таблиця' },
   { key: 'reports', label: 'Звіти' },
   { key: 'import', label: 'Імпорт' },
+  { key: 'templates', label: 'Шаблони' },
+  { key: 'document-history', label: 'Історія документів' },
   { key: 'logs', label: 'Логи' },
 ];
 
@@ -207,6 +211,10 @@ function switchView(view) {
     router.push({ name: 'reports' });
   } else if (view === 'import') {
     router.push({ name: 'import' });
+  } else if (view === 'templates') {
+    router.push({ name: 'templates' });
+  } else if (view === 'document-history') {
+    router.push({ name: 'document-history' });
   } else if (view === 'logs') {
     router.push({ name: 'logs' });
   }
@@ -247,6 +255,8 @@ watch(() => route.name, async (newRoute, oldRoute) => {
                    oldRoute === 'cards' ? 'cards' :
                    oldRoute === 'table' ? 'table' :
                    oldRoute === 'reports' ? 'reports' :
+                   oldRoute === 'templates' ? 'templates' :
+                   oldRoute === 'document-history' ? 'document-history' :
                    oldRoute === 'logs' ? 'logs' : 'dashboard';
 
   if (newView === 'dashboard') {
@@ -262,12 +272,27 @@ watch(() => route.name, async (newRoute, oldRoute) => {
     loadLogs();
   }
 
-  // Auto-load first employee when navigating to cards view without ID
-  // (but not if user explicitly wants to create new employee)
-  if (newView === 'cards' && !route.params.id && !isCreatingNew.value) {
-    await loadEmployeesIfNeeded();
-    if (employees.value.length > 0 && !form.employee_id) {
-      openEmployeeCard(employees.value[0].employee_id);
+  if (newView === 'templates') {
+    loadTemplates();
+  }
+
+  if (newView === 'document-history') {
+    loadTemplates();
+    loadEmployees();
+    loadDocumentHistory();
+  }
+
+  if (newView === 'cards') {
+    // Load templates for document generation section
+    loadTemplates();
+
+    // Auto-load first employee when navigating to cards view without ID
+    // (but not if user explicitly wants to create new employee)
+    if (!route.params.id && !isCreatingNew.value) {
+      await loadEmployeesIfNeeded();
+      if (employees.value.length > 0 && !form.employee_id) {
+        openEmployeeCard(employees.value[0].employee_id);
+      }
     }
   }
 
@@ -300,6 +325,42 @@ const editingCells = reactive({}); // { employeeId_fieldName: value }
 const columnFilters = reactive({}); // { fieldName: selectedValue }
 const logs = ref([]);
 const logsSearchTerm = ref("");
+
+// Templates management
+const templates = ref([]);
+const showTemplateDialog = ref(false);
+const templateDialogMode = ref('create'); // 'create' or 'edit'
+const templateForm = reactive({
+  template_id: '',
+  template_name: '',
+  template_type: '',
+  description: '',
+  placeholder_fields: '',
+  docx_filename: ''
+});
+
+// Template upload modal
+const showUploadTemplateModal = ref(false);
+const uploadTemplateId = ref('');
+const uploadTemplateName = ref('');
+const selectedTemplateFile = ref(null);
+
+// Document history management
+const generatedDocuments = ref([]);
+const documentHistoryLoading = ref(false);
+const documentHistoryError = ref('');
+const documentHistoryFilters = reactive({
+  template_id: '',
+  employee_id: '',
+  start_date: '',
+  end_date: ''
+});
+const documentHistoryPagination = reactive({
+  offset: 0,
+  limit: 50,
+  total: 0
+});
+const documentHistorySearchTerm = ref('');
 
 // Уведомления о сменах статусов
 const statusReturning = ref([]);
@@ -1617,10 +1678,12 @@ async function deleteEmployee() {
 
 function openDocument(fieldKey) {
   const filePath = form[fieldKey];
-  if (!filePath) return;
+  if (!filePath) {
+    return;
+  }
   // SECURITY: Validate file path starts with expected prefix to prevent XSS
   if (!filePath.startsWith('files/')) {
-    console.error('Invalid file path:', filePath);
+    console.error('Invalid file path (must start with "files/"):', filePath);
     return;
   }
   const url = `${import.meta.env.VITE_API_URL || ""}/${filePath}`;
@@ -1659,6 +1722,259 @@ async function loadLogs() {
     loading.value = false;
   }
 }
+
+// Templates management functions
+async function loadTemplates() {
+  loading.value = true;
+  errorMessage.value = "";
+  try {
+    const data = await api.getTemplates();
+    templates.value = data.templates || [];
+  } catch (error) {
+    errorMessage.value = error.message;
+  } finally {
+    loading.value = false;
+  }
+}
+
+function openCreateTemplateDialog() {
+  templateDialogMode.value = 'create';
+  Object.assign(templateForm, {
+    template_id: '',
+    template_name: '',
+    template_type: '',
+    description: '',
+    placeholder_fields: '',
+    docx_filename: ''
+  });
+  showTemplateDialog.value = true;
+}
+
+function editTemplate(template) {
+  templateDialogMode.value = 'edit';
+  Object.assign(templateForm, {
+    template_id: template.template_id,
+    template_name: template.template_name,
+    template_type: template.template_type,
+    description: template.description || '',
+    placeholder_fields: template.placeholder_fields || '',
+    docx_filename: template.docx_filename || ''
+  });
+  showTemplateDialog.value = true;
+}
+
+async function saveTemplate() {
+  try {
+    const payload = {
+      template_name: templateForm.template_name,
+      template_type: templateForm.template_type,
+      description: templateForm.description || ''
+    };
+
+    if (templateDialogMode.value === 'create') {
+      await api.createTemplate(payload);
+      alert('✓ Шаблон створено успішно');
+    } else {
+      await api.updateTemplate(templateForm.template_id, payload);
+      alert('✓ Шаблон оновлено успішно');
+    }
+
+    closeTemplateDialog();
+    await loadTemplates();
+  } catch (error) {
+    alert('Помилка збереження: ' + error.message);
+  }
+}
+
+function closeTemplateDialog() {
+  showTemplateDialog.value = false;
+  Object.assign(templateForm, {
+    template_id: '',
+    template_name: '',
+    template_type: '',
+    description: '',
+    placeholder_fields: '',
+    docx_filename: ''
+  });
+}
+
+function uploadTemplateFile(template) {
+  uploadTemplateId.value = template.template_id;
+  uploadTemplateName.value = template.template_name;
+  selectedTemplateFile.value = null;
+  showUploadTemplateModal.value = true;
+}
+
+function closeUploadTemplateModal() {
+  showUploadTemplateModal.value = false;
+  uploadTemplateId.value = '';
+  uploadTemplateName.value = '';
+  selectedTemplateFile.value = null;
+}
+
+function onTemplateFileSelected(event) {
+  const file = event.target.files?.[0];
+  if (file) {
+    if (!file.name.toLowerCase().endsWith('.docx')) {
+      alert('Помилка: файл повинен мати розширення .docx');
+      event.target.value = '';
+      return;
+    }
+    selectedTemplateFile.value = file;
+  }
+}
+
+async function uploadTemplateDocx() {
+  if (!selectedTemplateFile.value) {
+    alert('Будь ласка, оберіть файл DOCX');
+    return;
+  }
+
+  try {
+    const formData = new FormData();
+    formData.append('file', selectedTemplateFile.value);
+
+    const result = await api.uploadTemplateFile(uploadTemplateId.value, formData);
+
+    alert(`✓ Файл завантажено успішно!\n\nВиявлені плейсхолдери:\n${result.placeholders.join(', ') || '(немає)'}`);
+
+    closeUploadTemplateModal();
+    await loadTemplates();
+  } catch (error) {
+    alert('Помилка завантаження файлу: ' + error.message);
+  }
+}
+
+async function deleteTemplate(template) {
+  const confirmed = confirm(`Видалити шаблон "${template.template_name}"?\n\nЦя дія не видаляє файл DOCX, а лише позначає шаблон як неактивний.`);
+
+  if (!confirmed) {
+    return;
+  }
+
+  try {
+    await api.deleteTemplate(template.template_id);
+    alert('Шаблон успішно видалено');
+    await loadTemplates();
+  } catch (error) {
+    alert('Помилка видалення шаблону: ' + error.message);
+  }
+}
+
+async function openTemplateDocx(template) {
+  try {
+    await api.openTemplateFile(template.template_id);
+  } catch (error) {
+    alert('Ошибка открытия файла: ' + error.message);
+  }
+}
+
+async function reextractTemplatePlaceholders() {
+  try {
+    const result = await api.reextractPlaceholders(templateForm.template_id);
+    templateForm.placeholder_fields = result.placeholders.join(', ');
+    alert(`Плейсхолдеры обновлены: ${result.placeholders.join(', ') || '(нет)'}`);
+    await loadTemplates();
+  } catch (error) {
+    alert('Ошибка обновления плейсхолдеров: ' + error.message);
+  }
+}
+
+async function generateDocumentForEmployee(template) {
+  try {
+    const employeeId = form.employee_id;
+
+    if (!employeeId) {
+      alert('Помилка: не знайдено ID співробітника. Спочатку збережіть співробітника.');
+      return;
+    }
+
+    if (!template.docx_filename) {
+      alert('Помилка: для цього шаблону не завантажено файл DOCX');
+      return;
+    }
+
+    // Generate document with employee data
+    const result = await api.generateDocument(template.template_id, employeeId, {});
+
+    // Auto-download the document
+    const downloadUrl = api.downloadDocument(result.document_id);
+    window.open(downloadUrl, '_blank');
+
+    alert(`✓ Документ "${template.template_name}" успішно згенеровано та завантажено`);
+  } catch (error) {
+    alert('Помилка генерування документа: ' + error.message);
+  }
+}
+
+// Document history functions
+async function loadDocumentHistory() {
+  documentHistoryLoading.value = true;
+  documentHistoryError.value = "";
+  try {
+    const filters = {
+      template_id: documentHistoryFilters.template_id || undefined,
+      employee_id: documentHistoryFilters.employee_id || undefined,
+      start_date: documentHistoryFilters.start_date || undefined,
+      end_date: documentHistoryFilters.end_date || undefined,
+      offset: documentHistoryPagination.offset,
+      limit: documentHistoryPagination.limit
+    };
+
+    const data = await api.getGeneratedDocuments(filters);
+    generatedDocuments.value = data.documents || [];
+    documentHistoryPagination.total = data.total || 0;
+  } catch (error) {
+    documentHistoryError.value = error.message;
+    generatedDocuments.value = [];
+    documentHistoryPagination.total = 0;
+  } finally {
+    documentHistoryLoading.value = false;
+  }
+}
+
+function clearDocumentHistoryFilters() {
+  documentHistoryFilters.template_id = '';
+  documentHistoryFilters.employee_id = '';
+  documentHistoryFilters.start_date = '';
+  documentHistoryFilters.end_date = '';
+  documentHistorySearchTerm.value = '';
+  documentHistoryPagination.offset = 0;
+  loadDocumentHistory();
+}
+
+function goToDocumentHistoryPage(page) {
+  documentHistoryPagination.offset = (page - 1) * documentHistoryPagination.limit;
+  loadDocumentHistory();
+}
+
+function downloadGeneratedDocument(documentId) {
+  const downloadUrl = api.downloadDocument(documentId);
+  window.open(downloadUrl, '_blank');
+}
+
+// Computed values for document history
+const filteredDocuments = computed(() => {
+  if (!documentHistorySearchTerm.value) {
+    return generatedDocuments.value;
+  }
+  const search = documentHistorySearchTerm.value.toLowerCase();
+  return generatedDocuments.value.filter(doc => {
+    return (
+      (doc.template_name && doc.template_name.toLowerCase().includes(search)) ||
+      (doc.employee_name && doc.employee_name.toLowerCase().includes(search)) ||
+      (doc.document_id && doc.document_id.toString().includes(search))
+    );
+  });
+});
+
+const documentHistoryCurrentPage = computed(() => {
+  return Math.floor(documentHistoryPagination.offset / documentHistoryPagination.limit) + 1;
+});
+
+const documentHistoryTotalPages = computed(() => {
+  return Math.ceil(documentHistoryPagination.total / documentHistoryPagination.limit);
+});
 
 async function loadFieldsSchema() {
   try {
@@ -2552,8 +2868,9 @@ onUnmounted(() => {
             <div v-for="group in fieldGroups" :key="group.title" class="section">
               <div class="section-title">{{ group.title }}</div>
               <div class="form-grid">
-                <div v-for="field in group.fields" :key="field.key" class="field">
-                  <label :for="field.key">{{ field.label }}</label>
+                <template v-for="field in group.fields" :key="field.key">
+                <div class="field">
+                  <label :for="field.key">{{ field.label }}<span v-if="field.key === 'first_name' || field.key === 'last_name' || field.key === 'gender'" style="color: red;"> *</span></label>
                   <!-- employment_status: readonly display + buttons -->
                   <template v-if="field.key === 'employment_status'">
                     <div class="status-field-row">
@@ -2587,6 +2904,7 @@ onUnmounted(() => {
                     v-else-if="field.type === 'select'"
                     :id="field.key"
                     v-model="form[field.key]"
+                    :required="field.key === 'gender'"
                   >
                     <option value="">--</option>
                     <option
@@ -2611,6 +2929,19 @@ onUnmounted(() => {
                     :required="field.key === 'first_name' || field.key === 'last_name'"
                   />
                 </div>
+                <div v-if="field.key === 'last_name'" class="field" style="display: flex; align-items: center; padding-top: 1.4em;">
+                  <label style="display: flex; align-items: center; gap: 6px; margin: 0; cursor: pointer; white-space: nowrap;">
+                    <input type="checkbox" v-model="form.indeclinable_name" true-value="yes" false-value="" style="width: auto;" />
+                    Прізвище не склоняється
+                  </label>
+                </div>
+                <div v-if="field.key === 'first_name'" class="field" style="display: flex; align-items: center; padding-top: 1.4em;">
+                  <label style="display: flex; align-items: center; gap: 6px; margin: 0; cursor: pointer; white-space: nowrap;">
+                    <input type="checkbox" v-model="form.indeclinable_first_name" true-value="yes" false-value="" style="width: auto;" />
+                    Ім'я не склоняється
+                  </label>
+                </div>
+                </template>
               </div>
             </div>
 
@@ -2708,6 +3039,51 @@ onUnmounted(() => {
                   </tr>
                 </tbody>
               </table>
+            </div>
+
+            <div class="section">
+              <div class="panel-header">
+                <div class="section-title">Генерування документів</div>
+                <button class="secondary small" type="button" @click="openCreateTemplateDialog">➕ Новий шаблон</button>
+              </div>
+              <div v-if="isNew" class="inline-note">
+                Спочатку збережіть співробітника, потім згенеруйте документи.
+              </div>
+              <div v-else-if="templates.length === 0" class="empty-state">
+                Немає доступних шаблонів документів.
+                <a href="#" @click.prevent="openCreateTemplateDialog">Створити шаблон</a>
+              </div>
+              <div v-else class="document-generation-grid">
+                <div
+                  v-for="template in templates"
+                  :key="template.template_id"
+                  class="template-card"
+                  :class="{ disabled: !template.docx_filename }"
+                >
+                  <div class="template-card-icon">📄</div>
+                  <div class="template-card-content">
+                    <div class="template-card-title">{{ template.template_name }}</div>
+                    <div class="template-card-description">{{ template.description || 'Без опису' }}</div>
+                    <div v-if="!template.docx_filename" class="warning-text">
+                      ⚠ Файл DOCX не завантажено
+                    </div>
+                  </div>
+                  <div class="template-card-actions">
+                    <button class="icon-btn" title="Редагувати" @click="editTemplate(template)">✎</button>
+                    <button class="icon-btn" title="Відкрити DOCX" @click="openTemplateDocx(template)" :disabled="!template.docx_filename">📄</button>
+                    <button class="icon-btn" title="Завантажити DOCX" @click="uploadTemplateFile(template)">📁</button>
+                    <button class="icon-btn" title="Видалити" @click="deleteTemplate(template)">🗑</button>
+                  </div>
+                  <button
+                    class="primary small"
+                    type="button"
+                    :disabled="!template.docx_filename"
+                    @click="generateDocumentForEmployee(template)"
+                  >
+                    Згенерувати
+                  </button>
+                </div>
+              </div>
             </div>
 
             <div class="section">
@@ -3119,6 +3495,204 @@ onUnmounted(() => {
         </div>
       </div>
 
+      <!-- Режим шаблонів -->
+      <div v-else-if="currentView === 'templates'" class="layout-table">
+        <div class="panel table-panel">
+          <div class="view-header">
+            <div class="panel-title">Шаблони документів</div>
+            <button class="primary" type="button" @click="openCreateTemplateDialog">
+              ➕ Новий шаблон
+            </button>
+          </div>
+
+          <div v-if="templates.length === 0 && !loading" class="empty-state">
+            <p>Немає шаблонів. Створіть перший шаблон для генерації документів.</p>
+          </div>
+
+          <div v-else class="templates-table-container">
+            <table class="templates-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Назва</th>
+                  <th>Тип</th>
+                  <th>Файл DOCX</th>
+                  <th>Плейсхолдери</th>
+                  <th>Створено</th>
+                  <th>Дії</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="template in templates" :key="template.template_id">
+                  <td style="text-align: center;">{{ template.template_id }}</td>
+                  <td>{{ template.template_name }}</td>
+                  <td>
+                    <span class="template-type-badge" :data-type="template.template_type">
+                      {{ template.template_type }}
+                    </span>
+                  </td>
+                  <td>
+                    <span v-if="template.docx_filename" class="file-uploaded">
+                      ✓ {{ template.docx_filename }}
+                    </span>
+                    <span v-else class="file-missing">
+                      ⚠ Файл відсутній
+                    </span>
+                  </td>
+                  <td class="placeholders-cell">
+                    <code v-if="template.placeholder_fields">{{ template.placeholder_fields }}</code>
+                    <span v-else>—</span>
+                  </td>
+                  <td>{{ template.created_date || '—' }}</td>
+                  <td class="actions-cell">
+                    <button class="icon-btn" title="Редагувати" @click="editTemplate(template)">
+                      ✎
+                    </button>
+                    <button class="icon-btn" title="Открыть DOCX" @click="openTemplateDocx(template)" :disabled="!template.docx_filename">
+                      📄
+                    </button>
+                    <button class="icon-btn" title="Завантажити DOCX" @click="uploadTemplateFile(template)">
+                      📁
+                    </button>
+                    <button class="icon-btn" title="Видалити" @click="deleteTemplate(template)">
+                      🗑
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Режим історії документів -->
+      <div v-else-if="currentView === 'document-history'" class="layout-table">
+        <div class="panel table-panel">
+          <div class="view-header">
+            <div class="panel-title">Історія згенерованих документів</div>
+            <button class="secondary" type="button" @click="loadDocumentHistory">
+              🔄 Оновити
+            </button>
+          </div>
+
+          <!-- Filters -->
+          <div class="filters-section" style="padding: 16px; background: #f5f5f5; border-radius: 8px; margin-bottom: 16px;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+              <div class="field">
+                <label>Шаблон</label>
+                <select v-model="documentHistoryFilters.template_id">
+                  <option value="">Всі шаблони</option>
+                  <option v-for="template in templates" :key="template.template_id" :value="template.template_id">
+                    {{ template.template_name }}
+                  </option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label>Пошук співробітника</label>
+                <input
+                  type="text"
+                  v-model="documentHistorySearchTerm"
+                  placeholder="Введіть ПІБ або ID..."
+                />
+              </div>
+
+              <div class="field">
+                <label>Дата від</label>
+                <input type="date" v-model="documentHistoryFilters.start_date" />
+              </div>
+
+              <div class="field">
+                <label>Дата до</label>
+                <input type="date" v-model="documentHistoryFilters.end_date" />
+              </div>
+            </div>
+
+            <div style="display: flex; gap: 8px; margin-top: 12px;">
+              <button class="primary" type="button" @click="loadDocumentHistory">
+                Застосувати фільтри
+              </button>
+              <button class="secondary" type="button" @click="clearDocumentHistoryFilters">
+                Очистити фільтри
+              </button>
+            </div>
+          </div>
+
+          <!-- Table -->
+          <div class="table-container">
+            <div v-if="documentHistoryLoading" style="padding: 24px; text-align: center;">
+              Завантаження...
+            </div>
+
+            <div v-else-if="documentHistoryError" class="error-message" style="padding: 16px; background: #fee; color: #c00; border-radius: 8px; margin-bottom: 16px;">
+              {{ documentHistoryError }}
+            </div>
+
+            <div v-else-if="filteredDocuments.length === 0" style="padding: 24px; text-align: center; color: #666;">
+              Немає згенерованих документів
+            </div>
+
+            <table v-else class="data-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Шаблон</th>
+                  <th>Співробітник</th>
+                  <th>Дата генерації</th>
+                  <th>Згенеровано</th>
+                  <th>Дії</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="doc in filteredDocuments" :key="doc.document_id">
+                  <td>{{ doc.document_id }}</td>
+                  <td>{{ doc.template_name || 'N/A' }}</td>
+                  <td>{{ doc.employee_name || `ID: ${doc.employee_id}` }}</td>
+                  <td>{{ doc.generation_date ? new Date(doc.generation_date).toLocaleDateString('uk-UA') : 'N/A' }}</td>
+                  <td>{{ doc.generated_by || 'Система' }}</td>
+                  <td>
+                    <button
+                      class="primary small"
+                      type="button"
+                      @click="downloadGeneratedDocument(doc.document_id)"
+                      title="Завантажити документ"
+                    >
+                      ⬇ Завантажити
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Pagination -->
+          <div v-if="!documentHistoryLoading && filteredDocuments.length > 0" class="pagination" style="display: flex; justify-content: center; align-items: center; gap: 12px; padding: 16px;">
+            <button
+              class="secondary small"
+              type="button"
+              @click="goToDocumentHistoryPage(documentHistoryCurrentPage - 1)"
+              :disabled="documentHistoryCurrentPage === 1"
+            >
+              ← Попередня
+            </button>
+
+            <span>
+              Сторінка {{ documentHistoryCurrentPage }} з {{ documentHistoryTotalPages }}
+              (всього: {{ documentHistoryPagination.total }} документів)
+            </span>
+
+            <button
+              class="secondary small"
+              type="button"
+              @click="goToDocumentHistoryPage(documentHistoryCurrentPage + 1)"
+              :disabled="documentHistoryCurrentPage >= documentHistoryTotalPages"
+            >
+              Наступна →
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- Режим логов -->
       <div v-else-if="currentView === 'logs'" class="layout-table">
         <div class="panel table-panel">
@@ -3185,6 +3759,139 @@ onUnmounted(() => {
               </tbody>
             </table>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Template Create/Edit Dialog -->
+    <div v-if="showTemplateDialog" class="vacation-notification-overlay" @click="closeTemplateDialog">
+      <div class="vacation-notification-modal" @click.stop style="max-width: 600px;">
+        <div class="vacation-notification-header">
+          <h3>{{ templateDialogMode === 'create' ? 'Новий шаблон' : 'Редагувати шаблон' }}</h3>
+          <button class="close-btn" @click="closeTemplateDialog">&times;</button>
+        </div>
+        <div class="vacation-notification-body">
+          <div class="form-group">
+            <label for="template-name">Назва шаблону <span style="color: red;">*</span></label>
+            <input
+              id="template-name"
+              v-model="templateForm.template_name"
+              type="text"
+              required
+              placeholder="Наприклад: Заявка на відпустку"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="template-type">Тип документа <span style="color: red;">*</span></label>
+            <select id="template-type" v-model="templateForm.template_type" required>
+              <option value="">Оберіть тип</option>
+              <option value="Заявка">Заявка</option>
+              <option value="Службова записка">Службова записка</option>
+              <option value="Доповідь/Звіт">Доповідь/Звіт</option>
+              <option value="Інше">Інше</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="template-description">Опис</label>
+            <textarea
+              id="template-description"
+              v-model="templateForm.description"
+              rows="3"
+              placeholder="Опис шаблону та його призначення"
+            ></textarea>
+          </div>
+
+          <div v-if="templateForm.placeholder_fields || templateForm.docx_filename" class="form-group">
+            <label>Плейсхолдери (автоматично з DOCX)</label>
+            <input
+              v-model="templateForm.placeholder_fields"
+              type="text"
+              readonly
+              style="background-color: #f5f5f5; cursor: not-allowed;"
+            />
+            <button
+              v-if="templateDialogMode === 'edit' && templateForm.docx_filename"
+              class="secondary small"
+              type="button"
+              style="margin-top: 6px;"
+              @click="reextractTemplatePlaceholders"
+            >
+              Обновить плейсхолдеры
+            </button>
+          </div>
+        </div>
+        <div class="vacation-notification-footer status-change-footer">
+          <button class="secondary" type="button" @click="closeTemplateDialog">Скасувати</button>
+          <button
+            class="primary"
+            type="button"
+            @click="saveTemplate"
+            :disabled="!templateForm.template_name || !templateForm.template_type"
+          >
+            {{ templateDialogMode === 'create' ? 'Створити' : 'Зберегти' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Template Upload DOCX Dialog -->
+    <div v-if="showUploadTemplateModal" class="vacation-notification-overlay" @click="closeUploadTemplateModal">
+      <div class="vacation-notification-modal" @click.stop style="max-width: 550px;">
+        <div class="vacation-notification-header">
+          <h3>Завантаження DOCX шаблону</h3>
+          <button class="close-btn" @click="closeUploadTemplateModal">&times;</button>
+        </div>
+        <div class="vacation-notification-body">
+          <p style="margin-bottom: 15px;">
+            <strong>{{ uploadTemplateName }}</strong>
+          </p>
+
+          <div class="help-box" style="background-color: #f0f8ff; border-left: 4px solid #0066cc; padding: 15px; margin-bottom: 20px;">
+            <h4 style="margin-top: 0; margin-bottom: 10px; color: #0066cc;">📋 Інструкція зі створення шаблону</h4>
+            <ul style="margin: 0; padding-left: 20px; line-height: 1.6;">
+              <li>Створіть DOCX файл у Microsoft Word або LibreOffice</li>
+              <li>Використовуйте плейсхолдери у форматі <code>{{'{'}}field_name{{'}'}}</code></li>
+              <li>Доступні поля співробітника: <code>{{'{'}}last_name{{'}'}}</code>, <code>{{'{'}}first_name{{'}'}}</code>, <code>{{'{'}}position{{'}'}}</code>, та ін.</li>
+              <li>Спеціальні плейсхолдери: <code>{{'{'}}current_date{{'}'}}</code>, <code>{{'{'}}current_datetime{{'}'}}</code></li>
+              <li>
+                Відмінювання ПІБ — додайте суфікс падежу до <code>last_name</code>, <code>first_name</code>, <code>middle_name</code>, <code>full_name</code>:
+                <br/>
+                <code style="font-size: 0.85em;">_genitive</code> (родовий: Іванова),
+                <code style="font-size: 0.85em;">_dative</code> (давальний: Іванову),
+                <code style="font-size: 0.85em;">_accusative</code> (знахідний),
+                <code style="font-size: 0.85em;">_vocative</code> (кличний),
+                <code style="font-size: 0.85em;">_locative</code> (місцевий),
+                <code style="font-size: 0.85em;">_ablative</code> (орудний)
+              </li>
+              <li>Приклад: "Надати <code>{{'{'}}full_name_dative{{'}'}}</code> відпустку" → "Надати Іванову Петру Миколайовичу відпустку"</li>
+            </ul>
+          </div>
+
+          <div class="form-group">
+            <label for="template-file-input">Оберіть DOCX файл <span style="color: red;">*</span></label>
+            <input
+              id="template-file-input"
+              type="file"
+              accept=".docx"
+              @change="onTemplateFileSelected"
+            />
+            <p v-if="selectedTemplateFile" style="margin-top: 10px; color: #28a745;">
+              ✓ Обрано: {{ selectedTemplateFile.name }}
+            </p>
+          </div>
+        </div>
+        <div class="vacation-notification-footer status-change-footer">
+          <button class="secondary" type="button" @click="closeUploadTemplateModal">Скасувати</button>
+          <button
+            class="primary"
+            type="button"
+            @click="uploadTemplateDocx"
+            :disabled="!selectedTemplateFile"
+          >
+            Завантажити
+          </button>
         </div>
       </div>
     </div>
