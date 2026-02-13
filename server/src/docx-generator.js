@@ -101,6 +101,16 @@ async function prepareData(data) {
   const declinedGradePosition = await generateDeclinedGradePosition(data);
   Object.assign(prepared, declinedGradePosition);
 
+  // Add uppercase and capitalized variants for all text placeholders
+  const caseVariants = {};
+  for (const [key, value] of Object.entries(prepared)) {
+    if (typeof value === 'string' && value.length > 0) {
+      caseVariants[`${key}_upper`] = value.toUpperCase();
+      caseVariants[`${key}_cap`] = value.charAt(0).toUpperCase() + value.slice(1);
+    }
+  }
+  Object.assign(prepared, caseVariants);
+
   return prepared;
 }
 

@@ -384,6 +384,61 @@ async function testExtractPlaceholdersSplitRuns() {
   }
 }
 
+// Test 13: generateDocx() adds _upper and _cap case variants for placeholders
+async function testGenerateDocxCaseVariants() {
+  const testPath = path.join(TEST_FIXTURES_DIR, 'test-case-variants.docx');
+  createTestDocx(testPath, ['first_name', 'first_name_upper', 'first_name_cap', 'last_name_upper']);
+
+  const outputPath = path.join(TEST_OUTPUT_DIR, 'case-variants.docx');
+  const data = { first_name: 'іван', last_name: 'петренко' };
+
+  await generateDocx(testPath, data, outputPath);
+
+  const content = fs.readFileSync(outputPath, 'binary');
+  const zip = new PizZip(content);
+  const documentXml = zip.file('word/document.xml').asText();
+
+  // Verify _upper variant (all uppercase)
+  if (!documentXml.includes('ІВАН')) {
+    throw new Error('first_name_upper should produce ІВАН');
+  }
+
+  // Verify _cap variant (first letter uppercase)
+  if (!documentXml.includes('Іван')) {
+    throw new Error('first_name_cap should produce Іван');
+  }
+
+  // Verify last_name_upper
+  if (!documentXml.includes('ПЕТРЕНКО')) {
+    throw new Error('last_name_upper should produce ПЕТРЕНКО');
+  }
+
+  // Verify original value is also present
+  if (!documentXml.includes('іван')) {
+    throw new Error('Original first_name value should still be present');
+  }
+}
+
+// Test 14: generateDocx() does not generate _upper/_cap for empty values
+async function testGenerateDocxCaseVariantsEmpty() {
+  const testPath = path.join(TEST_FIXTURES_DIR, 'test-case-empty.docx');
+  createTestDocx(testPath, ['name', 'name_upper', 'name_cap']);
+
+  const outputPath = path.join(TEST_OUTPUT_DIR, 'case-empty.docx');
+  const data = { name: '' };
+
+  await generateDocx(testPath, data, outputPath);
+
+  const content = fs.readFileSync(outputPath, 'binary');
+  const zip = new PizZip(content);
+  const documentXml = zip.file('word/document.xml').asText();
+
+  // Placeholders should be replaced with empty strings (no literal text remaining)
+  if (documentXml.includes('{name_upper}') || documentXml.includes('{name_cap}')) {
+    throw new Error('Empty value _upper/_cap placeholders should still be replaced (with empty string)');
+  }
+}
+
 // Main test runner
 async function runAllTests() {
   console.log('Starting DOCX Generator unit tests...\n');
@@ -403,6 +458,8 @@ async function runAllTests() {
   await runTest('generateDocx() throws error for non-existent template', testGenerateDocxNonExistent);
   await runTest('generateDocx() creates output directory if missing', testGenerateDocxCreateDir);
   await runTest('extractPlaceholders() finds placeholders split across XML runs', testExtractPlaceholdersSplitRuns);
+  await runTest('generateDocx() adds _upper and _cap case variants', testGenerateDocxCaseVariants);
+  await runTest('generateDocx() handles _upper/_cap for empty values', testGenerateDocxCaseVariantsEmpty);
 
   // Cleanup
   cleanup();

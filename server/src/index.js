@@ -1100,6 +1100,24 @@ app.get("/api/placeholder-preview/:employeeId?", async (req, res) => {
       group: 'special'
     });
 
+    // Case variant placeholders (_upper and _cap for all text placeholders)
+    for (const p of [...placeholders]) {
+      if (typeof p.value === 'string' && p.value.length > 0) {
+        placeholders.push({
+          placeholder: p.placeholder.replace('}', '_upper}'),
+          label: `${p.label} (ВЕЛИКІ)`,
+          value: p.value.toUpperCase(),
+          group: 'case_variants'
+        });
+        placeholders.push({
+          placeholder: p.placeholder.replace('}', '_cap}'),
+          label: `${p.label} (З великої)`,
+          value: p.value.charAt(0).toUpperCase() + p.value.slice(1),
+          group: 'case_variants'
+        });
+      }
+    }
+
     const employeeName = [employee.last_name, employee.first_name, employee.middle_name]
       .filter(Boolean).join(' ');
 

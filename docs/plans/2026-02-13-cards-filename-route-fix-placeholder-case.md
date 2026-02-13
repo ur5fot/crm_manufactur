@@ -50,10 +50,10 @@ Three changes:
 - Modify: `server/src/docx-generator.js`
 - Modify: `server/src/index.js`
 
-- [ ] In prepareData (docx-generator.js), after building all prepared placeholders (including declension), generate two extra variants for every text placeholder: `{key_upper}` (all uppercase via .toUpperCase()) and `{key_cap}` (first letter uppercase via capitalize helper). Skip empty values and non-text fields (dates, IDs, etc. are fine to include - the transformation is harmless on them)
-- [ ] In /api/placeholder-preview endpoint (index.js), add the _upper and _cap variants to the placeholders array so they appear on the reference page. Use a new group name like 'case_variants' or add them inline next to their source placeholder
-- [ ] Add/update tests in docx-generator.test.js to verify _upper and _cap variants are generated correctly
-- [ ] Run project test suite - must pass before task 4
+- [x] In prepareData (docx-generator.js), after building all prepared placeholders (including declension), generate two extra variants for every text placeholder: `{key_upper}` (all uppercase via .toUpperCase()) and `{key_cap}` (first letter uppercase via capitalize helper). Skip empty values and non-text fields (dates, IDs, etc. are fine to include - the transformation is harmless on them)
+- [x] In /api/placeholder-preview endpoint (index.js), add the _upper and _cap variants to the placeholders array so they appear on the reference page. Use a new group name like 'case_variants' or add them inline next to their source placeholder
+- [x] Add/update tests in docx-generator.test.js to verify _upper and _cap variants are generated correctly
+- [x] Run project test suite - must pass before task 4
 
 ### Task 4: Verify acceptance criteria
 
