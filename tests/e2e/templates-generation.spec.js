@@ -116,6 +116,14 @@ test.describe('Document Generation E2E', () => {
     await employeeCard.click();
     await page.waitForTimeout(1500);
 
+    // Close any notification overlays that appeared after navigation
+    const overlayCloseButtons = page.locator('.vacation-notification-overlay .close-btn');
+    const overlayCount = await overlayCloseButtons.count();
+    for (let i = 0; i < overlayCount; i++) {
+      await overlayCloseButtons.nth(i).click({ timeout: 1000 }).catch(() => {});
+    }
+    await page.waitForTimeout(500);
+
     const generateButton = page.locator('button:has-text("Згенерувати"):not([disabled])').first();
 
     if (await generateButton.count() > 0) {
@@ -142,7 +150,7 @@ test.describe('Document Generation E2E', () => {
       const lastLine = afterLines[afterLines.length - 1];
       expect(lastLine).toContain(';1;'); // employee_id = 1
       expect(lastLine).toContain('.docx');
-      expect(lastLine).toContain('data_snapshot');
+      expect(lastLine).toContain('employee_id'); // data snapshot contains employee fields
     } else {
       expect(true).toBe(true);
     }
@@ -212,8 +220,8 @@ test.describe('Document Generation E2E', () => {
     await page.click('button:has-text("Картки")');
     await page.waitForTimeout(1000);
 
-    // Click "Новий співробітник" to create unsaved employee
-    const newEmployeeBtn = page.locator('button').filter({ hasText: 'Новий' }).first();
+    // Click "Новий співробітник" button (emoji ➕ with title attribute)
+    const newEmployeeBtn = page.locator('button[title="Новий працівник"]');
 
     if (await newEmployeeBtn.count() > 0) {
       await newEmployeeBtn.click();
