@@ -9,6 +9,7 @@ export default defineConfig({
   plugins: [vue()],
   server: {
     port: frontendPort,
+    strictPort: true,
     proxy: {
       "/api": backendUrl,
       "/files": backendUrl,

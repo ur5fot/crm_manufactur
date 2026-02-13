@@ -21,6 +21,21 @@ if ! command -v npm >/dev/null 2>&1; then
   exit 1
 fi
 
+# Звільнити порт: якщо зайнятий — вбити процес
+free_port() {
+  local port="$1"
+  local name="$2"
+  if lsof -ti:"$port" > /dev/null 2>&1; then
+    echo "Порт $port зайнятий, зупиняємо процес ($name)..."
+    lsof -ti:"$port" | xargs kill -9 2>/dev/null || true
+    sleep 1
+    echo "✓ Порт $port звільнено"
+  fi
+}
+
+free_port "$PORT" "backend"
+free_port "$VITE_PORT" "frontend"
+
 pids=()
 
 cleanup() {
