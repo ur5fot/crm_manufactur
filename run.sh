@@ -47,15 +47,23 @@ cleanup() {
 
 trap cleanup EXIT INT TERM
 
+# Перевірити та встановити залежності: npm install якщо node_modules відсутній
+# або package.json новіший за node_modules (додано нові пакети)
+ensure_deps() {
+  local dir="$1"
+  local name="$2"
+  if [ ! -d "$dir/node_modules" ] || [ "$dir/package.json" -nt "$dir/node_modules" ]; then
+    echo "Installing dependencies for $name..."
+    (cd "$dir" && npm install)
+  fi
+}
+
 start_service() {
   local name="$1"
   local dir="$2"
   local cmd="$3"
 
-  if [ ! -d "$dir/node_modules" ]; then
-    echo "Installing dependencies for $name..."
-    (cd "$dir" && npm install)
-  fi
+  ensure_deps "$dir" "$name"
 
   echo "Starting $name..."
   (cd "$dir" && $cmd) &
@@ -63,10 +71,7 @@ start_service() {
 }
 
 # Ensure server dependencies are installed before syncing template
-if [ ! -d "$root_dir/server/node_modules" ]; then
-  echo "Installing server dependencies..."
-  (cd "$root_dir/server" && npm install)
-fi
+ensure_deps "$root_dir/server" "server"
 
 # Initialize config.csv from template if not exists
 if [ ! -f "$root_dir/data/config.csv" ] && [ -f "$root_dir/data/config.template.csv" ]; then
