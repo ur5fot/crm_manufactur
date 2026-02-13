@@ -11,6 +11,7 @@ const routes = [
   { path: "/import", name: "import", component: App },
   { path: "/templates", name: "templates", component: App },
   { path: "/document-history", name: "document-history", component: App },
+  { path: "/placeholder-reference/:employeeId?", name: "placeholder-reference", component: App },
   { path: "/logs", name: "logs", component: App }
 ];
 

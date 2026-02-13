@@ -175,6 +175,10 @@ export const api = {
   downloadDocument(documentId) {
     return `${BASE_URL}/documents/${documentId}/download`;
   },
+  getPlaceholderPreview(employeeId) {
+    const path = employeeId ? `/placeholder-preview/${employeeId}` : '/placeholder-preview';
+    return request(path);
+  },
   getGeneratedDocuments(filters = {}) {
     const queryParams = new URLSearchParams();
     if (filters.template_id) queryParams.set('template_id', filters.template_id);
