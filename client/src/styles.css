@@ -2015,3 +2015,35 @@ button.small {
   font-weight: 500;
   font-style: italic;
 }
+
+/* Placeholder reference page */
+.placeholder-ref-info {
+  margin-bottom: 12px;
+  font-size: 14px;
+  color: #555;
+}
+
+.placeholder-cell {
+  font-family: 'Courier New', Courier, monospace;
+  cursor: pointer;
+  user-select: all;
+  color: #0d6efd;
+}
+
+.placeholder-cell:hover {
+  background-color: #e8f0fe;
+}
+
+.placeholder-cell:active {
+  background-color: #c2d9fc;
+}
+
+.placeholder-group-header td {
+  background-color: #e9ecef;
+  font-weight: 600;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #495057;
+  padding: 8px 12px;
+}

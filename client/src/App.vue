@@ -185,6 +185,7 @@ const currentView = computed(() => {
   if (name === 'import') return 'import';
   if (name === 'templates') return 'templates';
   if (name === 'document-history') return 'document-history';
+  if (name === 'placeholder-reference') return 'placeholder-reference';
   if (name === 'logs') return 'logs';
   return 'dashboard';
 });
@@ -282,6 +283,10 @@ watch(() => route.name, async (newRoute, oldRoute) => {
     loadDocumentHistory();
   }
 
+  if (newView === 'placeholder-reference') {
+    loadPlaceholderPreview();
+  }
+
   if (newView === 'cards') {
     // Load templates for document generation section
     loadTemplates();
@@ -361,6 +366,12 @@ const documentHistoryPagination = reactive({
   total: 0
 });
 const documentHistorySearchTerm = ref('');
+
+// Placeholder reference page
+const placeholderRefData = ref(null);
+const placeholderRefLoading = ref(false);
+const placeholderRefError = ref('');
+const placeholderRefSearch = ref('');
 
 // Уведомления о сменах статусов
 const statusReturning = ref([]);
@@ -1976,6 +1987,41 @@ const documentHistoryTotalPages = computed(() => {
   return Math.ceil(documentHistoryPagination.total / documentHistoryPagination.limit);
 });
 
+// Placeholder reference
+async function loadPlaceholderPreview() {
+  placeholderRefLoading.value = true;
+  placeholderRefError.value = '';
+  try {
+    const employeeId = route.params.employeeId || undefined;
+    placeholderRefData.value = await api.getPlaceholderPreview(employeeId);
+  } catch (error) {
+    placeholderRefError.value = error.message;
+    placeholderRefData.value = null;
+  } finally {
+    placeholderRefLoading.value = false;
+  }
+}
+
+const filteredPlaceholders = computed(() => {
+  if (!placeholderRefData.value) return [];
+  const items = placeholderRefData.value.placeholders || [];
+  if (!placeholderRefSearch.value) return items;
+  const term = placeholderRefSearch.value.toLowerCase();
+  return items.filter(p =>
+    p.placeholder.toLowerCase().includes(term) ||
+    p.label.toLowerCase().includes(term) ||
+    p.value.toLowerCase().includes(term)
+  );
+});
+
+function copyPlaceholder(text) {
+  navigator.clipboard.writeText(text).then(() => {
+    // brief visual feedback handled via CSS :active
+  }).catch(() => {
+    // fallback: select text
+  });
+}
+
 async function loadFieldsSchema() {
   try {
     const data = await api.getFieldsSchema();
@@ -2253,6 +2299,10 @@ onMounted(async () => {
     await loadDashboardEvents();
     await loadOverdueDocuments();
     startDashboardRefresh();
+  }
+
+  if (route.name === 'placeholder-reference') {
+    await loadPlaceholderPreview();
   }
 });
 
@@ -3044,7 +3094,13 @@ onUnmounted(() => {
             <div class="section">
               <div class="panel-header">
                 <div class="section-title">Генерування документів</div>
-                <button class="secondary small" type="button" @click="openCreateTemplateDialog">➕ Новий шаблон</button>
+                <div class="button-group">
+                  <button class="secondary small" type="button" @click="openCreateTemplateDialog">➕ Новий шаблон</button>
+                  <button class="secondary small" type="button"
+                    @click="router.push({ name: 'placeholder-reference', params: { employeeId: selectedId } })">
+                    Плейсхолдери
+                  </button>
+                </div>
               </div>
               <div v-if="isNew" class="inline-note">
                 Спочатку збережіть співробітника, потім згенеруйте документи.
@@ -3500,9 +3556,14 @@ onUnmounted(() => {
         <div class="panel table-panel">
           <div class="view-header">
             <div class="panel-title">Шаблони документів</div>
-            <button class="primary" type="button" @click="openCreateTemplateDialog">
-              ➕ Новий шаблон
-            </button>
+            <div class="button-group">
+              <button class="primary" type="button" @click="openCreateTemplateDialog">
+                ➕ Новий шаблон
+              </button>
+              <button class="secondary" type="button" @click="router.push({ name: 'placeholder-reference' })">
+                Довідник плейсхолдерів
+              </button>
+            </div>
           </div>
 
           <div v-if="templates.length === 0 && !loading" class="empty-state">
@@ -3690,6 +3751,68 @@ onUnmounted(() => {
               Наступна →
             </button>
           </div>
+        </div>
+      </div>
+
+      <!-- Довідник плейсхолдерів -->
+      <div v-else-if="currentView === 'placeholder-reference'" class="layout-table">
+        <div class="panel table-panel">
+          <div class="view-header">
+            <div class="panel-title">Довідник плейсхолдерів</div>
+            <button class="secondary" type="button" @click="router.back()">← Назад</button>
+          </div>
+
+          <div v-if="placeholderRefLoading" class="loading-message">Завантаження...</div>
+          <div v-else-if="placeholderRefError" class="error-message">{{ placeholderRefError }}</div>
+          <template v-else-if="placeholderRefData">
+            <div class="placeholder-ref-info">
+              Дані співробітника: <strong>{{ placeholderRefData.employee_name }}</strong>
+            </div>
+
+            <div class="filter-row" style="margin-bottom: 12px;">
+              <input
+                type="text"
+                class="form-control"
+                v-model="placeholderRefSearch"
+                placeholder="Пошук плейсхолдера..."
+              />
+            </div>
+
+            <table class="table table-striped">
+              <thead>
+                <tr>
+                  <th>Плейсхолдер</th>
+                  <th>Опис</th>
+                  <th>Приклад значення</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template v-for="group in ['fields', 'declension', 'special']" :key="group">
+                  <tr v-if="filteredPlaceholders.some(p => p.group === group)" class="placeholder-group-header">
+                    <td colspan="3">
+                      {{ group === 'fields' ? 'Поля співробітника' : group === 'declension' ? 'Відмінювання імен' : 'Спеціальні' }}
+                    </td>
+                  </tr>
+                  <tr
+                    v-for="item in filteredPlaceholders.filter(p => p.group === group)"
+                    :key="item.placeholder"
+                  >
+                    <td
+                      class="placeholder-cell"
+                      @click="copyPlaceholder(item.placeholder)"
+                      :title="'Натисніть, щоб скопіювати ' + item.placeholder"
+                    >{{ item.placeholder }}</td>
+                    <td>{{ item.label }}</td>
+                    <td>{{ item.value }}</td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+
+            <div v-if="filteredPlaceholders.length === 0" class="empty-state">
+              Нічого не знайдено за запитом "{{ placeholderRefSearch }}"
+            </div>
+          </template>
         </div>
       </div>
 

@@ -38,6 +38,7 @@ import {
 } from "./store.js";
 import { mergeRow, normalizeRows } from "./csv.js";
 import { extractPlaceholders, generateDocx } from "./docx-generator.js";
+import { generateDeclinedNames } from "./declension.js";
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -992,6 +993,103 @@ app.delete("/api/employees/:id/files/:fieldName", async (req, res) => {
     );
 
     res.status(204).end();
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Placeholder preview (reference page)
+app.get("/api/placeholder-preview/:employeeId?", async (req, res) => {
+  try {
+    const schema = await loadFieldsSchema();
+    const employees = await loadEmployees();
+    const activeEmployees = employees.filter(e => e.active !== 'no');
+
+    let employee;
+    if (req.params.employeeId) {
+      employee = activeEmployees.find(e => e.employee_id === req.params.employeeId);
+      if (!employee) {
+        res.status(404).json({ error: "Співробітник не знайдено" });
+        return;
+      }
+    } else {
+      employee = activeEmployees[0];
+      if (!employee) {
+        res.status(404).json({ error: "Немає активних співробітників" });
+        return;
+      }
+    }
+
+    const placeholders = [];
+
+    // Fields from schema
+    for (const field of schema) {
+      placeholders.push({
+        placeholder: `{${field.field_name}}`,
+        label: field.field_label || field.field_name,
+        value: employee[field.field_name] || '',
+        group: 'fields'
+      });
+    }
+
+    // Declension placeholders
+    const declined = await generateDeclinedNames(employee);
+    const caseLabels = {
+      genitive: 'родовий',
+      dative: 'давальний',
+      accusative: 'знахідний',
+      vocative: 'кличний',
+      locative: 'місцевий',
+      ablative: 'орудний'
+    };
+    const nameFields = {
+      last_name: 'Прізвище',
+      first_name: "Ім'я",
+      middle_name: 'По батькові',
+      full_name: 'Повне ПІБ'
+    };
+    for (const [suffix, caseLabel] of Object.entries(caseLabels)) {
+      for (const [field, fieldLabel] of Object.entries(nameFields)) {
+        const key = `${field}_${suffix}`;
+        placeholders.push({
+          placeholder: `{${key}}`,
+          label: `${fieldLabel} (${caseLabel})`,
+          value: declined[key] || '',
+          group: 'declension'
+        });
+      }
+    }
+
+    // Special placeholders
+    const now = new Date();
+    const day = String(now.getDate()).padStart(2, '0');
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const year = now.getFullYear();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+
+    placeholders.push({
+      placeholder: '{current_date}',
+      label: 'Поточна дата',
+      value: `${day}.${month}.${year}`,
+      group: 'special'
+    });
+    placeholders.push({
+      placeholder: '{current_datetime}',
+      label: 'Поточна дата і час',
+      value: `${day}.${month}.${year} ${hours}:${minutes}`,
+      group: 'special'
+    });
+
+    const employeeName = [employee.last_name, employee.first_name, employee.middle_name]
+      .filter(Boolean).join(' ');
+
+    res.json({
+      employee_name: employeeName,
+      employee_id: employee.employee_id,
+      placeholders
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
