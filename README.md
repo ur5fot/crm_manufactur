@@ -180,7 +180,7 @@ Generate document from template for an employee.
 ```json
 {
   "document_id": "1",
-  "filename": "Contract_emp123_1234567890.docx",
+  "filename": "Contract_Петренко_123_1234567890.docx",
   "download_url": "/api/documents/1/download"
 }
 ```
@@ -213,7 +213,7 @@ List generated documents with filtering and pagination.
       "template_name": "Contract Template",
       "employee_id": "emp123",
       "employee_name": "Smith John",
-      "docx_filename": "Contract_emp123_1234567890.docx",
+      "docx_filename": "Contract_Петренко_123_1234567890.docx",
       "generation_date": "2026-02-11T10:30:00.000Z",
       "generated_by": "system"
     }
@@ -255,6 +255,15 @@ Any employee field can be used as a placeholder:
 Auto-generated placeholders available in all templates:
 - {current_date} - Current date in DD.MM.YYYY format
 - {current_datetime} - Current date/time in DD.MM.YYYY HH:MM format
+
+### Case Variants (uppercase / capitalized)
+
+For every text placeholder, two additional variants are automatically generated:
+
+- `{key_upper}` - all characters uppercase (e.g., `{full_name_upper}` -> "ІВАН ПЕТРЕНКО")
+- `{key_cap}` - first character uppercase (e.g., `{full_name_cap}` -> "Іван петренко")
+
+Works for all placeholders: employee fields, name declensions, grade/position declensions, and special placeholders. Empty values do not get _upper/_cap variants.
 
 ### Склонение ФИО по падежам
 
