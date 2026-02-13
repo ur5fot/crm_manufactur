@@ -41,8 +41,8 @@ Three changes:
 **Files:**
 - Modify: `client/src/App.vue`
 
-- [ ] In switchView function (line ~207-208), when view is 'cards', preserve the currently selected employee ID: if selectedId.value exists, push `{ name: 'cards', params: { id: selectedId.value } }` instead of `{ name: 'cards' }` (without params)
-- [ ] Run project test suite - must pass before task 3
+- [x] In switchView function (line ~207-208), when view is 'cards', preserve the currently selected employee ID: if selectedId.value exists, push `{ name: 'cards', params: { id: selectedId.value } }` instead of `{ name: 'cards' }` (without params)
+- [x] Run project test suite - must pass before task 3
 
 ### Task 3: Add uppercase and capitalized placeholder variants
 

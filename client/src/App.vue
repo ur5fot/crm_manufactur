@@ -205,7 +205,7 @@ function switchView(view) {
   if (view === 'dashboard') {
     router.push({ name: 'dashboard' });
   } else if (view === 'cards') {
-    router.push({ name: 'cards' });
+    router.push(selectedId.value ? { name: 'cards', params: { id: selectedId.value } } : { name: 'cards' });
   } else if (view === 'table') {
     router.push({ name: 'table' });
   } else if (view === 'reports') {
