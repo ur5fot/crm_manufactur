@@ -10,6 +10,8 @@ data/employees.csv
 data/logs.csv
 data/fields_schema.csv
 data/config.csv
+data/employees_import_sample.csv
+data/fields_schema.template.csv
 
 # Claude Code та Ralphex (особисті налаштування та output)
 .claude/
