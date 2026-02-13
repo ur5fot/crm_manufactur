@@ -52,19 +52,33 @@ A comprehensive CRM system for managing employee records, documents, and templat
 
 ### Running the Application
 
-**Backend:**
+**Быстрый запуск (рекомендуется):**
 ```bash
-cd server
-npm start
+./run.sh          # DEV режим: backend :3000, frontend :5173
+./run.sh prod     # PROD режим: backend :3001, frontend :5174
 ```
-Server runs on http://localhost:3000
 
-**Frontend:**
+**Остановка:**
 ```bash
-cd client
-npm run dev
+./stop.sh         # Остановить DEV
+./stop.sh prod    # Остановить PROD
 ```
-Frontend runs on http://localhost:5173
+
+**Особенности run.sh:**
+- Порты жёстко закреплены за режимами (DEV: 3000/5173, PROD: 3001/5174)
+- Если порт занят — процесс на нём автоматически останавливается перед запуском
+- Vite использует `strictPort: true` — не переключается на другой порт
+- Зависимости автоматически устанавливаются, если `package.json` новее `node_modules/`
+- Автоматическая инициализация `config.csv` и синхронизация CSV-схемы
+
+**Ручной запуск (для отладки):**
+```bash
+# Терминал 1 — backend
+cd server && npm install && npm run dev
+
+# Терминал 2 — frontend
+cd client && npm install && npm run dev
+```
 
 ## API Documentation
 
@@ -255,9 +269,13 @@ Auto-generated placeholders available in all templates:
 | Місцевий (на кому?) | `{last_name_locative}` | `{first_name_locative}` | `{middle_name_locative}` | `{full_name_locative}` |
 | Орудний (ким?) | `{last_name_ablative}` | `{first_name_ablative}` | `{middle_name_ablative}` | `{full_name_ablative}` |
 
-**Примечания:**
+**Управление склонением:**
 - Пол определяется из поля `gender` сотрудника или автоматически по имени/отчеству
-- Если у сотрудника установлен флаг `indeclinable_name = "yes"` — все падежи совпадают с именительным (для несклоняемых иностранных имён)
+- В карточке сотрудника доступны две галочки для отключения склонения:
+  - **"Прізвище не склоняється"** (`indeclinable_name`) — отключает склонение только фамилии (last_name), имя и отчество продолжают склоняться
+  - **"Ім'я не склоняється"** (`indeclinable_first_name`) — отключает склонение только имени (first_name), фамилия и отчество продолжают склоняться
+- Если оба флага установлены — все падежи совпадают с именительным
+- Плейсхолдер `{full_name_*}` собирается из частей с учётом обоих флагов: несклоняемые части остаются в именительном падеже
 - Плейсхолдеры добавляются автоматически — просто используйте их в DOCX шаблоне
 
 ### Example Template

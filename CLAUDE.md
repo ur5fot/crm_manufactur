@@ -78,9 +78,11 @@ crm_manufactur/
 │   │   ├── csv.js              # Low-level CSV read/write utilities
 │   │   ├── schema.js           # Dynamic field schema loading from fields_schema.csv
 │   │   ├── docx-generator.js   # DOCX template processing and placeholder replacement
+│   │   ├── declension.js       # Ukrainian name declension (shevchenko library)
 │   │   └── upload-config.js    # Multer configuration for file uploads
 │   ├── test/                   # Unit and integration tests
 │   │   ├── config.test.js
+│   │   ├── declension.test.js
 │   │   ├── docx-generator.test.js
 │   │   ├── templates-api.test.js
 │   │   └── upload-limit.test.js
@@ -1559,6 +1561,7 @@ Unit and integration tests focus on backend business logic, API endpoints, and d
 - `config.test.js`: Configuration loading and validation
 - `upload-limit.test.js`: File upload size limit enforcement
 - `docx-generator.test.js`: DOCX template processing and placeholder replacement
+- `declension.test.js`: Ukrainian name declension with per-field indeclinable flags
 - `templates-api.test.js`: Template API endpoint validation
 - `retirement-events.test.js`: Retirement event processing logic
 - `retirement-api.test.js`: Retirement API endpoint validation
@@ -2063,22 +2066,25 @@ The application provides scripts for easy startup and shutdown of both server an
 
 This script:
 1. Checks for npm installation
-2. Installs dependencies if node_modules/ is missing (both server and client)
-3. Initializes config.csv from config.template.csv if not exists
-4. Runs CSV template synchronization (sync-template.js)
-5. Starts server in watch mode (port 3000)
-6. Starts client in development mode (port 5173)
-7. Runs both services in parallel
-8. Handles cleanup on exit (Ctrl+C)
+2. **Kills processes occupying required ports** (if ports are busy)
+3. Installs dependencies if node_modules/ is missing **or if package.json is newer** (new packages added)
+4. Initializes config.csv from config.template.csv if not exists
+5. Runs CSV template synchronization (sync-template.js)
+6. Starts server in watch mode (port 3000)
+7. Starts client in development mode (port 5173, strictPort)
+8. Runs both services in parallel
+9. Handles cleanup on exit (Ctrl+C)
 
 **Production Mode**:
 ```bash
 ./run.sh prod
 ```
 
-Production mode uses different ports:
-- Server: port 3001 (instead of 3000)
-- Client: port 5174 (instead of 5173)
+**Fixed ports per mode** (no automatic port switching):
+- DEV: backend 3000, frontend 5173
+- PROD: backend 3001, frontend 5174
+- If a port is occupied, the existing process is killed before startup
+- Vite uses `strictPort: true` — fails instead of silently switching ports
 
 **Manual Start** (alternative for debugging):
 ```bash
@@ -2156,22 +2162,20 @@ Generates optimized production bundle in `client/dist/`.
 
 ### Port Configuration
 
-The application uses standard ports for development:
+Ports are fixed per mode and cannot be auto-switched:
 
 **Development Ports** (default):
 - Server: 3000
 - Client: 5173
-- Configure via PORT and VITE_PORT environment variables
 
 **Production Ports** (with `./run.sh prod`):
 - Server: 3001
 - Client: 5174
 
-**Port Conflicts**:
-If ports are already in use:
-1. Use `./stop.sh` to clean up previous instances
-2. Or change PORT/VITE_PORT environment variables before starting
-3. Or manually kill processes: `lsof -ti:PORT | xargs kill -9`
+**Port Conflict Resolution**:
+- `run.sh` automatically kills processes occupying required ports before starting
+- Vite uses `strictPort: true` — exits with error instead of switching to next port
+- Manual cleanup: `./stop.sh` or `lsof -ti:PORT | xargs kill -9`
 
 ### Plan-Based Development Approach
 
@@ -2334,6 +2338,22 @@ export async function extractPlaceholders(templatePath) {
 - Null/undefined values replaced with empty strings
 - Special placeholders added with current timestamp
 - Unknown placeholders replaced with empty strings (no error)
+
+**Name Declension Placeholders** (from declension.js):
+
+The system automatically generates 24 declined name placeholders (6 grammatical cases × 4 name fields) using the [shevchenko](https://github.com/tooleks/shevchenko-js) library:
+
+- Fields: `last_name`, `first_name`, `middle_name`, `full_name`
+- Suffixes: `_genitive`, `_dative`, `_accusative`, `_vocative`, `_locative`, `_ablative`
+- Example: `{full_name_genitive}`, `{last_name_dative}`
+
+**Indeclinable Name Flags** (per-field control):
+- `indeclinable_name` — affects only `last_name` (surname stays in nominative)
+- `indeclinable_first_name` — affects only `first_name` (first name stays in nominative)
+- Middle name (patronymic) is always declined
+- `full_name_*` is assembled from parts respecting individual flags
+- If both flags are set, all parts stay in nominative (early return optimization)
+- Gender is detected from the `gender` field or auto-detected via shevchenko
 
 **Data Preparation Pattern** (from docx-generator.js):
 ```javascript
