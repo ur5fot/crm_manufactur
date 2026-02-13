@@ -9,7 +9,7 @@ import fs from 'fs';
 import path from 'path';
 import Docxtemplater from 'docxtemplater';
 import PizZip from 'pizzip';
-import { generateDeclinedNames } from './declension.js';
+import { generateDeclinedNames, generateDeclinedGradePosition } from './declension.js';
 
 /**
  * Generate DOCX document from template
@@ -97,6 +97,10 @@ async function prepareData(data) {
   const declinedNames = await generateDeclinedNames(data);
   Object.assign(prepared, declinedNames);
 
+  // Add declined grade/position placeholders (all grammatical cases)
+  const declinedGradePosition = await generateDeclinedGradePosition(data);
+  Object.assign(prepared, declinedGradePosition);
+
   return prepared;
 }
 
@@ -118,20 +122,20 @@ export async function extractPlaceholders(templatePath) {
     const content = fs.readFileSync(templatePath, 'binary');
     const zip = new PizZip(content);
 
-    // Extract all text content from document.xml
-    let documentXml = '';
-    try {
-      documentXml = zip.file('word/document.xml').asText();
-    } catch (error) {
-      throw new Error('Invalid DOCX file structure');
-    }
+    // Use Docxtemplater's getFullText() to get merged plain text.
+    // This handles cases where Word splits {placeholder} across multiple XML runs.
+    const doc = new Docxtemplater(zip, {
+      paragraphLoop: true,
+      linebreaks: true,
+    });
+    const fullText = doc.getFullText();
 
-    // Extract placeholders using regex
+    // Extract placeholders using regex on merged text
     const placeholderRegex = /\{([a-zA-Z0-9_]+)\}/g;
     const placeholders = new Set();
     let match;
 
-    while ((match = placeholderRegex.exec(documentXml)) !== null) {
+    while ((match = placeholderRegex.exec(fullText)) !== null) {
       placeholders.add(match[1]);
     }
 

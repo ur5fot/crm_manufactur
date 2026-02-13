@@ -44,3 +44,7 @@
 43;status_start_date;Дата початку статусу;date;;no;;no
 44;status_end_date;Дата завершення статусу;date;;no;;no
 45;notes;Примітка;textarea;;yes;Інше;yes
+46;indeclinable_name;Прізвище не склоняється;text;;no;;no
+47;indeclinable_first_name;Ім'я не склоняється;text;;no;;no
+48;indeclinable_grade;Посада не відмінюється;text;;no;;no
+49;indeclinable_position;Звання не відмінюється;text;;no;;no

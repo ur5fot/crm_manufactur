@@ -37,6 +37,7 @@ The system is optimized for organizations with up to 10,000 employees and emphas
 - **Storage**: CSV files with UTF-8 BOM encoding and semicolon delimiters
 - **File Uploads**: Multer with configurable size limits
 - **Document Generation**: Docxtemplater + PizzipJS for DOCX manipulation
+- **Declension**: shevchenko (name declension) + shevchenko-ext-military (grade/position declension)
 - **Validation**: Zod for input validation schemas
 - **CSV Parsing**: csv-parse and csv-stringify libraries
 - **Testing**: Node.js native test runner for unit/integration tests
@@ -78,7 +79,7 @@ crm_manufactur/
 │   │   ├── csv.js              # Low-level CSV read/write utilities
 │   │   ├── schema.js           # Dynamic field schema loading from fields_schema.csv
 │   │   ├── docx-generator.js   # DOCX template processing and placeholder replacement
-│   │   ├── declension.js       # Ukrainian name declension (shevchenko library)
+│   │   ├── declension.js       # Ukrainian name/grade/position declension (shevchenko + shevchenko-ext-military)
 │   │   └── upload-config.js    # Multer configuration for file uploads
 │   ├── test/                   # Unit and integration tests
 │   │   ├── config.test.js
@@ -807,23 +808,26 @@ Placeholders are extracted from DOCX templates and validated against employee sc
 **Extract Placeholders**:
 ```javascript
 export async function extractPlaceholders(templatePath) {
-  // Read template file
   const content = fs.readFileSync(templatePath, 'binary');
   const zip = new PizZip(content);
 
-  // Extract document.xml content
-  const documentXml = zip.file('word/document.xml').asText();
+  // Use Docxtemplater's getFullText() to get merged plain text.
+  // This handles cases where Word splits {placeholder} across multiple XML runs.
+  const doc = new Docxtemplater(zip, {
+    paragraphLoop: true,
+    linebreaks: true,
+  });
+  const fullText = doc.getFullText();
 
-  // Extract placeholders using regex
+  // Extract placeholders using regex on merged text
   const placeholderRegex = /\{([a-zA-Z0-9_]+)\}/g;
   const placeholders = new Set();
   let match;
 
-  while ((match = placeholderRegex.exec(documentXml)) !== null) {
+  while ((match = placeholderRegex.exec(fullText)) !== null) {
     placeholders.add(match[1]);
   }
 
-  // Return sorted array
   return Array.from(placeholders).sort();
 }
 ```
@@ -936,6 +940,7 @@ const routes = [
   { path: "/import", name: "import", component: App },
   { path: "/templates", name: "templates", component: App },
   { path: "/document-history", name: "document-history", component: App },
+  { path: "/placeholder-reference/:employeeId?", name: "placeholder-reference", component: App },
   { path: "/logs", name: "logs", component: App }
 ];
 ```
@@ -948,6 +953,7 @@ const routes = [
 - `/import`: CSV import interface for bulk employee operations
 - `/templates`: Document template management
 - `/document-history`: History of all generated documents
+- `/placeholder-reference/:employeeId?`: Placeholder reference page showing all available placeholders with preview values
 - `/logs`: Audit log viewer
 
 **Navigation Patterns**:
@@ -1561,7 +1567,7 @@ Unit and integration tests focus on backend business logic, API endpoints, and d
 - `config.test.js`: Configuration loading and validation
 - `upload-limit.test.js`: File upload size limit enforcement
 - `docx-generator.test.js`: DOCX template processing and placeholder replacement
-- `declension.test.js`: Ukrainian name declension with per-field indeclinable flags
+- `declension.test.js`: Ukrainian name and grade/position declension with per-field indeclinable flags
 - `templates-api.test.js`: Template API endpoint validation
 - `retirement-events.test.js`: Retirement event processing logic
 - `retirement-api.test.js`: Retirement API endpoint validation
@@ -1963,6 +1969,27 @@ All API endpoints are served under the `/api` prefix:
 - Returns: Document object with download URL
 - 404 if template or employee not found
 
+### Placeholder Reference Endpoint
+
+**GET /api/placeholder-preview/:employeeId?**
+- Get all available placeholders with preview values for a specific employee
+- Optional path parameter: employeeId (uses first active employee if omitted)
+- Returns: Object with:
+  - employee_name: Full name of the selected employee
+  - employee_id: ID of the selected employee
+  - placeholders: Array of placeholder objects, each with:
+    - placeholder: Placeholder syntax (e.g., `{full_name}`)
+    - label: Ukrainian display label
+    - value: Preview value from the selected employee's data
+    - group: Category ('fields', 'declension', 'declension_fields', 'special')
+- Groups:
+  - 'fields': All fields from fields_schema.csv
+  - 'declension': Name declension placeholders (24 items)
+  - 'declension_fields': Grade/position declension placeholders (12 items)
+  - 'special': Auto-generated placeholders (current_date, current_datetime)
+- 404 if specific employeeId not found or no active employees exist
+- Used by placeholder reference page
+
 ### Document History Endpoints
 
 **GET /api/documents**
@@ -2318,14 +2345,20 @@ Placeholders in DOCX templates follow a simple, consistent syntax that gets repl
 export async function extractPlaceholders(templatePath) {
   const content = fs.readFileSync(templatePath, 'binary');
   const zip = new PizZip(content);
-  const documentXml = zip.file('word/document.xml').asText();
 
-  // Extract placeholders using regex
+  // Use Docxtemplater's getFullText() to get merged plain text.
+  // This handles cases where Word splits {placeholder} across multiple XML runs.
+  const doc = new Docxtemplater(zip, {
+    paragraphLoop: true,
+    linebreaks: true,
+  });
+  const fullText = doc.getFullText();
+
   const placeholderRegex = /\{([a-zA-Z0-9_]+)\}/g;
   const placeholders = new Set();
   let match;
 
-  while ((match = placeholderRegex.exec(documentXml)) !== null) {
+  while ((match = placeholderRegex.exec(fullText)) !== null) {
     placeholders.add(match[1]);
   }
 
@@ -2354,6 +2387,24 @@ The system automatically generates 24 declined name placeholders (6 grammatical 
 - `full_name_*` is assembled from parts respecting individual flags
 - If both flags are set, all parts stay in nominative (early return optimization)
 - Gender is detected from the `gender` field or auto-detected via shevchenko
+
+**Grade/Position Declension Placeholders** (from declension.js):
+
+The system generates 12 additional declined placeholders (6 cases × 2 fields) for military grade and position using the [shevchenko-ext-military](https://github.com/tooleks/shevchenko-ext-military) extension:
+
+- `grade` field (Посада) → mapped to `militaryAppointment` in shevchenko-ext-military
+  - Placeholders: `{grade_genitive}`, `{grade_dative}`, `{grade_accusative}`, `{grade_vocative}`, `{grade_locative}`, `{grade_ablative}`
+- `position` field (Звання) → mapped to `militaryRank` in shevchenko-ext-military
+  - Placeholders: `{position_genitive}`, `{position_dative}`, `{position_accusative}`, `{position_vocative}`, `{position_locative}`, `{position_ablative}`
+
+**Indeclinable Grade/Position Flags**:
+- `indeclinable_grade` — when 'yes', grade stays in nominative for all cases
+- `indeclinable_position` — when 'yes', position stays in nominative for all cases
+- These are checkbox fields in fields_schema.csv (same pattern as indeclinable_name/indeclinable_first_name)
+
+**Placeholder Reference Page Groups**:
+- Name declension placeholders displayed under "Відмінювання імен" group
+- Grade/position declension placeholders displayed under "Відмінювання посади та звання" group (separate section)
 
 **Data Preparation Pattern** (from docx-generator.js):
 ```javascript
