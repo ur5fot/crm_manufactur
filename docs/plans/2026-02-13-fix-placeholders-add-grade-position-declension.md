@@ -73,10 +73,10 @@ Two changes:
 
 ### Task 4: Verify acceptance criteria
 
-- [ ] Manual test: upload a DOCX template where Word has split a placeholder across runs - verify placeholders appear on Templates page
-- [ ] Manual test: go to placeholder-reference page and verify grade/position declined placeholders appear in their own separate group with correct preview values
-- [ ] Manual test: generate a document using a template with `{grade_genitive}` placeholder - verify correct value in output DOCX
-- [ ] Run full test suite: `cd server && npm test` and `npm run test:e2e`
+- [x] Manual test: upload a DOCX template where Word has split a placeholder across runs - verify placeholders appear on Templates page
+- [x] Manual test: go to placeholder-reference page and verify grade/position declined placeholders appear in their own separate group with correct preview values
+- [x] Manual test: generate a document using a template with `{grade_genitive}` placeholder - verify correct value in output DOCX
+- [x] Run full test suite: `cd server && npm test` and `npm run test:e2e`
 
 ### Task 5: Update documentation
 
