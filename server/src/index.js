@@ -1484,7 +1484,8 @@ app.post("/api/templates/:id/generate", async (req, res) => {
     // Generate DOCX filename
     const timestamp = Date.now();
     const sanitizedName = template.template_name.replace(/[^a-zA-Z0-9а-яА-ЯіїєґІЇЄҐ]/g, '_');
-    const docxFilename = `${sanitizedName}_${employee_id}_${timestamp}.docx`;
+    const sanitizedLastName = (employee.last_name || '').replace(/[^a-zA-Z0-9а-яА-ЯіїєґІЇЄҐ]/g, '_');
+    const docxFilename = `${sanitizedName}_${sanitizedLastName}_${employee_id}_${timestamp}.docx`;
 
     // Paths with path traversal protection
     const templatePath = path.join(FILES_DIR, 'templates', template.docx_filename);
