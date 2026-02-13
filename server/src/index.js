@@ -38,7 +38,7 @@ import {
 } from "./store.js";
 import { mergeRow, normalizeRows } from "./csv.js";
 import { extractPlaceholders, generateDocx } from "./docx-generator.js";
-import { generateDeclinedNames } from "./declension.js";
+import { generateDeclinedNames, generateDeclinedGradePosition } from "./declension.js";
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -1057,6 +1057,24 @@ app.get("/api/placeholder-preview/:employeeId?", async (req, res) => {
           label: `${fieldLabel} (${caseLabel})`,
           value: declined[key] || '',
           group: 'declension'
+        });
+      }
+    }
+
+    // Grade/position declension placeholders
+    const declinedGradePosition = await generateDeclinedGradePosition(employee);
+    const gradePositionFields = {
+      grade: 'Посада',
+      position: 'Звання'
+    };
+    for (const [suffix, caseLabel] of Object.entries(caseLabels)) {
+      for (const [field, fieldLabel] of Object.entries(gradePositionFields)) {
+        const key = `${field}_${suffix}`;
+        placeholders.push({
+          placeholder: `{${key}}`,
+          label: `${fieldLabel} (${caseLabel})`,
+          value: declinedGradePosition[key] || '',
+          group: 'declension_fields'
         });
       }
     }

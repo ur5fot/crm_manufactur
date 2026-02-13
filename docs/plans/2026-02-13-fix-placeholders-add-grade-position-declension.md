@@ -67,9 +67,9 @@ Two changes:
 - Modify: `server/src/index.js` (placeholder-preview endpoint)
 - Modify: `client/src/App.vue` (placeholder-reference display)
 
-- [ ] In the `/api/placeholder-preview/:employeeId?` endpoint, call `generateDeclinedGradePosition(employee)` and add the resulting 12 placeholders to the response with group `'declension_fields'` (separate from existing `'declension'` group for names) and Ukrainian labels (e.g., "Посада (родовий)", "Звання (давальний)")
-- [ ] In the frontend placeholder-reference view, add `'declension_fields'` to the group iteration list (after `'declension'`), with header "Відмінювання посади та звання" (distinct from the existing "Відмінювання імен" header for names)
-- [ ] Run E2E tests: `npm run test:e2e` - must pass
+- [x] In the `/api/placeholder-preview/:employeeId?` endpoint, call `generateDeclinedGradePosition(employee)` and add the resulting 12 placeholders to the response with group `'declension_fields'` (separate from existing `'declension'` group for names) and Ukrainian labels (e.g., "Посада (родовий)", "Звання (давальний)")
+- [x] In the frontend placeholder-reference view, add `'declension_fields'` to the group iteration list (after `'declension'`), with header "Відмінювання посади та звання" (distinct from the existing "Відмінювання імен" header for names)
+- [x] Run E2E tests: `npm run test:e2e` - must pass
 
 ### Task 4: Verify acceptance criteria
 

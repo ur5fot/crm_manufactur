@@ -3787,10 +3787,10 @@ onUnmounted(() => {
                 </tr>
               </thead>
               <tbody>
-                <template v-for="group in ['fields', 'declension', 'special']" :key="group">
+                <template v-for="group in ['fields', 'declension', 'declension_fields', 'special']" :key="group">
                   <tr v-if="filteredPlaceholders.some(p => p.group === group)" class="placeholder-group-header">
                     <td colspan="3">
-                      {{ group === 'fields' ? 'Поля співробітника' : group === 'declension' ? 'Відмінювання імен' : 'Спеціальні' }}
+                      {{ group === 'fields' ? 'Поля співробітника' : group === 'declension' ? 'Відмінювання імен' : group === 'declension_fields' ? 'Відмінювання посади та звання' : 'Спеціальні' }}
                     </td>
                   </tr>
                   <tr
