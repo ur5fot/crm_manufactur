@@ -75,10 +75,10 @@
 - [x] Run all tests — must pass before next task
 
 ### Task 6: Extract template routes
-- [ ] Create `server/src/routes/templates.js` — export function registering: `GET /api/templates`, `GET /api/templates/:id`, `POST /api/templates`, `PUT /api/templates/:id`, `DELETE /api/templates/:id`, `POST /api/templates/:id/upload`, `POST /api/templates/:id/open-file`, `POST /api/templates/:id/reextract`, `POST /api/templates/:id/generate`
-- [ ] Update `server/src/index.js` — remove extracted routes, call `registerTemplateRoutes(app)`
-- [ ] Verify template E2E tests pass (`tests/e2e/templates-crud.spec.js`, `tests/e2e/templates-upload.spec.js`, `tests/e2e/templates-generation.spec.js`, `tests/e2e/templates-modal-simple.spec.js`)
-- [ ] Run all tests — must pass before next task
+- [x] Create `server/src/routes/templates.js` — export function registering: `GET /api/templates`, `GET /api/templates/:id`, `POST /api/templates`, `PUT /api/templates/:id`, `DELETE /api/templates/:id`, `POST /api/templates/:id/upload`, `POST /api/templates/:id/open-file`, `POST /api/templates/:id/reextract`, `POST /api/templates/:id/generate`
+- [x] Update `server/src/index.js` — remove extracted routes, call `registerTemplateRoutes(app)`
+- [x] Verify template E2E tests pass (`tests/e2e/templates-crud.spec.js`, `tests/e2e/templates-upload.spec.js`, `tests/e2e/templates-generation.spec.js`, `tests/e2e/templates-modal-simple.spec.js`)
+- [x] Run all tests — must pass before next task
 
 ### Task 7: Extract document history, logs, and utility routes
 - [ ] Create `server/src/routes/documents.js` — export function registering: `GET /api/documents`, `GET /api/documents/:id/download`
