@@ -69,7 +69,11 @@ const employeeFields = [
   "education_diploma_file_expiry_date",
   "status_start_date",
   "status_end_date",
-  "notes"
+  "notes",
+  "indeclinable_name",
+  "indeclinable_first_name",
+  "indeclinable_grade",
+  "indeclinable_position"
 ];
 
 export function useEmployeeForm() {

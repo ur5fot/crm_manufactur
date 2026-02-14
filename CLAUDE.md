@@ -47,7 +47,7 @@ The system is optimized for organizations with up to 10,000 employees and emphas
 - **Build Tool**: Vite for fast development and production builds
 - **Router**: Vue Router 5 for SPA navigation
 - **UI Framework**: Bootstrap 5 for responsive components
-- **HTTP Client**: Axios for API communication
+- **HTTP Client**: Native fetch API via centralized api.js client
 - **Styling**: Custom CSS with Bootstrap customizations
 
 ### Testing
@@ -141,7 +141,7 @@ crm_manufactur/
 ├── docs/                       # Documentation and planning
 │   ├── plans/                  # Active development plans
 │   ├── plans/completed/        # Completed plans (archived)
-│   └── templates-system-improvements.md
+│   └── (see plans/completed/ for archived docs)
 │
 ├── README.md                   # User-facing documentation
 ├── CLAUDE.md                   # Internal technical documentation (this file)
@@ -510,14 +510,18 @@ All API routes follow consistent patterns for clarity and maintainability.
 7. `logs.js` — Audit log retrieval
 8. `misc.js` — Fields schema, placeholder preview, data folder
 
-Each route module exports a registration function that receives the Express `app` instance:
+Each route module exports a registration function that receives the Express `app` instance. Some modules also receive `appConfig` for file upload size limits:
 ```javascript
 // server/src/routes/dashboard.js
 export function registerDashboardRoutes(app) {
-  app.get("/api/health", (_req, res) => { res.json({ status: "ok" }); });
+  app.get("/api/health", (_req, res) => { res.json({ ok: true }); });
   app.get("/api/dashboard/stats", async (_req, res) => { ... });
   // ...
 }
+
+// Modules needing upload config receive appConfig:
+// registerEmployeeFileRoutes(app, appConfig)
+// registerTemplateRoutes(app, appConfig)
 ```
 
 `index.js` imports and calls all registration functions:
@@ -987,25 +991,20 @@ export function useFieldsSchema() {
 
 ### Application Routing Structure
 
-The application uses Vue Router 5 with history mode for SPA navigation. Each route maps to a dedicated view component.
+The application uses Vue Router 5 with history mode for URL management. All routes map to the `App` component, which uses a `v-if`/`v-else-if` chain to render the appropriate view based on `route.name`.
 
 **Routes Configuration** (from main.js):
 ```javascript
-import DashboardView from "./views/DashboardView.vue";
-import EmployeeCardsView from "./views/EmployeeCardsView.vue";
-import TableView from "./views/TableView.vue";
-// ...
-
 const routes = [
-  { path: "/", name: "dashboard", component: DashboardView },
-  { path: "/cards/:id?", name: "cards", component: EmployeeCardsView },
-  { path: "/table", name: "table", component: TableView },
-  { path: "/reports", name: "reports", component: ReportsView },
-  { path: "/import", name: "import", component: ImportView },
-  { path: "/templates", name: "templates", component: TemplatesView },
-  { path: "/document-history", name: "document-history", component: DocumentHistoryView },
-  { path: "/placeholder-reference/:employeeId?", name: "placeholder-reference", component: PlaceholderReferenceView },
-  { path: "/logs", name: "logs", component: LogsView }
+  { path: "/", name: "dashboard", component: App },
+  { path: "/cards/:id?", name: "cards", component: App },
+  { path: "/table", name: "table", component: App },
+  { path: "/reports", name: "reports", component: App },
+  { path: "/import", name: "import", component: App },
+  { path: "/templates", name: "templates", component: App },
+  { path: "/document-history", name: "document-history", component: App },
+  { path: "/placeholder-reference/:employeeId?", name: "placeholder-reference", component: App },
+  { path: "/logs", name: "logs", component: App }
 ];
 ```
 
@@ -1033,7 +1032,7 @@ router.push({ name: 'document-history', query: { employee_id: id } });
 ```
 
 **Navigation Guards**:
-- EmployeeCardsView uses `onBeforeRouteLeave` guard to check for unsaved changes
+- EmployeeCardsView uses `router.beforeEach` guard to check for unsaved changes
 - Prompts user confirmation before discarding unsaved data
 - Browser `beforeunload` event prevents accidental page refresh with dirty form
 
@@ -1109,7 +1108,7 @@ async function saveEmployee() {
 
 ### Form Validation and Unsaved Changes Warning
 
-The application implements comprehensive form change tracking and user warnings.
+The application implements comprehensive form change tracking and user warnings. Form state tracking logic is implemented in the `useEmployeeForm` composable (`client/src/composables/useEmployeeForm.js`) and consumed by `EmployeeCardsView`.
 
 **Form State Tracking**:
 ```javascript
@@ -1810,7 +1809,7 @@ All API endpoints are served under the `/api` prefix:
 
 **GET /api/health**
 - Health check endpoint for server status
-- Returns: `{ status: "ok" }`
+- Returns: `{ ok: true }`
 - Used by monitoring tools and E2E tests
 
 **GET /api/config**
@@ -3024,7 +3023,7 @@ The application follows consistent naming patterns across different layers and f
 
 **Vue.js Component Names** (PascalCase for files, kebab-case in templates):
 - Component files use PascalCase: `App.vue` (single component per file in this project)
-- Template element names use kebab-case: `<router-view>`, `<router-link>`
+- Template element names use kebab-case: `<summary-table>`, `<tab-bar>`
 
 **CSS Class Names** (kebab-case):
 - CSS classes use kebab-case: `.vacation-notification-overlay`, `.form-group`, `.button-group`
