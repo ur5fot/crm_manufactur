@@ -89,14 +89,14 @@ This plan implements three UI enhancements: dark/light theme toggle, field searc
 
 ### Task 5: Verify acceptance criteria
 
-- [ ] Manual test: toggle theme and verify all pages render correctly in both modes
-- [ ] Manual test: search in cards view filters employee list correctly
-- [ ] Manual test: global search finds employees, templates, and documents
-- [ ] Manual test: clicking global search results navigates/downloads correctly
-- [ ] Run full E2E test suite: npm run test:e2e
-- [ ] Run server integration tests: cd server && npm run test:integration
-- [ ] Run server unit tests: cd server && npm test
-- [ ] Verify no console errors in browser or server logs
+- [x] Manual test: toggle theme and verify all pages render correctly in both modes
+- [x] Manual test: search in cards view filters employee list correctly
+- [x] Manual test: global search finds employees, templates, and documents
+- [x] Manual test: clicking global search results navigates/downloads correctly
+- [x] Run full E2E test suite: npm run test:e2e
+- [x] Run server integration tests: cd server && npm run test:integration
+- [x] Run server unit tests: cd server && npm test
+- [x] Verify no console errors in browser or server logs
 
 ### Task 6: Update documentation
 
