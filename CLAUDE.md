@@ -63,6 +63,10 @@ The system is optimized for organizations with up to 10,000 employees and emphas
 
 ```
 crm_manufactur/
+├── .github/
+│   └── workflows/
+│       └── tests.yml              # GitHub Actions CI workflow
+│
 ├── client/                      # Vue.js frontend application
 │   ├── src/
 │   │   ├── App.vue             # Main app component with routing
@@ -80,11 +84,14 @@ crm_manufactur/
 │   │   ├── schema.js           # Dynamic field schema loading from fields_schema.csv
 │   │   ├── docx-generator.js   # DOCX template processing and placeholder replacement
 │   │   ├── declension.js       # Ukrainian name/grade/position declension (shevchenko + shevchenko-ext-military)
+│   │   ├── sync-template.js    # CSV template synchronization utility
 │   │   └── upload-config.js    # Multer configuration for file uploads
 │   ├── test/                   # Unit and integration tests
 │   │   ├── config.test.js
 │   │   ├── declension.test.js
 │   │   ├── docx-generator.test.js
+│   │   ├── retirement-api.test.js
+│   │   ├── retirement-events.test.js
 │   │   ├── templates-api.test.js
 │   │   └── upload-limit.test.js
 │   └── package.json            # Backend dependencies
@@ -96,12 +103,14 @@ crm_manufactur/
 │       └── document-history.spec.js
 │
 ├── data/                       # CSV data files (runtime state)
+│   ├── fields_schema.template.csv # Field schema template (tracked in git)
+│   ├── config.template.csv     # Config template (tracked in git)
 │   ├── employees.csv           # Employee master records
-│   ├── templates.csv           # Document template metadata
-│   ├── generated_documents.csv # Generated document records
+│   ├── templates.csv           # Document template metadata (gitignored, auto-created)
+│   ├── generated_documents.csv # Generated document records (gitignored, auto-created)
 │   ├── logs.csv                # Audit log entries
-│   ├── config.csv              # Application configuration
-│   └── fields_schema.csv       # Dynamic field schema and UI metadata
+│   ├── config.csv              # Application configuration (gitignored, from template)
+│   └── fields_schema.csv       # Dynamic field schema (gitignored, from template)
 │
 ├── files/                      # Uploaded and generated files
 │   ├── templates/              # Template DOCX files (template_{id}_{timestamp}.docx)
@@ -181,6 +190,16 @@ These locks ensure that only one write operation occurs at a time per file, prev
 - Audit trail for all operations (create, update, delete, import, export, generate)
 - Includes timestamp, user, action type, entity type, entity ID, and details
 - Automatically pruned to max_log_entries configuration limit
+
+**fields_schema.template.csv** (tracked in git)
+- Canonical field schema template, source of truth for the schema
+- Copied to `fields_schema.csv` during startup (`run.sh`) and CI setup
+- Must remain in git for CI pipeline to function
+
+**config.template.csv** (tracked in git)
+- Default configuration template with all settings
+- Copied to `config.csv` on first launch if it does not exist
+- Must remain in git for CI pipeline to function
 
 **config.csv**
 - Key-value configuration storage
@@ -1637,13 +1656,22 @@ runAllTests()
 
 **Test Commands**:
 ```bash
-# Run all unit/integration tests
+# Run unit tests only (no server required)
 cd server && npm test
+
+# Run integration tests (requires server on port 3000)
+cd server && npm run test:integration
 
 # Run specific test file
 node server/test/config.test.js
 node server/test/docx-generator.test.js
 ```
+
+**Unit vs. Integration Test Distinction**:
+- **Unit tests** (no server required): config.test.js, upload-limit.test.js, docx-generator.test.js, declension.test.js, retirement-events.test.js
+- **Integration tests** (require running server on port 3000): templates-api.test.js, retirement-api.test.js
+- `npm test` runs only unit tests; `npm run test:integration` runs integration tests
+- CI runs unit tests before starting servers, and integration tests after servers are ready
 
 ### Test Data Fixtures
 
@@ -2128,6 +2156,29 @@ cd client
 npm install
 npm run dev
 ```
+
+### CI/CD Pipeline
+
+The project uses GitHub Actions for continuous integration, defined in `.github/workflows/tests.yml`.
+
+**Trigger Conditions**:
+- Push to `master` or `feature/*` branches
+- Pull requests to `master`
+- Manual dispatch (workflow_dispatch)
+
+**CI Pipeline Steps**:
+1. Checkout code and setup Node.js 18
+2. Install dependencies (root, server, client) and Playwright browsers
+3. Setup test data: copy template CSVs to working CSVs, create directories
+4. Run `sync-template.js` to generate `employees_import_sample.csv`
+5. Run unit tests (no server needed)
+6. Start backend and frontend servers
+7. Wait for servers (with failure detection if servers don't start)
+8. Run integration tests (require running server)
+9. Run Playwright E2E tests
+10. Upload artifacts and server logs on failure; stop servers
+
+**Important**: Template CSV files (`fields_schema.template.csv`, `config.template.csv`) must be tracked in git because CI depends on them to bootstrap test data.
 
 ### Stopping the Application
 
