@@ -27,7 +27,7 @@ A comprehensive CRM system for managing employee records, documents, and templat
 **Frontend:**
 - Vue.js 3
 - Bootstrap for UI components
-- Axios for API communication
+- Native fetch API for API communication
 
 **Testing:**
 - Playwright for E2E tests
