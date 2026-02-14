@@ -42,9 +42,9 @@
 **Files:**
 - Modify: `.github/workflows/tests.yml`
 
-- [ ] Ensure "Setup test data files" step correctly copies template files
-- [ ] Add `sync-template.js` execution in CI (to generate `employees_import_sample.csv`) or ensure backend generates it on startup
-- [ ] Add unit test run (`cd server && npm test`) to CI workflow
+- [x] Ensure "Setup test data files" step correctly copies template files
+- [x] Add `sync-template.js` execution in CI (to generate `employees_import_sample.csv`) or ensure backend generates it on startup
+- [x] Add unit test run (`cd server && npm test`) to CI workflow
 
 ### Task 3: Verify everything works
 

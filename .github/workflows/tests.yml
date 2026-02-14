@@ -42,6 +42,18 @@ jobs:
           cp data/config.template.csv data/config.csv
           mkdir -p data files
 
+      - name: Generate import sample from schema
+        working-directory: ./server
+        run: node src/sync-template.js
+
+      - name: Run unit tests
+        working-directory: ./server
+        run: |
+          node test/config.test.js
+          node test/upload-limit.test.js
+          node test/docx-generator.test.js
+          node test/declension.test.js
+
       - name: Start backend server
         working-directory: ./server
         run: |
@@ -75,6 +87,13 @@ jobs:
             echo "Attempt $i: Frontend not ready yet..."
             sleep 2
           done
+
+      - name: Run API integration tests
+        working-directory: ./server
+        run: |
+          node test/templates-api.test.js
+          node test/retirement-api.test.js
+          node test/retirement-events.test.js
 
       - name: Run Playwright tests
         run: npm run test:e2e
