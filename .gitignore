@@ -16,7 +16,8 @@ data/generated_documents.csv
 
 # Claude Code та Ralphex (особисті налаштування та output)
 .claude/
-_bmad/  # Legacy BMAD directory (no longer used, migrated to Ralphex)
+# Legacy BMAD directory (no longer used, migrated to Ralphex)
+_bmad/
 
 # Ralphex orchestrator progress logs
 progress*.txt
