@@ -146,12 +146,12 @@
 - [x] Run all tests — must pass before next task
 
 ### Task 15: Extract TableView
-- [ ] Create `client/src/views/TableView.vue` — move table state (column filters, sorting, editing cells) and methods from App.vue
-- [ ] Reuse `useFieldsSchema.js` composable for schema
-- [ ] Update `client/src/main.js` — change table route to point to `TableView`
-- [ ] Remove table-related code from App.vue (template section at line ~3172)
-- [ ] Verify table E2E tests pass (`tests/e2e/table-filters.spec.js`)
-- [ ] Run all tests — must pass before next task
+- [x] Create `client/src/views/TableView.vue` — move table state (column filters, sorting, editing cells) and methods from App.vue
+- [x] Reuse `useFieldsSchema.js` composable for schema
+- [x] Update `client/src/main.js` — change table route to point to `TableView`
+- [x] Remove table-related code from App.vue (template section at line ~3172)
+- [x] Verify table E2E tests pass (`tests/e2e/table-filters.spec.js`)
+- [x] Run all tests — must pass before next task
 
 ### Task 16: Extract PlaceholderReferenceView
 - [ ] Create `client/src/views/PlaceholderReferenceView.vue` — move placeholder preview state and methods from App.vue
