@@ -81,14 +81,14 @@
 - [x] Run all tests — must pass before next task
 
 ### Task 7: Extract document history, logs, and utility routes
-- [ ] Create `server/src/routes/documents.js` — export function registering: `GET /api/documents`, `GET /api/documents/:id/download`
-- [ ] Create `server/src/routes/logs.js` — export function registering: `GET /api/logs`
-- [ ] Create `server/src/routes/misc.js` — export function registering: `POST /api/open-data-folder`, `GET /api/fields-schema`, `GET /api/placeholder-preview/:employeeId?`
-- [ ] Update `server/src/index.js` — remove all remaining routes, call registration functions
-- [ ] Verify index.js is now ~50-80 lines (setup + imports + registration calls + listen)
-- [ ] Verify document history E2E tests pass (`tests/e2e/document-history.spec.js`)
-- [ ] Verify logs E2E tests pass (`tests/e2e/logs.spec.js`)
-- [ ] Run all tests — must pass before next task
+- [x] Create `server/src/routes/documents.js` — export function registering: `GET /api/documents`, `GET /api/documents/:id/download`
+- [x] Create `server/src/routes/logs.js` — export function registering: `GET /api/logs`
+- [x] Create `server/src/routes/misc.js` — export function registering: `POST /api/open-data-folder`, `GET /api/fields-schema`, `GET /api/placeholder-preview/:employeeId?`
+- [x] Update `server/src/index.js` — remove all remaining routes, call registration functions
+- [x] Verify index.js is now ~50-80 lines (setup + imports + registration calls + listen)
+- [x] Verify document history E2E tests pass (`tests/e2e/document-history.spec.js`)
+- [x] Verify logs E2E tests pass (`tests/e2e/logs.spec.js`)
+- [x] Run all tests — must pass before next task
 
 ### Task 8: Backend cleanup and verification
 - [ ] Review `server/src/index.js` — ensure it only contains setup, middleware, route registration, and listen
