@@ -57,16 +57,16 @@ This plan implements three UI enhancements: dark/light theme toggle, field searc
 - Modify: `server/src/index.js`
 - Modify: `client/src/api.js`
 
-- [ ] Add GET /api/search endpoint in server/src/index.js (after line 220, before employee endpoints)
-- [ ] Implement search logic: load employees, templates, generatedDocuments
-- [ ] Search employees across all text fields (names, position, status, etc)
-- [ ] Search templates by template_name and description
-- [ ] Search documents by filename and employee names (join with employees)
-- [ ] Return results grouped by type: {employees: [], templates: [], documents: []} with total counts
-- [ ] Add query parameter validation (require q parameter, min length 2 chars)
-- [ ] Add globalSearch method to client/src/api.js
-- [ ] Write integration test in server/test/search-api.test.js (verify endpoint returns correct results for various queries)
-- [ ] Run server tests with cd server && npm run test:integration - must pass
+- [x] Add GET /api/search endpoint in server/src/index.js (after line 220, before employee endpoints)
+- [x] Implement search logic: load employees, templates, generatedDocuments
+- [x] Search employees across all text fields (names, position, status, etc)
+- [x] Search templates by template_name and description
+- [x] Search documents by filename and employee names (join with employees)
+- [x] Return results grouped by type: {employees: [], templates: [], documents: []} with total counts
+- [x] Add query parameter validation (require q parameter, min length 2 chars)
+- [x] Add globalSearch method to client/src/api.js
+- [x] Write integration test in server/test/search-api.test.js (verify endpoint returns correct results for various queries)
+- [x] Run server tests with cd server && npm run test:integration - must pass
 
 ### Task 4: Add global search UI in header
 

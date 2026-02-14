@@ -179,6 +179,9 @@ export const api = {
     const path = employeeId ? `/placeholder-preview/${employeeId}` : '/placeholder-preview';
     return request(path);
   },
+  globalSearch(q) {
+    return request(`/search?q=${encodeURIComponent(q)}`);
+  },
   getGeneratedDocuments(filters = {}) {
     const queryParams = new URLSearchParams();
     if (filters.template_id) queryParams.set('template_id', filters.template_id);

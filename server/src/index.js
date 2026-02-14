@@ -265,6 +265,77 @@ app.get("/api/fields-schema", async (_req, res) => {
   });
 });
 
+app.get("/api/search", async (req, res) => {
+  try {
+    const q = req.query.q;
+    if (!q || q.trim().length < 2) {
+      res.status(400).json({ error: "Параметр q обов'язковий (мінімум 2 символи)" });
+      return;
+    }
+
+    const query = q.trim().toLowerCase();
+
+    const [employees, templates, documents] = await Promise.all([
+      loadEmployees(),
+      loadTemplates(),
+      loadGeneratedDocuments()
+    ]);
+
+    const activeEmployees = employees.filter(e => e.active !== 'no');
+    const activeTemplates = templates.filter(t => t.active !== 'no');
+    const activeDocuments = documents.filter(d => d.active !== 'no');
+
+    const schema = await loadFieldsSchema();
+    const textFieldKeys = schema.filter(f => f.field_type !== 'file').map(f => f.field_name);
+
+    const matchedEmployees = activeEmployees.filter(emp => {
+      for (const key of textFieldKeys) {
+        const val = emp[key];
+        if (val && String(val).toLowerCase().includes(query)) return true;
+      }
+      return false;
+    });
+
+    const matchedTemplates = activeTemplates.filter(t => {
+      return (t.template_name && t.template_name.toLowerCase().includes(query)) ||
+        (t.description && t.description.toLowerCase().includes(query));
+    });
+
+    const employeeMap = new Map(activeEmployees.map(e => [e.employee_id, e]));
+    const templateMap = new Map(activeTemplates.map(t => [t.template_id, t]));
+
+    const matchedDocuments = activeDocuments.filter(doc => {
+      if (doc.filename && doc.filename.toLowerCase().includes(query)) return true;
+      const emp = employeeMap.get(doc.employee_id);
+      if (emp) {
+        const name = [emp.last_name, emp.first_name, emp.middle_name].filter(Boolean).join(" ");
+        if (name.toLowerCase().includes(query)) return true;
+      }
+      const tmpl = templateMap.get(doc.template_id);
+      if (tmpl && tmpl.template_name && tmpl.template_name.toLowerCase().includes(query)) return true;
+      return false;
+    }).map(doc => ({
+      ...doc,
+      employee: employeeMap.get(doc.employee_id),
+      template: templateMap.get(doc.template_id)
+    }));
+
+    res.json({
+      employees: matchedEmployees.slice(0, 20),
+      templates: matchedTemplates.slice(0, 10),
+      documents: matchedDocuments.slice(0, 10),
+      total: {
+        employees: matchedEmployees.length,
+        templates: matchedTemplates.length,
+        documents: matchedDocuments.length
+      }
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get("/api/logs", async (req, res) => {
   try {
     const logs = await loadLogs();
