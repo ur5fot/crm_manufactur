@@ -62,11 +62,11 @@
 - [x] Run all tests — must pass before next task
 
 ### Task 4: Extract employee CRUD routes
-- [ ] Create `server/src/routes/employees.js` — export function registering: `GET /api/employees`, `GET /api/employees/:id`, `POST /api/employees`, `PUT /api/employees/:id`, `DELETE /api/employees/:id`
-- [ ] Move date validation logic and field change detection into route module (or shared utility if reused)
-- [ ] Update `server/src/index.js` — remove extracted routes, call `registerEmployeeRoutes(app)`
-- [ ] Verify employee E2E tests pass (`tests/e2e/employee-crud.spec.js`, `tests/e2e/birth-date-validation.spec.js`, `tests/e2e/status-retirement.spec.js`)
-- [ ] Run all tests — must pass before next task
+- [x] Create `server/src/routes/employees.js` — export function registering: `GET /api/employees`, `GET /api/employees/:id`, `POST /api/employees`, `PUT /api/employees/:id`, `DELETE /api/employees/:id`
+- [x] Move date validation logic and field change detection into route module (or shared utility if reused)
+- [x] Update `server/src/index.js` — remove extracted routes, call `registerEmployeeRoutes(app)`
+- [x] Verify employee E2E tests pass (`tests/e2e/employee-crud.spec.js`, `tests/e2e/birth-date-validation.spec.js`, `tests/e2e/status-retirement.spec.js`)
+- [x] Run all tests — must pass before next task
 
 ### Task 5: Extract employee file and import routes
 - [ ] Create `server/src/routes/employee-files.js` — export function registering: `POST /api/employees/:id/files`, `DELETE /api/employees/:id/files/:fieldName`, `POST /api/employees/:id/open-folder`, `POST /api/employees/import`, `GET /api/download/import-template`
