@@ -172,12 +172,6 @@ async function loadEmployees() {
   }
 }
 
-async function loadEmployeesIfNeeded() {
-  if (employees.value.length === 0) {
-    await loadEmployees();
-  }
-}
-
 async function selectEmployee(id) {
   if (!id) return;
   selectedId.value = id;

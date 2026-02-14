@@ -1,5 +1,6 @@
 import {
   getStatusReport,
+  getCustomReport,
   exportEmployees
 } from "../store.js";
 
@@ -44,7 +45,6 @@ export function registerReportRoutes(app) {
         }
       }
 
-      const { getCustomReport } = await import('../store.js');
       const results = await getCustomReport(filters, columns);
       res.json({ results });
     } catch (err) {
