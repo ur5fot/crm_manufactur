@@ -14,20 +14,7 @@ import EmployeeCardsView from "./views/EmployeeCardsView.vue";
 const router = useRouter();
 const route = useRoute();
 
-// Compute current view based on route
-const currentView = computed(() => {
-  const name = route.name;
-  if (name === 'dashboard') return 'dashboard';
-  if (name === 'cards') return 'cards';
-  if (name === 'table') return 'table';
-  if (name === 'reports') return 'reports';
-  if (name === 'import') return 'import';
-  if (name === 'templates') return 'templates';
-  if (name === 'document-history') return 'document-history';
-  if (name === 'placeholder-reference') return 'placeholder-reference';
-  if (name === 'logs') return 'logs';
-  return 'dashboard';
-});
+const currentView = computed(() => route.name || 'dashboard');
 
 const tabs = [
   { key: 'dashboard', label: 'Dashboard' },
