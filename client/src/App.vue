@@ -5,6 +5,7 @@ import { api } from "./api";
 import LogsView from "./views/LogsView.vue";
 import ImportView from "./views/ImportView.vue";
 import DocumentHistoryView from "./views/DocumentHistoryView.vue";
+import TemplatesView from "./views/TemplatesView.vue";
 
 const router = useRouter();
 const route = useRoute();
@@ -271,10 +272,6 @@ watch(() => route.name, async (newRoute, oldRoute) => {
 
   if (newView === 'table') {
     loadEmployees();
-  }
-
-  if (newView === 'templates') {
-    loadTemplates();
   }
 
   if (newView === 'placeholder-reference') {
@@ -3297,79 +3294,7 @@ onUnmounted(() => {
       <ImportView v-else-if="currentView === 'import'" />
 
       <!-- Режим шаблонів -->
-      <div v-else-if="currentView === 'templates'" class="layout-table">
-        <div class="panel table-panel">
-          <div class="view-header">
-            <div class="panel-title">Шаблони документів</div>
-            <div class="button-group">
-              <button class="primary" type="button" @click="openCreateTemplateDialog">
-                ➕ Новий шаблон
-              </button>
-              <button class="secondary" type="button" @click="router.push({ name: 'placeholder-reference' })">
-                Довідник плейсхолдерів
-              </button>
-            </div>
-          </div>
-
-          <div v-if="templates.length === 0 && !loading" class="empty-state">
-            <p>Немає шаблонів. Створіть перший шаблон для генерації документів.</p>
-          </div>
-
-          <div v-else class="templates-table-container">
-            <table class="templates-table">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Назва</th>
-                  <th>Тип</th>
-                  <th>Файл DOCX</th>
-                  <th>Плейсхолдери</th>
-                  <th>Створено</th>
-                  <th>Дії</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="template in templates" :key="template.template_id">
-                  <td style="text-align: center;">{{ template.template_id }}</td>
-                  <td>{{ template.template_name }}</td>
-                  <td>
-                    <span class="template-type-badge" :data-type="template.template_type">
-                      {{ template.template_type }}
-                    </span>
-                  </td>
-                  <td>
-                    <span v-if="template.docx_filename" class="file-uploaded">
-                      ✓ {{ template.docx_filename }}
-                    </span>
-                    <span v-else class="file-missing">
-                      ⚠ Файл відсутній
-                    </span>
-                  </td>
-                  <td class="placeholders-cell">
-                    <code v-if="template.placeholder_fields">{{ template.placeholder_fields }}</code>
-                    <span v-else>—</span>
-                  </td>
-                  <td>{{ template.created_date || '—' }}</td>
-                  <td class="actions-cell">
-                    <button class="icon-btn" title="Редагувати" @click="editTemplate(template)">
-                      ✎
-                    </button>
-                    <button class="icon-btn" title="Открыть DOCX" @click="openTemplateDocx(template)" :disabled="!template.docx_filename">
-                      📄
-                    </button>
-                    <button class="icon-btn" title="Завантажити DOCX" @click="uploadTemplateFile(template)">
-                      📁
-                    </button>
-                    <button class="icon-btn" title="Видалити" @click="deleteTemplate(template)">
-                      🗑
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
+      <TemplatesView v-else-if="currentView === 'templates'" />
 
       <!-- Режим історії документів -->
       <DocumentHistoryView v-else-if="currentView === 'document-history'" />

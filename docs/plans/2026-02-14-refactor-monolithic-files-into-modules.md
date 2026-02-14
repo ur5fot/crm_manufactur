@@ -124,11 +124,11 @@
 - [x] Run all tests — must pass before next task
 
 ### Task 12: Extract TemplatesView
-- [ ] Create `client/src/views/TemplatesView.vue` — move templates state (templates list, dialogs, upload modal) and methods from App.vue
-- [ ] Update `client/src/main.js` — change templates route to point to `TemplatesView`
-- [ ] Remove templates-related code from App.vue (template section at line ~3550)
-- [ ] Verify templates E2E tests pass (`tests/e2e/templates-crud.spec.js`, `tests/e2e/templates-upload.spec.js`, `tests/e2e/templates-generation.spec.js`, `tests/e2e/templates-modal-simple.spec.js`)
-- [ ] Run all tests — must pass before next task
+- [x] Create `client/src/views/TemplatesView.vue` — move templates state (templates list, dialogs, upload modal) and methods from App.vue
+- [x] Update `client/src/main.js` — change templates route to point to `TemplatesView`
+- [x] Remove templates-related code from App.vue (template section at line ~3550)
+- [x] Verify templates E2E tests pass (`tests/e2e/templates-crud.spec.js`, `tests/e2e/templates-upload.spec.js`, `tests/e2e/templates-generation.spec.js`, `tests/e2e/templates-modal-simple.spec.js`)
+- [x] Run all tests — must pass before next task
 
 ### Task 13: Extract ReportsView
 - [ ] Create `client/src/views/ReportsView.vue` — move reports state (filters, results, columns, sorting) and methods from App.vue
