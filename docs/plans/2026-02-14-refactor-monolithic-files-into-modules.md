@@ -160,13 +160,13 @@
 - [x] Run all tests — must pass before next task
 
 ### Task 17: Extract EmployeeCardsView (largest view)
-- [ ] Create `client/src/composables/useEmployeeForm.js` — extract form state, dirty tracking, snapshot management, unsaved changes logic
-- [ ] Create `client/src/views/EmployeeCardsView.vue` — move employee cards state (selectedId, searchTerm, form, file fields) and methods from App.vue
-- [ ] Handle navigation guards for unsaved changes within the new component
-- [ ] Update `client/src/main.js` — change cards route to point to `EmployeeCardsView`
-- [ ] Remove employee cards code from App.vue (template section at line ~2826, form, sidebar)
-- [ ] Verify employee E2E tests pass (`tests/e2e/employee-crud.spec.js`, `tests/e2e/birth-date-validation.spec.js`, `tests/e2e/status-retirement.spec.js`, `tests/e2e/documents.spec.js`)
-- [ ] Run all tests — must pass before next task
+- [x] Create `client/src/composables/useEmployeeForm.js` — extract form state, dirty tracking, snapshot management, unsaved changes logic
+- [x] Create `client/src/views/EmployeeCardsView.vue` — move employee cards state (selectedId, searchTerm, form, file fields) and methods from App.vue
+- [x] Handle navigation guards for unsaved changes within the new component
+- [x] Update `client/src/main.js` — change cards route to point to `EmployeeCardsView`
+- [x] Remove employee cards code from App.vue (template section at line ~2826, form, sidebar)
+- [x] Verify employee E2E tests pass (`tests/e2e/employee-crud.spec.js`, `tests/e2e/birth-date-validation.spec.js`, `tests/e2e/status-retirement.spec.js`, `tests/e2e/documents.spec.js`)
+- [x] Run all tests — must pass before next task
 
 ### Task 18: Clean up App.vue and finalize routing
 - [ ] Review App.vue — should now contain only: navigation/sidebar, shared layout, and minimal shared state
