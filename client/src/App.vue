@@ -147,6 +147,9 @@ const saving = ref(false);
 const errorMessage = ref("");
 const openingDataFolder = ref(false);
 const openingEmployeeFolder = ref(false);
+
+// Theme management
+const currentTheme = ref(localStorage.getItem('theme') || 'light');
 const importFile = ref(null);
 const importResult = ref(null);
 const importing = ref(false);
@@ -248,6 +251,14 @@ function stopDashboardRefresh() {
     clearInterval(refreshIntervalId.value);
     refreshIntervalId.value = null;
   }
+}
+
+// Theme toggle function
+function toggleTheme() {
+  const newTheme = currentTheme.value === 'light' ? 'dark' : 'light';
+  currentTheme.value = newTheme;
+  localStorage.setItem('theme', newTheme);
+  document.documentElement.setAttribute('data-theme', newTheme);
 }
 
 watch(() => route.name, async (newRoute, oldRoute) => {
@@ -2244,6 +2255,9 @@ watch(() => customFilters.value, (newFilters, oldFilters) => {
 }, { deep: true });
 
 onMounted(async () => {
+  // Apply theme on load
+  document.documentElement.setAttribute('data-theme', currentTheme.value);
+
   document.addEventListener('keydown', handleGlobalKeydown);
 
   // Setup navigation guard for unsaved changes
@@ -2662,6 +2676,14 @@ onUnmounted(() => {
             title="Оновити дані"
           >
             🔄
+          </button>
+          <button
+            class="tab-icon-btn theme-toggle-btn"
+            type="button"
+            @click="toggleTheme"
+            :title="currentTheme === 'light' ? 'Перемкнути на темну тему' : 'Перемкнути на світлу тему'"
+          >
+            {{ currentTheme === 'light' ? '🌙' : '☀️' }}
           </button>
         </div>
       </header>

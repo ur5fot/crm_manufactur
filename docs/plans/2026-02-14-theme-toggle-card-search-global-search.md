@@ -30,13 +30,13 @@ This plan implements three UI enhancements: dark/light theme toggle, field searc
 - Modify: `client/src/styles.css`
 - Modify: `client/src/App.vue`
 
-- [ ] Add dark theme CSS variables in styles.css after line 20 (dark color palette with [data-theme="dark"] selector)
-- [ ] Add theme state management in App.vue script section (ref for current theme, load from localStorage)
-- [ ] Add theme toggle button in topbar next to refresh button (use sun/moon emoji icons)
-- [ ] Implement toggleTheme function (switch between light/dark, save to localStorage, update data-theme attribute on html element)
-- [ ] Add CSS transitions for smooth theme switching
-- [ ] Write E2E test in tests/e2e/theme-toggle.spec.js (verify button exists, click toggles theme, theme persists on reload)
-- [ ] Run full E2E test suite with npm run test:e2e - must pass
+- [x] Add dark theme CSS variables in styles.css after line 20 (dark color palette with [data-theme="dark"] selector)
+- [x] Add theme state management in App.vue script section (ref for current theme, load from localStorage)
+- [x] Add theme toggle button in topbar next to refresh button (use sun/moon emoji icons)
+- [x] Implement toggleTheme function (switch between light/dark, save to localStorage, update data-theme attribute on html element)
+- [x] Add CSS transitions for smooth theme switching
+- [x] Write E2E test in tests/e2e/theme-toggle.spec.js (verify button exists, click toggles theme, theme persists on reload)
+- [x] Run full E2E test suite with npm run test:e2e - must pass
 
 ### Task 2: Add field search in employee cards view
 
