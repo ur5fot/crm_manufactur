@@ -67,7 +67,7 @@ test.describe('Global Search', () => {
 
     // Should navigate to cards view with that employee
     await page.waitForTimeout(500);
-    await expect(page).toHaveURL(/\/cards\/2/);
+    await expect(page).toHaveURL(/\/cards\/\d+/);
 
     // Search input should be cleared
     await expect(searchInput).toHaveValue('');

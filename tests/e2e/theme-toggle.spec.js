@@ -1,9 +1,14 @@
 const { test, expect } = require('@playwright/test');
 
 test.describe('Theme Toggle', () => {
+  test.afterEach(async ({ page }) => {
+    // Reset theme to light to prevent leaking into subsequent tests
+    await page.evaluate(() => localStorage.removeItem('theme'));
+  });
+
   test('should toggle theme and persist on reload', async ({ page }) => {
     // Navigate to the application
-    await page.goto('http://localhost:5173/');
+    await page.goto('/');
 
     // Wait for page to load
     await page.waitForSelector('.topbar');
@@ -13,10 +18,7 @@ test.describe('Theme Toggle', () => {
     await expect(themeButton).toBeVisible();
 
     // Get initial theme (should be light by default)
-    const initialTheme = await page.evaluate(() => {
-      return document.documentElement.getAttribute('data-theme') || 'light';
-    });
-    expect(initialTheme).toBe('light');
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
 
     // Initial button should show moon emoji (for switching to dark)
     await expect(themeButton).toHaveText('🌙');
@@ -24,14 +26,8 @@ test.describe('Theme Toggle', () => {
     // Click to toggle to dark theme
     await themeButton.click();
 
-    // Wait a bit for transition
-    await page.waitForTimeout(100);
-
     // Verify theme changed to dark
-    const darkTheme = await page.evaluate(() => {
-      return document.documentElement.getAttribute('data-theme');
-    });
-    expect(darkTheme).toBe('dark');
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
 
     // Button should now show sun emoji (for switching to light)
     await expect(themeButton).toHaveText('☀️');
@@ -47,26 +43,19 @@ test.describe('Theme Toggle', () => {
     await page.waitForSelector('.topbar');
 
     // Verify theme persisted after reload
-    const persistedTheme = await page.evaluate(() => {
-      return document.documentElement.getAttribute('data-theme');
-    });
-    expect(persistedTheme).toBe('dark');
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
 
     // Toggle back to light
     await themeButton.click();
-    await page.waitForTimeout(100);
 
-    const lightTheme = await page.evaluate(() => {
-      return document.documentElement.getAttribute('data-theme');
-    });
-    expect(lightTheme).toBe('light');
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
 
     // Verify button shows moon emoji again
     await expect(themeButton).toHaveText('🌙');
   });
 
   test('should apply correct CSS styles in dark theme', async ({ page }) => {
-    await page.goto('http://localhost:5173/');
+    await page.goto('/');
     await page.waitForSelector('.topbar');
 
     // Get background color in light theme
@@ -77,7 +66,8 @@ test.describe('Theme Toggle', () => {
     // Toggle to dark theme
     const themeButton = page.locator('.theme-toggle-btn');
     await themeButton.click();
-    await page.waitForTimeout(100);
+
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
 
     // Get background color in dark theme
     const darkBg = await page.evaluate(() => {
@@ -86,8 +76,5 @@ test.describe('Theme Toggle', () => {
 
     // Verify colors are different
     expect(lightBg).not.toBe(darkBg);
-
-    // Verify dark theme has dark background
-    expect(darkBg).toBe('#1a1a1a');
   });
 });

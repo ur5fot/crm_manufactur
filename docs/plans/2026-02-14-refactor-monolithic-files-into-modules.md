@@ -56,10 +56,10 @@
 - [x] Run all tests — must pass before next task
 
 ### Task 3: Extract report and export routes
-- [ ] Create `server/src/routes/reports.js` — export function registering: `GET /api/reports/statuses`, `GET /api/reports/custom`, `GET /api/export`
-- [ ] Update `server/src/index.js` — remove extracted routes, call `registerReportRoutes(app)`
-- [ ] Verify reports E2E tests pass (`tests/e2e/reports.spec.js`)
-- [ ] Run all tests — must pass before next task
+- [x] Create `server/src/routes/reports.js` — export function registering: `GET /api/reports/statuses`, `GET /api/reports/custom`, `GET /api/export`
+- [x] Update `server/src/index.js` — remove extracted routes, call `registerReportRoutes(app)`
+- [x] Verify reports E2E tests pass (`tests/e2e/reports.spec.js`)
+- [x] Run all tests — must pass before next task
 
 ### Task 4: Extract employee CRUD routes
 - [ ] Create `server/src/routes/employees.js` — export function registering: `GET /api/employees`, `GET /api/employees/:id`, `POST /api/employees`, `PUT /api/employees/:id`, `DELETE /api/employees/:id`

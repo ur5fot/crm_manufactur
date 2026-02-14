@@ -786,6 +786,7 @@ async function performGlobalSearch(query) {
       showGlobalSearchResults.value = true;
     }
   } catch (err) {
+    console.error('Global search failed:', err);
     if (globalSearchTerm.value === query) {
       globalSearchResults.value = { employees: [], templates: [], documents: [] };
     }
@@ -2808,8 +2809,8 @@ onUnmounted(() => {
                 class="global-search-item"
                 @mousedown.prevent="selectGlobalSearchDocument(doc)"
               >
-                <span class="global-search-item-name">{{ doc.docx_filename }}</span>
-                <span class="global-search-item-meta">{{ doc.employee ? displayName(doc.employee) : '' }}</span>
+                <span class="global-search-item-name">{{ doc.docx_filename || 'Без назви' }}</span>
+                <span class="global-search-item-meta">{{ doc.employee_name || '' }}</span>
               </div>
             </div>
           </div>
