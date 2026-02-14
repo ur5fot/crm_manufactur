@@ -69,13 +69,9 @@ export function registerDocumentRoutes(app) {
       const total = filtered.length;
 
       // Apply pagination with validation to prevent DoS
-      const offsetNum = parseInt(offset, 10) || 0;
+      const rawOffset = parseInt(offset, 10);
+      const offsetNum = isNaN(rawOffset) || rawOffset < 0 ? 0 : rawOffset;
       const limitNum = Math.min(Math.max(parseInt(limit, 10) || 50, 1), 1000);
-
-      if (offsetNum < 0 || isNaN(offsetNum)) {
-        res.status(400).json({ error: 'Invalid offset parameter' });
-        return;
-      }
 
       const paginated = filtered.slice(offsetNum, offsetNum + limitNum);
 

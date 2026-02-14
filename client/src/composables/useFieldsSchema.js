@@ -2,7 +2,6 @@ import { ref, computed } from "vue";
 import { api } from "../api";
 
 // Module-level cache so schema is loaded once and shared across views
-let schemaLoaded = false;
 let schemaPromise = null;
 
 const allFieldsSchema = ref([]);
@@ -80,7 +79,6 @@ async function _doLoad() {
     });
     dictionaries.value = dict;
 
-    schemaLoaded = true;
   } catch (error) {
     console.error("Failed to load fields schema:", error);
     // Reset promise so retry is possible
@@ -90,7 +88,6 @@ async function _doLoad() {
 
 // Force reload (useful when schema changes)
 async function reloadFieldsSchema() {
-  schemaLoaded = false;
   schemaPromise = null;
   return loadFieldsSchema();
 }

@@ -60,10 +60,10 @@ function getDetailLabel(detail) {
 async function loadSchema() {
   try {
     const data = await api.getFieldsSchema();
-    allFieldsSchema.value = (data.fields || []).map(f => ({
-      key: f.field_name,
-      label: f.field_label,
-      type: f.field_type,
+    allFieldsSchema.value = (data.allFields || []).map(f => ({
+      key: f.key,
+      label: f.label,
+      type: f.type,
     }));
   } catch (error) {
     console.error("Failed to load schema:", error);

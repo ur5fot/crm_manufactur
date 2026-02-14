@@ -69,7 +69,7 @@ crm_manufactur/
 │
 ├── client/                      # Vue.js frontend application
 │   ├── src/
-│   │   ├── App.vue             # Main app shell: sidebar navigation + <router-view> (~84 lines)
+│   │   ├── App.vue             # Main app shell: topbar navigation + conditional view rendering (~84 lines)
 │   │   ├── api.js              # Centralized fetch-based API client
 │   │   ├── main.js             # Vue app initialization and route definitions
 │   │   ├── views/              # Standalone view components (one per route)
@@ -371,7 +371,7 @@ Every data modification operation is logged to `logs.csv` with full details:
 
 All entities use integer auto-increment IDs for primary keys:
 
-**Implementation** (from getNextId function in index.js):
+**Implementation** (from getNextId function in utils.js):
 ```javascript
 function getNextId(items, idField) {
   if (items.length === 0) return "1";
@@ -403,7 +403,7 @@ The application implements several security measures to protect against common v
 
 All file system operations validate paths to prevent directory traversal attacks:
 
-**Pattern** (from index.js):
+**Pattern** (from route modules, e.g., employee-files.js, documents.js):
 ```javascript
 const resolvedPath = path.resolve(userProvidedPath);
 const allowedDir = path.resolve(FILES_DIR);
@@ -584,7 +584,7 @@ const importUpload = multer({
 });
 ```
 
-**Template Upload Configuration** (in index.js):
+**Template Upload Configuration** (in upload-config.js):
 ```javascript
 const templateStorage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -919,7 +919,7 @@ This section documents common code patterns and conventions used throughout the 
 
 The application uses Vue.js 3 with the Composition API and script setup syntax for all components.
 
-**Architecture**: App.vue serves as the shell (sidebar navigation + `<router-view>`). Each route maps to a standalone view component in `client/src/views/`. Shared logic is extracted into composables in `client/src/composables/`.
+**Architecture**: App.vue serves as the shell (topbar navigation + conditional `v-if` rendering). All routes point to `App` as their component; App imports and conditionally renders the appropriate view component based on `route.name`. Each view is a standalone component in `client/src/views/`. Shared logic is extracted into composables in `client/src/composables/`.
 
 **View Component Pattern**:
 ```vue
@@ -2563,7 +2563,7 @@ Example: `Contract_Петренко_123_1707845123456.docx`
 - Custom data not saved to employee record (one-time use)
 - Original employee data preserved in data snapshot
 
-**Generation API Route** (from index.js):
+**Generation API Route** (from routes/templates.js):
 ```javascript
 app.post("/api/templates/:id/generate", async (req, res) => {
   const { employee_id, custom_data } = req.body;
@@ -2755,7 +2755,7 @@ The dashboard provides real-time notifications for important events and upcoming
 4. **Document Overdue**: Documents already expired
 5. **Status Changes**: Recent employment status changes
 
-**Combined Events API** (from index.js):
+**Combined Events API** (from routes/dashboard.js):
 ```javascript
 app.get("/api/dashboard/events", async (_req, res) => {
   try {
@@ -2924,7 +2924,7 @@ const customFilters = ref([
 ]);
 ```
 
-**Server-Side Filter Application** (from index.js):
+**Server-Side Filter Application** (from routes/reports.js):
 ```javascript
 app.get("/api/reports/custom", async (req, res) => {
   let { filters, limit, preview } = req.query;

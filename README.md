@@ -344,7 +344,7 @@ Tests run automatically via GitHub Actions on push to `master`/`feature/*` branc
 .
 ├── client/                 # Vue.js frontend
 │   ├── src/
-│   │   ├── App.vue        # App shell (sidebar + router-view)
+│   │   ├── App.vue        # App shell (topbar navigation + view switching)
 │   │   ├── api.js         # API client
 │   │   ├── main.js        # Vue app init + route definitions
 │   │   ├── views/         # View components (one per route)
@@ -368,6 +368,7 @@ Tests run automatically via GitHub Actions on push to `master`/`feature/*` branc
 │   │   ├── docx-generator.js  # DOCX generation
 │   │   ├── schema.js      # Employee field schema
 │   │   ├── utils.js       # Utility functions
+│   │   ├── upload-config.js  # Multer file upload configuration
 │   │   └── routes/        # API route modules
 │   │       ├── dashboard.js
 │   │       ├── employees.js
