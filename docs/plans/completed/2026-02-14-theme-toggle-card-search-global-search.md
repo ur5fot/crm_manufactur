@@ -100,7 +100,7 @@ This plan implements three UI enhancements: dark/light theme toggle, field searc
 
 ### Task 6: Update documentation
 
-- [ ] Update README.md user-facing features section (mention theme toggle, search features)
-- [ ] Update CLAUDE.md Frontend Patterns section (document theme management pattern)
-- [ ] Update CLAUDE.md API Structure section (document /api/search endpoint)
-- [ ] Move this plan to docs/plans/completed/
+- [x] Update README.md user-facing features section (mention theme toggle, search features)
+- [x] Update CLAUDE.md Frontend Patterns section (document theme management pattern)
+- [x] Update CLAUDE.md API Structure section (document /api/search endpoint)
+- [x] Move this plan to docs/plans/completed/

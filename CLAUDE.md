@@ -93,7 +93,8 @@ crm_manufactur/
 │   │   ├── retirement-api.test.js
 │   │   ├── retirement-events.test.js
 │   │   ├── templates-api.test.js
-│   │   └── upload-limit.test.js
+│   │   ├── upload-limit.test.js
+│   │   └── search-api.test.js
 │   └── package.json            # Backend dependencies
 │
 ├── tests/
@@ -1414,6 +1415,72 @@ const getFieldOptions = (fieldName) => {
 - Automatic UI updates when schema changes
 - Type-aware filtering and validation
 
+### Theme Management (Dark/Light Mode)
+
+The application supports dark and light themes with persistent user preference via localStorage.
+
+**State Management**:
+```javascript
+// Theme state loaded from localStorage with fallback to 'light'
+const currentTheme = ref(localStorage.getItem('theme') || 'light');
+
+// Apply theme on mount
+onMounted(() => {
+  document.documentElement.setAttribute('data-theme', currentTheme.value);
+});
+
+// Toggle function
+function toggleTheme() {
+  const newTheme = currentTheme.value === 'light' ? 'dark' : 'light';
+  currentTheme.value = newTheme;
+  localStorage.setItem('theme', newTheme);
+  document.documentElement.setAttribute('data-theme', newTheme);
+}
+```
+
+**CSS Variables Pattern** (in styles.css):
+- Light theme: default CSS custom properties in `:root` (--bg, --text, --accent, etc.)
+- Dark theme: overrides via `[data-theme="dark"]` selector
+- All components reference CSS variables for colors, backgrounds, borders
+- CSS transitions on `background-color` and `color` for smooth theme switching
+
+**Theme Toggle Button**: Located in topbar, uses sun/moon emoji icons to indicate current state.
+
+### Global Search
+
+The application provides a global search feature in the header that searches across employees, templates, and documents simultaneously.
+
+**Frontend Pattern**:
+```javascript
+const globalSearchTerm = ref("");
+const globalSearchResults = ref({ employees: [], templates: [], documents: [] });
+const showGlobalSearchResults = ref(false);
+
+// Debounced search via watch
+watch(() => globalSearchTerm.value, (newTerm) => {
+  if (newTerm.trim().length < 2) {
+    showGlobalSearchResults.value = false;
+    return;
+  }
+  // 300ms debounce, then call performGlobalSearch
+});
+
+async function performGlobalSearch(query) {
+  const result = await api.globalSearch(query);
+  globalSearchResults.value = result;
+  showGlobalSearchResults.value = true;
+}
+```
+
+**UI Components**:
+- Search input in topbar (after brand, before tab-bar)
+- Dropdown results panel positioned absolutely below input
+- Results grouped by type: Співробітники, Шаблони, Документи
+- Click handlers: employees navigate to cards view, templates to templates view, documents download
+- Outside click handler closes dropdown
+
+**Card Search**: Separate `cardSearchTerm` ref filters employee list in cards view using a computed property that matches across all text fields.
+
 ### Bootstrap UI Components Usage
 
 The application uses Bootstrap 5 utility classes and custom CSS for styling.
@@ -1521,6 +1588,9 @@ End-to-end tests validate complete user workflows across the full stack (databas
 - `templates-generation.spec.js`: Document generation from templates
 - `document-history.spec.js`: Document history viewing with filters
 - `templates-modal-simple.spec.js`: Template modal UI interactions
+- `theme-toggle.spec.js`: Dark/light theme toggle and persistence
+- `card-search.spec.js`: Employee card search filtering
+- `global-search.spec.js`: Global search UI and navigation
 
 **Configuration** (`playwright.config.js`):
 - Test directory: `./tests/e2e`
@@ -1593,6 +1663,7 @@ Unit and integration tests focus on backend business logic, API endpoints, and d
 - `templates-api.test.js`: Template API endpoint validation
 - `retirement-events.test.js`: Retirement event processing logic
 - `retirement-api.test.js`: Retirement API endpoint validation
+- `search-api.test.js`: Global search API endpoint validation
 
 **Test Framework**: Node.js native test runner (no external dependencies)
 
@@ -1669,7 +1740,7 @@ node server/test/docx-generator.test.js
 
 **Unit vs. Integration Test Distinction**:
 - **Unit tests** (no server required): config.test.js, upload-limit.test.js, docx-generator.test.js, declension.test.js, retirement-events.test.js
-- **Integration tests** (require running server on port 3000): templates-api.test.js, retirement-api.test.js
+- **Integration tests** (require running server on port 3000): templates-api.test.js, retirement-api.test.js, search-api.test.js
 - `npm test` runs only unit tests; `npm run test:integration` runs integration tests
 - CI runs unit tests before starting servers, and integration tests after servers are ready
 
@@ -1837,6 +1908,25 @@ All API endpoints are served under the `/api` prefix:
   - value2: Second value for date_range condition
 - Returns: Filtered employee list
 - Used by reports view with custom filter builder
+
+### Global Search Endpoint
+
+**GET /api/search**
+- Cross-entity search across employees, templates, and documents
+- Query parameters:
+  - q (required): Search query string (minimum 2 characters)
+- Search logic:
+  - Employees: searched across all non-file text fields from fields_schema.csv
+  - Templates: searched by template_name and description
+  - Documents: searched by filename, associated employee name, and template name
+- Results limited per type: 20 employees, 10 templates, 10 documents
+- Returns: Object with:
+  - employees: Array of matching employee objects
+  - templates: Array of matching template objects
+  - documents: Array of matching document objects (with joined employee and template data)
+  - total: Object with counts per type { employees, templates, documents }
+- 400 if q parameter missing or less than 2 characters
+- Used by global search input in header
 
 ### Employee CRUD Endpoints
 

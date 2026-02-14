@@ -15,6 +15,9 @@ A comprehensive CRM system for managing employee records, documents, and templat
 - Audit logging for all operations
 - File management for employee documents
 - Dashboard with statistics and events
+- Dark/light theme toggle with persistent preference
+- Employee card search for filtering employees in cards view
+- Global search across employees, templates, and documents
 
 ## Technology Stack
 
@@ -235,6 +238,34 @@ Download generated document file.
 - Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document
 - Content-Disposition: attachment; filename="..."
 - Body: DOCX file binary
+
+### Search API
+
+#### GET /api/search
+Search across employees, templates, and documents.
+
+**Query Parameters:**
+- q (required) - Search query string (minimum 2 characters)
+
+**Response:**
+```json
+{
+  "employees": [{ "employee_id": "1", "full_name": "..." }],
+  "templates": [{ "template_id": "1", "template_name": "..." }],
+  "documents": [{ "document_id": "1", "filename": "...", "employee": {...}, "template": {...} }],
+  "total": {
+    "employees": 5,
+    "templates": 2,
+    "documents": 3
+  }
+}
+```
+
+**Notes:**
+- Employees searched across all text fields
+- Templates searched by name and description
+- Documents searched by filename, employee name, and template name
+- Results limited: 20 employees, 10 templates, 10 documents
 
 ### Employees API
 
