@@ -177,12 +177,12 @@
 - [x] Run full unit/integration test suite: `cd server && npm test && npm run test:integration`
 
 ### Task 19: Verify acceptance criteria
-- [ ] Verify `server/src/index.js` is under 100 lines (setup + registration only)
-- [ ] Verify `client/src/App.vue` is under 500 lines (layout + navigation only)
-- [ ] Verify all 36 API routes still respond correctly
-- [ ] Verify all 9 frontend views render and function correctly
-- [ ] Run full test suite (unit + integration + E2E)
-- [ ] Run linter if configured — all issues must be fixed
+- [x] Verify `server/src/index.js` is under 100 lines (setup + registration only)
+- [x] Verify `client/src/App.vue` is under 500 lines (layout + navigation only)
+- [x] Verify all 36 API routes still respond correctly
+- [x] Verify all 9 frontend views render and function correctly
+- [x] Run full test suite (unit + integration + E2E)
+- [x] Run linter if configured — all issues must be fixed
 
 ### Task 20: [Final] Update documentation
 - [ ] Update CLAUDE.md project structure section to reflect new file layout
