@@ -48,6 +48,6 @@
 
 ### Task 3: Verify everything works
 
-- [ ] Run unit tests locally: `cd server && npm test`
-- [ ] Run E2E tests locally: `npm run test:e2e`
-- [ ] Ensure all tests pass
+- [x] Run unit tests locally: `cd server && npm test`
+- [x] Run E2E tests locally: `npm run test:e2e`
+- [x] Ensure all tests pass
