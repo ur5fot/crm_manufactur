@@ -168,12 +168,14 @@ These locks ensure that only one write operation occurs at a time per file, prev
 - References DOCX files in files/templates/
 - Soft delete: active='yes'/'no'
 - Auto-increment template_id
+- Gitignored — auto-created with headers by `ensureCsvFile()` on first read
 
 **generated_documents.csv**
 - Records of all generated documents
 - Links to templates and employees
 - Stores generation timestamp and data snapshot
 - Document ID for tracking and download
+- Gitignored — auto-created with headers by `ensureCsvFile()` on first read
 
 **logs.csv**
 - Audit trail for all operations (create, update, delete, import, export, generate)

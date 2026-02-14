@@ -1,5 +1,9 @@
 # CRM Manufacturing System
 
+![Vibe Coded](https://img.shields.io/badge/Vibe_Coded-with_Claude_Code-blueviolet?style=flat)
+
+> **This project is vibe coded.** Most of the code was written by [Claude Code](https://claude.ai/claude-code) with human oversight and review. Use in production at your own discretion.
+
 A comprehensive CRM system for managing employee records, documents, and templates.
 
 ## Features
