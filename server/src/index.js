@@ -275,17 +275,16 @@ app.get("/api/search", async (req, res) => {
 
     const query = q.trim().toLowerCase();
 
-    const [employees, templates, documents] = await Promise.all([
+    const [employees, templates, documents, schema] = await Promise.all([
       loadEmployees(),
       loadTemplates(),
-      loadGeneratedDocuments()
+      loadGeneratedDocuments(),
+      loadFieldsSchema()
     ]);
 
     const activeEmployees = employees.filter(e => e.active !== 'no');
     const activeTemplates = templates.filter(t => t.active !== 'no');
-    const activeDocuments = documents.filter(d => d.active !== 'no');
 
-    const schema = await loadFieldsSchema();
     const textFieldKeys = schema.filter(f => f.field_type !== 'file').map(f => f.field_name);
 
     const matchedEmployees = activeEmployees.filter(emp => {
@@ -304,8 +303,8 @@ app.get("/api/search", async (req, res) => {
     const employeeMap = new Map(activeEmployees.map(e => [e.employee_id, e]));
     const templateMap = new Map(activeTemplates.map(t => [t.template_id, t]));
 
-    const matchedDocuments = activeDocuments.filter(doc => {
-      if (doc.filename && doc.filename.toLowerCase().includes(query)) return true;
+    const matchedDocuments = documents.filter(doc => {
+      if (doc.docx_filename && doc.docx_filename.toLowerCase().includes(query)) return true;
       const emp = employeeMap.get(doc.employee_id);
       if (emp) {
         const name = [emp.last_name, emp.first_name, emp.middle_name].filter(Boolean).join(" ");
@@ -315,7 +314,11 @@ app.get("/api/search", async (req, res) => {
       if (tmpl && tmpl.template_name && tmpl.template_name.toLowerCase().includes(query)) return true;
       return false;
     }).map(doc => ({
-      ...doc,
+      document_id: doc.document_id,
+      template_id: doc.template_id,
+      employee_id: doc.employee_id,
+      docx_filename: doc.docx_filename,
+      generation_date: doc.generation_date,
       employee: employeeMap.get(doc.employee_id),
       template: templateMap.get(doc.template_id)
     }));

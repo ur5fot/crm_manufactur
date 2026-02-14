@@ -50,7 +50,7 @@ test.describe('Global Search', () => {
     await expect(employeeGroup).toBeVisible();
 
     // Should show matching employee
-    const resultItem = page.locator('.global-search-item-name:has-text("Іванов")');
+    const resultItem = page.locator('.global-search-item-name:has-text("Іванов")').first();
     await expect(resultItem).toBeVisible();
   });
 

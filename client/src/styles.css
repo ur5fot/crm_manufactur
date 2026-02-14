@@ -377,7 +377,7 @@ a {
 }
 
 .card-search-clear:hover {
-  color: var(--text);
+  color: var(--ink);
 }
 
 .employee-list {

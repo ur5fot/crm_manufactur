@@ -780,12 +780,19 @@ async function performGlobalSearch(query) {
   globalSearchLoading.value = true;
   try {
     const result = await api.globalSearch(query);
-    globalSearchResults.value = result;
-    showGlobalSearchResults.value = true;
+    // Only apply results if the search term hasn't changed while waiting
+    if (globalSearchTerm.value === query) {
+      globalSearchResults.value = result;
+      showGlobalSearchResults.value = true;
+    }
   } catch (err) {
-    globalSearchResults.value = { employees: [], templates: [], documents: [] };
+    if (globalSearchTerm.value === query) {
+      globalSearchResults.value = { employees: [], templates: [], documents: [] };
+    }
   } finally {
-    globalSearchLoading.value = false;
+    if (globalSearchTerm.value === query) {
+      globalSearchLoading.value = false;
+    }
   }
 }
 
@@ -817,7 +824,7 @@ function selectGlobalSearchEmployee(employeeId) {
   openEmployeeCard(employeeId);
 }
 
-function selectGlobalSearchTemplate(templateId) {
+function selectGlobalSearchTemplate() {
   closeGlobalSearch();
   globalSearchTerm.value = "";
   router.push({ name: 'templates' });
@@ -2408,6 +2415,7 @@ onMounted(async () => {
 onUnmounted(() => {
   document.removeEventListener('keydown', handleGlobalKeydown);
   stopDashboardRefresh();
+  clearTimeout(globalSearchTimeout);
 });
 </script>
 
@@ -2800,7 +2808,7 @@ onUnmounted(() => {
                 class="global-search-item"
                 @mousedown.prevent="selectGlobalSearchDocument(doc)"
               >
-                <span class="global-search-item-name">{{ doc.filename }}</span>
+                <span class="global-search-item-name">{{ doc.docx_filename }}</span>
                 <span class="global-search-item-meta">{{ doc.employee ? displayName(doc.employee) : '' }}</span>
               </div>
             </div>

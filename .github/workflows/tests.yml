@@ -108,6 +108,7 @@ jobs:
         run: |
           node test/templates-api.test.js
           node test/retirement-api.test.js
+          node test/search-api.test.js
 
       - name: Run Playwright tests
         run: npm run test:e2e
