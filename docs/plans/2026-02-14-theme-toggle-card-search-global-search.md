@@ -74,18 +74,18 @@ This plan implements three UI enhancements: dark/light theme toggle, field searc
 - Modify: `client/src/App.vue`
 - Modify: `client/src/styles.css`
 
-- [ ] Add globalSearchTerm ref and globalSearchResults ref in App.vue script
-- [ ] Add showGlobalSearchResults ref (boolean to control dropdown visibility)
-- [ ] Add performGlobalSearch async function (calls api.globalSearch, updates results)
-- [ ] Add debounced watch on globalSearchTerm (300ms delay, calls performGlobalSearch)
-- [ ] Add search input in topbar header (after brand, before tab-bar, line ~2647)
-- [ ] Add search results dropdown (positioned absolutely below search input)
-- [ ] Group results by type (Співробітники, Шаблони, Документи) with counts
-- [ ] Add click handlers: employees navigate to cards view, templates to templates view, documents download
-- [ ] Add outside click handler to close dropdown when clicking elsewhere
-- [ ] Add CSS styles for search input and dropdown in styles.css
-- [ ] Write E2E test in tests/e2e/global-search.spec.js (enter search term, verify dropdown appears, click result navigates correctly)
-- [ ] Run full E2E test suite with npm run test:e2e - must pass
+- [x] Add globalSearchTerm ref and globalSearchResults ref in App.vue script
+- [x] Add showGlobalSearchResults ref (boolean to control dropdown visibility)
+- [x] Add performGlobalSearch async function (calls api.globalSearch, updates results)
+- [x] Add debounced watch on globalSearchTerm (300ms delay, calls performGlobalSearch)
+- [x] Add search input in topbar header (after brand, before tab-bar, line ~2647)
+- [x] Add search results dropdown (positioned absolutely below search input)
+- [x] Group results by type (Співробітники, Шаблони, Документи) with counts
+- [x] Add click handlers: employees navigate to cards view, templates to templates view, documents download
+- [x] Add outside click handler to close dropdown when clicking elsewhere
+- [x] Add CSS styles for search input and dropdown in styles.css
+- [x] Write E2E test in tests/e2e/global-search.spec.js (enter search term, verify dropdown appears, click result navigates correctly)
+- [x] Run full E2E test suite with npm run test:e2e - must pass
 
 ### Task 5: Verify acceptance criteria
 

@@ -142,6 +142,10 @@ const employees = ref([]);
 const selectedId = ref("");
 const searchTerm = ref("");
 const cardSearchTerm = ref("");
+const globalSearchTerm = ref("");
+const globalSearchResults = ref({ employees: [], templates: [], documents: [] });
+const showGlobalSearchResults = ref(false);
+const globalSearchLoading = ref(false);
 const isCreatingNew = ref(false); // Flag to prevent auto-load when creating new employee
 const loading = ref(false);
 const saving = ref(false);
@@ -762,6 +766,73 @@ const filteredEmployeesForCards = computed(() => {
     if (employee.employee_id && String(employee.employee_id).toLowerCase().includes(query)) return true;
     return false;
   });
+});
+
+// Global search
+let globalSearchTimeout;
+
+async function performGlobalSearch(query) {
+  if (!query || query.trim().length < 2) {
+    globalSearchResults.value = { employees: [], templates: [], documents: [] };
+    showGlobalSearchResults.value = false;
+    return;
+  }
+  globalSearchLoading.value = true;
+  try {
+    const result = await api.globalSearch(query);
+    globalSearchResults.value = result;
+    showGlobalSearchResults.value = true;
+  } catch (err) {
+    globalSearchResults.value = { employees: [], templates: [], documents: [] };
+  } finally {
+    globalSearchLoading.value = false;
+  }
+}
+
+watch(() => globalSearchTerm.value, (newTerm) => {
+  clearTimeout(globalSearchTimeout);
+  if (!newTerm || newTerm.trim().length < 2) {
+    globalSearchResults.value = { employees: [], templates: [], documents: [] };
+    showGlobalSearchResults.value = false;
+    return;
+  }
+  globalSearchTimeout = setTimeout(() => {
+    performGlobalSearch(newTerm);
+  }, 300);
+});
+
+function onGlobalSearchFocus() {
+  if (globalSearchTerm.value.trim().length >= 2 && globalSearchHasResults.value) {
+    showGlobalSearchResults.value = true;
+  }
+}
+
+function closeGlobalSearch() {
+  showGlobalSearchResults.value = false;
+}
+
+function selectGlobalSearchEmployee(employeeId) {
+  closeGlobalSearch();
+  globalSearchTerm.value = "";
+  openEmployeeCard(employeeId);
+}
+
+function selectGlobalSearchTemplate(templateId) {
+  closeGlobalSearch();
+  globalSearchTerm.value = "";
+  router.push({ name: 'templates' });
+}
+
+function selectGlobalSearchDocument(doc) {
+  closeGlobalSearch();
+  globalSearchTerm.value = "";
+  const downloadUrl = api.downloadDocument(doc.document_id);
+  window.open(downloadUrl, '_blank');
+}
+
+const globalSearchHasResults = computed(() => {
+  const r = globalSearchResults.value;
+  return r.employees.length > 0 || r.templates.length > 0 || r.documents.length > 0;
 });
 
 const isNew = computed(() => !form.employee_id);
@@ -2676,6 +2747,64 @@ onUnmounted(() => {
         <div class="brand">
           <div class="brand-title">CRM на CSV</div>
           <div class="brand-sub">Vue + Node, локальні CSV файли</div>
+        </div>
+        <div class="global-search-wrapper">
+          <input
+            v-model="globalSearchTerm"
+            class="global-search-input"
+            type="search"
+            placeholder="Глобальний пошук..."
+            @focus="onGlobalSearchFocus"
+            @blur="closeGlobalSearch"
+          />
+          <div v-if="globalSearchLoading" class="global-search-spinner">...</div>
+          <div
+            v-if="showGlobalSearchResults && globalSearchHasResults"
+            class="global-search-dropdown"
+          >
+            <div v-if="globalSearchResults.employees.length > 0" class="global-search-group">
+              <div class="global-search-group-header">
+                Співробітники ({{ globalSearchResults.total?.employees || globalSearchResults.employees.length }})
+              </div>
+              <div
+                v-for="emp in globalSearchResults.employees"
+                :key="'emp-' + emp.employee_id"
+                class="global-search-item"
+                @mousedown.prevent="selectGlobalSearchEmployee(emp.employee_id)"
+              >
+                <span class="global-search-item-name">{{ displayName(emp) }}</span>
+                <span class="global-search-item-meta">ID: {{ emp.employee_id }}</span>
+              </div>
+            </div>
+            <div v-if="globalSearchResults.templates.length > 0" class="global-search-group">
+              <div class="global-search-group-header">
+                Шаблони ({{ globalSearchResults.total?.templates || globalSearchResults.templates.length }})
+              </div>
+              <div
+                v-for="tmpl in globalSearchResults.templates"
+                :key="'tmpl-' + tmpl.template_id"
+                class="global-search-item"
+                @mousedown.prevent="selectGlobalSearchTemplate(tmpl.template_id)"
+              >
+                <span class="global-search-item-name">{{ tmpl.template_name }}</span>
+                <span class="global-search-item-meta">{{ tmpl.template_type || '' }}</span>
+              </div>
+            </div>
+            <div v-if="globalSearchResults.documents.length > 0" class="global-search-group">
+              <div class="global-search-group-header">
+                Документи ({{ globalSearchResults.total?.documents || globalSearchResults.documents.length }})
+              </div>
+              <div
+                v-for="doc in globalSearchResults.documents"
+                :key="'doc-' + doc.document_id"
+                class="global-search-item"
+                @mousedown.prevent="selectGlobalSearchDocument(doc)"
+              >
+                <span class="global-search-item-name">{{ doc.filename }}</span>
+                <span class="global-search-item-meta">{{ doc.employee ? displayName(doc.employee) : '' }}</span>
+              </div>
+            </div>
+          </div>
         </div>
         <div class="tab-bar">
           <button
