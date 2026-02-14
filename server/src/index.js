@@ -39,6 +39,7 @@ import { extractPlaceholders, generateDocx } from "./docx-generator.js";
 import { generateDeclinedNames, generateDeclinedGradePosition } from "./declension.js";
 import { getOpenCommand, openFolder, getNextId, normalizeEmployeeInput } from "./utils.js";
 import { createImportUpload, createEmployeeFileUpload, createTemplateUpload } from "./upload-config.js";
+import { registerDashboardRoutes } from "./routes/dashboard.js";
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -69,81 +70,8 @@ app.use("/files", express.static(FILES_DIR));
 
 const importUpload = createImportUpload(appConfig);
 
-app.get("/api/health", (req, res) => {
-  res.json({ ok: true });
-});
-
-app.get("/api/dashboard/stats", async (_req, res) => {
-  try {
-    const stats = await getDashboardStats();
-    res.json(stats);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.get("/api/dashboard/events", async (_req, res) => {
-  try {
-    const events = await getDashboardEvents();
-    res.json(events);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.get("/api/document-expiry", async (_req, res) => {
-  try {
-    const events = await getDocumentExpiryEvents();
-    res.json(events);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.get("/api/document-overdue", async (_req, res) => {
-  try {
-    const events = await getDocumentOverdueEvents();
-    res.json(events);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.get("/api/birthday-events", async (_req, res) => {
-  try {
-    const events = await getBirthdayEvents();
-    res.json(events);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.get("/api/retirement-events", async (_req, res) => {
-  try {
-    const config = await loadConfig();
-    const retirementAge = parseInt(config.retirement_age_years || 60, 10);
-    const events = await getRetirementEvents(retirementAge);
-    res.json(events);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.get("/api/config", async (_req, res) => {
-  try {
-    const config = await loadConfig();
-    res.json(config);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: err.message });
-  }
-});
+// Register dashboard and config routes
+registerDashboardRoutes(app);
 
 app.get("/api/reports/statuses", async (req, res) => {
   const type = req.query.type;
@@ -272,6 +200,10 @@ app.get("/api/search", async (req, res) => {
       res.status(400).json({ error: "Параметр q обов'язковий (мінімум 2 символи)" });
       return;
     }
+    if (q.trim().length > 200) {
+      res.status(400).json({ error: "Пошуковий запит занадто довгий (максимум 200 символів)" });
+      return;
+    }
 
     const query = q.trim().toLowerCase();
 
@@ -313,18 +245,31 @@ app.get("/api/search", async (req, res) => {
       const tmpl = templateMap.get(doc.template_id);
       if (tmpl && tmpl.template_name && tmpl.template_name.toLowerCase().includes(query)) return true;
       return false;
-    }).map(doc => ({
-      document_id: doc.document_id,
-      template_id: doc.template_id,
-      employee_id: doc.employee_id,
-      docx_filename: doc.docx_filename,
-      generation_date: doc.generation_date,
-      employee: employeeMap.get(doc.employee_id),
-      template: templateMap.get(doc.template_id)
-    }));
+    }).map(doc => {
+      const emp = employeeMap.get(doc.employee_id);
+      const tmpl = templateMap.get(doc.template_id);
+      return {
+        document_id: doc.document_id,
+        template_id: doc.template_id,
+        employee_id: doc.employee_id,
+        docx_filename: doc.docx_filename,
+        generation_date: doc.generation_date,
+        employee_name: emp ? [emp.last_name, emp.first_name, emp.middle_name].filter(Boolean).join(" ") : "",
+        template_name: tmpl ? tmpl.template_name : ""
+      };
+    });
+
+    matchedDocuments.sort((a, b) => (b.generation_date || "").localeCompare(a.generation_date || ""));
 
     res.json({
-      employees: matchedEmployees.slice(0, 20),
+      employees: matchedEmployees.slice(0, 20).map(e => ({
+        employee_id: e.employee_id,
+        last_name: e.last_name,
+        first_name: e.first_name,
+        middle_name: e.middle_name,
+        employment_status: e.employment_status,
+        department: e.department
+      })),
       templates: matchedTemplates.slice(0, 10),
       documents: matchedDocuments.slice(0, 10),
       total: {

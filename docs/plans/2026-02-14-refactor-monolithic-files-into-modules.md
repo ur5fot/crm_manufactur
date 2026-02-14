@@ -50,10 +50,10 @@
 - [x] Run all tests — must pass before next task
 
 ### Task 2: Extract dashboard and config routes
-- [ ] Create `server/src/routes/dashboard.js` — export a function that takes `(app)` and registers: `GET /api/health`, `GET /api/dashboard/stats`, `GET /api/dashboard/events`, `GET /api/document-expiry`, `GET /api/document-overdue`, `GET /api/birthday-events`, `GET /api/retirement-events`, `GET /api/config`
-- [ ] Update `server/src/index.js` — remove extracted routes, call `registerDashboardRoutes(app)` instead
-- [ ] Verify all dashboard E2E tests pass (`tests/e2e/dashboard.spec.js`)
-- [ ] Run all tests — must pass before next task
+- [x] Create `server/src/routes/dashboard.js` — export a function that takes `(app)` and registers: `GET /api/health`, `GET /api/dashboard/stats`, `GET /api/dashboard/events`, `GET /api/document-expiry`, `GET /api/document-overdue`, `GET /api/birthday-events`, `GET /api/retirement-events`, `GET /api/config`
+- [x] Update `server/src/index.js` — remove extracted routes, call `registerDashboardRoutes(app)` instead
+- [x] Verify all dashboard E2E tests pass (`tests/e2e/dashboard.spec.js`)
+- [x] Run all tests — must pass before next task
 
 ### Task 3: Extract report and export routes
 - [ ] Create `server/src/routes/reports.js` — export function registering: `GET /api/reports/statuses`, `GET /api/reports/custom`, `GET /api/export`
