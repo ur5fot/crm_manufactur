@@ -7,6 +7,7 @@ import ImportView from "./views/ImportView.vue";
 import DocumentHistoryView from "./views/DocumentHistoryView.vue";
 import TemplatesView from "./views/TemplatesView.vue";
 import ReportsView from "./views/ReportsView.vue";
+import DashboardView from "./views/DashboardView.vue";
 import { useFieldsSchema } from "./composables/useFieldsSchema";
 
 const { allFieldsSchema, fieldGroups, summaryColumns, dictionaries, documentFields, getFieldType, loadFieldsSchema } = useFieldsSchema();
@@ -96,20 +97,6 @@ const saving = ref(false);
 const errorMessage = ref("");
 const openingDataFolder = ref(false);
 const openingEmployeeFolder = ref(false);
-const refreshIntervalId = ref(null);
-const lastUpdated = ref(null);
-const isRefreshing = ref(false);
-const dashboardEvents = ref({ today: [], thisWeek: [] });
-const dashboardOverdueEvents = ref([]);
-const expandedCard = ref(null); // null | 'total' | '<status_label>' | 'other'
-const activeReport = ref(null); // null | 'current' | 'month'
-const reportData = ref([]);
-const reportLoading = ref(false);
-
-// App config
-const appConfig = ref({
-  max_report_preview_rows: 100
-});
 
 // Compute current view based on route
 const currentView = computed(() => {
@@ -157,33 +144,8 @@ function switchView(view) {
   }
 }
 
-function startDashboardRefresh() {
-  stopDashboardRefresh();
-  refreshIntervalId.value = setInterval(async () => {
-    try {
-      await loadEmployees(true);
-      await loadDashboardEvents();
-      await loadOverdueDocuments();
-    } catch (error) {
-      console.error('Dashboard auto-refresh failed:', error);
-    }
-  }, 300000);
-}
-
 function refreshManually() {
   loadEmployees();
-  if (currentView.value === 'dashboard') {
-    loadDashboardEvents();
-    loadOverdueDocuments();
-    startDashboardRefresh();
-  }
-}
-
-function stopDashboardRefresh() {
-  if (refreshIntervalId.value) {
-    clearInterval(refreshIntervalId.value);
-    refreshIntervalId.value = null;
-  }
 }
 
 watch(() => route.name, async (newRoute, oldRoute) => {
@@ -195,15 +157,6 @@ watch(() => route.name, async (newRoute, oldRoute) => {
                    oldRoute === 'templates' ? 'templates' :
                    oldRoute === 'document-history' ? 'document-history' :
                    oldRoute === 'logs' ? 'logs' : 'dashboard';
-
-  if (newView === 'dashboard') {
-    loadEmployees();
-    loadDashboardEvents();
-    loadOverdueDocuments();
-    startDashboardRefresh();
-  } else if (oldView === 'dashboard') {
-    stopDashboardRefresh();
-  }
 
   if (newView === 'table') {
     loadEmployees();
@@ -279,29 +232,6 @@ const placeholderRefLoading = ref(false);
 const placeholderRefError = ref('');
 const placeholderRefSearch = ref('');
 
-// Уведомления о сменах статусов
-const statusReturning = ref([]);
-const statusStarting = ref([]);
-const showStatusNotification = ref(false);
-const notifiedEmployeeIds = new Set();
-let notifiedDate = '';
-
-// Уведомления о закінченні терміну дії документів
-const docExpiryToday = ref([]);
-const docExpiryWeek = ref([]);
-const showDocExpiryNotification = ref(false);
-let docExpiryNotifiedDate = '';
-
-const birthdayToday = ref([]);
-const birthdayNext7Days = ref([]);
-const showBirthdayNotification = ref(false);
-let birthdayNotifiedDate = '';
-
-const retirementToday = ref([]);
-const retirementThisMonth = ref([]);
-const showRetirementNotification = ref(false);
-let retirementNotifiedDate = '';
-const retirementNotifiedIds = new Set(); // Track which employees we've already processed for retirement
 
 // Динамические значения статусов из fields_schema (по позиции в field_options)
 // Конвенция: options[0] = рабочий, options[1] = уволен, options[2] = отпуск, options[3] = больничный
@@ -312,52 +242,6 @@ const employmentOptions = computed(() => {
 
 const workingStatus = computed(() => employmentOptions.value[0] || '');
 
-// Эмодзи по позиции статуса: options[2] (отпуск) — ✈️, options[3] (лікарняний) — 🏥, остальные — ℹ️
-function statusEmoji(statusValue) {
-  const idx = employmentOptions.value.indexOf(statusValue);
-  if (idx === 2) return '✈️';
-  if (idx === 3) return '🏥';
-  return 'ℹ️';
-}
-
-function docExpiryEmoji(event) {
-  if (event.type === 'recently_expired') return '⚠️'; // Документ просрочен (в пределах 30 дней)
-  if (event.type === 'expiring_today') return '⚠️'; // Документ истекает сегодня
-  if (event.type === 'expiring_soon') return '📄'; // Документ истекает в ближайшие 7 дней
-  return '📄';
-}
-
-function timelineEventEmoji(event) {
-  if (event.type === 'doc_expiry') return docExpiryEmoji({ type: event.expiry_type });
-  if (event.type === 'status_end') return '🏢';
-  if (event.type === 'birthday_today') return '🎂';
-  if (event.type === 'birthday_upcoming') return '🎉';
-  return statusEmoji(event.status_type);
-}
-
-function timelineEventDesc(event) {
-  if (event.type === 'doc_expiry') {
-    const label = event.document_label || event.document_field;
-    if (event.expiry_type === 'recently_expired' || event.expiry_type === 'expiring_today') {
-      return `— ${label} (термін сплив)`;
-    }
-    return `— ${label} (до ${formatEventDate(event.expiry_date)})`;
-  }
-  if (event.type === 'status_end') {
-    return `— повернення (${event.status_type || 'статус'})`;
-  }
-  if (event.type === 'birthday_today') {
-    return `— день народження (${event.age} років)`;
-  }
-  if (event.type === 'birthday_upcoming') {
-    return `— день народження (${event.age} років, ${formatEventDate(event.date)})`;
-  }
-  const label = event.status_type || 'статус';
-  if (event.end_date) {
-    return `— ${label} (до ${formatEventDate(event.end_date)})`;
-  }
-  return `— ${label}`;
-}
 
 // Маппинг технических названий полей на человекопонятные — динамически из fields_schema
 const fieldLabels = computed(() => {
@@ -368,32 +252,6 @@ const fieldLabels = computed(() => {
   return map;
 });
 
-// Цвета stat-card по позиции option (CSS-переменные)
-const statusColors = [
-  'var(--color-status-active)',    // options[0] — рабочий
-  'var(--color-status-warning)',   // options[1]
-  'var(--color-status-vacation)',  // options[2] — отпуск
-  'var(--color-status-warning)',   // options[3]
-];
-function statusCardColor(idx) {
-  return statusColors[idx] || 'var(--color-status-inactive)';
-}
-
-function toggleStatCard(cardKey) {
-  expandedCard.value = expandedCard.value === cardKey ? null : cardKey;
-}
-
-const expandedEmployees = computed(() => {
-  const key = expandedCard.value;
-  if (!key) return [];
-  const emps = employees.value;
-  if (key === 'total') return emps;
-  if (key === 'other') {
-    const options = employmentOptions.value;
-    return emps.filter(e => !options.includes(e.employment_status));
-  }
-  return emps.filter(e => e.employment_status === key);
-});
 
 async function exportTableData() {
   errorMessage.value = '';
@@ -405,25 +263,6 @@ async function exportTableData() {
   }
 }
 
-async function toggleReport(type) {
-  if (activeReport.value === type) {
-    activeReport.value = null;
-    reportData.value = [];
-    return;
-  }
-  activeReport.value = type;
-  reportLoading.value = true;
-  try {
-    const data = await api.getStatusReport(type);
-    reportData.value = data;
-    errorMessage.value = '';
-  } catch (e) {
-    reportData.value = [];
-    errorMessage.value = 'Помилка завантаження звіту';
-  } finally {
-    reportLoading.value = false;
-  }
-}
 
 const form = reactive(emptyEmployee());
 
@@ -492,42 +331,6 @@ const filteredEmployees = computed(() => {
 
 const isNew = computed(() => !form.employee_id);
 
-// Статистика по кожному статусу з field_options — повністю динамічно
-const dashboardStats = computed(() => {
-  const emps = employees.value;
-  const total = emps.length;
-  const options = employmentOptions.value;
-
-  // Підрахунок по кожній опції з schema
-  const statusCounts = options.map(opt => ({
-    label: opt,
-    count: emps.filter(e => e.employment_status === opt).length
-  }));
-
-  const counted = statusCounts.reduce((sum, s) => sum + s.count, 0);
-  return { total, statusCounts, other: total - counted };
-});
-
-const formattedLastUpdated = computed(() => {
-  if (!lastUpdated.value) return '';
-  const d = lastUpdated.value;
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-});
-
-// Dashboard report counts
-const absentEmployeesCount = computed(() => {
-  if (activeReport.value === 'current') {
-    return reportData.value.length;
-  }
-  return 0;
-});
-
-const statusChangesThisMonthCount = computed(() => {
-  if (activeReport.value === 'month') {
-    return reportData.value.length;
-  }
-  return 0;
-});
 
 // Попап зміни статусу
 const showStatusChangePopup = ref(false);
@@ -919,345 +722,17 @@ async function openEmployeeFolder() {
   }
 }
 
-async function loadEmployees(silent = false) {
-  if (silent && isRefreshing.value) return;
-  if (!silent) loading.value = true;
-  isRefreshing.value = true;
-  if (!silent) errorMessage.value = "";
+async function loadEmployees() {
+  loading.value = true;
+  errorMessage.value = "";
   try {
     const data = await api.getEmployees();
     employees.value = data.employees || [];
-    await checkStatusChanges();
-    await checkDocumentExpiry();
-    await checkBirthdayEvents();
-    await checkRetirementEvents();
-    lastUpdated.value = new Date();
-
-    // Auto-expand "Who is absent now" report on Dashboard load
-    if (currentView.value === 'dashboard' && activeReport.value !== 'current') {
-      await toggleReport('current');
-    }
   } catch (error) {
-    if (!silent) errorMessage.value = error.message;
+    errorMessage.value = error.message;
   } finally {
-    isRefreshing.value = false;
-    if (!silent) loading.value = false;
+    loading.value = false;
   }
-}
-
-const shortDays = ['Нд', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
-
-function formatEventDate(dateStr) {
-  if (!dateStr) return '';
-  const d = new Date(dateStr + 'T00:00:00');
-  if (isNaN(d.getTime())) return dateStr;
-  const day = shortDays[d.getDay()];
-  const dd = String(d.getDate()).padStart(2, '0');
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  return `${day}, ${dd}.${mm}.${d.getFullYear()}`;
-}
-
-function daysFromNowLabel(dateStr) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const target = new Date(dateStr + 'T00:00:00');
-  const diff = Math.round((target - today) / 86400000);
-  if (diff === 0) return 'сьогодні';
-  if (diff < 0) return `${Math.abs(diff)} дн. тому`;
-  if (diff === 1) return 'завтра';
-  if (diff >= 2 && diff <= 4) return `через ${diff} дні`;
-  return `через ${diff} днів`;
-}
-
-async function loadDashboardEvents() {
-  try {
-    const [statusData, docData, birthdayData] = await Promise.all([
-      api.getDashboardEvents(),
-      api.getDocumentExpiry(),
-      api.getBirthdayEvents()
-    ]);
-
-    // Перетворюємо події закінчення документів у формат timeline
-    const mapDocEvent = (evt) => ({
-      employee_id: evt.employee_id,
-      name: evt.name,
-      type: 'doc_expiry',
-      expiry_type: evt.type,
-      document_field: evt.document_field,
-      document_label: evt.document_label,
-      expiry_date: evt.expiry_date,
-      date: evt.expiry_date
-    });
-
-    // Перетворюємо події днів народження у формат timeline
-    const mapBirthdayEvent = (evt, isToday) => ({
-      employee_id: evt.employee_id,
-      name: evt.employee_name,
-      type: isToday ? 'birthday_today' : 'birthday_upcoming',
-      birth_date: evt.birth_date,
-      age: evt.age,
-      date: evt.current_year_birthday  // Use current year date for timeline display/sorting
-    });
-
-    // На дашборд виводимо лише сьогоднішні події (не прострочені за минулі 30 днів)
-    const todayDocEvents = (docData.today || [])
-      .filter(evt => evt.type !== 'recently_expired')
-      .map(mapDocEvent);
-    const todayBirthdayEvents = (birthdayData.today || []).map(evt => mapBirthdayEvent(evt, true));
-    const todayEvents = [
-      ...(statusData.today || []),
-      ...todayDocEvents,
-      ...todayBirthdayEvents
-    ];
-
-    const weekBirthdayEvents = (birthdayData.next7Days || []).map(evt => mapBirthdayEvent(evt, false));
-    const weekEvents = [
-      ...(statusData.thisWeek || []),
-      ...(docData.thisWeek || []).map(mapDocEvent),
-      ...weekBirthdayEvents
-    ];
-    weekEvents.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
-
-    dashboardEvents.value = { today: todayEvents, thisWeek: weekEvents };
-  } catch (error) {
-    console.error('Failed to load dashboard events:', error);
-  }
-}
-
-async function loadOverdueDocuments() {
-  try {
-    const data = await api.getDocumentOverdue();
-    dashboardOverdueEvents.value = data.overdue || [];
-  } catch (error) {
-    console.error('Failed to load overdue documents:', error);
-  }
-}
-
-// Универсальная проверка и обработка смены статусов
-async function checkStatusChanges() {
-  const now = new Date();
-  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-
-  // Проверяем что схема полей загружена (workingStatus должен быть доступен)
-  if (!workingStatus.value) {
-    console.warn('checkStatusChanges: workingStatus not available yet, skipping');
-    return;
-  }
-
-  // Сбрасываем уведомления при смене дня (для длительных сессий)
-  if (notifiedDate !== today) {
-    notifiedEmployeeIds.clear();
-    notifiedDate = today;
-  }
-
-  const returningToday = [];
-  const startingToday = [];
-  const needsUpdate = [];
-
-  employees.value.forEach(employee => {
-    const startDate = employee.status_start_date;
-    const endDate = employee.status_end_date;
-
-    // Пропускаем если нет дат статуса
-    if (!startDate && !endDate) return;
-
-    // Пропускаем автовозврат для уволенных (options[1]) — увольнение не должно автоматически сбрасываться
-    const firedStatus = employmentOptions.value[1] || '';
-    const isFired = firedStatus && employee.employment_status === firedStatus;
-
-    // Проверка 1: сегодня последний день статуса — уведомить (но НЕ сбрасывать,
-    // end_date включительна, сброс произойдёт завтра в проверке 2: end_date < today)
-    if (endDate === today && !isFired) {
-      returningToday.push({
-        id: employee.employee_id,
-        name: displayName(employee),
-        position: employee.position || '',
-        statusType: employee.employment_status
-      });
-      return;
-    }
-
-    // Проверка 2: статус уже прошел (end_date < today) — очистить даты, вернуть options[0]
-    if (endDate && endDate < today && !isFired) {
-      needsUpdate.push({
-        ...employee,
-        status_start_date: '',
-        status_end_date: '',
-        employment_status: workingStatus.value
-      });
-      return;
-    }
-
-    // Проверка 3: сегодня начинается статус — уведомить
-    if (startDate === today && employee.employment_status !== workingStatus.value) {
-      startingToday.push({
-        id: employee.employee_id,
-        name: displayName(employee),
-        position: employee.position || '',
-        endDate: endDate,
-        statusType: employee.employment_status
-      });
-      return;
-    }
-
-    // Проверка 4: сейчас в статусе (start_date <= today, end_date > today или пуста) — ничего не делаем
-  });
-
-  // Обновляем статусы сотрудников
-  for (const employee of needsUpdate) {
-    try {
-      await api.updateEmployee(employee.employee_id, employee);
-    } catch (error) {
-      console.error(`Ошибка обновления сотрудника ${employee.employee_id}:`, error);
-    }
-  }
-
-  // Показываем уведомление только для ещё не показанных сотрудников
-  const newReturning = returningToday.filter(e => !notifiedEmployeeIds.has(e.id));
-  const newStarting = startingToday.filter(e => !notifiedEmployeeIds.has(e.id));
-  if (newReturning.length > 0 || newStarting.length > 0) {
-    newReturning.forEach(e => notifiedEmployeeIds.add(e.id));
-    newStarting.forEach(e => notifiedEmployeeIds.add(e.id));
-    statusReturning.value = newReturning;
-    statusStarting.value = newStarting;
-    showStatusNotification.value = true;
-  }
-
-  // Перезагружаем список если были обновления
-  if (needsUpdate.length > 0) {
-    const data = await api.getEmployees();
-    employees.value = data.employees || [];
-  }
-}
-
-function closeStatusNotification() {
-  showStatusNotification.value = false;
-}
-
-async function checkDocumentExpiry() {
-  const now = new Date();
-  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-
-  // Показываем уведомления один раз в день
-  if (docExpiryNotifiedDate === today) return;
-
-  try {
-    const data = await api.getDocumentExpiry();
-    const todayItems = (data.today || []).filter(evt => evt.type !== 'recently_expired');
-    const weekItems = data.thisWeek || [];
-
-    docExpiryNotifiedDate = today;
-    if (todayItems.length > 0 || weekItems.length > 0) {
-      docExpiryToday.value = todayItems;
-      docExpiryWeek.value = weekItems;
-      showDocExpiryNotification.value = true;
-    }
-  } catch (error) {
-    console.error('Failed to check document expiry:', error);
-  }
-}
-
-function closeDocExpiryNotification() {
-  showDocExpiryNotification.value = false;
-}
-
-async function checkBirthdayEvents() {
-  const now = new Date();
-  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-
-  // Показываем уведомления один раз в день
-  if (birthdayNotifiedDate === today) return;
-
-  try {
-    const data = await api.getBirthdayEvents();
-    const todayItems = data.today || [];
-    const next7DaysItems = data.next7Days || [];
-
-    birthdayNotifiedDate = today;
-    if (todayItems.length > 0 || next7DaysItems.length > 0) {
-      birthdayToday.value = todayItems;
-      birthdayNext7Days.value = next7DaysItems;
-      showBirthdayNotification.value = true;
-    }
-  } catch (error) {
-    console.error('Failed to check birthday events:', error);
-  }
-}
-
-function closeBirthdayNotification() {
-  showBirthdayNotification.value = false;
-}
-
-async function checkRetirementEvents() {
-  const now = new Date();
-  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-
-  // Проверяем что схема полей загружена
-  if (!workingStatus.value || !employmentOptions.value[1]) {
-    console.warn('checkRetirementEvents: employment options not available yet, skipping');
-    return;
-  }
-
-  // Сбрасываем Set при смене дня
-  if (retirementNotifiedDate !== today) {
-    retirementNotifiedIds.clear();
-    retirementNotifiedDate = today;
-  }
-
-  try {
-    const data = await api.getRetirementEvents();
-    const todayItems = data.today || [];
-    const thisMonthItems = data.thisMonth || [];
-
-    // Filter out employees we've already processed today
-    const newTodayItems = todayItems.filter(item => !retirementNotifiedIds.has(item.employee_id));
-    const newThisMonthItems = thisMonthItems.filter(item => !retirementNotifiedIds.has(item.employee_id));
-
-    // Auto-dismiss employees reaching retirement age today (only new ones)
-    // Only auto-dismiss employees with working status (options[0]) to avoid overwriting other statuses
-    if (newTodayItems.length > 0) {
-      const firedStatus = employmentOptions.value[1];
-      for (const event of newTodayItems) {
-        const emp = employees.value.find(e => e.employee_id === event.employee_id);
-        // Only auto-dismiss if employee is currently in working status
-        if (emp && emp.employment_status === workingStatus.value) {
-          try {
-            await api.updateEmployee(event.employee_id, {
-              ...emp,
-              employment_status: firedStatus
-            });
-            console.log(`Auto-dismissed employee ${event.employee_name} (ID: ${event.employee_id}) due to retirement`);
-            retirementNotifiedIds.add(event.employee_id); // Mark as processed
-          } catch (error) {
-            console.error(`Failed to auto-dismiss employee ${event.employee_id}:`, error);
-          }
-        } else {
-          // Even if not dismissed (e.g., already fired), mark as processed to avoid re-showing notification
-          retirementNotifiedIds.add(event.employee_id);
-        }
-      }
-      // Reload employees without triggering check functions again (prevent infinite loop)
-      const employeeData = await api.getEmployees();
-      employees.value = employeeData.employees || [];
-      lastUpdated.value = new Date();
-    }
-
-    // Mark all month items as processed (even if only showing notification, not auto-dismissing)
-    newThisMonthItems.forEach(item => retirementNotifiedIds.add(item.employee_id));
-
-    // Show notification only for new items
-    if (newTodayItems.length > 0 || newThisMonthItems.length > 0) {
-      retirementToday.value = newTodayItems;
-      retirementThisMonth.value = newThisMonthItems;
-      showRetirementNotification.value = true;
-    }
-  } catch (error) {
-    console.error('Failed to check retirement events:', error);
-  }
-}
-
-function closeRetirementNotification() {
-  showRetirementNotification.value = false;
 }
 
 async function selectEmployee(id) {
@@ -1757,12 +1232,6 @@ function handleGlobalKeydown(e) {
       closeDocEditDatesPopup();
     } else if (showStatusChangePopup.value) {
       closeStatusChangePopup();
-    } else if (showBirthdayNotification.value) {
-      closeBirthdayNotification();
-    } else if (showDocExpiryNotification.value) {
-      closeDocExpiryNotification();
-    } else if (showStatusNotification.value) {
-      closeStatusNotification();
     }
   }
 }
@@ -1791,14 +1260,6 @@ onMounted(async () => {
     }
   });
 
-  // Load config
-  try {
-    const config = await api.getConfig();
-    appConfig.value = config;
-  } catch (error) {
-    console.error('Failed to load config:', error);
-  }
-
   await loadFieldsSchema();
   await loadEmployees();
 
@@ -1812,13 +1273,6 @@ onMounted(async () => {
     }
   }
 
-  // Load dashboard events if on dashboard
-  if (route.name === 'dashboard' || !route.name) {
-    await loadDashboardEvents();
-    await loadOverdueDocuments();
-    startDashboardRefresh();
-  }
-
   if (route.name === 'placeholder-reference') {
     await loadPlaceholderPreview();
   }
@@ -1826,186 +1280,11 @@ onMounted(async () => {
 
 onUnmounted(() => {
   document.removeEventListener('keydown', handleGlobalKeydown);
-  stopDashboardRefresh();
 });
 </script>
 
 <template>
   <div class="app">
-    <!-- Уведомление о сменах статусов -->
-    <div v-if="showStatusNotification" class="vacation-notification-overlay" @click="closeStatusNotification">
-      <div class="vacation-notification-modal" @click.stop>
-        <div class="vacation-notification-header">
-          <h3>📋 Сповіщення про зміну статусів</h3>
-          <button class="close-btn" @click="closeStatusNotification">×</button>
-        </div>
-        <div class="vacation-notification-body">
-          <!-- Сьогодні змінюють статус -->
-          <div v-if="statusStarting.length > 0" class="notification-section">
-            <p class="notification-message">📋 Сьогодні змінюють статус:</p>
-            <ul class="vacation-employees-list">
-              <li v-for="emp in statusStarting" :key="emp.id" class="vacation-employee starting">
-                <div class="employee-info">
-                  <span class="employee-name">{{ statusEmoji(emp.statusType) }} {{ emp.name }}</span>
-                  <span v-if="emp.position" class="employee-position">{{ emp.position }}</span>
-                </div>
-                <div class="status-details">
-                  <span class="status-badge">{{ emp.statusType }}</span>
-                  <span v-if="emp.endDate" class="vacation-end-date">до {{ formatEventDate(emp.endDate) }}</span>
-                </div>
-              </li>
-            </ul>
-          </div>
-
-          <!-- Повертаються до робочого стану -->
-          <div v-if="statusReturning.length > 0" class="notification-section">
-            <p class="notification-message">🏢 Сьогодні повертаються:</p>
-            <ul class="vacation-employees-list">
-              <li v-for="emp in statusReturning" :key="emp.id" class="vacation-employee returning">
-                <div class="employee-info">
-                  <span class="employee-name">{{ emp.name }}</span>
-                  <span v-if="emp.position" class="employee-position">{{ emp.position }}</span>
-                </div>
-                <span class="status-badge returning-badge">{{ emp.statusType }} → {{ workingStatus }}</span>
-              </li>
-            </ul>
-          </div>
-        </div>
-        <div class="vacation-notification-footer">
-          <button class="primary" @click="closeStatusNotification">Зрозуміло</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Уведомление про закінчення терміну дії документів -->
-    <div v-if="showDocExpiryNotification" class="vacation-notification-overlay" @click="closeDocExpiryNotification">
-      <div class="vacation-notification-modal" @click.stop>
-        <div class="vacation-notification-header">
-          <h3>📋 Сповіщення про закінчення терміну дії документів</h3>
-          <button class="close-btn" @click="closeDocExpiryNotification">&times;</button>
-        </div>
-        <div class="vacation-notification-body">
-          <div v-if="docExpiryToday.length > 0" class="notification-section">
-            <p class="notification-message">⚠️ Термін дії сплив або спливає сьогодні:</p>
-            <ul class="vacation-employees-list">
-              <li v-for="(evt, idx) in docExpiryToday" :key="'doc-today-' + idx" class="vacation-employee starting">
-                <div class="employee-info">
-                  <span class="employee-name">{{ docExpiryEmoji(evt) }} {{ evt.name }}</span>
-                </div>
-                <div class="status-details">
-                  <span class="status-badge">{{ evt.document_label }}</span>
-                  <span class="vacation-end-date">{{ formatEventDate(evt.expiry_date) }}</span>
-                </div>
-              </li>
-            </ul>
-          </div>
-          <div v-if="docExpiryWeek.length > 0" class="notification-section">
-            <p class="notification-message">📄 Термін дії спливає найближчим часом:</p>
-            <ul class="vacation-employees-list">
-              <li v-for="(evt, idx) in docExpiryWeek" :key="'doc-week-' + idx" class="vacation-employee returning">
-                <div class="employee-info">
-                  <span class="employee-name">📄 {{ evt.name }}</span>
-                </div>
-                <div class="status-details">
-                  <span class="status-badge">{{ evt.document_label }}</span>
-                  <span class="vacation-end-date">{{ formatEventDate(evt.expiry_date) }}</span>
-                </div>
-              </li>
-            </ul>
-          </div>
-        </div>
-        <div class="vacation-notification-footer">
-          <button class="primary" @click="closeDocExpiryNotification">Зрозуміло</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Уведомление про дні народження -->
-    <div v-if="showBirthdayNotification" class="vacation-notification-overlay" @click="closeBirthdayNotification">
-      <div class="vacation-notification-modal" @click.stop>
-        <div class="vacation-notification-header">
-          <h3>🎂 Сповіщення про дні народження</h3>
-          <button class="close-btn" @click="closeBirthdayNotification">&times;</button>
-        </div>
-        <div class="vacation-notification-body">
-          <div v-if="birthdayToday.length > 0" class="notification-section">
-            <p class="notification-message">🎂 Сьогодні день народження:</p>
-            <ul class="vacation-employees-list">
-              <li v-for="(evt, idx) in birthdayToday" :key="'bday-today-' + idx" class="vacation-employee starting">
-                <div class="employee-info">
-                  <span class="employee-name">🎂 {{ evt.employee_name }}</span>
-                </div>
-                <div class="status-details">
-                  <span class="status-badge">{{ evt.age }} років</span>
-                  <span class="vacation-end-date">{{ formatEventDate(evt.current_year_birthday) }}</span>
-                </div>
-              </li>
-            </ul>
-          </div>
-          <div v-if="birthdayNext7Days.length > 0" class="notification-section">
-            <p class="notification-message">🎉 Найближчі дні народження:</p>
-            <ul class="vacation-employees-list">
-              <li v-for="(evt, idx) in birthdayNext7Days" :key="'bday-week-' + idx" class="vacation-employee returning">
-                <div class="employee-info">
-                  <span class="employee-name">🎉 {{ evt.employee_name }}</span>
-                </div>
-                <div class="status-details">
-                  <span class="status-badge">{{ evt.age }} років</span>
-                  <span class="vacation-end-date">{{ formatEventDate(evt.current_year_birthday) }}</span>
-                </div>
-              </li>
-            </ul>
-          </div>
-        </div>
-        <div class="vacation-notification-footer">
-          <button class="primary" @click="closeBirthdayNotification">Зрозуміло</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Уведомление про вихід на пенсію -->
-    <div v-if="showRetirementNotification" class="vacation-notification-overlay" @click="closeRetirementNotification">
-      <div class="vacation-notification-modal" @click.stop>
-        <div class="vacation-notification-header">
-          <h3>👴 Сповіщення про вихід на пенсію</h3>
-          <button class="close-btn" @click="closeRetirementNotification">&times;</button>
-        </div>
-        <div class="vacation-notification-body">
-          <div v-if="retirementToday.length > 0" class="notification-section">
-            <p class="notification-message">👴 Виходять на пенсію сьогодні:</p>
-            <ul class="vacation-employees-list">
-              <li v-for="(evt, idx) in retirementToday" :key="'retire-today-' + idx" class="vacation-employee starting">
-                <div class="employee-info">
-                  <span class="employee-name">👴 {{ evt.employee_name }}</span>
-                </div>
-                <div class="status-details">
-                  <span class="status-badge">{{ evt.age }} років</span>
-                  <span class="vacation-end-date">{{ formatEventDate(evt.retirement_date) }}</span>
-                </div>
-              </li>
-            </ul>
-          </div>
-          <div v-if="retirementThisMonth.length > 0" class="notification-section">
-            <p class="notification-message">ℹ️ Виходять на пенсію цього місяця:</p>
-            <ul class="vacation-employees-list">
-              <li v-for="(evt, idx) in retirementThisMonth" :key="'retire-month-' + idx" class="vacation-employee returning">
-                <div class="employee-info">
-                  <span class="employee-name">ℹ️ {{ evt.employee_name }}</span>
-                </div>
-                <div class="status-details">
-                  <span class="status-badge">{{ evt.age }} років</span>
-                  <span class="vacation-end-date">{{ formatEventDate(evt.retirement_date) }}</span>
-                </div>
-              </li>
-            </ul>
-          </div>
-        </div>
-        <div class="vacation-notification-footer">
-          <button class="primary" @click="closeRetirementNotification">Зрозуміло</button>
-        </div>
-      </div>
-    </div>
-
     <!-- Попап зміни статусу -->
     <div v-if="showStatusChangePopup" class="vacation-notification-overlay" @click="closeStatusChangePopup">
       <div class="vacation-notification-modal" @click.stop>
@@ -2189,161 +1468,7 @@ onUnmounted(() => {
       </header>
 
       <!-- Режим Dashboard -->
-      <div v-if="currentView === 'dashboard'" class="dashboard">
-        <div v-if="loading" class="status-bar" style="justify-content: center; padding: 24px;">
-          <span>Завантаження...</span>
-        </div>
-        <div class="stats-grid">
-          <div class="stat-card-wrap">
-            <div class="stat-card" :class="{ expanded: expandedCard === 'total' }"
-                 style="--card-color: #E0E0E0" @click="toggleStatCard('total')">
-              <div class="stat-card-header">
-                <div>
-                  <div class="stat-card-number">{{ dashboardStats.total }}</div>
-                  <div class="stat-card-label">Всього</div>
-                </div>
-                <span class="stat-card-toggle">{{ expandedCard === 'total' ? '▲' : '▼' }}</span>
-              </div>
-            </div>
-            <div class="inline-expand" :class="{ open: expandedCard === 'total' }">
-              <div class="inline-expand-list">
-                <div v-if="expandedEmployees.length === 0" class="inline-expand-empty">Немає працівників</div>
-                <div v-for="emp in expandedEmployees" :key="emp.employee_id" class="inline-expand-item" @click.stop="openEmployeeCard(emp.employee_id)">
-                  {{ [emp.last_name, emp.first_name, emp.middle_name].filter(Boolean).join(' ') }}
-                </div>
-              </div>
-            </div>
-          </div>
-          <div
-            v-for="(stat, idx) in dashboardStats.statusCounts"
-            :key="stat.label"
-            class="stat-card-wrap"
-          >
-            <div
-              class="stat-card"
-              :class="{ expanded: expandedCard === stat.label }"
-              :style="{ '--card-color': statusCardColor(idx) }"
-              @click="toggleStatCard(stat.label)"
-            >
-              <div class="stat-card-header">
-                <div>
-                  <div class="stat-card-number">{{ stat.count }}</div>
-                  <div class="stat-card-label">{{ stat.label }}</div>
-                </div>
-                <span class="stat-card-toggle">{{ expandedCard === stat.label ? '▲' : '▼' }}</span>
-              </div>
-            </div>
-            <div class="inline-expand" :class="{ open: expandedCard === stat.label }">
-              <div class="inline-expand-list">
-                <div v-if="expandedEmployees.length === 0" class="inline-expand-empty">Немає працівників</div>
-                <div v-for="emp in expandedEmployees" :key="emp.employee_id" class="inline-expand-item" @click.stop="openEmployeeCard(emp.employee_id)">
-                  {{ [emp.last_name, emp.first_name, emp.middle_name].filter(Boolean).join(' ') }}
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="stat-card-wrap">
-            <div class="stat-card" :class="{ expanded: expandedCard === 'other' }"
-                 style="--card-color: var(--color-status-inactive)" @click="toggleStatCard('other')">
-              <div class="stat-card-header">
-                <div>
-                  <div class="stat-card-number">{{ dashboardStats.other }}</div>
-                  <div class="stat-card-label">Інше</div>
-                </div>
-                <span class="stat-card-toggle">{{ expandedCard === 'other' ? '▲' : '▼' }}</span>
-              </div>
-            </div>
-            <div class="inline-expand" :class="{ open: expandedCard === 'other' }">
-              <div class="inline-expand-list">
-                <div v-if="expandedEmployees.length === 0" class="inline-expand-empty">Немає працівників</div>
-                <div v-for="emp in expandedEmployees" :key="emp.employee_id" class="inline-expand-item" @click.stop="openEmployeeCard(emp.employee_id)">
-                  {{ [emp.last_name, emp.first_name, emp.middle_name].filter(Boolean).join(' ') }}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="timeline-grid">
-        <!-- Timeline: Сьогодні -->
-        <div class="timeline-card">
-          <div class="timeline-title">Сьогодні</div>
-          <div v-if="dashboardEvents.today.length === 0" class="timeline-empty">
-            Нічого термінового
-          </div>
-          <div v-for="event in dashboardEvents.today" :key="event.employee_id + event.type + (event.document_field || '')" class="timeline-event">
-            <span class="timeline-emoji">{{ timelineEventEmoji(event) }}</span>
-            <span class="timeline-name timeline-link" @click="openEmployeeCard(event.employee_id)">{{ event.name }}</span>
-            <span class="timeline-desc">{{ timelineEventDesc(event) }}</span>
-          </div>
-        </div>
-        <!-- Timeline: Цього тижня -->
-        <div class="timeline-card">
-          <div class="timeline-title">Найближчі 7 днів</div>
-          <div v-if="dashboardEvents.thisWeek.length === 0" class="timeline-empty">
-            Немає запланованих подій
-          </div>
-          <div v-for="event in dashboardEvents.thisWeek" :key="event.employee_id + event.type + event.date + (event.document_field || '')" class="timeline-event">
-            <span class="timeline-date">{{ formatEventDate(event.date) }}</span>
-            <span class="timeline-days-badge">{{ daysFromNowLabel(event.date) }}</span>
-            <span class="timeline-emoji">{{ timelineEventEmoji(event) }}</span>
-            <span class="timeline-name timeline-link" @click="openEmployeeCard(event.employee_id)">{{ event.name }}</span>
-            <span class="timeline-desc">{{ timelineEventDesc(event) }}</span>
-          </div>
-        </div>
-        </div>
-        <!-- Прострочені документи -->
-        <div class="timeline-card" style="margin-top: 1rem;">
-          <div class="timeline-title">Прострочені документи</div>
-          <div v-if="dashboardOverdueEvents.length === 0" class="timeline-empty">
-            Немає прострочених документів
-          </div>
-          <div v-for="event in dashboardOverdueEvents" :key="event.employee_id + event.document_field" class="timeline-event">
-            <span class="timeline-emoji">⚠️</span>
-            <span class="timeline-name timeline-link" @click="openEmployeeCard(event.employee_id)">{{ event.name }}</span>
-            <span class="timeline-desc">{{ event.document_label }} (закінчився {{ formatEventDate(event.expiry_date) }})</span>
-          </div>
-        </div>
-        <!-- Швидкі звіти по статусах -->
-        <div class="report-section">
-          <div class="report-buttons">
-            <button class="report-btn" :class="{ active: activeReport === 'current' }" @click="toggleReport('current')">
-              Хто відсутній зараз<span v-if="activeReport === 'current'"> ({{ absentEmployeesCount }})</span>
-            </button>
-            <button class="report-btn" :class="{ active: activeReport === 'month' }" @click="toggleReport('month')">
-              Зміни статусів цього місяця<span v-if="activeReport === 'month'"> ({{ statusChangesThisMonthCount }})</span>
-            </button>
-          </div>
-          <div v-if="activeReport && !reportLoading" class="report-result">
-            <div v-if="reportData.length === 0" class="report-empty">
-              {{ activeReport === 'current' ? 'Наразі всі працюють' : 'Немає змін статусів цього місяця' }}
-            </div>
-            <table v-else class="report-table">
-              <thead>
-                <tr>
-                  <th>ПІБ</th>
-                  <th>Статус</th>
-                  <th>Початок</th>
-                  <th>Закінчення</th>
-                  <th>Днів</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="row in reportData" :key="row.employee_id">
-                  <td><span class="report-name-link" @click="openEmployeeCard(row.employee_id)">{{ row.name }}</span></td>
-                  <td>{{ row.status_type }}</td>
-                  <td>{{ formatEventDate(row.status_start_date) }}</td>
-                  <td>{{ formatEventDate(row.status_end_date) }}</td>
-                  <td>{{ row.days }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <div v-if="reportLoading" class="report-empty">Завантаження...</div>
-        </div>
-        <div v-if="lastUpdated" class="dashboard-footer">
-          Оновлено: {{ formattedLastUpdated }}
-        </div>
-      </div>
+      <DashboardView v-if="currentView === 'dashboard'" />
 
       <!-- Режим карточек -->
       <div v-else-if="currentView === 'cards'" class="layout">
