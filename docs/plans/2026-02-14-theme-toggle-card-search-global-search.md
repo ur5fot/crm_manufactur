@@ -43,13 +43,13 @@ This plan implements three UI enhancements: dark/light theme toggle, field searc
 **Files:**
 - Modify: `client/src/App.vue`
 
-- [ ] Add cardSearchTerm ref in App.vue script section
-- [ ] Add filteredEmployeesForCards computed property (filters employees list by cardSearchTerm across all text fields)
-- [ ] Add search input in cards view sidebar before employee list (line ~3028, styled like existing search inputs)
-- [ ] Update employee list to use filteredEmployeesForCards instead of employees
-- [ ] Add clear search button (X icon) that appears when cardSearchTerm is not empty
-- [ ] Write E2E test in tests/e2e/card-search.spec.js (navigate to cards, enter search term, verify filtered results, clear search)
-- [ ] Run full E2E test suite with npm run test:e2e - must pass
+- [x] Add cardSearchTerm ref in App.vue script section
+- [x] Add filteredEmployeesForCards computed property (filters employees list by cardSearchTerm across all text fields)
+- [x] Add search input in cards view sidebar before employee list (line ~3028, styled like existing search inputs)
+- [x] Update employee list to use filteredEmployeesForCards instead of employees
+- [x] Add clear search button (X icon) that appears when cardSearchTerm is not empty
+- [x] Write E2E test in tests/e2e/card-search.spec.js (navigate to cards, enter search term, verify filtered results, clear search)
+- [x] Run full E2E test suite with npm run test:e2e - must pass
 
 ### Task 3: Implement global search API endpoint
 

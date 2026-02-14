@@ -141,6 +141,7 @@ const filterConditionOptions = (filter) => {
 const employees = ref([]);
 const selectedId = ref("");
 const searchTerm = ref("");
+const cardSearchTerm = ref("");
 const isCreatingNew = ref(false); // Flag to prevent auto-load when creating new employee
 const loading = ref(false);
 const saving = ref(false);
@@ -744,6 +745,23 @@ const filteredEmployees = computed(() => {
   }
 
   return result;
+});
+
+const filteredEmployeesForCards = computed(() => {
+  const query = cardSearchTerm.value.trim().toLowerCase();
+  if (!query) return employees.value;
+
+  return employees.value.filter((employee) => {
+    for (const field of allFieldsSchema.value) {
+      if (field.type === 'file') continue;
+      const val = employee[field.key];
+      if (val && String(val).toLowerCase().includes(query)) return true;
+    }
+    const name = displayName(employee);
+    if (name.toLowerCase().includes(query)) return true;
+    if (employee.employee_id && String(employee.employee_id).toLowerCase().includes(query)) return true;
+    return false;
+  });
 });
 
 const isNew = computed(() => !form.employee_id);
@@ -2862,18 +2880,28 @@ onUnmounted(() => {
             </div>
             <div class="status-bar">
               <span v-if="loading">Завантаження...</span>
+              <span v-else-if="cardSearchTerm.trim()">{{ filteredEmployeesForCards.length }} з {{ employees.length }}</span>
               <span v-else>{{ employees.length }} всього</span>
             </div>
           </div>
-          <input
-            v-model="searchTerm"
-            class="search-input"
-            type="search"
-            placeholder="Пошук за ПІБ, підрозділом або ID"
-          />
+          <div class="card-search-wrapper">
+            <input
+              v-model="cardSearchTerm"
+              class="search-input"
+              type="search"
+              placeholder="Пошук за будь-яким полем"
+            />
+            <button
+              v-if="cardSearchTerm"
+              class="card-search-clear"
+              type="button"
+              @click="cardSearchTerm = ''"
+              title="Очистити пошук"
+            >&times;</button>
+          </div>
           <div class="employee-list">
             <div
-              v-for="(employee, index) in filteredEmployees"
+              v-for="(employee, index) in filteredEmployeesForCards"
               :key="employee.employee_id"
               class="employee-card"
               :class="{ active: employee.employee_id === selectedId }"
