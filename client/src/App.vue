@@ -205,7 +205,7 @@ function switchView(view) {
   if (view === 'dashboard') {
     router.push({ name: 'dashboard' });
   } else if (view === 'cards') {
-    router.push({ name: 'cards' });
+    router.push(selectedId.value ? { name: 'cards', params: { id: selectedId.value } } : { name: 'cards' });
   } else if (view === 'table') {
     router.push({ name: 'table' });
   } else if (view === 'reports') {
@@ -3783,10 +3783,10 @@ onUnmounted(() => {
                 </tr>
               </thead>
               <tbody>
-                <template v-for="group in ['fields', 'declension', 'declension_fields', 'special']" :key="group">
+                <template v-for="group in ['fields', 'declension', 'declension_fields', 'special', 'case_variants']" :key="group">
                   <tr v-if="filteredPlaceholders.some(p => p.group === group)" class="placeholder-group-header">
                     <td colspan="3">
-                      {{ group === 'fields' ? 'Поля співробітника' : group === 'declension' ? 'Відмінювання імен' : group === 'declension_fields' ? 'Відмінювання посади та звання' : 'Спеціальні' }}
+                      {{ group === 'fields' ? 'Поля співробітника' : group === 'declension' ? 'Відмінювання імен' : group === 'declension_fields' ? 'Відмінювання посади та звання' : group === 'case_variants' ? 'Варіанти регістру' : 'Спеціальні' }}
                     </td>
                   </tr>
                   <tr

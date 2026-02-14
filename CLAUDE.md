@@ -105,7 +105,7 @@ crm_manufactur/
 │
 ├── files/                      # Uploaded and generated files
 │   ├── templates/              # Template DOCX files (template_{id}_{timestamp}.docx)
-│   ├── documents/              # Generated DOCX files (TemplateName_empXXX_{timestamp}.docx)
+│   ├── documents/              # Generated DOCX files (TemplateName_LastName_empXXX_{timestamp}.docx)
 │   └── employee_*/             # Employee-specific document folders
 │
 ├── docs/                       # Documentation and planning
@@ -168,12 +168,14 @@ These locks ensure that only one write operation occurs at a time per file, prev
 - References DOCX files in files/templates/
 - Soft delete: active='yes'/'no'
 - Auto-increment template_id
+- Gitignored — auto-created with headers by `ensureCsvFile()` on first read
 
 **generated_documents.csv**
 - Records of all generated documents
 - Links to templates and employees
 - Stores generation timestamp and data snapshot
 - Document ID for tracking and download
+- Gitignored — auto-created with headers by `ensureCsvFile()` on first read
 
 **logs.csv**
 - Audit trail for all operations (create, update, delete, import, export, generate)
@@ -205,8 +207,8 @@ Template DOCX files uploaded by users:
 ### Generated Documents (files/documents/)
 
 Documents generated from templates:
-- Naming convention: `{TemplateName}_emp{employee_id}_{timestamp}.docx`
-- Example: Contract_emp123_1707845123456.docx
+- Naming convention: `{TemplateName}_{LastName}_{employee_id}_{timestamp}.docx`
+- Example: Contract_Петренко_123_1707845123456.docx
 - Files are never deleted, only references in generated_documents.csv
 - Used for document history and compliance
 
@@ -784,7 +786,8 @@ app.post("/api/templates/:id/generate", async (req, res) => {
 
   // Generate unique filename
   const sanitizedName = template.template_name.replace(/[^a-zA-Z0-9а-яА-ЯіїєґІЇЄҐ]/g, '_');
-  const outputFilename = `${sanitizedName}_emp${employeeId}_${timestamp}.docx`;
+  const sanitizedLastName = (employee.last_name || '').replace(/[^a-zA-Z0-9а-яА-ЯіїєґІЇЄҐ]/g, '_');
+  const outputFilename = `${sanitizedName}_${sanitizedLastName}_${employeeId}_${timestamp}.docx`;
   const outputPath = path.join(FILES_DIR, 'documents', outputFilename);
 
   // Generate DOCX
@@ -1963,7 +1966,7 @@ All API endpoints are served under the `/api` prefix:
 - Merges employee data with custom_data
 - Replaces placeholders in template DOCX
 - Adds special placeholders: {current_date}, {current_datetime}
-- Saves generated document to: `files/documents/{TemplateName}_emp{id}_{timestamp}.docx`
+- Saves generated document to: `files/documents/{TemplateName}_{LastName}_{id}_{timestamp}.docx`
 - Records generation in generated_documents.csv with data snapshot
 - Creates audit log entry
 - Returns: Document object with download URL
@@ -2405,6 +2408,16 @@ The system generates 12 additional declined placeholders (6 cases × 2 fields) f
 **Placeholder Reference Page Groups**:
 - Name declension placeholders displayed under "Відмінювання імен" group
 - Grade/position declension placeholders displayed under "Відмінювання посади та звання" group (separate section)
+- Case variant placeholders displayed under "case_variants" group
+
+**Uppercase and Capitalized Case Variants** (from docx-generator.js):
+
+The system automatically generates two case variants for every non-empty text placeholder:
+
+- `{key_upper}` — all characters uppercase via `.toUpperCase()` (e.g., `{full_name_upper}` → "ІВАН ПЕТРЕНКО")
+- `{key_cap}` — first character uppercase via `.charAt(0).toUpperCase() + .slice(1)` (e.g., `{full_name_cap}` → "Іван петренко")
+
+Variants are generated for all prepared placeholders including employee fields, declension placeholders, and special placeholders (current_date, current_datetime). Empty values are skipped (no _upper/_cap variant created for empty strings). The variants are added last in prepareData(), after all other placeholders (employee data, declension, special) are assembled.
 
 **Data Preparation Pattern** (from docx-generator.js):
 ```javascript
@@ -2450,9 +2463,9 @@ The document generation workflow combines templates, employee data, and optional
 
 **Generated Document Filename**:
 ```
-{TemplateName}_emp{employee_id}_{timestamp}.docx
+{TemplateName}_{LastName}_{employee_id}_{timestamp}.docx
 ```
-Example: `Contract_emp123_1707845123456.docx`
+Example: `Contract_Петренко_123_1707845123456.docx`
 
 **Custom Data Pattern**:
 - User can override any employee field during generation
@@ -2944,8 +2957,8 @@ The application uses specific naming conventions for generated files to ensure u
 - One DOCX file per template (old file replaced on re-upload)
 
 **Generated Documents**:
-- Pattern: `{TemplateName}_emp{employee_id}_{timestamp}.docx`
-- Example: `Contract_emp123_1707845123456.docx`
+- Pattern: `{TemplateName}_{LastName}_{employee_id}_{timestamp}.docx`
+- Example: `Contract_Петренко_123_1707845123456.docx`
 - Location: `files/documents/`
 - Template name sanitized to remove special characters (replaced with underscores)
 - Sanitization regex: `/[^a-zA-Z0-9а-яА-ЯіїєґІЇЄҐ]/g` (alphanumeric + Ukrainian letters only)

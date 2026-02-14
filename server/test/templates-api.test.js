@@ -839,6 +839,79 @@ async function testConcurrentGeneration() {
   }
 }
 
+// Test 15: Generated document filename includes employee last_name
+async function testGenerateFilenameIncludesLastName() {
+  // Ensure test employee exists and get their data
+  const employeeId = await ensureTestEmployee();
+  const empResponse = await fetch(`${BASE_URL}/api/employees/${employeeId}`);
+  const empData = await empResponse.json();
+  const lastName = empData.last_name || empData.employee?.last_name || '';
+
+  if (!lastName) {
+    throw new Error('Test employee must have a last_name');
+  }
+
+  // Create template with file
+  const createResponse = await fetch(`${BASE_URL}/api/templates`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      template_name: 'Filename Test',
+      template_type: 'contract'
+    })
+  });
+  const createData = await createResponse.json();
+  createdTemplateIds.push(createData.template_id);
+
+  // Upload DOCX
+  const testDocxPath = path.join(__dirname, 'temp-filename-test.docx');
+  createTestDocx(testDocxPath, ['first_name', 'last_name']);
+  createdFiles.push(testDocxPath);
+
+  const formData = new FormData();
+  const fileBlob = new Blob([fs.readFileSync(testDocxPath)], {
+    type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  });
+  formData.append('file', fileBlob, 'test.docx');
+
+  await fetch(`${BASE_URL}/api/templates/${createData.template_id}/upload`, {
+    method: 'POST',
+    body: formData
+  });
+
+  // Generate document
+  const generateResponse = await fetch(`${BASE_URL}/api/templates/${createData.template_id}/generate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ employee_id: employeeId })
+  });
+
+  if (!generateResponse.ok) {
+    const errorText = await generateResponse.text();
+    throw new Error(`Generate failed: ${errorText}`);
+  }
+
+  const generateData = await generateResponse.json();
+  const filename = generateData.filename;
+
+  // Sanitize last name the same way the server does
+  const sanitizedLastName = lastName.replace(/[^a-zA-Z0-9а-яА-ЯіїєґІЇЄҐ]/g, '_');
+
+  if (!filename.includes(sanitizedLastName)) {
+    throw new Error(`Filename "${filename}" should include sanitized last_name "${sanitizedLastName}"`);
+  }
+
+  // Verify filename pattern: TemplateName_LastName_employeeId_timestamp.docx
+  const expectedPrefix = `Filename_Test_${sanitizedLastName}_${employeeId}_`;
+  if (!filename.startsWith(expectedPrefix)) {
+    throw new Error(`Filename "${filename}" should start with "${expectedPrefix}"`);
+  }
+
+  if (!filename.endsWith('.docx')) {
+    throw new Error(`Filename "${filename}" should end with .docx`);
+  }
+}
+
 // Cleanup function
 async function cleanup() {
   // Delete created template files
@@ -885,6 +958,7 @@ async function runAllTests() {
   await runTest('POST /api/templates/:id/generate validates employee_id', testGenerateValidatesEmployeeId);
   await runTest('POST /api/templates/:id/generate creates document record', testGenerateCreatesDocumentRecord);
   await runTest('Concurrent document generation doesn\'t corrupt CSV', testConcurrentGeneration);
+  await runTest('Generated document filename includes employee last_name', testGenerateFilenameIncludesLastName);
 
   // Cleanup
   await cleanup();

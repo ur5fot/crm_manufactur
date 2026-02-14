@@ -1100,6 +1100,23 @@ app.get("/api/placeholder-preview/:employeeId?", async (req, res) => {
       group: 'special'
     });
 
+    // Case variant placeholders (_upper and _cap for all text placeholders)
+    for (const p of [...placeholders]) {
+      const val = typeof p.value === 'string' ? p.value : '';
+      placeholders.push({
+        placeholder: p.placeholder.replace('}', '_upper}'),
+        label: `${p.label} (ВЕЛИКІ)`,
+        value: val.length > 0 ? val.toUpperCase() : '',
+        group: 'case_variants'
+      });
+      placeholders.push({
+        placeholder: p.placeholder.replace('}', '_cap}'),
+        label: `${p.label} (З великої)`,
+        value: val.length > 0 ? val.charAt(0).toUpperCase() + val.slice(1) : '',
+        group: 'case_variants'
+      });
+    }
+
     const employeeName = [employee.last_name, employee.first_name, employee.middle_name]
       .filter(Boolean).join(' ');
 
@@ -1484,7 +1501,10 @@ app.post("/api/templates/:id/generate", async (req, res) => {
     // Generate DOCX filename
     const timestamp = Date.now();
     const sanitizedName = template.template_name.replace(/[^a-zA-Z0-9а-яА-ЯіїєґІЇЄҐ]/g, '_');
-    const docxFilename = `${sanitizedName}_${employee_id}_${timestamp}.docx`;
+    const sanitizedLastName = (employee.last_name || '').replace(/[^a-zA-Z0-9а-яА-ЯіїєґІЇЄҐ]/g, '_');
+    const docxFilename = sanitizedLastName
+      ? `${sanitizedName}_${sanitizedLastName}_${employee_id}_${timestamp}.docx`
+      : `${sanitizedName}_${employee_id}_${timestamp}.docx`;
 
     // Paths with path traversal protection
     const templatePath = path.join(FILES_DIR, 'templates', template.docx_filename);
