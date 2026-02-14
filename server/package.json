@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "node --watch src/index.js",
     "start": "node src/index.js",
-    "test": "node test/config.test.js && node test/upload-limit.test.js && node test/docx-generator.test.js && node test/templates-api.test.js && node test/declension.test.js"
+    "test": "node test/config.test.js && node test/upload-limit.test.js && node test/docx-generator.test.js && node test/templates-api.test.js && node test/declension.test.js && node test/retirement-api.test.js && node test/retirement-events.test.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
