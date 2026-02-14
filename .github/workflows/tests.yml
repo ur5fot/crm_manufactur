@@ -53,6 +53,7 @@ jobs:
           node test/upload-limit.test.js
           node test/docx-generator.test.js
           node test/declension.test.js
+          node test/retirement-events.test.js
 
       - name: Start backend server
         working-directory: ./server
@@ -69,31 +70,44 @@ jobs:
       - name: Wait for servers to be ready
         run: |
           echo "Waiting for backend..."
+          backend_ready=false
           for i in {1..30}; do
             if curl -s http://localhost:3000/api/employees > /dev/null; then
               echo "Backend ready"
+              backend_ready=true
               break
             fi
             echo "Attempt $i: Backend not ready yet..."
             sleep 2
           done
+          if [ "$backend_ready" = false ]; then
+            echo "ERROR: Backend failed to start after 30 attempts"
+            cat server.log || true
+            exit 1
+          fi
 
           echo "Waiting for frontend..."
+          frontend_ready=false
           for i in {1..30}; do
             if curl -s http://localhost:5173 > /dev/null; then
               echo "Frontend ready"
+              frontend_ready=true
               break
             fi
             echo "Attempt $i: Frontend not ready yet..."
             sleep 2
           done
+          if [ "$frontend_ready" = false ]; then
+            echo "ERROR: Frontend failed to start after 30 attempts"
+            cat client.log || true
+            exit 1
+          fi
 
       - name: Run API integration tests
         working-directory: ./server
         run: |
           node test/templates-api.test.js
           node test/retirement-api.test.js
-          node test/retirement-events.test.js
 
       - name: Run Playwright tests
         run: npm run test:e2e
