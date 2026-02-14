@@ -1,11 +1,9 @@
 import express from "express";
 import cors from "cors";
-import multer from "multer";
 import { parse } from "csv-parse/sync";
 import path from "path";
 import fs from "fs";
 import fsPromises from "fs/promises";
-import { execFile } from "child_process";
 import {
   ensureDataDirs,
   DATA_DIR,
@@ -39,6 +37,8 @@ import {
 import { mergeRow, normalizeRows } from "./csv.js";
 import { extractPlaceholders, generateDocx } from "./docx-generator.js";
 import { generateDeclinedNames, generateDeclinedGradePosition } from "./declension.js";
+import { getOpenCommand, openFolder, getNextId, normalizeEmployeeInput } from "./utils.js";
+import { createImportUpload, createEmployeeFileUpload, createTemplateUpload } from "./upload-config.js";
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -67,64 +67,7 @@ app.use("/files", express.static(FILES_DIR));
 // SECURITY: DATA_DIR static serving removed - sensitive CSV files should not be publicly accessible
 // app.use("/data", express.static(DATA_DIR));
 
-const importUpload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: parseInt(appConfig.max_file_upload_mb || 10) * 1024 * 1024 }
-});
-
-function getOpenCommand() {
-  if (process.platform === "darwin") {
-    return "open";
-  }
-  if (process.platform === "win32") {
-    return "explorer";
-  }
-  return "xdg-open";
-}
-
-function openFolder(targetPath) {
-  // SECURITY: Validate path is within allowed directories to prevent command injection
-  const resolvedPath = path.resolve(targetPath);
-  const allowedDirs = [path.resolve(FILES_DIR), path.resolve(DATA_DIR)];
-
-  if (!allowedDirs.some(dir => resolvedPath.startsWith(dir + path.sep) || resolvedPath === dir)) {
-    throw new Error('Path outside allowed directories');
-  }
-
-  const command = getOpenCommand();
-  return new Promise((resolve, reject) => {
-    execFile(command, [resolvedPath], (error) => {
-      if (error) {
-        // Graceful degradation: в headless окружении команда может провалиться
-        // но это не критическая ошибка - папка создана, API должен вернуть успех
-        console.warn(`Could not open folder in file manager (expected in headless environments): ${error.message}`);
-        resolve();
-        return;
-      }
-      resolve();
-    });
-  });
-}
-
-function getNextId(items, idField) {
-  if (items.length === 0) {
-    return "1";
-  }
-  const ids = items
-    .map((item) => parseInt(item[idField], 10))
-    .filter((id) => !isNaN(id));
-  if (ids.length === 0) {
-    return "1";
-  }
-  // Use reduce to avoid stack overflow with large arrays (Math.max spread has ~65k argument limit)
-  const maxId = ids.reduce((max, id) => Math.max(max, id), 0);
-  return String(maxId + 1);
-}
-
-function normalizeEmployeeInput(payload) {
-  const input = payload && typeof payload === "object" ? payload : {};
-  return normalizeRows(getEmployeeColumnsSync(), [input])[0];
-}
+const importUpload = createImportUpload(appConfig);
 
 app.get("/api/health", (req, res) => {
   res.json({ ok: true });
@@ -718,36 +661,7 @@ app.delete("/api/employees/:id", async (req, res) => {
   }
 });
 
-const ALLOWED_FILE_EXTENSIONS = ['.pdf', '.jpg', '.jpeg', '.png', '.gif', '.webp'];
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const employeeId = req.params.id;
-    const targetDir = path.join(FILES_DIR, `employee_${employeeId}`);
-    fs.mkdir(targetDir, { recursive: true }, (error) => {
-      cb(error, targetDir);
-    });
-  },
-  filename: (req, file, cb) => {
-    // Используем временное имя, потому что req.body еще не доступен
-    const ext = path.extname(file.originalname).toLowerCase() || ".pdf";
-    const tempName = `temp_${Date.now()}${ext}`;
-    cb(null, tempName);
-  }
-});
-
-const upload = multer({
-  storage,
-  limits: { fileSize: parseInt(appConfig.max_file_upload_mb || 10) * 1024 * 1024 },
-  fileFilter: (_req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    if (ALLOWED_FILE_EXTENSIONS.includes(ext)) {
-      cb(null, true);
-    } else {
-      cb(new Error("Дозволені лише файли PDF та зображення (jpg, png, gif, webp)"));
-    }
-  }
-});
+const upload = createEmployeeFileUpload(appConfig);
 
 app.post("/api/employees/:id/files", (req, res, next) => {
   upload.single("file")(req, res, (err) => {
@@ -1288,32 +1202,7 @@ app.delete("/api/templates/:id", async (req, res) => {
   }
 });
 
-// Template DOCX upload
-const templateUpload = multer({
-  storage: multer.diskStorage({
-    destination: (req, file, cb) => {
-      const templatesDir = path.join(FILES_DIR, 'templates');
-      fs.mkdir(templatesDir, { recursive: true }, (error) => {
-        cb(error, templatesDir);
-      });
-    },
-    filename: (req, file, cb) => {
-      const templateId = req.params.id;
-      const timestamp = Date.now();
-      const ext = path.extname(file.originalname).toLowerCase();
-      cb(null, `template_${templateId}_${timestamp}${ext}`);
-    }
-  }),
-  limits: { fileSize: parseInt(appConfig.max_file_upload_mb || 10) * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    if (ext !== '.docx') {
-      cb(new Error('Тільки DOCX файли дозволені'));
-      return;
-    }
-    cb(null, true);
-  }
-});
+const templateUpload = createTemplateUpload(appConfig);
 
 app.post("/api/templates/:id/upload", templateUpload.single('file'), async (req, res) => {
   try {
