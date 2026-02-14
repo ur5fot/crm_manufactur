@@ -101,13 +101,13 @@
 ### Phase 2: Frontend View Extraction
 
 ### Task 9: Set up frontend module structure and extract first view (Logs)
-- [ ] Create `client/src/views/` directory
-- [ ] Create `client/src/composables/` directory
-- [ ] Extract `LogsView.vue` from App.vue — move logs-related state (`logs`, `logsLoading`, `logsOffset`, `logsLimit`, `logsTotal`) and methods (`loadLogs`, pagination) into the component
-- [ ] Update `client/src/main.js` — change logs route to point to `LogsView` component instead of `App`
-- [ ] Remove logs-related code from App.vue (state, methods, template section at line ~3815)
-- [ ] Verify logs E2E test passes (`tests/e2e/logs.spec.js`)
-- [ ] Run all tests — must pass before next task
+- [x] Create `client/src/views/` directory
+- [x] Create `client/src/composables/` directory
+- [x] Extract `LogsView.vue` from App.vue — move logs-related state (`logs`, `logsLoading`, `logsOffset`, `logsLimit`, `logsTotal`) and methods (`loadLogs`, pagination) into the component
+- [x] Update `client/src/main.js` — change logs route to point to `LogsView` component instead of `App`
+- [x] Remove logs-related code from App.vue (state, methods, template section at line ~3815)
+- [x] Verify logs E2E test passes (`tests/e2e/logs.spec.js`)
+- [x] Run all tests — must pass before next task
 
 ### Task 10: Extract ImportView
 - [ ] Create `client/src/views/ImportView.vue` — move import-related state and methods from App.vue
