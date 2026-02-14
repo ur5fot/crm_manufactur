@@ -27,7 +27,7 @@ A comprehensive CRM system for managing employee records, documents, and templat
 **Frontend:**
 - Vue.js 3
 - Bootstrap for UI components
-- Axios for API communication
+- Native fetch API for API communication
 
 **Testing:**
 - Playwright for E2E tests
@@ -344,15 +344,40 @@ Tests run automatically via GitHub Actions on push to `master`/`feature/*` branc
 .
 ├── client/                 # Vue.js frontend
 │   ├── src/
-│   │   ├── App.vue        # Main app component
-│   │   └── api.js         # API client
+│   │   ├── App.vue        # App shell (topbar navigation + view switching)
+│   │   ├── api.js         # API client
+│   │   ├── main.js        # Vue app init + route definitions
+│   │   ├── views/         # View components (one per route)
+│   │   │   ├── DashboardView.vue
+│   │   │   ├── EmployeeCardsView.vue
+│   │   │   ├── TableView.vue
+│   │   │   ├── ReportsView.vue
+│   │   │   ├── TemplatesView.vue
+│   │   │   ├── DocumentHistoryView.vue
+│   │   │   ├── ImportView.vue
+│   │   │   ├── LogsView.vue
+│   │   │   └── PlaceholderReferenceView.vue
+│   │   └── composables/   # Shared Vue composition functions
+│   │       ├── useFieldsSchema.js
+│   │       └── useEmployeeForm.js
 │   └── package.json
 ├── server/                 # Node.js backend
 │   ├── src/
-│   │   ├── index.js       # Express server & API routes
+│   │   ├── index.js       # Express setup + route registration
 │   │   ├── store.js       # CSV data storage
 │   │   ├── docx-generator.js  # DOCX generation
-│   │   └── schema.js      # Employee field schema
+│   │   ├── schema.js      # Employee field schema
+│   │   ├── utils.js       # Utility functions
+│   │   ├── upload-config.js  # Multer file upload configuration
+│   │   └── routes/        # API route modules
+│   │       ├── dashboard.js
+│   │       ├── employees.js
+│   │       ├── employee-files.js
+│   │       ├── templates.js
+│   │       ├── documents.js
+│   │       ├── reports.js
+│   │       ├── logs.js
+│   │       └── misc.js
 │   ├── test/              # Unit & integration tests
 │   └── package.json
 ├── tests/
