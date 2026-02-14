@@ -1,5 +1,0 @@
-﻿config_key;config_value;config_description
-max_log_entries;1000;Maximum number of log entries before auto-cleanup triggers
-max_file_upload_mb;10;Maximum file upload size in megabytes
-retirement_age_years;60;Retirement age in years for auto-dismiss notification
-max_report_preview_rows;100;Maximum rows shown in report preview table

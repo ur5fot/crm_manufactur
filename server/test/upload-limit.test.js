@@ -16,10 +16,10 @@ const CONFIG_PATH = path.join(__dirname, '../../data/config.csv');
 async function testUploadLimit() {
   console.log('Testing upload limit configuration...');
 
-  try {
-    // Read original config
-    const originalConfig = await fs.promises.readFile(CONFIG_PATH, 'utf-8');
+  // Read original config before tests to ensure restoration
+  const originalConfig = await fs.promises.readFile(CONFIG_PATH, 'utf-8');
 
+  try {
     // Test with default value (10MB)
     console.log('\n1. Testing default value (10MB)...');
     let config = await loadConfig();
@@ -59,16 +59,15 @@ async function testUploadLimit() {
     }
     console.log(`✓ Large limit: ${config.max_file_upload_mb}MB = ${expectedBytes} bytes`);
 
-    // Restore original config
-    console.log('\n4. Restoring original config...');
-    await fs.promises.writeFile(CONFIG_PATH, originalConfig, 'utf-8');
-    console.log('✓ Original config restored');
-
     console.log('\n✅ All upload limit tests passed!');
     return true;
   } catch (error) {
     console.error('❌ Test failed:', error.message);
     return false;
+  } finally {
+    // Always restore original config, even if tests fail
+    await fs.promises.writeFile(CONFIG_PATH, originalConfig, 'utf-8');
+    console.log('✓ Original config restored');
   }
 }
 

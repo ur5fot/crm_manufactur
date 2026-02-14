@@ -1,0 +1,50 @@
+﻿field_order;field_name;field_label;field_type;field_options;show_in_table;field_group;editable_in_table
+1;employee_id;ID співробітника;text;;no;Особисті дані;no
+2;last_name;Прізвище;text;;yes;Особисті дані;yes
+3;first_name;Ім'я;text;;yes;Особисті дані;yes
+4;middle_name;По батькові;text;;yes;Особисті дані;yes
+5;birth_date;Дата народження;date;;no;Особисті дані;no
+6;employment_status;Статус роботи;select;Працює|Звільнений|Відпустка|Лікарняний|Відкомандирований;yes;Особисті дані;no
+7;additional_status;Додатковий статус;select;може працювати|Не може працювати;no;Особисті дані;no
+8;gender;Стать;select;Чоловіча|Жіноча;no;Особисті дані;no
+9;blood_group;Група крові;select;0(I) Rh+|0(I) Rh-|A(II) Rh+|A(II) Rh-|B(III) Rh+|B(III) Rh-|AB(IV) Rh+|AB(IV) Rh-;no;Особисті дані;no
+10;department;Підрозділ;text;;no;Посада та робота;no
+11;grade;Посада;text;;no;Посада та робота;no
+12;position;Звання;text;;no;Посада та робота;no
+13;specialty;Спеціальність;text;;no;Посада та робота;no
+14;work_state;Робочий стан;text;;yes;Посада та робота;yes
+15;work_type;Тип роботи;select;Часткова зайнятість|Контракт|Повна ставка;no;Посада та робота;no
+16;fit_status;Придатність;select;Придатний|Не придатний|Обмежено придатний;yes;Посада та робота;yes
+17;order_ref;Наказ;text;;no;Посада та робота;no
+18;location;Місцезнаходження;select;Дніпро|Запоріжжя|На виїзді;no;Локація;no
+19;residence_place;Місце проживання;text;;no;Локація;no
+20;registration_place;Місце реєстрації;text;;no;Локація;no
+21;email;Ел. пошта;email;;no;Контакти та освіта;no
+22;phone;Телефон;tel;;no;Контакти та освіта;no
+23;phone_note;Примітка до телефону;text;;no;Контакти та освіта;no
+24;education;Освіта;text;;no;Контакти та освіта;no
+25;salary_grid;Зарплатна сітка;text;;no;Оплата;no
+26;salary_amount;Оклад;number;;no;Оплата;no
+27;bank_name;Банк;text;;no;Оплата;no
+28;bank_card_number;Номер картки;text;;no;Оплата;no
+29;bank_iban;IBAN;text;;no;Оплата;no
+30;tax_id;ІПН;text;;no;Оплата;no
+31;personal_matter_file;Особова справа;file;;no;Документи;no
+32;medical_commission_file;Медична комісія;file;;no;Документи;no
+33;veterans_certificate_file;Посвідчення ветерана;file;;no;Документи;no
+34;driver_license_file;Водійське посвідчення;file;;no;Документи;no
+35;id_certificate_file;Посвідчення особи;file;;no;Документи;no
+36;foreign_passport_number;Номер закордонного паспорта;text;;no;Документи;no
+37;foreign_passport_file;Закордонний паспорт;file;;no;Документи;no
+38;criminal_record_file;Довідка про несудимість;file;;no;Документи;no
+39;military_id_file;Військовий квиток;file;;no;Документи;no
+40;medical_certificate_file;Медична довідка;file;;no;Документи;no
+41;insurance_file;Страховий поліс;file;;no;Документи;no
+42;education_diploma_file;Диплом про освіту;file;;no;Документи;no
+43;status_start_date;Дата початку статусу;date;;no;;no
+44;status_end_date;Дата завершення статусу;date;;no;;no
+45;notes;Примітка;textarea;;yes;Інше;yes
+46;indeclinable_name;Прізвище не склоняється;text;;no;;no
+47;indeclinable_first_name;Ім'я не склоняється;text;;no;;no
+48;indeclinable_grade;Посада не відмінюється;text;;no;;no
+49;indeclinable_position;Звання не відмінюється;text;;no;;no

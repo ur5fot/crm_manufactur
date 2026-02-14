@@ -322,17 +322,21 @@ npm run test:e2e -- templates-generation.spec.js
 
 ### Unit Tests
 
-Run server unit tests:
+Run server unit tests (no server required):
 ```bash
 cd server
 npm test
 ```
 
-Run specific test file:
+Run integration tests (requires running server on port 3000):
 ```bash
 cd server
-npm test -- docx-generator.test.js
+npm run test:integration
 ```
+
+### CI/CD
+
+Tests run automatically via GitHub Actions on push to `master`/`feature/*` branches and on PRs to `master`. The CI pipeline runs unit tests, integration tests, and Playwright E2E tests. See `.github/workflows/tests.yml` for details.
 
 ## Project Structure
 
