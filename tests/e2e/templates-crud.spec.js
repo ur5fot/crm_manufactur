@@ -2,7 +2,7 @@ const { test, expect } = require('@playwright/test');
 
 test.describe('Templates CRUD Operations', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('http://localhost:5173');
+    await page.goto('/');
 
     // Close any notification popups that might appear
     await page.waitForTimeout(1000);

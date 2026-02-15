@@ -3,7 +3,7 @@ const path = require('path');
 
 test.describe('Template DOCX Upload', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('http://localhost:5173');
+    await page.goto('/');
 
     // Close any notification popups
     await page.waitForTimeout(1000);

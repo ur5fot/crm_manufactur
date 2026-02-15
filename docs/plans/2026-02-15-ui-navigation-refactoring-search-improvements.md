@@ -133,12 +133,12 @@ Add new search input that filters visible form fields within the current employe
 - Modify: all test files in `tests/e2e/` with hardcoded localhost URLs
 - Modify: `playwright.config.js`
 
-- [ ] add baseURL to playwright.config.js use object with API and frontend base URLs
-- [ ] create test helper or config for API base URL (e.g., const API_URL = process.env.API_URL || 'http://localhost:3000')
-- [ ] search for all instances of 'http://localhost:3000' and 'http://localhost:5173' in tests
-- [ ] replace with config-based URLs or page.goto with relative paths
-- [ ] verify all E2E tests still pass with new URL pattern
-- [ ] run full E2E test suite - must pass
+- [x] add baseURL to playwright.config.js use object with API and frontend base URLs
+- [x] create test helper or config for API base URL (e.g., const API_URL = process.env.API_URL || 'http://localhost:3000')
+- [x] search for all instances of 'http://localhost:3000' and 'http://localhost:5173' in tests
+- [x] replace with config-based URLs or page.goto with relative paths
+- [x] verify all E2E tests still pass with new URL pattern
+- [x] run full E2E test suite - must pass
 
 ### Task 9: Refactor frontend code for maintainability
 

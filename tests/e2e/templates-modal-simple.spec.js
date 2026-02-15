@@ -2,7 +2,7 @@ const { test, expect } = require('@playwright/test');
 
 test.describe('Templates Modal - Simple Tests', () => {
   test('Modal відкривається і закривається', async ({ page }) => {
-    await page.goto('http://localhost:5173');
+    await page.goto('/');
 
     // Close any notification popups
     await page.waitForTimeout(500);
@@ -33,7 +33,7 @@ test.describe('Templates Modal - Simple Tests', () => {
   });
 
   test('Валідація обовязкових полів працює', async ({ page }) => {
-    await page.goto('http://localhost:5173');
+    await page.goto('/');
 
     // Close popups
     await page.waitForTimeout(500);
@@ -64,7 +64,7 @@ test.describe('Templates Modal - Simple Tests', () => {
   });
 
   test('Форма правильно заповнюється даними', async ({ page }) => {
-    await page.goto('http://localhost:5173');
+    await page.goto('/');
 
     // Close popups
     await page.waitForTimeout(500);

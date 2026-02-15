@@ -1,10 +1,11 @@
 const { test, expect } = require('@playwright/test');
 const fs = require('fs');
 const path = require('path');
+const { API_URL } = require('./test-config');
 
 test.describe('Document Generation E2E', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('http://localhost:5173');
+    await page.goto('/');
 
     // Close any notification popups
     await page.waitForTimeout(1000);
@@ -275,7 +276,7 @@ test.describe('Document Download E2E', () => {
 
       if (fileExists) {
         // Make GET request to download endpoint
-        const response = await request.get(`http://localhost:3000/api/documents/${documentId}/download`);
+        const response = await request.get(`${API_URL}/api/documents/${documentId}/download`);
 
         // Verify status code
         expect(response.status()).toBe(200);
@@ -308,7 +309,7 @@ test.describe('Document Download E2E', () => {
     const nonExistentId = '999999999';
 
     // Make GET request
-    const response = await request.get(`http://localhost:3000/api/documents/${nonExistentId}/download`);
+    const response = await request.get(`${API_URL}/api/documents/${nonExistentId}/download`);
 
     // Verify 404 status
     expect(response.status()).toBe(404);
@@ -348,7 +349,7 @@ test.describe('Document Download E2E', () => {
 
     try {
       // Make GET request
-      const response = await request.get(`http://localhost:3000/api/documents/${testDocId}/download`);
+      const response = await request.get(`${API_URL}/api/documents/${testDocId}/download`);
 
       // Verify 404 status
       expect(response.status()).toBe(404);

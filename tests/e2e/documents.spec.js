@@ -1,14 +1,13 @@
 const { test, expect } = require('@playwright/test');
 const path = require('path');
 const fs = require('fs');
+const { API_URL } = require('./test-config');
 
 test.describe('Document Upload Operations', () => {
   let employeeId;
-  const apiBaseUrl = 'http://localhost:3000';
-
-  test.beforeAll(async ({ request }) => {
+    test.beforeAll(async ({ request }) => {
     // Create a test employee for document operations
-    const response = await request.post(`${apiBaseUrl}/api/employees`, {
+    const response = await request.post(`${API_URL}/api/employees`, {
       data: {
         last_name: 'Документов',
         first_name: 'Тест',
@@ -25,13 +24,13 @@ test.describe('Document Upload Operations', () => {
   test.afterAll(async ({ request }) => {
     // Cleanup: delete test employee and files
     if (employeeId) {
-      await request.delete(`${apiBaseUrl}/api/employees/${employeeId}`);
+      await request.delete(`${API_URL}/api/employees/${employeeId}`);
     }
   });
 
   test('Загрузить документ с датами', async ({ page }) => {
     // Navigate to employee card
-    await page.goto(`http://localhost:5173/cards/${employeeId}`);
+    await page.goto(`/cards/${employeeId}`);
     await page.waitForLoadState('networkidle');
 
     // Dismiss any notification popups - aggressively close all overlays
@@ -126,7 +125,7 @@ test.describe('Document Upload Operations', () => {
     await expect(documentRow).toContainText('15.01.2033');
 
     // Verify file exists via API
-    const response = await page.request.get(`${apiBaseUrl}/api/employees/${employeeId}`);
+    const response = await page.request.get(`${API_URL}/api/employees/${employeeId}`);
     expect(response.ok()).toBeTruthy();
     const responseData = await response.json();
 
@@ -150,7 +149,7 @@ test.describe('Document Upload Operations', () => {
     const testFilePath = path.join(__dirname, '../fixtures/test-passport.pdf');
     const fileBuffer = fs.readFileSync(testFilePath);
 
-    const response = await page.request.post(`${apiBaseUrl}/api/employees/${employeeId}/files`, {
+    const response = await page.request.post(`${API_URL}/api/employees/${employeeId}/files`, {
       multipart: {
         file: {
           name: 'test-doc.pdf',
@@ -165,7 +164,7 @@ test.describe('Document Upload Operations', () => {
     expect(response.ok()).toBeTruthy();
 
     // Navigate to employee card
-    await page.goto(`http://localhost:5173/cards/${employeeId}`);
+    await page.goto(`/cards/${employeeId}`);
     await page.waitForLoadState('networkidle');
 
     // Dismiss any notification popups - aggressively close all overlays
@@ -232,7 +231,7 @@ test.describe('Document Upload Operations', () => {
     await page.waitForLoadState('networkidle');
 
     // Verify document removed from API
-    const checkResponse = await page.request.get(`${apiBaseUrl}/api/employees/${employeeId}`);
+    const checkResponse = await page.request.get(`${API_URL}/api/employees/${employeeId}`);
     expect(checkResponse.ok()).toBeTruthy();
     const checkData = await checkResponse.json();
     const employee = checkData.employee;
@@ -246,7 +245,7 @@ test.describe('Document Upload Operations', () => {
 
   test('Открыть папку сотрудника', async ({ page }) => {
     // Navigate to employee card
-    await page.goto(`http://localhost:5173/cards/${employeeId}`);
+    await page.goto(`/cards/${employeeId}`);
     await page.waitForLoadState('networkidle');
 
     // Dismiss any notification popups - aggressively close all overlays
@@ -303,7 +302,7 @@ test.describe('Document Upload Operations', () => {
     const testFilePath = path.join(__dirname, '../fixtures/test-passport.pdf');
     const fileBuffer = fs.readFileSync(testFilePath);
 
-    const response = await page.request.post(`${apiBaseUrl}/api/employees/${employeeId}/files`, {
+    const response = await page.request.post(`${API_URL}/api/employees/${employeeId}/files`, {
       multipart: {
         file: {
           name: 'test-passport.pdf',
@@ -318,14 +317,14 @@ test.describe('Document Upload Operations', () => {
     expect(response.ok()).toBeTruthy();
 
     // Get the uploaded file path
-    const employeeResponse = await page.request.get(`${apiBaseUrl}/api/employees/${employeeId}`);
+    const employeeResponse = await page.request.get(`${API_URL}/api/employees/${employeeId}`);
     const employeeData = await employeeResponse.json();
     const filePath = employeeData.employee.id_certificate_file;
     expect(filePath).toBeTruthy();
     expect(filePath).toContain('files/employee_');
 
     // Navigate to employee card
-    await page.goto(`http://localhost:5173/cards/${employeeId}`);
+    await page.goto(`/cards/${employeeId}`);
     await page.waitForLoadState('networkidle');
 
     // Dismiss any notification popups
@@ -359,7 +358,7 @@ test.describe('Document Upload Operations', () => {
     // 1. The button exists and is clickable
     // 2. The file path is correct in the backend
     // 3. The file is accessible directly via HTTP
-    const fileUrl = `${apiBaseUrl}/${filePath}`;
+    const fileUrl = `${API_URL}/${filePath}`;
     const fileResponse = await page.request.get(fileUrl);
     expect(fileResponse.ok()).toBeTruthy();
     expect(fileResponse.headers()['content-type']).toContain('pdf');

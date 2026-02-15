@@ -1,6 +1,7 @@
 const { test, expect } = require('@playwright/test');
 const path = require('path');
 const fs = require('fs');
+const { API_URL } = require('./test-config');
 
 /**
  * Dismiss any notification popups on the page
@@ -58,7 +59,7 @@ test.describe('CSV Import', () => {
 
   test('Импортировать валидный CSV', async ({ page }) => {
     // Get initial employee count from API
-    const initialResponse = await page.request.get('http://localhost:3000/api/employees');
+    const initialResponse = await page.request.get(`${API_URL}/api/employees`);
     const initialData = await initialResponse.json();
     const initialCount = initialData.employees.length;
 
@@ -99,7 +100,7 @@ test.describe('CSV Import', () => {
     await expect(table).toContainText('Українка');
 
     // Verify via API that employees were created
-    const finalResponse = await page.request.get('http://localhost:3000/api/employees');
+    const finalResponse = await page.request.get(`${API_URL}/api/employees`);
     const finalData = await finalResponse.json();
     expect(finalData.employees.length).toBe(initialCount + 3);
 

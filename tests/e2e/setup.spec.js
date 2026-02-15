@@ -1,8 +1,9 @@
 const { test, expect } = require('@playwright/test');
+const { API_URL } = require('./test-config');
 
 test.describe('Setup and Connectivity Tests', () => {
   test('Server responds to GET /api/employees', async ({ request }) => {
-    const response = await request.get('http://localhost:3000/api/employees');
+    const response = await request.get(`${API_URL}/api/employees`);
 
     expect(response.ok()).toBeTruthy();
     expect(response.status()).toBe(200);
@@ -13,7 +14,7 @@ test.describe('Setup and Connectivity Tests', () => {
   });
 
   test('Server responds to GET /api/fields-schema', async ({ request }) => {
-    const response = await request.get('http://localhost:3000/api/fields-schema');
+    const response = await request.get(`${API_URL}/api/fields-schema`);
 
     expect(response.ok()).toBeTruthy();
     expect(response.status()).toBe(200);
@@ -25,7 +26,7 @@ test.describe('Setup and Connectivity Tests', () => {
   });
 
   test('Client is accessible at localhost:5173', async ({ page }) => {
-    await page.goto('http://localhost:5173');
+    await page.goto('/');
 
     // Wait for Vue app to mount
     await page.waitForSelector('.app', { timeout: 5000 });
@@ -36,7 +37,7 @@ test.describe('Setup and Connectivity Tests', () => {
   });
 
   test('Client loads dashboard view', async ({ page }) => {
-    await page.goto('http://localhost:5173');
+    await page.goto('/');
 
     // Wait for dashboard to load
     await page.waitForSelector('.dashboard', { timeout: 5000 });
@@ -53,7 +54,7 @@ test.describe('Setup and Connectivity Tests', () => {
       { timeout: 10000 }
     );
 
-    await page.goto('http://localhost:5173/cards');
+    await page.goto('/cards');
 
     // Wait for API call to complete
     await apiResponsePromise;
