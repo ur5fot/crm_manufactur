@@ -248,6 +248,7 @@ export function registerTemplateRoutes(app, appConfig) {
 
       const filePath = path.join(FILES_DIR, 'templates', template.docx_filename);
       const allowedDir = path.join(FILES_DIR, 'templates');
+      const resolvedPath = path.resolve(filePath);
 
       if (!validatePath(filePath, allowedDir)) {
         res.status(403).json({ error: "Недопустимий шлях до файлу" });
@@ -291,6 +292,7 @@ export function registerTemplateRoutes(app, appConfig) {
 
       const filePath = path.join(FILES_DIR, 'templates', template.docx_filename);
       const allowedDir = path.join(FILES_DIR, 'templates');
+      const resolvedPath = path.resolve(filePath);
 
       if (!validatePath(filePath, allowedDir)) {
         res.status(403).json({ error: "Недопустимий шлях до файлу" });
