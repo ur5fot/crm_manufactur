@@ -116,7 +116,7 @@ watch(() => globalSearchTerm.value, (newTerm) => {
 });
 
 function onGlobalSearchFocus() {
-  if (globalSearchTerm.value.trim().length >= 2 && globalSearchHasResults.value) {
+  if (globalSearchTerm.value.trim().length >= SEARCH_MIN_LENGTH && globalSearchHasResults.value) {
     showGlobalSearchResults.value = true;
   }
 }

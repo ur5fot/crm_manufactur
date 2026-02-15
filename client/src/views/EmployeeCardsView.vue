@@ -677,7 +677,7 @@ onMounted(async () => {
 
   // Load employee if ID in route
   if (route.params.id) {
-    selectEmployee(route.params.id);
+    await selectEmployee(route.params.id);
   } else if (employees.value.length > 0 && !form.employee_id) {
     openEmployeeCard(employees.value[0].employee_id);
   }
