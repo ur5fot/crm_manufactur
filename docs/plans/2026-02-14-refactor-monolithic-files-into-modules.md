@@ -69,10 +69,10 @@
 - [x] Run all tests — must pass before next task
 
 ### Task 5: Extract employee file and import routes
-- [ ] Create `server/src/routes/employee-files.js` — export function registering: `POST /api/employees/:id/files`, `DELETE /api/employees/:id/files/:fieldName`, `POST /api/employees/:id/open-folder`, `POST /api/employees/import`, `GET /api/download/import-template`
-- [ ] Update `server/src/index.js` — remove extracted routes, call `registerEmployeeFileRoutes(app)`
-- [ ] Verify import and documents E2E tests pass (`tests/e2e/import.spec.js`, `tests/e2e/documents.spec.js`)
-- [ ] Run all tests — must pass before next task
+- [x] Create `server/src/routes/employee-files.js` — export function registering: `POST /api/employees/:id/files`, `DELETE /api/employees/:id/files/:fieldName`, `POST /api/employees/:id/open-folder`, `POST /api/employees/import`, `GET /api/download/import-template`
+- [x] Update `server/src/index.js` — remove extracted routes, call `registerEmployeeFileRoutes(app)`
+- [x] Verify import and documents E2E tests pass (`tests/e2e/import.spec.js`, `tests/e2e/documents.spec.js`)
+- [x] Run all tests — must pass before next task
 
 ### Task 6: Extract template routes
 - [ ] Create `server/src/routes/templates.js` — export function registering: `GET /api/templates`, `GET /api/templates/:id`, `POST /api/templates`, `PUT /api/templates/:id`, `DELETE /api/templates/:id`, `POST /api/templates/:id/upload`, `POST /api/templates/:id/open-file`, `POST /api/templates/:id/reextract`, `POST /api/templates/:id/generate`
