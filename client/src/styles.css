@@ -122,7 +122,8 @@ a {
   position: relative;
   padding: 32px;
   min-height: 100vh;
-  overflow: hidden;
+  overflow-x: clip;
+  overflow-y: visible;
 }
 
 .app::before,
@@ -171,6 +172,8 @@ a {
   box-shadow: var(--shadow);
   backdrop-filter: blur(14px);
   animation: fadeUp 0.6s ease both;
+  position: relative;
+  z-index: 100;
 }
 
 .brand {
@@ -234,7 +237,7 @@ a {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
   max-height: 400px;
   overflow-y: auto;
-  z-index: 1000;
+  z-index: 9999;
   min-width: 320px;
 }
 
@@ -309,7 +312,7 @@ a {
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow);
   min-width: 220px;
-  z-index: 1000;
+  z-index: 9999;
   overflow: hidden;
 }
 
