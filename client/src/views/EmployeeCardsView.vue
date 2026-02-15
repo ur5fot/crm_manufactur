@@ -4,6 +4,7 @@ import { useRouter, useRoute } from "vue-router";
 import { api } from "../api";
 import { useFieldsSchema } from "../composables/useFieldsSchema";
 import { useEmployeeForm } from "../composables/useEmployeeForm";
+import { displayName } from "../utils/employee";
 
 const router = useRouter();
 const route = useRoute();
@@ -184,11 +185,6 @@ watch(() => route.params.id, (newId) => {
 });
 
 // Helper functions
-function displayName(employee) {
-  const parts = [employee.last_name, employee.first_name, employee.middle_name].filter(Boolean);
-  return parts.length ? parts.join(" ") : "Без імені";
-}
-
 function fileUrl(path) {
   if (!path) return "";
   if (path.startsWith("files/")) return `/${path}`;

@@ -147,13 +147,13 @@ Add new search input that filters visible form fields within the current employe
 - Modify: `client/src/App.vue`
 - Modify: `client/src/api.js`
 
-- [ ] extract hardcoded field names in EmployeeCardsView to constants or schema-based config
-- [ ] consolidate duplicate display name logic (displayName function) into a shared utility
-- [ ] review and simplify complex computed properties (break into smaller functions if needed)
-- [ ] extract magic numbers (debounce timeouts, pagination limits) to named constants
-- [ ] add JSDoc comments to complex functions where helpful
-- [ ] verify no regressions after refactoring
-- [ ] run full E2E test suite - must pass
+- [x] extract hardcoded field names in EmployeeCardsView to constants or schema-based config
+- [x] consolidate duplicate display name logic (displayName function) into a shared utility
+- [x] review and simplify complex computed properties (break into smaller functions if needed)
+- [x] extract magic numbers (debounce timeouts, pagination limits) to named constants
+- [x] add JSDoc comments to complex functions where helpful
+- [x] verify no regressions after refactoring
+- [x] run full E2E test suite - must pass
 
 ### Task 10: Refactor backend code for maintainability
 

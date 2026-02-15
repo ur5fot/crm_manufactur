@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import { api } from "../api";
+import { displayName } from "../utils/employee";
 
 const router = useRouter();
 
@@ -178,11 +179,6 @@ function daysFromNowLabel(dateStr) {
   if (diff === 1) return 'завтра';
   if (diff >= 2 && diff <= 4) return `через ${diff} дні`;
   return `через ${diff} днів`;
-}
-
-function displayName(employee) {
-  const parts = [employee.last_name, employee.first_name, employee.middle_name].filter(Boolean);
-  return parts.length ? parts.join(" ") : "Без імені";
 }
 
 async function loadEmployees(silent = false) {

@@ -3,6 +3,7 @@ import { ref, computed, reactive, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { api } from "../api";
 import { useFieldsSchema } from "../composables/useFieldsSchema";
+import { displayName } from "../utils/employee";
 
 const router = useRouter();
 
@@ -62,12 +63,6 @@ const filteredEmployees = computed(() => {
 
   return result;
 });
-
-// Helper function to display employee name
-function displayName(employee) {
-  const parts = [employee.last_name, employee.first_name, employee.middle_name].filter(Boolean);
-  return parts.length ? parts.join(" ") : "Без імені";
-}
 
 // Load employees
 async function loadEmployees() {

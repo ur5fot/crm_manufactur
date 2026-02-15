@@ -2,6 +2,7 @@
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { api } from "./api";
+import { SEARCH_MIN_LENGTH, SEARCH_DEBOUNCE_MS } from "./utils/constants";
 import DashboardView from "./views/DashboardView.vue";
 import TableView from "./views/TableView.vue";
 import PlaceholderReferenceView from "./views/PlaceholderReferenceView.vue";
@@ -111,7 +112,7 @@ function toggleTheme() {
 let globalSearchTimeout;
 
 async function performGlobalSearch(query) {
-  if (!query || query.trim().length < 2) {
+  if (!query || query.trim().length < SEARCH_MIN_LENGTH) {
     globalSearchResults.value = { employees: [], templates: [], documents: [] };
     showGlobalSearchResults.value = false;
     return;
@@ -137,14 +138,14 @@ async function performGlobalSearch(query) {
 
 watch(() => globalSearchTerm.value, (newTerm) => {
   clearTimeout(globalSearchTimeout);
-  if (!newTerm || newTerm.trim().length < 2) {
+  if (!newTerm || newTerm.trim().length < SEARCH_MIN_LENGTH) {
     globalSearchResults.value = { employees: [], templates: [], documents: [] };
     showGlobalSearchResults.value = false;
     return;
   }
   globalSearchTimeout = setTimeout(() => {
     performGlobalSearch(newTerm);
-  }, 300);
+  }, SEARCH_DEBOUNCE_MS);
 });
 
 function onGlobalSearchFocus() {
