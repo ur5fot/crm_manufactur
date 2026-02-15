@@ -485,6 +485,16 @@ a {
   background: var(--bg);
 }
 
+/* Hide native browser search clear button */
+.search-input::-webkit-search-cancel-button {
+  display: none;
+  -webkit-appearance: none;
+}
+
+.search-input::-ms-clear {
+  display: none;
+}
+
 .card-search-wrapper {
   position: relative;
 }
