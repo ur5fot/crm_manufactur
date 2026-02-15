@@ -9,8 +9,8 @@
       </div>
 
       <!-- Filters -->
-      <div class="filters-section" style="padding: 16px; background: #f5f5f5; border-radius: 8px; margin-bottom: 16px;">
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+      <div class="filters-section">
+        <div class="filters-grid">
           <div class="field">
             <label>Шаблон</label>
             <select v-model="documentHistoryFilters.template_id">
@@ -41,7 +41,7 @@
           </div>
         </div>
 
-        <div style="display: flex; gap: 8px; margin-top: 12px;">
+        <div class="filters-actions">
           <button class="primary" type="button" @click="loadDocumentHistory">
             Застосувати фільтри
           </button>

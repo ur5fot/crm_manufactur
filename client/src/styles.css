@@ -410,6 +410,33 @@ a {
   color: var(--ink);
 }
 
+/* Tab buttons (main navigation) */
+.tab-btn {
+  padding: 8px 16px;
+  border: 1.5px solid var(--accent);
+  border-radius: 8px;
+  background: rgba(15, 118, 110, 0.05);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tab-btn:hover:not(.active) {
+  background: rgba(15, 118, 110, 0.12);
+  border-color: var(--accent-strong);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(15, 118, 110, 0.2);
+}
+
+.tab-btn.active {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.2);
+}
+
 .layout {
   display: grid;
   grid-template-columns: 1.2fr 2fr;
@@ -2381,6 +2408,27 @@ button.small {
   background-color: var(--line);
 }
 
+/* Tab buttons (main navigation) - dark theme */
+[data-theme="dark"] .tab-btn {
+  background: rgba(20, 184, 166, 0.08);
+  color: var(--ink);
+  border: 1.5px solid rgba(20, 184, 166, 0.3);
+}
+
+[data-theme="dark"] .tab-btn:hover:not(.active) {
+  background: rgba(20, 184, 166, 0.15);
+  border-color: rgba(20, 184, 166, 0.5);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(20, 184, 166, 0.2);
+}
+
+[data-theme="dark"] .tab-btn.active {
+  background: rgba(20, 184, 166, 0.25);
+  border-color: var(--accent);
+  color: var(--ink);
+  box-shadow: 0 0 0 2px rgba(20, 184, 166, 0.2);
+}
+
 /* Task 4: Badge elements */
 [data-theme="dark"] .status-badge {
   background: var(--badge-blue-bg);
@@ -2538,14 +2586,22 @@ button.small {
 
 /* Fix overly bright buttons in dark theme */
 [data-theme="dark"] button.secondary {
-  background: var(--surface);
+  background: rgba(20, 184, 166, 0.08);
   color: var(--ink);
-  border-color: var(--line);
+  border: 1.5px solid rgba(20, 184, 166, 0.3);
 }
 
 [data-theme="dark"] button.secondary:hover:not(:disabled) {
-  background: var(--bg-accent);
+  background: rgba(20, 184, 166, 0.15);
+  border-color: rgba(20, 184, 166, 0.5);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(20, 184, 166, 0.2);
+}
+
+[data-theme="dark"] button.secondary.active {
+  background: rgba(20, 184, 166, 0.2);
   border-color: var(--accent);
+  color: var(--ink);
 }
 
 [data-theme="dark"] .file-label-btn {
@@ -2578,4 +2634,29 @@ button.small {
 [data-theme="dark"] .report-btn.active {
   background: var(--accent);
   color: #fff;
+}
+
+/* Filters section styling */
+.filters-section {
+  padding: 16px;
+  background: #f5f5f5;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.filters-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.filters-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+[data-theme="dark"] .filters-section {
+  background: var(--surface);
+  border: 1px solid var(--line);
 }
