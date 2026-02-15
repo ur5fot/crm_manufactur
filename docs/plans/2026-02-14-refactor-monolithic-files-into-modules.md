@@ -91,12 +91,12 @@
 - [x] Run all tests — must pass before next task
 
 ### Task 8: Backend cleanup and verification
-- [ ] Review `server/src/index.js` — ensure it only contains setup, middleware, route registration, and listen
-- [ ] Verify no dead code or unused imports remain in any backend file
-- [ ] Run full unit test suite: `cd server && npm test`
-- [ ] Run full integration test suite: `cd server && npm run test:integration`
-- [ ] Run full E2E test suite: `npm run test:e2e`
-- [ ] All tests must pass
+- [x] Review `server/src/index.js` — ensure it only contains setup, middleware, route registration, and listen
+- [x] Verify no dead code or unused imports remain in any backend file
+- [x] Run full unit test suite: `cd server && npm test`
+- [x] Run full integration test suite: `cd server && npm run test:integration`
+- [x] Run full E2E test suite: `npm run test:e2e`
+- [x] All tests must pass
 
 ### Phase 2: Frontend View Extraction
 
