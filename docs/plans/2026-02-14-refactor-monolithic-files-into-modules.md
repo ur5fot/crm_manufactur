@@ -139,11 +139,11 @@
 - [x] Run all tests — must pass before next task
 
 ### Task 14: Extract DashboardView
-- [ ] Create `client/src/views/DashboardView.vue` — move dashboard state (events, refresh interval, notifications, status changes) and methods from App.vue
-- [ ] Update `client/src/main.js` — change dashboard route to point to `DashboardView`
-- [ ] Remove dashboard-related code from App.vue (template section at line ~2669, notification modals)
-- [ ] Verify dashboard E2E test passes (`tests/e2e/dashboard.spec.js`)
-- [ ] Run all tests — must pass before next task
+- [x] Create `client/src/views/DashboardView.vue` — move dashboard state (events, refresh interval, notifications, status changes) and methods from App.vue
+- [x] Update `client/src/main.js` — change dashboard route to point to `DashboardView`
+- [x] Remove dashboard-related code from App.vue (template section at line ~2669, notification modals)
+- [x] Verify dashboard E2E test passes (`tests/e2e/dashboard.spec.js`)
+- [x] Run all tests — must pass before next task
 
 ### Task 15: Extract TableView
 - [ ] Create `client/src/views/TableView.vue` — move table state (column filters, sorting, editing cells) and methods from App.vue
