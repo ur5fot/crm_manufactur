@@ -69,23 +69,47 @@ crm_manufactur/
 │
 ├── client/                      # Vue.js frontend application
 │   ├── src/
-│   │   ├── App.vue             # Main app component with routing
+│   │   ├── views/              # View components (one per route)
+│   │   │   ├── DashboardView.vue         # Dashboard with statistics and notifications
+│   │   │   ├── EmployeeCardsView.vue     # Employee card-based editing interface
+│   │   │   ├── TableView.vue             # Employee table with sorting and filtering
+│   │   │   ├── ReportsView.vue           # Custom reports with dynamic filters
+│   │   │   ├── ImportView.vue            # CSV import interface
+│   │   │   ├── TemplatesView.vue         # Template management
+│   │   │   ├── DocumentHistoryView.vue   # Document generation history
+│   │   │   ├── PlaceholderReferenceView.vue # Placeholder reference guide
+│   │   │   └── LogsView.vue              # Audit log viewer
+│   │   ├── composables/        # Shared composable functions
+│   │   │   ├── useFieldsSchema.js        # Field schema loading and utilities
+│   │   │   └── useEmployeeForm.js        # Employee form state and dirty tracking
+│   │   ├── App.vue             # Root component with navigation and layout
 │   │   ├── api.js              # Axios-based API client
-│   │   └── main.js             # Vue app initialization
+│   │   └── main.js             # Vue app initialization and routing
 │   ├── public/                 # Static assets
 │   ├── package.json            # Frontend dependencies
 │   └── vite.config.js          # Vite build configuration
 │
 ├── server/                      # Node.js backend application
 │   ├── src/
-│   │   ├── index.js            # Express server setup and API routes
+│   │   ├── routes/             # API route modules (organized by feature)
+│   │   │   ├── dashboard.js    # Dashboard, health, config, event routes
+│   │   │   ├── reports.js      # Status and custom report routes
+│   │   │   ├── employees.js    # Employee CRUD routes
+│   │   │   ├── employee-files.js # Employee file management and import routes
+│   │   │   ├── templates.js    # Template CRUD and generation routes
+│   │   │   ├── documents.js    # Document history and download routes
+│   │   │   ├── logs.js         # Audit log routes
+│   │   │   └── misc.js         # Utility routes (folder, schema, search)
+│   │   ├── index.js            # Express server setup and route registration
 │   │   ├── store.js            # CSV data storage layer (load/save functions)
 │   │   ├── csv.js              # Low-level CSV read/write utilities
 │   │   ├── schema.js           # Dynamic field schema loading from fields_schema.csv
 │   │   ├── docx-generator.js   # DOCX template processing and placeholder replacement
 │   │   ├── declension.js       # Ukrainian name/grade/position declension (shevchenko + shevchenko-ext-military)
+│   │   ├── utils.js            # Shared utility functions (getNextId, normalizeEmployeeInput, etc.)
+│   │   ├── upload-config.js    # Multer configuration for file uploads
 │   │   ├── sync-template.js    # CSV template synchronization utility
-│   │   └── upload-config.js    # Multer configuration for file uploads
+│   │   └── clean-invalid-dates.js # Data migration utility
 │   ├── test/                   # Unit and integration tests
 │   │   ├── config.test.js
 │   │   ├── declension.test.js
@@ -94,6 +118,7 @@ crm_manufactur/
 │   │   ├── retirement-events.test.js
 │   │   ├── templates-api.test.js
 │   │   ├── upload-limit.test.js
+│   │   ├── utils.test.js
 │   │   └── search-api.test.js
 │   └── package.json            # Backend dependencies
 │
@@ -480,27 +505,74 @@ All API routes follow consistent patterns for clarity and maintainability.
 - PUT: Update existing resources
 - DELETE: Soft delete resources (set active='no')
 
-**Route Organization** (in index.js):
-1. Health check and configuration routes
-2. Dashboard and reporting routes
-3. Employee CRUD routes
-4. Templates CRUD routes
-5. Documents and file management routes
-6. Utility routes (folder opening, import/export)
+**Route Organization** (modular structure in server/src/routes/):
+- `dashboard.js` - Health check, configuration, dashboard stats, events
+- `reports.js` - Status reports and custom reports with filters
+- `employees.js` - Employee CRUD operations
+- `employee-files.js` - Employee file management and CSV import
+- `templates.js` - Template CRUD, upload, and document generation
+- `documents.js` - Document history and downloads
+- `logs.js` - Audit log retrieval
+- `misc.js` - Utility routes (folder opening, schema, search)
 
-**Example Route Pattern**:
+**Route Module Pattern**:
+Each route module exports a registration function that takes the Express app instance and registers its routes:
+
 ```javascript
-app.get("/api/templates", async (req, res) => {
-  try {
-    const templates = await loadTemplates();
-    const activeTemplates = templates.filter((t) => t.active !== 'no');
-    res.json({ templates: activeTemplates });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: err.message });
-  }
-});
+// server/src/routes/templates.js
+export function registerTemplateRoutes(app) {
+  app.get("/api/templates", async (req, res) => {
+    try {
+      const templates = await loadTemplates();
+      const activeTemplates = templates.filter((t) => t.active !== 'no');
+      res.json({ templates: activeTemplates });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/templates", async (req, res) => { /* ... */ });
+  app.put("/api/templates/:id", async (req, res) => { /* ... */ });
+  // ... more routes
+}
 ```
+
+**Main Server File** (server/src/index.js):
+The main server file imports and calls route registration functions:
+
+```javascript
+import { registerDashboardRoutes } from "./routes/dashboard.js";
+import { registerReportRoutes } from "./routes/reports.js";
+import { registerEmployeeRoutes } from "./routes/employees.js";
+import { registerEmployeeFileRoutes } from "./routes/employee-files.js";
+import { registerTemplateRoutes } from "./routes/templates.js";
+import { registerDocumentRoutes } from "./routes/documents.js";
+import { registerLogRoutes } from "./routes/logs.js";
+import { registerMiscRoutes } from "./routes/misc.js";
+
+// ... middleware setup
+
+// Register all routes
+registerDashboardRoutes(app);
+registerReportRoutes(app);
+registerEmployeeRoutes(app);
+registerEmployeeFileRoutes(app);
+registerTemplateRoutes(app);
+registerDocumentRoutes(app);
+registerLogRoutes(app);
+registerMiscRoutes(app);
+
+// Start server
+app.listen(port, () => { /* ... */ });
+```
+
+This modular approach:
+- Separates routes by feature/resource for easier maintenance
+- Keeps index.js focused on server setup and configuration
+- Makes it easy to find and modify specific route handlers
+- Improves testability by isolating route logic
+- Reduces merge conflicts when multiple developers work on different features
 
 ### CSV Read/Write Patterns
 
@@ -951,33 +1023,84 @@ async function loadData() {
 
 ### Application Routing Structure
 
-The application uses Vue Router 5 with history mode for SPA navigation.
+The application uses Vue Router 5 with history mode for SPA navigation. Each route maps to a dedicated view component in `client/src/views/`.
 
 **Routes Configuration** (from main.js):
 ```javascript
+import DashboardView from "./views/DashboardView.vue";
+import EmployeeCardsView from "./views/EmployeeCardsView.vue";
+import TableView from "./views/TableView.vue";
+import ReportsView from "./views/ReportsView.vue";
+import ImportView from "./views/ImportView.vue";
+import TemplatesView from "./views/TemplatesView.vue";
+import DocumentHistoryView from "./views/DocumentHistoryView.vue";
+import PlaceholderReferenceView from "./views/PlaceholderReferenceView.vue";
+import LogsView from "./views/LogsView.vue";
+
 const routes = [
-  { path: "/", name: "dashboard", component: App },
-  { path: "/cards/:id?", name: "cards", component: App },
-  { path: "/table", name: "table", component: App },
-  { path: "/reports", name: "reports", component: App },
-  { path: "/import", name: "import", component: App },
-  { path: "/templates", name: "templates", component: App },
-  { path: "/document-history", name: "document-history", component: App },
-  { path: "/placeholder-reference/:employeeId?", name: "placeholder-reference", component: App },
-  { path: "/logs", name: "logs", component: App }
+  { path: "/", name: "dashboard", component: DashboardView },
+  { path: "/cards/:id?", name: "cards", component: EmployeeCardsView },
+  { path: "/table", name: "table", component: TableView },
+  { path: "/reports", name: "reports", component: ReportsView },
+  { path: "/import", name: "import", component: ImportView },
+  { path: "/templates", name: "templates", component: TemplatesView },
+  { path: "/document-history", name: "document-history", component: DocumentHistoryView },
+  { path: "/placeholder-reference/:employeeId?", name: "placeholder-reference", component: PlaceholderReferenceView },
+  { path: "/logs", name: "logs", component: LogsView }
 ];
 ```
 
-**Route Descriptions**:
-- `/` (dashboard): Main dashboard with statistics and notifications
-- `/cards/:id?`: Employee card view with optional employee ID parameter
-- `/table`: Employee list in table format
-- `/reports`: Reporting interface with status reports and custom filters
-- `/import`: CSV import interface for bulk employee operations
-- `/templates`: Document template management
-- `/document-history`: History of all generated documents
-- `/placeholder-reference/:employeeId?`: Placeholder reference page showing all available placeholders with preview values
-- `/logs`: Audit log viewer
+**View Components**:
+Each view is a standalone Vue component with its own state and methods:
+- `DashboardView.vue` - Dashboard with statistics and notifications
+- `EmployeeCardsView.vue` - Employee card-based editing interface with optional employee ID parameter
+- `TableView.vue` - Employee list in table format with sorting and filtering
+- `ReportsView.vue` - Custom reports with dynamic filters
+- `ImportView.vue` - CSV import interface for bulk employee operations
+- `TemplatesView.vue` - Document template management
+- `DocumentHistoryView.vue` - History of all generated documents with pagination
+- `PlaceholderReferenceView.vue` - Placeholder reference guide with preview values
+- `LogsView.vue` - Audit log viewer with pagination
+
+**View Component Pattern**:
+```vue
+// client/src/views/LogsView.vue
+<script setup>
+import { ref, onMounted } from "vue";
+import { api } from "../api";
+
+// View-specific state
+const logs = ref([]);
+const logsLoading = ref(false);
+const logsOffset = ref(0);
+const logsLimit = ref(100);
+const logsTotal = ref(0);
+
+// View-specific methods
+async function loadLogs() {
+  logsLoading.value = true;
+  try {
+    const response = await api.getLogs({ offset: logsOffset.value, limit: logsLimit.value });
+    logs.value = response.logs;
+    logsTotal.value = response.total;
+  } catch (err) {
+    console.error('Failed to load logs:', err);
+  } finally {
+    logsLoading.value = false;
+  }
+}
+
+onMounted(() => {
+  loadLogs();
+});
+</script>
+
+<template>
+  <div class="logs-view">
+    <!-- View-specific template -->
+  </div>
+</template>
+```
 
 **Navigation Patterns**:
 ```javascript
@@ -995,7 +1118,8 @@ router.push({ name: 'document-history', query: { employee_id: id } });
 ```
 
 **Navigation Guards**:
-- beforeEach guard checks for unsaved changes when leaving cards view
+- Navigation guards are handled within individual view components (see EmployeeCardsView.vue)
+- beforeRouteLeave checks for unsaved changes when leaving cards view
 - Prompts user confirmation before discarding unsaved data
 - Supports pending navigation that executes after user confirms
 
@@ -1068,6 +1192,126 @@ async function saveEmployee() {
 - 204 No Content handled explicitly
 - Environment-based BASE_URL configuration
 - Consistent error throwing with response text
+
+### Composables for Shared Logic
+
+The application uses composables (reusable functions following the Composition API pattern) to share logic between multiple view components.
+
+**Composable Location**: `client/src/composables/`
+
+**useFieldsSchema.js** - Field schema loading and utilities:
+```javascript
+// client/src/composables/useFieldsSchema.js
+import { ref } from "vue";
+import { api } from "../api";
+
+export function useFieldsSchema() {
+  const allFieldsSchema = ref([]);
+  const fieldGroups = ref([]);
+
+  async function loadSchema() {
+    const response = await api.getFieldsSchema();
+    allFieldsSchema.value = response.fields.map(field => ({
+      key: field.field_name,
+      label: field.field_label,
+      type: field.field_type,
+      options: field.field_options?.split('|') || [],
+      group: field.field_group,
+      required: field.required === 'yes'
+    }));
+
+    fieldGroups.value = response.groups;
+  }
+
+  function getFieldType(fieldName) {
+    const field = allFieldsSchema.value.find(f => f.key === fieldName);
+    return field?.type || 'text';
+  }
+
+  function getFieldLabel(fieldName) {
+    const field = allFieldsSchema.value.find(f => f.key === fieldName);
+    return field?.label || fieldName;
+  }
+
+  return {
+    allFieldsSchema,
+    fieldGroups,
+    loadSchema,
+    getFieldType,
+    getFieldLabel
+  };
+}
+```
+
+**Used by**: ReportsView, EmployeeCardsView, TableView, PlaceholderReferenceView
+
+**useEmployeeForm.js** - Employee form state and dirty tracking:
+```javascript
+// client/src/composables/useEmployeeForm.js
+import { ref, computed } from "vue";
+
+export function useEmployeeForm(employeeFields) {
+  const form = ref({});
+  const savedFormSnapshot = ref(null);
+
+  const isFormDirty = computed(() => {
+    if (!savedFormSnapshot.value) return false;
+
+    for (const key of employeeFields) {
+      const currentValue = form.value[key] || '';
+      const savedValue = savedFormSnapshot.value[key] || '';
+      if (currentValue !== savedValue) {
+        return true;
+      }
+    }
+    return false;
+  });
+
+  const changedFields = computed(() => {
+    if (!savedFormSnapshot.value || !isFormDirty.value) return [];
+
+    const changes = [];
+    for (const key of employeeFields) {
+      const currentValue = form.value[key] || '';
+      const savedValue = savedFormSnapshot.value[key] || '';
+      if (currentValue !== savedValue) {
+        changes.push({
+          key,
+          oldValue: savedValue,
+          newValue: currentValue
+        });
+      }
+    }
+    return changes;
+  });
+
+  function updateFormSnapshot() {
+    savedFormSnapshot.value = { ...form.value };
+  }
+
+  function resetForm() {
+    form.value = { ...savedFormSnapshot.value };
+  }
+
+  return {
+    form,
+    savedFormSnapshot,
+    isFormDirty,
+    changedFields,
+    updateFormSnapshot,
+    resetForm
+  };
+}
+```
+
+**Used by**: EmployeeCardsView (for unsaved changes warning and dirty state tracking)
+
+**Composable Pattern Benefits**:
+- Reusable logic across multiple views
+- Testable in isolation
+- Follows Vue 3 Composition API conventions
+- Clear separation of concerns (data fetching, state management, business logic)
+- Type-safe with proper return signatures
 
 ### Form Validation and Unsaved Changes Warning
 

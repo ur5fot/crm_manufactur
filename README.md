@@ -375,14 +375,38 @@ Tests run automatically via GitHub Actions on push to `master`/`feature/*` branc
 .
 ├── client/                 # Vue.js frontend
 │   ├── src/
-│   │   ├── App.vue        # Main app component
-│   │   └── api.js         # API client
+│   │   ├── views/         # View components (one per route)
+│   │   │   ├── DashboardView.vue
+│   │   │   ├── EmployeeCardsView.vue
+│   │   │   ├── TableView.vue
+│   │   │   ├── ReportsView.vue
+│   │   │   ├── TemplatesView.vue
+│   │   │   ├── DocumentHistoryView.vue
+│   │   │   ├── ImportView.vue
+│   │   │   ├── PlaceholderReferenceView.vue
+│   │   │   └── LogsView.vue
+│   │   ├── composables/   # Reusable logic
+│   │   │   ├── useFieldsSchema.js
+│   │   │   └── useEmployeeForm.js
+│   │   ├── App.vue        # Root component with navigation
+│   │   ├── api.js         # API client
+│   │   └── main.js        # App initialization & routing
 │   └── package.json
 ├── server/                 # Node.js backend
 │   ├── src/
-│   │   ├── index.js       # Express server & API routes
+│   │   ├── routes/        # API route modules (organized by feature)
+│   │   │   ├── dashboard.js
+│   │   │   ├── reports.js
+│   │   │   ├── employees.js
+│   │   │   ├── employee-files.js
+│   │   │   ├── templates.js
+│   │   │   ├── documents.js
+│   │   │   ├── logs.js
+│   │   │   └── misc.js
+│   │   ├── index.js       # Express server setup & route registration
 │   │   ├── store.js       # CSV data storage
 │   │   ├── docx-generator.js  # DOCX generation
+│   │   ├── utils.js       # Shared utilities
 │   │   └── schema.js      # Employee field schema
 │   ├── test/              # Unit & integration tests
 │   └── package.json
@@ -399,7 +423,8 @@ Tests run automatically via GitHub Actions on push to `master`/`feature/*` branc
 │   ├── documents/         # Generated DOCX files
 │   └── employee_*/        # Employee-specific files
 └── docs/                  # Documentation
-    └── templates-system-improvements.md
+    ├── plans/             # Development plans
+    └── plans/completed/   # Completed plans
 ```
 
 ## Data Storage

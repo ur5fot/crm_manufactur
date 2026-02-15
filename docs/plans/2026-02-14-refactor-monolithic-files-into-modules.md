@@ -185,10 +185,10 @@
 - [x] Run linter if configured — N/A (no linter configured)
 
 ### Task 20: [Final] Update documentation
-- [ ] Update CLAUDE.md project structure section to reflect new file layout
-- [ ] Update CLAUDE.md backend patterns section to document route module pattern
-- [ ] Update CLAUDE.md frontend patterns section to document view/composable extraction
-- [ ] Update README.md project structure if it lists file layout
+- [x] Update CLAUDE.md project structure section to reflect new file layout
+- [x] Update CLAUDE.md backend patterns section to document route module pattern
+- [x] Update CLAUDE.md frontend patterns section to document view/composable extraction
+- [x] Update README.md project structure if it lists file layout
 
 *Note: ralphex automatically moves completed plans to `docs/plans/completed/`*
 
