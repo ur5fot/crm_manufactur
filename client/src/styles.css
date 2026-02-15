@@ -1852,7 +1852,7 @@ button.small {
 
 .filter-builder {
   background: var(--bg);
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: 8px;
   padding: 16px;
 }
@@ -1861,7 +1861,7 @@ button.small {
   margin: 0 0 16px 0;
   font-size: 16px;
   font-weight: 600;
-  color: var(--text);
+  color: var(--ink);
 }
 
 .filter-row {
@@ -1921,7 +1921,7 @@ button.small {
 
 .column-selector {
   background: var(--bg);
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: 8px;
   padding: 16px;
 }
@@ -1930,7 +1930,7 @@ button.small {
   margin: 0 0 8px 0;
   font-size: 16px;
   font-weight: 600;
-  color: var(--text);
+  color: var(--ink);
 }
 
 .help-text {
@@ -1974,13 +1974,13 @@ button.small {
   gap: 12px;
   padding: 16px;
   background: var(--bg);
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: 8px;
 }
 
 .report-preview {
   background: var(--bg);
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: 8px;
   padding: 16px;
 }
@@ -1989,7 +1989,7 @@ button.small {
   margin: 0 0 12px 0;
   font-size: 16px;
   font-weight: 600;
-  color: var(--text);
+  color: var(--ink);
 }
 
 .report-preview .status-bar {
@@ -1998,7 +1998,7 @@ button.small {
   background: rgba(15, 118, 110, 0.08);
   border-radius: 4px;
   font-size: 14px;
-  color: var(--text);
+  color: var(--ink);
 }
 
 /* Destructive actions container - icon-only buttons */

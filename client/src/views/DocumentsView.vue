@@ -43,14 +43,14 @@ const activeTab = ref('templates');
   gap: 8px;
   padding: 12px 16px;
   background: var(--bg);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--line);
 }
 
 .documents-tab-btn {
   padding: 8px 16px;
-  border: 1px solid var(--border);
-  background: var(--panel-bg);
-  color: var(--text);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
   border-radius: 6px;
   cursor: pointer;
   font-size: 14px;
@@ -58,7 +58,7 @@ const activeTab = ref('templates');
 }
 
 .documents-tab-btn:hover {
-  background: var(--hover-bg);
+  background: var(--bg-accent);
 }
 
 .documents-tab-btn.active {

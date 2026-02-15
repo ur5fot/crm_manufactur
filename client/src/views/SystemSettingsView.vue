@@ -47,15 +47,15 @@ const activeTab = ref("import");
   display: flex;
   gap: 0.5rem;
   padding: 0.5rem 1rem;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--line);
   background: var(--bg);
 }
 
 .subtab-btn {
   padding: 0.5rem 1rem;
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   background: var(--bg);
-  color: var(--text);
+  color: var(--ink);
   cursor: pointer;
   border-radius: 4px;
   font-size: 0.9rem;
@@ -63,7 +63,7 @@ const activeTab = ref("import");
 }
 
 .subtab-btn:hover {
-  background: var(--hover-bg);
+  background: var(--bg-accent);
 }
 
 .subtab-btn.active {
