@@ -45,11 +45,11 @@ Refactor the CRM Manufacturing System to improve navigation structure, enhance s
 Current state: cardSearchTerm exists and filters employees list
 Required: verify it searches across all visible employee fields in sidebar (last_name, first_name, middle_name, employee_id, employment_status)
 
-- [ ] review current filteredEmployeesForCards computed property implementation
-- [ ] verify search matches across: last_name, first_name, middle_name, employee_id, employment_status
-- [ ] add unit test or E2E test for employee list search functionality
-- [ ] test searching by partial name, employee ID, and status
-- [ ] run full E2E test suite - must pass
+- [x] review current filteredEmployeesForCards computed property implementation
+- [x] verify search matches across: last_name, first_name, middle_name, employee_id, employment_status
+- [x] add unit test or E2E test for employee list search functionality
+- [x] test searching by partial name, employee ID, and status
+- [x] run full E2E test suite - must pass
 
 ### Task 3: Add search within current employee card fields
 

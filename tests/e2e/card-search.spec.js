@@ -51,6 +51,26 @@ test.describe('Card Search', () => {
     // Search by specialty
     await searchInput.fill('Розробка');
     await expect(cards).toHaveCount(2); // Іванов and Мельник
+
+    // Search by first_name
+    await searchInput.fill('Олена');
+    await expect(cards).toHaveCount(1);
+    await expect(cards.first()).toContainText('Петренко');
+
+    // Search by middle_name
+    await searchInput.fill('Миколайович');
+    await expect(cards).toHaveCount(1);
+    await expect(cards.first()).toContainText('Іванов');
+
+    // Search by employment_status
+    await searchInput.fill('Відпустка');
+    await expect(cards).toHaveCount(1);
+    await expect(cards.first()).toContainText('Петренко');
+
+    // Search by employment_status - partial match
+    await searchInput.fill('Лікарняний');
+    await expect(cards).toHaveCount(1);
+    await expect(cards.first()).toContainText('Мельник');
   });
 
   test('should clear search with clear button', async ({ page }) => {
