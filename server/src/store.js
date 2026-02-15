@@ -697,13 +697,6 @@ export async function getBirthdayEvents() {
     if (birthMonth === 2 && birthDay === 29 && !isLeapYear(currentYear)) {
       return; // Skip Feb 29 birthdays in non-leap years
     }
-    if (birthMonth === 2 && birthDay === 29 && !isLeapYear(currentYear + 1)) {
-      // For next year check, skip if next year is not a leap year
-      const thisYearBirthday = new Date(currentYear, birthMonth - 1, birthDay);
-      if (thisYearBirthday < nowDateOnly || thisYearBirthday > in7days) {
-        return; // Not in range and next year won't have this date
-      }
-    }
 
     // Проверяем день рождения в текущем году и следующем (для случая перехода через Новый год)
     const thisYearBirthday = new Date(currentYear, birthMonth - 1, birthDay);

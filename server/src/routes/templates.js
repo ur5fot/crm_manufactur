@@ -350,22 +350,10 @@ export function registerTemplateRoutes(app, appConfig) {
         return;
       }
 
-      // Prepare data with employee fields + special placeholders
-      // Use explicit date formatting to ensure consistent format across all environments
-      const now = new Date();
-      const day = String(now.getDate()).padStart(2, '0');
-      const month = String(now.getMonth() + 1).padStart(2, '0');
-      const year = now.getFullYear();
-      const hours = String(now.getHours()).padStart(2, '0');
-      const minutes = String(now.getMinutes()).padStart(2, '0');
-
-      const currentDate = `${day}.${month}.${year}`;
-      const currentDateTime = `${day}.${month}.${year} ${hours}:${minutes}`;
-
+      // Prepare data with employee fields
+      // Note: special placeholders (current_date, current_datetime) are added by prepareData() in docx-generator.js
       const data = {
-        ...employee,
-        current_date: currentDate,
-        current_datetime: currentDateTime
+        ...employee
       };
 
       // Generate DOCX filename
