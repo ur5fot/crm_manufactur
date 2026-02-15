@@ -351,9 +351,16 @@ export function registerTemplateRoutes(app, appConfig) {
       }
 
       // Prepare data with employee fields + special placeholders
+      // Use explicit date formatting to ensure consistent format across all environments
       const now = new Date();
-      const currentDate = now.toLocaleDateString('uk-UA'); // DD.MM.YYYY format
-      const currentDateTime = now.toLocaleString('uk-UA'); // DD.MM.YYYY HH:mm:ss format
+      const day = String(now.getDate()).padStart(2, '0');
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const year = now.getFullYear();
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+
+      const currentDate = `${day}.${month}.${year}`;
+      const currentDateTime = `${day}.${month}.${year} ${hours}:${minutes}`;
 
       const data = {
         ...employee,
