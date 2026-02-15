@@ -4,15 +4,20 @@ import fs from "fs";
 import { FILES_DIR } from "./store.js";
 
 export function createImportUpload(appConfig) {
+  const maxSizeMB = parseInt(appConfig.max_file_upload_mb, 10);
+  const fileSize = (isNaN(maxSizeMB) || maxSizeMB <= 0) ? 10 : maxSizeMB;
   return multer({
     storage: multer.memoryStorage(),
-    limits: { fileSize: parseInt(appConfig.max_file_upload_mb || 10) * 1024 * 1024 }
+    limits: { fileSize: fileSize * 1024 * 1024 }
   });
 }
 
 const ALLOWED_FILE_EXTENSIONS = ['.pdf', '.jpg', '.jpeg', '.png', '.gif', '.webp'];
 
 export function createEmployeeFileUpload(appConfig) {
+  const maxSizeMB = parseInt(appConfig.max_file_upload_mb, 10);
+  const fileSize = (isNaN(maxSizeMB) || maxSizeMB <= 0) ? 10 : maxSizeMB;
+
   const storage = multer.diskStorage({
     destination: (req, file, cb) => {
       const employeeId = req.params.id;
@@ -31,7 +36,7 @@ export function createEmployeeFileUpload(appConfig) {
 
   return multer({
     storage,
-    limits: { fileSize: parseInt(appConfig.max_file_upload_mb || 10) * 1024 * 1024 },
+    limits: { fileSize: fileSize * 1024 * 1024 },
     fileFilter: (_req, file, cb) => {
       const ext = path.extname(file.originalname).toLowerCase();
       if (ALLOWED_FILE_EXTENSIONS.includes(ext)) {
@@ -44,6 +49,9 @@ export function createEmployeeFileUpload(appConfig) {
 }
 
 export function createTemplateUpload(appConfig) {
+  const maxSizeMB = parseInt(appConfig.max_file_upload_mb, 10);
+  const fileSize = (isNaN(maxSizeMB) || maxSizeMB <= 0) ? 10 : maxSizeMB;
+
   return multer({
     storage: multer.diskStorage({
       destination: (req, file, cb) => {
@@ -59,7 +67,7 @@ export function createTemplateUpload(appConfig) {
         cb(null, `template_${templateId}_${timestamp}${ext}`);
       }
     }),
-    limits: { fileSize: parseInt(appConfig.max_file_upload_mb || 10) * 1024 * 1024 },
+    limits: { fileSize: fileSize * 1024 * 1024 },
     fileFilter: (req, file, cb) => {
       const ext = path.extname(file.originalname).toLowerCase();
       if (ext !== '.docx') {
