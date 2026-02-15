@@ -169,12 +169,12 @@
 - [x] Run all tests — must pass before next task
 
 ### Task 18: Clean up App.vue and finalize routing
-- [ ] Review App.vue — should now contain only: navigation/sidebar, shared layout, and minimal shared state
-- [ ] Remove all dead code, unused imports, and orphaned methods from App.vue
-- [ ] Verify App.vue is under ~500 lines
-- [ ] Update `client/src/main.js` — ensure all routes point to correct view components
-- [ ] Run full E2E test suite: `npm run test:e2e` — all 15 specs must pass
-- [ ] Run full unit/integration test suite: `cd server && npm test && npm run test:integration`
+- [x] Review App.vue — should now contain only: navigation/sidebar, shared layout, and minimal shared state
+- [x] Remove all dead code, unused imports, and orphaned methods from App.vue
+- [x] Verify App.vue is under ~500 lines (285 lines ✓)
+- [x] Update `client/src/main.js` — ensure all routes point to correct view components
+- [x] Run full E2E test suite: `npm run test:e2e` — all 86 specs passed
+- [x] Run full unit/integration test suite: `cd server && npm test && npm run test:integration` — 69 tests passed
 
 ### Task 19: Verify acceptance criteria
 - [ ] Verify `server/src/index.js` is under 100 lines (setup + registration only)
