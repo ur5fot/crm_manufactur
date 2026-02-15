@@ -131,12 +131,12 @@
 - [x] Run all tests — must pass before next task
 
 ### Task 13: Extract ReportsView
-- [ ] Create `client/src/views/ReportsView.vue` — move reports state (filters, results, columns, sorting) and methods from App.vue
-- [ ] Create `client/src/composables/useFieldsSchema.js` — extract shared schema loading logic (used by multiple views: reports, cards, table, placeholder-reference)
-- [ ] Update `client/src/main.js` — change reports route to point to `ReportsView`
-- [ ] Remove reports-related code from App.vue (template section at line ~3321)
-- [ ] Verify reports E2E test passes (`tests/e2e/reports.spec.js`)
-- [ ] Run all tests — must pass before next task
+- [x] Create `client/src/views/ReportsView.vue` — move reports state (filters, results, columns, sorting) and methods from App.vue
+- [x] Create `client/src/composables/useFieldsSchema.js` — extract shared schema loading logic (used by multiple views: reports, cards, table, placeholder-reference)
+- [x] Update `client/src/main.js` — change reports route to point to `ReportsView`
+- [x] Remove reports-related code from App.vue (template section at line ~3321)
+- [x] Verify reports E2E test passes (`tests/e2e/reports.spec.js`)
+- [x] Run all tests — must pass before next task
 
 ### Task 14: Extract DashboardView
 - [ ] Create `client/src/views/DashboardView.vue` — move dashboard state (events, refresh interval, notifications, status changes) and methods from App.vue

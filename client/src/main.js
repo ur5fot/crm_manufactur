@@ -1,13 +1,14 @@
 import { createApp } from "vue";
 import { createRouter, createWebHistory } from "vue-router";
 import App from "./App.vue";
+import ReportsView from "./views/ReportsView.vue";
 import "./styles.css";
 
 const routes = [
   { path: "/", name: "dashboard", component: App },
   { path: "/cards/:id?", name: "cards", component: App },
   { path: "/table", name: "table", component: App },
-  { path: "/reports", name: "reports", component: App },
+  { path: "/reports", name: "reports", component: ReportsView },
   { path: "/import", name: "import", component: App },
   { path: "/templates", name: "templates", component: App },
   { path: "/document-history", name: "document-history", component: App },
