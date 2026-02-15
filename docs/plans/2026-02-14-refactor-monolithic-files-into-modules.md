@@ -110,11 +110,11 @@
 - [x] Run all tests — must pass before next task
 
 ### Task 10: Extract ImportView
-- [ ] Create `client/src/views/ImportView.vue` — move import-related state and methods from App.vue
-- [ ] Update `client/src/main.js` — change import route to point to `ImportView`
-- [ ] Remove import-related code from App.vue (template section at line ~3479)
-- [ ] Verify import E2E test passes (`tests/e2e/import.spec.js`)
-- [ ] Run all tests — must pass before next task
+- [x] Create `client/src/views/ImportView.vue` — move import-related state and methods from App.vue
+- [x] Update `client/src/main.js` — change import route to point to `ImportView`
+- [x] Remove import-related code from App.vue (template section at line ~3479)
+- [x] Verify import E2E test passes (`tests/e2e/import.spec.js`)
+- [x] Run all tests — must pass before next task
 
 ### Task 11: Extract DocumentHistoryView
 - [ ] Create `client/src/views/DocumentHistoryView.vue` — move document history state (filters, pagination, loading) and methods from App.vue
