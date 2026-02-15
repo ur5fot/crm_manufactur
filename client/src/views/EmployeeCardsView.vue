@@ -81,6 +81,7 @@ const {
 const employees = ref([]);
 const loading = ref(false);
 const cardSearchTerm = ref("");
+const cardFieldSearchTerm = ref("");
 const openingEmployeeFolder = ref(false);
 
 // Templates for document generation
@@ -143,6 +144,31 @@ const filteredEmployeesForCards = computed(() => {
     if (employee.employee_id && String(employee.employee_id).toLowerCase().includes(query)) return true;
     return false;
   });
+});
+
+// Filtered field groups for current employee card
+const filteredFieldGroups = computed(() => {
+  const query = cardFieldSearchTerm.value.trim().toLowerCase();
+  if (!query) return fieldGroups.value;
+
+  // Filter groups and fields based on label and value match
+  return fieldGroups.value.map(group => {
+    const filteredFields = group.fields.filter(field => {
+      // Match against field label
+      if (field.label.toLowerCase().includes(query)) return true;
+
+      // Match against field value (form is reactive, not a ref)
+      const val = form[field.key];
+      if (val && String(val).toLowerCase().includes(query)) return true;
+
+      return false;
+    });
+
+    return {
+      ...group,
+      fields: filteredFields
+    };
+  }).filter(group => group.fields.length > 0); // Only include groups with matching fields
 });
 
 // Watch route params to handle employee selection
@@ -765,8 +791,26 @@ onUnmounted(() => {
 
       <div v-if="errorMessage" class="alert">{{ errorMessage }}</div>
 
+      <!-- Field search within current card -->
+      <div class="card-field-search-wrapper">
+        <input
+          v-model="cardFieldSearchTerm"
+          class="search-input"
+          type="search"
+          placeholder="Пошук по полях картки..."
+        />
+        <button
+          v-if="cardFieldSearchTerm"
+          class="card-search-clear"
+          @click="cardFieldSearchTerm = ''"
+          title="Очистити пошук"
+        >
+          ✕
+        </button>
+      </div>
+
       <div class="detail-grid">
-        <div v-for="group in fieldGroups" :key="group.title" class="section">
+        <div v-for="group in filteredFieldGroups" :key="group.title" class="section">
           <div class="section-title">{{ group.title }}</div>
           <div class="form-grid">
             <template v-for="field in group.fields" :key="field.key">

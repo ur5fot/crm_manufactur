@@ -58,13 +58,13 @@ Required: verify it searches across all visible employee fields in sidebar (last
 
 Add new search input that filters visible form fields within the current employee card based on field labels and values.
 
-- [ ] add new ref cardFieldSearchTerm for searching within current employee's fields
-- [ ] add computed property filteredFieldGroups that filters fieldGroups based on search term
-- [ ] search logic: match against field labels (from schema) and field values (from form data)
-- [ ] add search input UI in employee card section (above field groups)
-- [ ] add clear button for field search input
-- [ ] update E2E test card-search.spec.js to cover within-card field search
-- [ ] run full E2E test suite - must pass
+- [x] add new ref cardFieldSearchTerm for searching within current employee's fields
+- [x] add computed property filteredFieldGroups that filters fieldGroups based on search term
+- [x] search logic: match against field labels (from schema) and field values (from form data)
+- [x] add search input UI in employee card section (above field groups)
+- [x] add clear button for field search input
+- [x] update E2E test card-search.spec.js to cover within-card field search
+- [x] run full E2E test suite - must pass
 
 ### Task 4: Combine Templates and Document History into one navigation section
 

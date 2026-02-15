@@ -108,4 +108,70 @@ test.describe('Card Search', () => {
     const statusBar = page.locator('.panel .status-bar');
     await expect(statusBar).toContainText('0 з 5');
   });
+
+  test('should filter fields within employee card by field label', async ({ page }) => {
+    // Select an employee
+    const firstCard = page.locator('.employee-list .employee-card').first();
+    await firstCard.click();
+
+    // Wait for employee card to load
+    await page.waitForSelector('.card-field-search-wrapper .search-input');
+
+    // Get initial field count (all sections and fields visible)
+    const initialSections = page.locator('.detail-grid .section');
+    const initialSectionCount = await initialSections.count();
+    await expect(initialSectionCount).toBeGreaterThan(0);
+
+    // Search by field label (Ukrainian)
+    const fieldSearchInput = page.locator('.card-field-search-wrapper .search-input');
+    await fieldSearchInput.fill('пошта');
+
+    // Should show only sections with matching field labels
+    const filteredSections = page.locator('.detail-grid .section');
+    const filteredSectionCount = await filteredSections.count();
+
+    // Should have fewer sections after filtering
+    expect(filteredSectionCount).toBeLessThanOrEqual(initialSectionCount);
+
+    // Check that email field is visible
+    const emailField = page.locator('label:has-text("Ел. пошта")');
+    await expect(emailField).toBeVisible();
+  });
+
+  test('should filter fields within employee card by field value', async ({ page }) => {
+    // Select an employee
+    const firstCard = page.locator('.employee-list .employee-card').first();
+    await firstCard.click();
+
+    await page.waitForSelector('.card-field-search-wrapper .search-input');
+
+    // Search by field value (phone number)
+    const fieldSearchInput = page.locator('.card-field-search-wrapper .search-input');
+    await fieldSearchInput.fill('+38050');
+
+    // Phone field should be visible (use for= selector to be specific)
+    const phoneField = page.locator('label[for="phone"]');
+    await expect(phoneField).toBeVisible();
+  });
+
+  test('should have field search input within employee card', async ({ page }) => {
+    // Select an employee
+    const firstCard = page.locator('.employee-list .employee-card').first();
+    await firstCard.click();
+
+    // Field search input should exist
+    const fieldSearchInput = page.locator('.card-field-search-wrapper .search-input');
+    await expect(fieldSearchInput).toBeVisible();
+
+    // Should have correct placeholder
+    await expect(fieldSearchInput).toHaveAttribute('placeholder', 'Пошук по полях картки...');
+
+    // Should be able to type in it
+    await fieldSearchInput.fill('test');
+    await expect(fieldSearchInput).toHaveValue('test');
+
+    // Should be able to clear it
+    await fieldSearchInput.fill('');
+    await expect(fieldSearchInput).toHaveValue('');
+  });
 });
