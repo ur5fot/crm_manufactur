@@ -3346,6 +3346,8 @@ The application uses specific naming conventions for generated files to ensure u
 - Example: `Contract_Петренко_123_1707845123456.docx`
 - Location: `files/documents/`
 - Template name sanitized to remove special characters (replaced with underscores)
+- Last name sanitized to remove special characters (replaced with underscores)
+- If last_name is empty/null, pattern becomes: `{TemplateName}_{employee_id}_{timestamp}.docx`
 - Sanitization regex: `/[^a-zA-Z0-9а-яА-ЯіїєґІЇЄҐ]/g` (alphanumeric + Ukrainian letters only)
 
 **Employee Document Folders**:

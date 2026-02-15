@@ -106,12 +106,12 @@ Add new search input that filters visible form fields within the current employe
 **Files:**
 - Review: `server/src/routes/templates.js` (line 362-364)
 
-- [ ] verify generateDocx already includes sanitizedLastName in filename
-- [ ] verify format: `{TemplateName}_{LastName}_{employee_id}_{timestamp}.docx`
-- [ ] test document generation from cards view and verify filename pattern
-- [ ] verify E2E tests for document generation pass with current implementation
-- [ ] document this behavior in CLAUDE.md if not already documented
-- [ ] run E2E templates-generation.spec.js - must pass
+- [x] verify generateDocx already includes sanitizedLastName in filename
+- [x] verify format: `{TemplateName}_{LastName}_{employee_id}_{timestamp}.docx`
+- [x] test document generation from cards view and verify filename pattern
+- [x] verify E2E tests for document generation pass with current implementation
+- [x] document this behavior in CLAUDE.md if not already documented
+- [x] run E2E templates-generation.spec.js - must pass
 
 ### Task 7: Review and fix dark/light theme styling
 
