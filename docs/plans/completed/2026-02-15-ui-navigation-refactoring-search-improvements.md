@@ -185,8 +185,8 @@ Add new search input that filters visible form fields within the current employe
 
 ### Task 12: Update documentation
 
-- [ ] update README.md: document new navigation structure (Documents, System Settings)
-- [ ] update README.md: document search capabilities (global, employee list, within-card)
-- [ ] update CLAUDE.md: document refactored code patterns if significantly changed
-- [ ] update CLAUDE.md: document new view components (DocumentsView, SystemSettingsView)
-- [ ] move this plan to `docs/plans/completed/`
+- [x] update README.md: document new navigation structure (Documents, System Settings)
+- [x] update README.md: document search capabilities (global, employee list, within-card)
+- [x] update CLAUDE.md: document refactored code patterns if significantly changed
+- [x] update CLAUDE.md: document new view components (DocumentsView, SystemSettingsView)
+- [x] move this plan to `docs/plans/completed/`

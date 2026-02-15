@@ -16,8 +16,72 @@ A comprehensive CRM system for managing employee records, documents, and templat
 - File management for employee documents
 - Dashboard with statistics and events
 - Dark/light theme toggle with persistent preference
-- Employee card search for filtering employees in cards view
-- Global search across employees, templates, and documents
+- Three-level search capabilities:
+  - Global search across employees, templates, and documents
+  - Employee list search within cards view sidebar
+  - Within-card field search to filter form fields by label and value
+- Organized navigation:
+  - Main tabs: Dashboard, Cards, Table, Reports, Documents
+  - Documents tab combines Templates and Document History in sub-tabs
+  - System Settings dropdown (three dots menu) for Import and Logs
+
+## Navigation Structure
+
+The application uses a tabbed navigation interface with the following organization:
+
+### Main Tabs
+
+Located in the header tab bar:
+
+- **Dashboard** - Statistics, notifications, and recent events
+- **Cards (Картки)** - Employee card-based editing interface with sidebar list
+- **Table (Таблиця)** - Employee table view with sorting and filtering
+- **Reports (Звіти)** - Custom reports with dynamic filter builder
+- **Documents (Документи)** - Template management and document history (combines two sub-tabs)
+
+### Documents Tab Sub-tabs
+
+The Documents section contains two sub-tabs for document management:
+
+- **Templates (Шаблони)** - Manage DOCX templates, upload template files, extract placeholders
+- **Document History (Історія документів)** - View all generated documents with filters and pagination
+
+### System Settings Dropdown
+
+Accessible via the three-dots menu (⋮) in the top-right corner:
+
+- **System Settings (Налаштування системи)** - Contains Import and Logs sub-tabs:
+  - **Import (Імпорт)** - CSV import interface for bulk employee operations
+  - **Logs (Логи)** - Audit log viewer with pagination
+- **Open Data Folder (Відкрити папку даних)** - Opens the data directory in file manager
+
+## Search Capabilities
+
+The application provides three levels of search functionality:
+
+### Global Search
+
+Located in the header (input field in top bar):
+- Searches across employees, templates, and documents simultaneously
+- Minimum 2 characters required
+- Results grouped by type with counts
+- Click on result to navigate to details or download
+- Debounced input (300ms delay) for performance
+
+### Employee List Search (Cards View)
+
+Located in the employee sidebar of the Cards view:
+- Filters the employee list in real-time
+- Searches across: last_name, first_name, middle_name, employee_id, employment_status
+- Case-insensitive substring matching
+
+### Within-Card Field Search
+
+Located within the employee card in Cards view (above form fields):
+- Filters visible form fields within the current employee card
+- Matches against both field labels (from schema) and field values (from employee data)
+- Case-insensitive substring matching
+- Useful for finding specific fields in large forms
 
 ## Technology Stack
 

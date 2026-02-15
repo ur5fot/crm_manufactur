@@ -1034,6 +1034,8 @@ import ReportsView from "./views/ReportsView.vue";
 import ImportView from "./views/ImportView.vue";
 import TemplatesView from "./views/TemplatesView.vue";
 import DocumentHistoryView from "./views/DocumentHistoryView.vue";
+import DocumentsView from "./views/DocumentsView.vue";
+import SystemSettingsView from "./views/SystemSettingsView.vue";
 import PlaceholderReferenceView from "./views/PlaceholderReferenceView.vue";
 import LogsView from "./views/LogsView.vue";
 
@@ -1042,10 +1044,13 @@ const routes = [
   { path: "/cards/:id?", name: "cards", component: EmployeeCardsView },
   { path: "/table", name: "table", component: TableView },
   { path: "/reports", name: "reports", component: ReportsView },
+  { path: "/documents", name: "documents", component: DocumentsView },
+  { path: "/system-settings", name: "system-settings", component: SystemSettingsView },
+  { path: "/placeholder-reference/:employeeId?", name: "placeholder-reference", component: PlaceholderReferenceView },
+  // Legacy routes for backwards compatibility:
   { path: "/import", name: "import", component: ImportView },
   { path: "/templates", name: "templates", component: TemplatesView },
   { path: "/document-history", name: "document-history", component: DocumentHistoryView },
-  { path: "/placeholder-reference/:employeeId?", name: "placeholder-reference", component: PlaceholderReferenceView },
   { path: "/logs", name: "logs", component: LogsView }
 ];
 ```
@@ -1053,14 +1058,16 @@ const routes = [
 **View Components**:
 Each view is a standalone Vue component with its own state and methods:
 - `DashboardView.vue` - Dashboard with statistics and notifications
-- `EmployeeCardsView.vue` - Employee card-based editing interface with optional employee ID parameter
+- `EmployeeCardsView.vue` - Employee card-based editing interface with optional employee ID parameter, includes employee list search and within-card field search
 - `TableView.vue` - Employee list in table format with sorting and filtering
 - `ReportsView.vue` - Custom reports with dynamic filters
 - `ImportView.vue` - CSV import interface for bulk employee operations
-- `TemplatesView.vue` - Document template management
-- `DocumentHistoryView.vue` - History of all generated documents with pagination
+- `TemplatesView.vue` - Document template management (also embedded in DocumentsView)
+- `DocumentHistoryView.vue` - History of all generated documents with pagination (also embedded in DocumentsView)
+- `DocumentsView.vue` - Tabbed container combining TemplatesView and DocumentHistoryView (main navigation tab)
+- `SystemSettingsView.vue` - Tabbed container combining ImportView and LogsView (accessed via dropdown menu)
 - `PlaceholderReferenceView.vue` - Placeholder reference guide with preview values
-- `LogsView.vue` - Audit log viewer with pagination
+- `LogsView.vue` - Audit log viewer with pagination (also embedded in SystemSettingsView)
 
 **View Component Pattern**:
 ```vue
@@ -1468,6 +1475,65 @@ async function handleUploadTemplate(event) {
 - Cancel button to close without action
 - Modal state tracked with ref boolean
 
+### Tabbed Container Pattern
+
+The application uses tabbed container components to organize related views into sub-sections. This pattern is used for DocumentsView and SystemSettingsView.
+
+**Container Component Structure**:
+```vue
+<script setup>
+import { ref } from "vue";
+import ChildViewA from "./ChildViewA.vue";
+import ChildViewB from "./ChildViewB.vue";
+
+const activeTab = ref('tab-a');
+
+function switchTab(tab) {
+  activeTab.value = tab;
+}
+</script>
+
+<template>
+  <div class="container-view">
+    <div class="tabs-header">
+      <button
+        :class="['tab-btn', { active: activeTab === 'tab-a' }]"
+        @click="switchTab('tab-a')"
+      >
+        Tab A Label
+      </button>
+      <button
+        :class="['tab-btn', { active: activeTab === 'tab-b' }]"
+        @click="switchTab('tab-b')"
+      >
+        Tab B Label
+      </button>
+    </div>
+
+    <ChildViewA v-if="activeTab === 'tab-a'" />
+    <ChildViewB v-else-if="activeTab === 'tab-b'" />
+  </div>
+</template>
+```
+
+**Usage Examples**:
+
+**DocumentsView** (main tab in navigation):
+- Combines TemplatesView and DocumentHistoryView
+- Two sub-tabs: "Шаблони" and "Історія документів"
+- Accessible via Documents tab in main navigation
+
+**SystemSettingsView** (dropdown menu):
+- Combines ImportView and LogsView
+- Two sub-tabs: "Імпорт" and "Логи"
+- Accessible via three-dots dropdown menu in top-right corner
+
+**Benefits**:
+- Reduces main navigation clutter
+- Groups related functionality logically
+- Reuses existing view components without modification
+- Maintains component isolation and testability
+
 ### Table Filtering and Pagination Patterns
 
 The application implements client-side and server-side filtering with pagination.
@@ -1690,9 +1756,13 @@ function toggleTheme() {
 
 **Theme Toggle Button**: Located in topbar, uses sun/moon emoji icons to indicate current state.
 
-### Global Search
+### Search Capabilities
 
-The application provides a global search feature in the header that searches across employees, templates, and documents simultaneously.
+The application provides three levels of search functionality to help users find information quickly.
+
+#### Global Search
+
+Searches across employees, templates, and documents simultaneously from the header.
 
 **Frontend Pattern**:
 ```javascript
@@ -1702,11 +1772,13 @@ const showGlobalSearchResults = ref(false);
 
 // Debounced search via watch
 watch(() => globalSearchTerm.value, (newTerm) => {
-  if (newTerm.trim().length < 2) {
+  if (newTerm.trim().length < SEARCH_MIN_LENGTH) {
     showGlobalSearchResults.value = false;
     return;
   }
-  // 300ms debounce, then call performGlobalSearch
+  globalSearchTimeout = setTimeout(() => {
+    performGlobalSearch(newTerm);
+  }, SEARCH_DEBOUNCE_MS);
 });
 
 async function performGlobalSearch(query) {
@@ -1720,10 +1792,70 @@ async function performGlobalSearch(query) {
 - Search input in topbar (after brand, before tab-bar)
 - Dropdown results panel positioned absolutely below input
 - Results grouped by type: Співробітники, Шаблони, Документи
-- Click handlers: employees navigate to cards view, templates to templates view, documents download
+- Click handlers: employees navigate to cards view, templates to documents view, documents download
 - Outside click handler closes dropdown
+- Minimum 2 characters required (SEARCH_MIN_LENGTH constant)
+- 300ms debounce delay (SEARCH_DEBOUNCE_MS constant)
 
-**Card Search**: Separate `cardSearchTerm` ref filters employee list in cards view using a computed property that matches across all text fields.
+#### Employee List Search (Cards View)
+
+Filters the employee list in the sidebar of the Cards view.
+
+**Pattern**:
+```javascript
+const cardSearchTerm = ref("");
+
+const filteredEmployeesForCards = computed(() => {
+  if (!cardSearchTerm.value) return employees.value;
+
+  const term = cardSearchTerm.value.toLowerCase();
+  return employees.value.filter(emp => {
+    // Search across key fields
+    return [
+      emp.last_name,
+      emp.first_name,
+      emp.middle_name,
+      emp.employee_id,
+      emp.employment_status
+    ].some(field => String(field || '').toLowerCase().includes(term));
+  });
+});
+```
+
+**UI**:
+- Search input at top of employee list sidebar
+- Real-time filtering (no debounce needed for client-side search)
+- Case-insensitive substring matching
+- Searches: last_name, first_name, middle_name, employee_id, employment_status
+
+#### Within-Card Field Search
+
+Filters visible form fields within the current employee card based on field labels and values.
+
+**Pattern**:
+```javascript
+const cardFieldSearchTerm = ref("");
+
+const filteredFieldGroups = computed(() => {
+  if (!cardFieldSearchTerm.value) return fieldGroups.value;
+
+  const term = cardFieldSearchTerm.value.toLowerCase();
+  return fieldGroups.value.map(group => ({
+    ...group,
+    fields: group.fields.filter(field => {
+      const labelMatch = field.label.toLowerCase().includes(term);
+      const valueMatch = String(form.value[field.key] || '').toLowerCase().includes(term);
+      return labelMatch || valueMatch;
+    })
+  })).filter(group => group.fields.length > 0);
+});
+```
+
+**UI**:
+- Search input in employee card section (above field groups)
+- Filters fields by both label (from schema) and current value (from form)
+- Useful for finding specific fields in large employee forms
+- Clear button to reset filter
 
 ### Bootstrap UI Components Usage
 
