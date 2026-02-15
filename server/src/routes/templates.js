@@ -98,7 +98,7 @@ export function registerTemplateRoutes(app, appConfig) {
       const index = templates.findIndex((t) => t.template_id === req.params.id);
 
       if (index === -1) {
-        res.status(404).json({ error: "Шаблон не найден" });
+        res.status(404).json({ error: "Шаблон не знайдено" });
         return;
       }
 
@@ -237,12 +237,12 @@ export function registerTemplateRoutes(app, appConfig) {
       const template = templates.find((t) => t.template_id === req.params.id && t.active !== 'no');
 
       if (!template) {
-        res.status(404).json({ error: "Шаблон не найден" });
+        res.status(404).json({ error: "Шаблон не знайдено" });
         return;
       }
 
       if (!template.docx_filename) {
-        res.status(400).json({ error: "Шаблон не имеет загруженного DOCX файла" });
+        res.status(400).json({ error: "Шаблон не має завантаженого DOCX файлу" });
         return;
       }
 
@@ -281,12 +281,12 @@ export function registerTemplateRoutes(app, appConfig) {
       const template = templates.find((t) => t.template_id === req.params.id && t.active !== 'no');
 
       if (!template) {
-        res.status(404).json({ error: "Шаблон не найден" });
+        res.status(404).json({ error: "Шаблон не знайдено" });
         return;
       }
 
       if (!template.docx_filename) {
-        res.status(400).json({ error: "Шаблон не имеет загруженного DOCX файла" });
+        res.status(400).json({ error: "Шаблон не має завантаженого DOCX файлу" });
         return;
       }
 
