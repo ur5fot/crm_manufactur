@@ -171,17 +171,17 @@ Add new search input that filters visible form fields within the current employe
 
 ### Task 11: Verify acceptance criteria
 
-- [ ] manual test: clean database has no test templates or documents
-- [ ] manual test: employee list search filters employees in cards sidebar
-- [ ] manual test: within-card field search filters form fields by label and value
-- [ ] manual test: global search finds employees, templates, and documents across entire site
-- [ ] manual test: Documents tab contains Templates and Document History sub-tabs
-- [ ] manual test: System Settings (three dots menu) contains Import and Logs sub-tabs
-- [ ] manual test: generated documents include employee last name in filename
-- [ ] manual test: dark theme readable and consistent across all views
-- [ ] manual test: light theme readable and consistent across all views
-- [ ] run full E2E test suite (npm run test:e2e) - must pass
-- [ ] run backend unit tests (cd server && npm test) - must pass
+- [x] manual test: clean database has no test templates or documents
+- [x] manual test: employee list search filters employees in cards sidebar
+- [x] manual test: within-card field search filters form fields by label and value
+- [x] manual test: global search finds employees, templates, and documents across entire site
+- [x] manual test: Documents tab contains Templates and Document History sub-tabs
+- [x] manual test: System Settings (three dots menu) contains Import and Logs sub-tabs
+- [x] manual test: generated documents include employee last name in filename
+- [x] manual test: dark theme readable and consistent across all views
+- [x] manual test: light theme readable and consistent across all views
+- [x] run full E2E test suite (npm run test:e2e) - must pass
+- [x] run backend unit tests (cd server && npm test) - must pass
 
 ### Task 12: Update documentation
 

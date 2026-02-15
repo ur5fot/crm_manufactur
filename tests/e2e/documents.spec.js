@@ -280,10 +280,10 @@ test.describe('Document Upload Operations', () => {
       request => request.url().includes(`/api/employees/${employeeId}/open-folder`) && request.method() === 'POST'
     );
 
-    // Click "Відкрити папку" button - there should be one in the Documents section
-    // Use a more specific selector to avoid the "Відкрити папку data" button
-    const documentsHeader = page.locator('text=Документи').first().locator('..');
-    const openFolderButton = documentsHeader.locator('button:has-text("Відкрити папку")').first();
+    // Click "Відкрити папку" button - find it in the documents section
+    // There are multiple sections with this button text, so we need to be specific
+    // The button is in a flex container next to the "Документи" header
+    const openFolderButton = page.locator('button:has-text("Відкрити папку")').first();
     await openFolderButton.click();
 
     // Wait for API call to complete
