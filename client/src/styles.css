@@ -35,6 +35,9 @@
   --color-status-warning: #ffa726;
   --color-status-inactive: #bdbdbd;
   --shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
+  --input-bg: #1f1f1f;
+  --modal-bg: #2d2d2d;
+  --table-hover: rgba(20, 184, 166, 0.12);
 }
 
 [data-theme="dark"] body {
@@ -117,8 +120,8 @@ a {
   justify-content: space-between;
   gap: 16px;
   padding: 22px 26px;
-  background: rgba(255, 253, 247, 0.9);
-  border: 1px solid rgba(255, 255, 255, 0.6);
+  background: var(--surface);
+  border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow);
   backdrop-filter: blur(14px);
@@ -312,11 +315,19 @@ a {
 }
 
 .tab-icon-btn:hover {
-  background-color: #f0f0f0;
+  background-color: rgba(15, 118, 110, 0.1);
 }
 
 .tab-icon-btn:active {
-  background-color: #e0e0e0;
+  background-color: rgba(15, 118, 110, 0.15);
+}
+
+[data-theme="dark"] .tab-icon-btn:hover {
+  background-color: rgba(20, 184, 166, 0.15);
+}
+
+[data-theme="dark"] .tab-icon-btn:active {
+  background-color: rgba(20, 184, 166, 0.2);
 }
 
 .tab-divider {
@@ -330,7 +341,7 @@ a {
   padding: 0 20px;
   font-size: 14px;
   font-weight: 500;
-  color: #666;
+  color: var(--muted);
   cursor: pointer;
   background: none;
   border: none;
@@ -351,7 +362,7 @@ a {
 }
 
 .tab-item:hover:not(.active) {
-  color: #333;
+  color: var(--ink);
 }
 
 .layout {
@@ -362,8 +373,8 @@ a {
 }
 
 .panel {
-  background: rgba(255, 253, 247, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.7);
+  background: var(--surface);
+  border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow);
   padding: 22px;
@@ -438,7 +449,7 @@ a {
   border-radius: var(--radius-md);
   padding: 14px 16px;
   border: 1px solid transparent;
-  background: #fff;
+  background: var(--bg-accent);
   transition: transform 0.2s ease, border 0.2s ease, box-shadow 0.2s ease;
   cursor: pointer;
   display: flex;
@@ -523,7 +534,7 @@ a {
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   padding: 16px;
-  background: rgba(255, 255, 255, 0.8);
+  background: var(--bg-accent);
 }
 
 .section-title {
@@ -558,7 +569,7 @@ textarea {
   border-radius: var(--radius-sm);
   border: 1px solid var(--line);
   font-size: 14px;
-  background: #fff;
+  background: var(--input-bg, #fff);
   color: var(--ink);
 }
 
@@ -596,7 +607,7 @@ button.primary {
 }
 
 button.secondary {
-  background: #fff;
+  background: var(--bg-accent);
   color: var(--ink);
   border: 1px solid var(--line);
 }
@@ -722,7 +733,7 @@ button:hover:not(:disabled) {
   min-height: 300px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--line);
-  background: #fff;
+  background: var(--surface);
 }
 
 .summary-table {
@@ -735,7 +746,7 @@ button:hover:not(:disabled) {
   position: sticky;
   top: 0;
   z-index: 10;
-  background: rgba(255, 253, 247, 0.98);
+  background: var(--bg-accent);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
@@ -771,7 +782,7 @@ button:hover:not(:disabled) {
   font-size: 11px;
   border: 1px solid var(--line);
   border-radius: 6px;
-  background: #fff;
+  background: var(--input-bg, #fff);
   color: var(--ink);
   text-transform: none;
   letter-spacing: normal;
@@ -886,7 +897,7 @@ button:hover:not(:disabled) {
 
 /* Dropdown content box */
 .filter-dropdown-content {
-  background: white;
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
@@ -935,7 +946,7 @@ button:hover:not(:disabled) {
 }
 
 .summary-table tbody tr:hover {
-  background-color: rgba(15, 118, 110, 0.08);
+  background-color: var(--table-hover, rgba(15, 118, 110, 0.08));
 }
 
 .id-cell {
@@ -973,7 +984,7 @@ button:hover:not(:disabled) {
   gap: 4px;
   padding: 4px;
   min-height: 50px;
-  background: #fff;
+  background: var(--surface);
   align-items: center;
 }
 
@@ -984,7 +995,8 @@ button:hover:not(:disabled) {
   border: 1px solid var(--accent);
   border-radius: var(--radius-sm);
   font-size: 13px;
-  background: #fff;
+  background: var(--input-bg, #fff);
+  color: var(--ink);
   outline: none;
   box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.1);
 }
@@ -1009,7 +1021,7 @@ button:hover:not(:disabled) {
   justify-content: center;
   border-radius: 6px;
   border: 1px solid var(--line);
-  background: #fff;
+  background: var(--bg-accent);
   cursor: pointer;
   font-size: 14px;
   transition: all 0.15s ease;
@@ -1161,7 +1173,7 @@ button.small {
   font-size: 13px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--line);
-  background: #fff;
+  background: var(--bg-accent);
   color: var(--ink);
   transition: all 0.2s ease;
   text-align: center;
@@ -1240,7 +1252,7 @@ button.small {
 }
 
 .vacation-notification-modal {
-  background: white;
+  background: var(--modal-bg, white);
   border-radius: var(--radius-lg);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   max-width: 500px;
@@ -1408,7 +1420,7 @@ button.small {
 }
 
 .stat-card {
-  background: #FFFFFF;
+  background: var(--surface);
   border-radius: 8px;
   padding: 16px;
   border-left: 4px solid var(--card-color);
@@ -1452,7 +1464,7 @@ button.small {
 }
 
 .inline-expand {
-  background: #FFFFFF;
+  background: var(--surface);
   border-radius: 8px;
   border: 1px solid transparent;
   overflow: hidden;
@@ -1508,7 +1520,7 @@ button.small {
 }
 
 .timeline-card {
-  background: #FFFFFF;
+  background: var(--surface);
   border-radius: 8px;
   padding: 16px;
 }
@@ -1629,7 +1641,7 @@ button.small {
   width: 100%;
   border-collapse: collapse;
   font-size: 14px;
-  background: #fff;
+  background: var(--surface);
   border-radius: 8px;
   overflow: hidden;
 }
@@ -1761,28 +1773,28 @@ button.small {
 .filter-field {
   flex: 2;
   padding: 8px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: 4px;
-  background: white;
-  color: var(--text);
+  background: var(--input-bg, white);
+  color: var(--ink);
 }
 
 .filter-condition {
   flex: 1;
   padding: 8px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: 4px;
-  background: white;
-  color: var(--text);
+  background: var(--input-bg, white);
+  color: var(--ink);
 }
 
 .filter-value {
   flex: 2;
   padding: 8px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: 4px;
-  background: white;
-  color: var(--text);
+  background: var(--input-bg, white);
+  color: var(--ink);
 }
 
 .btn-remove-filter {
@@ -1833,8 +1845,8 @@ button.small {
   max-height: 300px;
   overflow-y: auto;
   padding: 8px;
-  background: white;
-  border: 1px solid var(--border);
+  background: var(--surface);
+  border: 1px solid var(--line);
   border-radius: 4px;
 }
 
@@ -1905,7 +1917,7 @@ button.small {
   justify-content: center;
   border-radius: 50%;
   border: 1px solid var(--line);
-  background: #fff;
+  background: var(--bg-accent);
   color: var(--muted);
   font-size: 18px;
   cursor: pointer;
@@ -1945,7 +1957,7 @@ button.small {
   margin-top: 16px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--line);
-  background: #fff;
+  background: var(--surface);
 }
 
 .templates-table {
@@ -2100,7 +2112,7 @@ button.small {
 }
 
 .template-dialog-content {
-  background: white;
+  background: var(--modal-bg, white);
   border-radius: var(--radius-lg);
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.3);
   max-width: 600px;
@@ -2174,7 +2186,7 @@ button.small {
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   padding: 16px;
-  background: white;
+  background: var(--surface);
   display: flex;
   flex-direction: column;
   gap: 12px;

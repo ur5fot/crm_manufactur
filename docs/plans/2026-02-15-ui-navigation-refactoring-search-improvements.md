@@ -118,14 +118,14 @@ Add new search input that filters visible form fields within the current employe
 **Files:**
 - Modify: `client/src/styles.css`
 
-- [ ] manually test dark theme: check all views for readability and contrast
-- [ ] manually test light theme: check all views for readability and contrast
-- [ ] identify any elements with poor contrast or missing theme variables
-- [ ] fix dropdown menus, modals, form inputs, buttons in both themes
-- [ ] verify global search dropdown styling in both themes
-- [ ] verify new Documents and System Settings views in both themes
-- [ ] update theme-toggle.spec.js E2E test if needed
-- [ ] run theme-toggle.spec.js E2E test - must pass
+- [x] manually test dark theme: check all views for readability and contrast
+- [x] manually test light theme: check all views for readability and contrast
+- [x] identify any elements with poor contrast or missing theme variables
+- [x] fix dropdown menus, modals, form inputs, buttons in both themes
+- [x] verify global search dropdown styling in both themes
+- [x] verify new Documents and System Settings views in both themes
+- [x] update theme-toggle.spec.js E2E test if needed
+- [x] run theme-toggle.spec.js E2E test - must pass
 
 ### Task 8: Remove hardcoded URLs in E2E tests
 
