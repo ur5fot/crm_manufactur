@@ -154,10 +154,10 @@
 - [x] Run all tests — must pass before next task
 
 ### Task 16: Extract PlaceholderReferenceView
-- [ ] Create `client/src/views/PlaceholderReferenceView.vue` — move placeholder preview state and methods from App.vue
-- [ ] Update `client/src/main.js` — change placeholder-reference route to point to `PlaceholderReferenceView`
-- [ ] Remove placeholder-reference code from App.vue
-- [ ] Run all tests — must pass before next task
+- [x] Create `client/src/views/PlaceholderReferenceView.vue` — move placeholder preview state and methods from App.vue
+- [x] Update `client/src/main.js` — change placeholder-reference route to point to `PlaceholderReferenceView`
+- [x] Remove placeholder-reference code from App.vue
+- [x] Run all tests — must pass before next task
 
 ### Task 17: Extract EmployeeCardsView (largest view)
 - [ ] Create `client/src/composables/useEmployeeForm.js` — extract form state, dirty tracking, snapshot management, unsaved changes logic
