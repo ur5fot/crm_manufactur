@@ -126,13 +126,12 @@ async function loadLogs() {
 async function loadFieldsSchema() {
   try {
     const response = await api.getFieldsSchema();
-    allFieldsSchema.value = response.fields.map(f => ({
-      key: f.field_name,
-      label: f.field_label,
-      type: f.field_type,
-      options: f.field_options?.split('|') || [],
-      group: f.field_group,
-      required: f.required === 'yes'
+    allFieldsSchema.value = (response.allFields || []).map(f => ({
+      key: f.key,
+      label: f.label,
+      type: f.type,
+      options: f.options || [],
+      group: f.group
     }));
   } catch (error) {
     console.error("Failed to load fields schema:", error);

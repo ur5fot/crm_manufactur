@@ -248,7 +248,7 @@ export function registerEmployeeRoutes(app) {
     }
   });
 
-  // DELETE employee (soft delete + physical file cleanup)
+  // DELETE employee (hard delete + physical file cleanup)
   app.delete("/api/employees/:id", async (req, res) => {
     try {
       const employees = await loadEmployees();

@@ -3,6 +3,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { api } from "./api";
 import { SEARCH_MIN_LENGTH, SEARCH_DEBOUNCE_MS } from "./utils/constants";
+import { displayName } from "./utils/employee";
 import DashboardView from "./views/DashboardView.vue";
 import TableView from "./views/TableView.vue";
 import PlaceholderReferenceView from "./views/PlaceholderReferenceView.vue";
@@ -52,21 +53,7 @@ async function openDataFolder() {
 }
 
 // Compute current view based on route
-const currentView = computed(() => {
-  const name = route.name;
-  if (name === 'dashboard') return 'dashboard';
-  if (name === 'cards') return 'cards';
-  if (name === 'table') return 'table';
-  if (name === 'reports') return 'reports';
-  if (name === 'import') return 'import';
-  if (name === 'documents') return 'documents';
-  if (name === 'templates') return 'templates';
-  if (name === 'document-history') return 'document-history';
-  if (name === 'placeholder-reference') return 'placeholder-reference';
-  if (name === 'logs') return 'logs';
-  if (name === 'system-settings') return 'system-settings';
-  return 'dashboard';
-});
+const currentView = computed(() => route.name || 'dashboard');
 
 const tabs = [
   { key: 'dashboard', label: 'Dashboard' },
@@ -77,27 +64,7 @@ const tabs = [
 ];
 
 function switchView(view) {
-  if (view === 'dashboard') {
-    router.push({ name: 'dashboard' });
-  } else if (view === 'cards') {
-    router.push({ name: 'cards' });
-  } else if (view === 'table') {
-    router.push({ name: 'table' });
-  } else if (view === 'reports') {
-    router.push({ name: 'reports' });
-  } else if (view === 'import') {
-    router.push({ name: 'import' });
-  } else if (view === 'documents') {
-    router.push({ name: 'documents' });
-  } else if (view === 'templates') {
-    router.push({ name: 'templates' });
-  } else if (view === 'document-history') {
-    router.push({ name: 'document-history' });
-  } else if (view === 'logs') {
-    router.push({ name: 'logs' });
-  } else if (view === 'system-settings') {
-    router.push({ name: 'system-settings' });
-  }
+  router.push({ name: view });
 }
 
 // Theme toggle function
@@ -181,11 +148,6 @@ const globalSearchHasResults = computed(() => {
   const r = globalSearchResults.value;
   return r.employees.length > 0 || r.templates.length > 0 || r.documents.length > 0;
 });
-
-function displayName(employee) {
-  const parts = [employee.last_name, employee.first_name, employee.middle_name].filter(Boolean);
-  return parts.length ? parts.join(" ") : "Без імені";
-}
 
 onMounted(async () => {
   // Apply theme on load

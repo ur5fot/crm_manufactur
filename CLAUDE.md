@@ -77,13 +77,18 @@ crm_manufactur/
 │   │   │   ├── ImportView.vue            # CSV import interface
 │   │   │   ├── TemplatesView.vue         # Template management
 │   │   │   ├── DocumentHistoryView.vue   # Document generation history
+│   │   │   ├── DocumentsView.vue         # Tabbed container for Templates + Document History
+│   │   │   ├── SystemSettingsView.vue    # Tabbed container for Import + Logs
 │   │   │   ├── PlaceholderReferenceView.vue # Placeholder reference guide
 │   │   │   └── LogsView.vue              # Audit log viewer
 │   │   ├── composables/        # Shared composable functions
 │   │   │   ├── useFieldsSchema.js        # Field schema loading and utilities
 │   │   │   └── useEmployeeForm.js        # Employee form state and dirty tracking
+│   │   ├── utils/              # Utility modules
+│   │   │   ├── constants.js              # Application-wide constants
+│   │   │   └── employee.js               # Employee display name utility
 │   │   ├── App.vue             # Root component with navigation and layout
-│   │   ├── api.js              # Axios-based API client
+│   │   ├── api.js              # Fetch-based API client
 │   │   └── main.js             # Vue app initialization and routing
 │   ├── public/                 # Static assets
 │   ├── package.json            # Frontend dependencies

@@ -446,12 +446,17 @@ Tests run automatically via GitHub Actions on push to `master`/`feature/*` branc
 │   │   │   ├── ReportsView.vue
 │   │   │   ├── TemplatesView.vue
 │   │   │   ├── DocumentHistoryView.vue
+│   │   │   ├── DocumentsView.vue
+│   │   │   ├── SystemSettingsView.vue
 │   │   │   ├── ImportView.vue
 │   │   │   ├── PlaceholderReferenceView.vue
 │   │   │   └── LogsView.vue
 │   │   ├── composables/   # Reusable logic
 │   │   │   ├── useFieldsSchema.js
 │   │   │   └── useEmployeeForm.js
+│   │   ├── utils/         # Utility modules
+│   │   │   ├── constants.js
+│   │   │   └── employee.js
 │   │   ├── App.vue        # Root component with navigation
 │   │   ├── api.js         # API client
 │   │   └── main.js        # App initialization & routing

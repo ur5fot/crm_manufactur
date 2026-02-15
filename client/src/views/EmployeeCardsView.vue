@@ -625,8 +625,9 @@ function handleGlobalKeydown(e) {
 }
 
 // Setup navigation guard
+let removeNavigationGuard;
 function setupNavigationGuard() {
-  router.beforeEach((to, from, next) => {
+  removeNavigationGuard = router.beforeEach((to, from, next) => {
     if (from.name === 'cards' && to.name !== 'cards' && isFormDirty.value) {
       pendingNavigation.value = to;
       showUnsavedChangesPopup.value = true;
@@ -684,6 +685,9 @@ onMounted(async () => {
 
 onUnmounted(() => {
   document.removeEventListener('keydown', handleGlobalKeydown);
+  if (removeNavigationGuard) {
+    removeNavigationGuard();
+  }
   if (beforeUnloadHandler) {
     window.removeEventListener('beforeunload', beforeUnloadHandler);
   }
