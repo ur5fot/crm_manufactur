@@ -17,8 +17,14 @@ test.describe('Audit Logs Tests', () => {
   });
 
   test('Просмотр логов изменений', async ({ page }) => {
-    // Navigate to logs page
-    await page.goto('/logs');
+    // Navigate to system settings page
+    await page.goto('/system-settings');
+    await page.waitForLoadState('networkidle');
+
+    // Click on Logs tab
+    await page.click('.subtab-btn:has-text("Логи")');
+    await page.waitForTimeout(500);
+
     await waitForLogsLoad(page);
 
     // Verify logs table/container is visible
@@ -91,8 +97,14 @@ test.describe('Audit Logs Tests', () => {
     // Wait a bit for log to be written
     await page.waitForTimeout(500);
 
-    // Navigate to logs page
-    await page.goto('/logs');
+    // Navigate to system settings page
+    await page.goto('/system-settings');
+    await page.waitForLoadState('networkidle');
+
+    // Click on Logs tab
+    await page.click('.subtab-btn:has-text("Логи")');
+    await page.waitForTimeout(500);
+
     await waitForLogsLoad(page);
 
     // Search for employee logs

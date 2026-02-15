@@ -4,6 +4,7 @@ import App from "./App.vue";
 import ReportsView from "./views/ReportsView.vue";
 import EmployeeCardsView from "./views/EmployeeCardsView.vue";
 import DocumentsView from "./views/DocumentsView.vue";
+import SystemSettingsView from "./views/SystemSettingsView.vue";
 import "./styles.css";
 
 const routes = [
@@ -16,7 +17,8 @@ const routes = [
   { path: "/templates", name: "templates", component: App },
   { path: "/document-history", name: "document-history", component: App },
   { path: "/placeholder-reference/:employeeId?", name: "placeholder-reference", component: App },
-  { path: "/logs", name: "logs", component: App }
+  { path: "/logs", name: "logs", component: App },
+  { path: "/system-settings", name: "system-settings", component: SystemSettingsView }
 ];
 
 const router = createRouter({

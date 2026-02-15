@@ -11,6 +11,7 @@ import DocumentHistoryView from "./views/DocumentHistoryView.vue";
 import TemplatesView from "./views/TemplatesView.vue";
 import ReportsView from "./views/ReportsView.vue";
 import DocumentsView from "./views/DocumentsView.vue";
+import SystemSettingsView from "./views/SystemSettingsView.vue";
 
 const router = useRouter();
 const route = useRoute();
@@ -23,6 +24,31 @@ const globalSearchLoading = ref(false);
 
 // Theme management
 const currentTheme = ref(localStorage.getItem('theme') || 'light');
+
+// Dropdown menu state
+const showDropdown = ref(false);
+
+function toggleDropdown() {
+  showDropdown.value = !showDropdown.value;
+}
+
+function closeDropdown() {
+  showDropdown.value = false;
+}
+
+function navigateToSystemSettings() {
+  closeDropdown();
+  router.push({ name: 'system-settings' });
+}
+
+async function openDataFolder() {
+  closeDropdown();
+  try {
+    await api.openDataFolder();
+  } catch (err) {
+    console.error('Failed to open data folder:', err);
+  }
+}
 
 // Compute current view based on route
 const currentView = computed(() => {
@@ -37,6 +63,7 @@ const currentView = computed(() => {
   if (name === 'document-history') return 'document-history';
   if (name === 'placeholder-reference') return 'placeholder-reference';
   if (name === 'logs') return 'logs';
+  if (name === 'system-settings') return 'system-settings';
   return 'dashboard';
 });
 
@@ -45,9 +72,7 @@ const tabs = [
   { key: 'cards', label: 'Картки' },
   { key: 'table', label: 'Таблиця' },
   { key: 'reports', label: 'Звіти' },
-  { key: 'import', label: 'Імпорт' },
   { key: 'documents', label: 'Документи' },
-  { key: 'logs', label: 'Логи' },
 ];
 
 function switchView(view) {
@@ -69,6 +94,8 @@ function switchView(view) {
     router.push({ name: 'document-history' });
   } else if (view === 'logs') {
     router.push({ name: 'logs' });
+  } else if (view === 'system-settings') {
+    router.push({ name: 'system-settings' });
   }
 }
 
@@ -162,11 +189,22 @@ function displayName(employee) {
 onMounted(async () => {
   // Apply theme on load
   document.documentElement.setAttribute('data-theme', currentTheme.value);
+
+  // Add click listener to close dropdown when clicking outside
+  document.addEventListener('click', handleClickOutside);
 });
 
 onUnmounted(() => {
   clearTimeout(globalSearchTimeout);
+  document.removeEventListener('click', handleClickOutside);
 });
+
+function handleClickOutside(event) {
+  const dropdown = document.querySelector('.dropdown-wrapper');
+  if (dropdown && !dropdown.contains(event.target)) {
+    showDropdown.value = false;
+  }
+}
 </script>
 
 <template>
@@ -253,6 +291,23 @@ onUnmounted(() => {
           >
             {{ currentTheme === 'light' ? '🌙' : '☀️' }}
           </button>
+          <div class="dropdown-wrapper">
+            <button
+              class="icon-btn dropdown-toggle-btn"
+              @click="toggleDropdown"
+              title="Меню"
+            >
+              ⋮
+            </button>
+            <div v-if="showDropdown" class="dropdown-menu" @click.stop>
+              <button class="dropdown-item" @click="navigateToSystemSettings">
+                Налаштування системи
+              </button>
+              <button class="dropdown-item" @click="openDataFolder">
+                Відкрити папку даних
+              </button>
+            </div>
+          </div>
         </div>
       </header>
 
@@ -283,8 +338,11 @@ onUnmounted(() => {
       <!-- Placeholder Reference View -->
       <PlaceholderReferenceView v-else-if="currentView === 'placeholder-reference'" />
 
-      <!-- Logs View -->
+      <!-- Logs View (legacy route support) -->
       <LogsView v-else-if="currentView === 'logs'" />
+
+      <!-- System Settings View -->
+      <SystemSettingsView v-else-if="currentView === 'system-settings'" />
 
     </div>
   </div>

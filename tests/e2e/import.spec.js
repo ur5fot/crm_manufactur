@@ -40,8 +40,8 @@ async function dismissNotifications(page) {
 
 test.describe('CSV Import', () => {
   test.beforeEach(async ({ page }) => {
-    // Navigate to import page
-    await page.goto('/import');
+    // Navigate to system settings page
+    await page.goto('/system-settings');
 
     // Wait for page to load
     await page.waitForLoadState('networkidle');
@@ -49,7 +49,11 @@ test.describe('CSV Import', () => {
     // Close any notification popups
     await dismissNotifications(page);
 
-    await expect(page.locator('.panel-title')).toContainText('Імпорт співробітників з CSV');
+    // Click on Import tab
+    await page.click('.subtab-btn:has-text("Імпорт")');
+    await page.waitForTimeout(500);
+
+    await expect(page.locator('.panel-title').last()).toContainText('Імпорт співробітників з CSV');
   });
 
   test('Импортировать валидный CSV', async ({ page }) => {

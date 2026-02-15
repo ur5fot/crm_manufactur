@@ -90,16 +90,16 @@ Add new search input that filters visible form fields within the current employe
 - Create: `client/src/views/SystemSettingsView.vue`
 - Modify: `client/src/main.js` (routes)
 
-- [ ] create SystemSettingsView.vue with tabbed interface
-- [ ] add two tabs: "Імпорт" and "Логи"
-- [ ] embed ImportView and LogsView as child components within tabs
-- [ ] update App.vue: remove "import" and "logs" tabs from main tab bar
-- [ ] add dropdown menu (three dots icon) in topbar-actions area
-- [ ] dropdown menu items: "Налаштування системи" (routes to /system-settings), "Відкрити папку даних" (existing functionality)
-- [ ] style dropdown to match existing theme
-- [ ] update router in main.js: add /system-settings route
-- [ ] update E2E tests that navigate to import or logs
-- [ ] run full E2E test suite - must pass
+- [x] create SystemSettingsView.vue with tabbed interface
+- [x] add two tabs: "Імпорт" and "Логи"
+- [x] embed ImportView and LogsView as child components within tabs
+- [x] update App.vue: remove "import" and "logs" tabs from main tab bar
+- [x] add dropdown menu (three dots icon) in topbar-actions area
+- [x] dropdown menu items: "Налаштування системи" (routes to /system-settings), "Відкрити папку даних" (existing functionality)
+- [x] style dropdown to match existing theme
+- [x] update router in main.js: add /system-settings route
+- [x] update E2E tests that navigate to import or logs
+- [x] run full E2E test suite - must pass
 
 ### Task 6: Verify document filename includes employee last name (already implemented)
 
