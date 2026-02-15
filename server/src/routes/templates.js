@@ -368,7 +368,7 @@ export function registerTemplateRoutes(app, appConfig) {
       const resolvedTemplatePath = path.resolve(templatePath);
       const allowedTemplateDir = path.resolve(FILES_DIR, 'templates');
 
-      if (!resolvedTemplatePath.startsWith(allowedTemplateDir + path.sep)) {
+      if (!resolvedTemplatePath.startsWith(allowedTemplateDir + path.sep) && resolvedTemplatePath !== allowedTemplateDir) {
         res.status(403).json({ error: "Недозволений шлях до шаблону" });
         return;
       }

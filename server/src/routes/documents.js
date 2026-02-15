@@ -127,7 +127,7 @@ export function registerDocumentRoutes(app) {
       const resolvedPath = path.resolve(filePath);
       const allowedDir = path.resolve(FILES_DIR, 'documents');
 
-      if (!resolvedPath.startsWith(allowedDir + path.sep)) {
+      if (!resolvedPath.startsWith(allowedDir + path.sep) && resolvedPath !== allowedDir) {
         res.status(403).json({ error: "Недозволений шлях до файлу" });
         return;
       }
