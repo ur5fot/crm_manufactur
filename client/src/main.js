@@ -2,11 +2,12 @@ import { createApp } from "vue";
 import { createRouter, createWebHistory } from "vue-router";
 import App from "./App.vue";
 import ReportsView from "./views/ReportsView.vue";
+import EmployeeCardsView from "./views/EmployeeCardsView.vue";
 import "./styles.css";
 
 const routes = [
   { path: "/", name: "dashboard", component: App },
-  { path: "/cards/:id?", name: "cards", component: App },
+  { path: "/cards/:id?", name: "cards", component: EmployeeCardsView },
   { path: "/table", name: "table", component: App },
   { path: "/reports", name: "reports", component: ReportsView },
   { path: "/import", name: "import", component: App },
