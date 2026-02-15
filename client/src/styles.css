@@ -2535,3 +2535,47 @@ button.small {
 [data-theme="dark"] .report-table td {
   border-color: var(--line);
 }
+
+/* Fix overly bright buttons in dark theme */
+[data-theme="dark"] button.secondary {
+  background: var(--surface);
+  color: var(--ink);
+  border-color: var(--line);
+}
+
+[data-theme="dark"] button.secondary:hover:not(:disabled) {
+  background: var(--bg-accent);
+  border-color: var(--accent);
+}
+
+[data-theme="dark"] .file-label-btn {
+  background: var(--surface);
+  color: var(--ink);
+  border-color: var(--line);
+}
+
+[data-theme="dark"] .file-label-btn:hover {
+  background: var(--bg-accent);
+  border-color: var(--accent);
+}
+
+[data-theme="dark"] .cell-btn {
+  background: var(--surface);
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+[data-theme="dark"] .report-btn {
+  background: transparent;
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+[data-theme="dark"] .report-btn:hover {
+  background: rgba(20, 184, 166, 0.15);
+}
+
+[data-theme="dark"] .report-btn.active {
+  background: var(--accent);
+  color: #fff;
+}
