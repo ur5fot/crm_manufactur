@@ -131,10 +131,10 @@ function selectGlobalSearchEmployee(employeeId) {
   router.push({ name: 'cards', params: { id: employeeId } });
 }
 
-function selectGlobalSearchTemplate() {
+function selectGlobalSearchTemplate(templateId) {
   closeGlobalSearch();
   globalSearchTerm.value = "";
-  router.push({ name: 'documents' });
+  router.push({ name: 'documents', query: templateId ? { template_id: templateId } : {} });
 }
 
 function selectGlobalSearchDocument(doc) {
@@ -230,7 +230,7 @@ function handleClickOutside(event) {
                 class="global-search-item"
                 @mousedown.prevent="selectGlobalSearchDocument(doc)"
               >
-                <span class="global-search-item-name">{{ doc.docx_filename || 'Без назви' }}</span>
+                <span class="global-search-item-name">{{ doc.template_name || doc.docx_filename || 'Без назви' }}</span>
                 <span class="global-search-item-meta">{{ doc.employee_name || '' }}</span>
               </div>
             </div>

@@ -82,12 +82,11 @@ export function registerMiscRoutes(app) {
         loadFieldsSchema()
       ]);
 
-      const activeEmployees = employees.filter(e => e.active !== 'no');
       const activeTemplates = templates.filter(t => t.active !== 'no');
 
       const textFieldKeys = schema.filter(f => f.field_type !== 'file').map(f => f.field_name);
 
-      const matchedEmployees = activeEmployees.filter(emp => {
+      const matchedEmployees = employees.filter(emp => {
         for (const key of textFieldKeys) {
           const val = emp[key];
           if (val && String(val).toLowerCase().includes(query)) return true;
@@ -100,7 +99,7 @@ export function registerMiscRoutes(app) {
           (t.description && t.description.toLowerCase().includes(query));
       });
 
-      const employeeMap = new Map(activeEmployees.map(e => [e.employee_id, e]));
+      const employeeMap = new Map(employees.map(e => [e.employee_id, e]));
       const templateMap = new Map(activeTemplates.map(t => [t.template_id, t]));
 
       const matchedDocuments = documents.filter(doc => {
@@ -157,17 +156,16 @@ export function registerMiscRoutes(app) {
     try {
       const schema = await loadFieldsSchema();
       const employees = await loadEmployees();
-      const activeEmployees = employees.filter(e => e.active !== 'no');
 
       let employee;
       if (req.params.employeeId) {
-        employee = findById(activeEmployees, 'employee_id', req.params.employeeId);
+        employee = findById(employees, 'employee_id', req.params.employeeId);
         if (!employee) {
           res.status(404).json({ error: "Співробітник не знайдено" });
           return;
         }
       } else {
-        employee = activeEmployees[0];
+        employee = employees[0];
         if (!employee) {
           res.status(404).json({ error: "Немає активних співробітників" });
           return;

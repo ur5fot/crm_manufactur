@@ -54,6 +54,7 @@ jobs:
           node test/docx-generator.test.js
           node test/declension.test.js
           node test/retirement-events.test.js
+          node test/utils.test.js
 
       - name: Start backend server
         working-directory: ./server
