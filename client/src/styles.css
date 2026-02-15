@@ -38,6 +38,51 @@
   --input-bg: #1f1f1f;
   --modal-bg: #2d2d2d;
   --table-hover: rgba(20, 184, 166, 0.12);
+
+  /* Badge elements */
+  --badge-blue-bg: #1e3a5f;
+  --badge-blue-text: #93c5fd;
+  --badge-purple-bg: #3d1e5f;
+  --badge-purple-text: #d8b4fe;
+  --badge-green-bg: #1e4d2b;
+  --badge-green-text: #86efac;
+  --badge-orange-bg: #5f3d1e;
+  --badge-orange-text: #fdba74;
+  --badge-red-bg: #5f1e1e;
+  --badge-red-text: #fca5a5;
+  --badge-gray-bg: #353535;
+  --badge-gray-text: #d1d5db;
+
+  /* Alert and help boxes */
+  --alert-bg: #3d1e1e;
+  --alert-border: #7f1d1d;
+  --alert-text: #fca5a5;
+  --help-bg: #3d3520;
+  --help-border: #92711a;
+  --help-text: #fde68a;
+
+  /* Table elements */
+  --table-header-bg: #1f1f1f;
+  --table-header-text: #a0a0a0;
+
+  /* Timeline and status */
+  --timeline-text: #e8e8e8;
+  --timeline-desc: #a0a0a0;
+  --timeline-date: #6b7280;
+  --stat-number: #e8e8e8;
+  --stat-label: #a0a0a0;
+
+  /* Vacation notification elements */
+  --vacation-starting-bg: #1e2d3d;
+  --vacation-starting-border: #3b82f6;
+  --vacation-returning-bg: #1e3d2d;
+  --vacation-returning-border: #10b981;
+
+  /* Placeholder reference */
+  --placeholder-hover-bg: #1e3a5f;
+  --placeholder-active-bg: #2d4a70;
+  --placeholder-group-bg: #252525;
+  --placeholder-group-text: #9ca3af;
 }
 
 [data-theme="dark"] body {
@@ -2287,4 +2332,206 @@ button.small {
   letter-spacing: 0.5px;
   color: #495057;
   padding: 8px 12px;
+}
+
+/* ============================================ */
+/* Dark Theme Overrides */
+/* ============================================ */
+
+/* Task 2: Critical elements with poor visibility */
+[data-theme="dark"] .stat-card-number {
+  color: var(--stat-number);
+}
+
+[data-theme="dark"] .stat-card-label {
+  color: var(--stat-label);
+}
+
+[data-theme="dark"] .timeline-event {
+  color: var(--timeline-text);
+}
+
+[data-theme="dark"] .timeline-desc {
+  color: var(--timeline-desc);
+}
+
+[data-theme="dark"] .timeline-date {
+  color: var(--timeline-date);
+}
+
+[data-theme="dark"] .report-table th {
+  background: var(--table-header-bg);
+  color: var(--table-header-text);
+}
+
+[data-theme="dark"] .report-empty {
+  color: var(--muted);
+}
+
+[data-theme="dark"] .placeholder-ref-info {
+  color: var(--muted);
+}
+
+/* Task 3: Border and divider elements */
+[data-theme="dark"] .tab-bar {
+  border-bottom-color: var(--line);
+}
+
+[data-theme="dark"] .tab-divider {
+  background-color: var(--line);
+}
+
+/* Task 4: Badge elements */
+[data-theme="dark"] .status-badge {
+  background: var(--badge-blue-bg);
+  color: var(--badge-blue-text);
+}
+
+[data-theme="dark"] .status-badge.returning-badge {
+  background: var(--badge-green-bg);
+  color: var(--badge-green-text);
+}
+
+[data-theme="dark"] .template-type-badge[data-type="Заявка"] {
+  background: var(--badge-blue-bg);
+  color: var(--badge-blue-text);
+}
+
+[data-theme="dark"] .template-type-badge[data-type="Службова записка"] {
+  background: var(--badge-purple-bg);
+  color: var(--badge-purple-text);
+}
+
+[data-theme="dark"] .template-type-badge[data-type="Доповідь/Звіт"] {
+  background: var(--badge-green-bg);
+  color: var(--badge-green-text);
+}
+
+[data-theme="dark"] .template-type-badge[data-type="Інше"] {
+  background: var(--badge-orange-bg);
+  color: var(--badge-orange-text);
+}
+
+[data-theme="dark"] .action-create {
+  background: var(--badge-green-bg);
+  color: var(--badge-green-text);
+}
+
+[data-theme="dark"] .action-update {
+  background: var(--badge-blue-bg);
+  color: var(--badge-blue-text);
+}
+
+[data-theme="dark"] .action-delete {
+  background: var(--badge-red-bg);
+  color: var(--badge-red-text);
+}
+
+[data-theme="dark"] .tag {
+  background: var(--badge-orange-bg);
+  color: var(--badge-orange-text);
+}
+
+/* Task 5: Vacation and special elements */
+[data-theme="dark"] .vacation-employee.starting {
+  background: var(--vacation-starting-bg);
+  border-left-color: var(--vacation-starting-border);
+}
+
+[data-theme="dark"] .vacation-employee.returning {
+  background: var(--vacation-returning-bg);
+  border-left-color: var(--vacation-returning-border);
+}
+
+[data-theme="dark"] .help-box {
+  background: var(--help-bg);
+  border-color: var(--help-border);
+  color: var(--help-text);
+}
+
+[data-theme="dark"] .help-box strong {
+  color: var(--help-text);
+}
+
+[data-theme="dark"] .alert {
+  background: var(--alert-bg);
+  border-color: var(--alert-border);
+  color: var(--alert-text);
+}
+
+/* Task 6: Interactive elements (buttons, hover states) */
+[data-theme="dark"] .icon-btn .clear-btn:hover {
+  background: #353535;
+  border-color: #6b7280;
+}
+
+[data-theme="dark"] .icon-btn .delete-btn:hover {
+  background: var(--badge-red-bg);
+  border-color: #dc2626;
+  color: var(--badge-red-text);
+}
+
+[data-theme="dark"] .save-btn {
+  color: var(--badge-green-text);
+  border-color: #059669;
+}
+
+[data-theme="dark"] .save-btn:hover {
+  background: #059669;
+  color: #fff;
+}
+
+[data-theme="dark"] .cancel-btn {
+  color: var(--badge-red-text);
+  border-color: #dc2626;
+}
+
+[data-theme="dark"] .cancel-btn:hover {
+  background: #dc2626;
+  color: #fff;
+}
+
+/* Task 7: Placeholder reference elements */
+[data-theme="dark"] .placeholder-cell:hover {
+  background-color: var(--placeholder-hover-bg);
+}
+
+[data-theme="dark"] .placeholder-cell:active {
+  background-color: var(--placeholder-active-bg);
+}
+
+[data-theme="dark"] .placeholder-group-header td {
+  background-color: var(--placeholder-group-bg);
+  color: var(--placeholder-group-text);
+}
+
+/* Additional dark theme improvements for better consistency */
+[data-theme="dark"] .inline-expand.open {
+  border-color: var(--line);
+}
+
+[data-theme="dark"] .inline-expand-item {
+  color: var(--ink);
+  border-bottom-color: var(--line);
+}
+
+[data-theme="dark"] .inline-expand-empty {
+  color: var(--muted);
+}
+
+[data-theme="dark"] .timeline-title {
+  color: var(--ink);
+}
+
+[data-theme="dark"] .timeline-days-badge {
+  background: var(--badge-gray-bg);
+  color: var(--badge-gray-text);
+}
+
+[data-theme="dark"] .timeline-empty {
+  color: var(--muted);
+}
+
+[data-theme="dark"] .report-table td {
+  border-color: var(--line);
 }
