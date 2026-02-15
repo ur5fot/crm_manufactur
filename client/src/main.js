@@ -3,6 +3,7 @@ import { createRouter, createWebHistory } from "vue-router";
 import App from "./App.vue";
 import ReportsView from "./views/ReportsView.vue";
 import EmployeeCardsView from "./views/EmployeeCardsView.vue";
+import DocumentsView from "./views/DocumentsView.vue";
 import "./styles.css";
 
 const routes = [
@@ -11,6 +12,7 @@ const routes = [
   { path: "/table", name: "table", component: App },
   { path: "/reports", name: "reports", component: ReportsView },
   { path: "/import", name: "import", component: App },
+  { path: "/documents", name: "documents", component: DocumentsView },
   { path: "/templates", name: "templates", component: App },
   { path: "/document-history", name: "document-history", component: App },
   { path: "/placeholder-reference/:employeeId?", name: "placeholder-reference", component: App },

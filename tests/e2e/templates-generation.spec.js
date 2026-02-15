@@ -157,8 +157,9 @@ test.describe('Document Generation E2E', () => {
   });
 
   test('Error case - try to generate without DOCX file', async ({ page }) => {
-    // Navigate to templates tab first to create a template without DOCX
-    await page.click('text=Шаблони');
+    // Navigate to documents view and templates tab first to create a template without DOCX
+    await page.click('text=Документи');
+    await page.click('button:has-text("Шаблони")');
     await page.waitForTimeout(1000);
 
     // Create a template without DOCX

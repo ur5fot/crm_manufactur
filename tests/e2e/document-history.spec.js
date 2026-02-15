@@ -15,7 +15,8 @@ test.describe('Document History View', () => {
 
   test('Navigate to document history tab', async ({ page }) => {
     // Navigate to document history view
-    await page.click('text=Історія документів');
+    await page.click('text=Документи');
+    await page.click('button:has-text("Історія документів")');
 
     // Verify page title is visible
     await expect(page.locator('text=Історія згенерованих документів')).toBeVisible();
@@ -23,7 +24,8 @@ test.describe('Document History View', () => {
 
   test('Document history filters are visible', async ({ page }) => {
     // Navigate to document history view
-    await page.click('text=Історія документів');
+    await page.click('text=Документи');
+    await page.click('button:has-text("Історія документів")');
 
     // Check that filter inputs are visible
     await expect(page.locator('label:has-text("Шаблон")')).toBeVisible();
@@ -38,7 +40,8 @@ test.describe('Document History View', () => {
 
   test('Template filter dropdown loads templates', async ({ page }) => {
     // Navigate to document history view
-    await page.click('text=Історія документів');
+    await page.click('text=Документи');
+    await page.click('button:has-text("Історія документів")');
 
     // Wait for templates to load
     await page.waitForTimeout(1000);
@@ -53,7 +56,8 @@ test.describe('Document History View', () => {
 
   test('Search field accepts input', async ({ page }) => {
     // Navigate to document history view
-    await page.click('text=Історія документів');
+    await page.click('text=Документи');
+    await page.click('button:has-text("Історія документів")');
 
     // Find search input by placeholder
     const searchInput = page.locator('input[placeholder*="Введіть ПІБ"]');
@@ -66,7 +70,8 @@ test.describe('Document History View', () => {
 
   test('Date filters accept dates', async ({ page }) => {
     // Navigate to document history view
-    await page.click('text=Історія документів');
+    await page.click('text=Документи');
+    await page.click('button:has-text("Історія документів")');
 
     // Find date inputs
     const dateInputs = page.locator('input[type="date"]');
@@ -83,7 +88,8 @@ test.describe('Document History View', () => {
 
   test('Clear filters button works', async ({ page }) => {
     // Navigate to document history view
-    await page.click('text=Історія документів');
+    await page.click('text=Документи');
+    await page.click('button:has-text("Історія документів")');
 
     // Fill some filters
     const searchInput = page.locator('input[placeholder*="Введіть ПІБ"]');
@@ -105,7 +111,8 @@ test.describe('Document History View', () => {
 
   test('Refresh button is functional', async ({ page }) => {
     // Navigate to document history view
-    await page.click('text=Історія документів');
+    await page.click('text=Документи');
+    await page.click('button:has-text("Історія документів")');
 
     // Find and click refresh button
     const refreshButton = page.locator('button:has-text("🔄 Оновити")');
@@ -118,7 +125,8 @@ test.describe('Document History View', () => {
 
   test('Table headers are visible', async ({ page }) => {
     // Navigate to document history view
-    await page.click('text=Історія документів');
+    await page.click('text=Документи');
+    await page.click('button:has-text("Історія документів")');
 
     // Wait for table or empty state
     await page.waitForTimeout(1000);
@@ -150,7 +158,8 @@ test.describe('Document History View', () => {
 
   test('Pagination controls are present when there are documents', async ({ page }) => {
     // Navigate to document history view
-    await page.click('text=Історія документів');
+    await page.click('text=Документи');
+    await page.click('button:has-text("Історія документів")');
 
     // Wait for data to load
     await page.waitForTimeout(1000);
@@ -168,7 +177,8 @@ test.describe('Document History View', () => {
 
   test('Navigation between tabs preserves state', async ({ page }) => {
     // Navigate to document history view
-    await page.click('text=Історія документів');
+    await page.click('text=Документи');
+    await page.click('button:has-text("Історія документів")');
     await expect(page.locator('text=Історія згенерованих документів')).toBeVisible();
 
     // Navigate to another tab
@@ -176,7 +186,8 @@ test.describe('Document History View', () => {
     await page.waitForTimeout(500);
 
     // Navigate back to document history
-    await page.click('text=Історія документів');
+    await page.click('text=Документи');
+    await page.click('button:has-text("Історія документів")');
     await expect(page.locator('text=Історія згенерованих документів')).toBeVisible();
   });
 });

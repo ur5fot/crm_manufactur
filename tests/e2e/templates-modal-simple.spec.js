@@ -13,7 +13,8 @@ test.describe('Templates Modal - Simple Tests', () => {
     }
 
     // Navigate to templates
-    await page.click('text=Шаблони');
+    await page.click('text=Документи');
+    await page.click('button:has-text("Шаблони")');
     await page.waitForTimeout(1000);
 
     // Open create modal
@@ -42,7 +43,8 @@ test.describe('Templates Modal - Simple Tests', () => {
       await closeButtons.nth(i).click({ timeout: 1000 }).catch(() => {});
     }
 
-    await page.click('text=Шаблони');
+    await page.click('text=Документи');
+    await page.click('button:has-text("Шаблони")');
     await page.waitForTimeout(1000);
 
     // Open modal
@@ -72,7 +74,8 @@ test.describe('Templates Modal - Simple Tests', () => {
       await closeButtons.nth(i).click({ timeout: 1000 }).catch(() => {});
     }
 
-    await page.click('text=Шаблони');
+    await page.click('text=Документи');
+    await page.click('button:has-text("Шаблони")');
     await page.waitForTimeout(1000);
 
     await page.click('button:has-text("Новий шаблон")');

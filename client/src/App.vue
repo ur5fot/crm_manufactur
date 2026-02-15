@@ -10,6 +10,7 @@ import ImportView from "./views/ImportView.vue";
 import DocumentHistoryView from "./views/DocumentHistoryView.vue";
 import TemplatesView from "./views/TemplatesView.vue";
 import ReportsView from "./views/ReportsView.vue";
+import DocumentsView from "./views/DocumentsView.vue";
 
 const router = useRouter();
 const route = useRoute();
@@ -31,6 +32,7 @@ const currentView = computed(() => {
   if (name === 'table') return 'table';
   if (name === 'reports') return 'reports';
   if (name === 'import') return 'import';
+  if (name === 'documents') return 'documents';
   if (name === 'templates') return 'templates';
   if (name === 'document-history') return 'document-history';
   if (name === 'placeholder-reference') return 'placeholder-reference';
@@ -44,8 +46,7 @@ const tabs = [
   { key: 'table', label: 'Таблиця' },
   { key: 'reports', label: 'Звіти' },
   { key: 'import', label: 'Імпорт' },
-  { key: 'templates', label: 'Шаблони' },
-  { key: 'document-history', label: 'Історія документів' },
+  { key: 'documents', label: 'Документи' },
   { key: 'logs', label: 'Логи' },
 ];
 
@@ -60,6 +61,8 @@ function switchView(view) {
     router.push({ name: 'reports' });
   } else if (view === 'import') {
     router.push({ name: 'import' });
+  } else if (view === 'documents') {
+    router.push({ name: 'documents' });
   } else if (view === 'templates') {
     router.push({ name: 'templates' });
   } else if (view === 'document-history') {
@@ -136,7 +139,7 @@ function selectGlobalSearchEmployee(employeeId) {
 function selectGlobalSearchTemplate() {
   closeGlobalSearch();
   globalSearchTerm.value = "";
-  router.push({ name: 'templates' });
+  router.push({ name: 'documents' });
 }
 
 function selectGlobalSearchDocument(doc) {
@@ -268,10 +271,13 @@ onUnmounted(() => {
       <!-- Режим імпорту -->
       <ImportView v-else-if="currentView === 'import'" />
 
-      <!-- Templates View -->
+      <!-- Documents View (combines Templates and Document History) -->
+      <DocumentsView v-else-if="currentView === 'documents'" />
+
+      <!-- Templates View (legacy route support) -->
       <TemplatesView v-else-if="currentView === 'templates'" />
 
-      <!-- Document History View -->
+      <!-- Document History View (legacy route support) -->
       <DocumentHistoryView v-else-if="currentView === 'document-history'" />
 
       <!-- Placeholder Reference View -->

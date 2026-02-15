@@ -13,8 +13,9 @@ test.describe('Template DOCX Upload', () => {
       await closeButtons.nth(i).click({ timeout: 1000 }).catch(() => {});
     }
 
-    // Navigate to templates view
-    await page.click('text=Шаблони');
+    // Navigate to documents view and templates tab
+    await page.click('text=Документи');
+    await page.click('button:has-text("Шаблони")');
     await expect(page.locator('text=Шаблони документів')).toBeVisible();
   });
 
@@ -114,7 +115,8 @@ test.describe('Template DOCX Upload', () => {
           await closeNotifications.nth(i).click({ timeout: 1000 }).catch(() => {});
         }
 
-        await page.click('text=Шаблони');
+        await page.click('text=Документи');
+        await page.click('button:has-text("Шаблони")');
         await page.waitForTimeout(1000);
 
         // Verify at least one file uploaded status exists

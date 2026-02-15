@@ -73,15 +73,15 @@ Add new search input that filters visible form fields within the current employe
 - Create: `client/src/views/DocumentsView.vue`
 - Modify: `client/src/main.js` (routes)
 
-- [ ] create new DocumentsView.vue component with tabbed interface
-- [ ] add two tabs: "Шаблони" (templates) and "Історія документів" (document history)
-- [ ] embed TemplatesView and DocumentHistoryView as child components within tabs
-- [ ] update App.vue: remove separate "templates" and "document-history" tabs
-- [ ] add new tab "Документи" that routes to documents view
-- [ ] update router in main.js: add /documents route with DocumentsView component
-- [ ] test navigation to new combined section
-- [ ] update E2E tests that navigate to templates or document history
-- [ ] run full E2E test suite - must pass
+- [x] create new DocumentsView.vue component with tabbed interface
+- [x] add two tabs: "Шаблони" (templates) and "Історія документів" (document history)
+- [x] embed TemplatesView and DocumentHistoryView as child components within tabs
+- [x] update App.vue: remove separate "templates" and "document-history" tabs
+- [x] add new tab "Документи" that routes to documents view
+- [x] update router in main.js: add /documents route with DocumentsView component
+- [x] test navigation to new combined section
+- [x] update E2E tests that navigate to templates or document history
+- [x] run full E2E test suite - must pass
 
 ### Task 5: Combine Logs and Import into System Settings dropdown
 
