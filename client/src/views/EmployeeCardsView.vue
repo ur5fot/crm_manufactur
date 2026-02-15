@@ -616,13 +616,16 @@ function setupNavigationGuard() {
 }
 
 // Setup beforeunload handler
+let beforeUnloadHandler;
+
 function setupBeforeUnload() {
-  window.addEventListener('beforeunload', (e) => {
+  beforeUnloadHandler = (e) => {
     if (isFormDirty.value && route.name === 'cards') {
       e.preventDefault();
       e.returnValue = '';
     }
-  });
+  };
+  window.addEventListener('beforeunload', beforeUnloadHandler);
 }
 
 onMounted(async () => {
@@ -659,6 +662,9 @@ onMounted(async () => {
 
 onUnmounted(() => {
   document.removeEventListener('keydown', handleGlobalKeydown);
+  if (beforeUnloadHandler) {
+    window.removeEventListener('beforeunload', beforeUnloadHandler);
+  }
 });
 </script>
 
