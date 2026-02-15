@@ -11,7 +11,14 @@ import {
   getDocumentFieldsSync
 } from "../store.js";
 import { mergeRow } from "../csv.js";
-import { getNextId, normalizeEmployeeInput } from "../utils.js";
+import {
+  getNextId,
+  normalizeEmployeeInput,
+  validateRequired,
+  validatePath,
+  findById,
+  buildFullName
+} from "../utils.js";
 
 /**
  * Date validation logic - validates format and correctness of date fields
@@ -75,9 +82,9 @@ export function registerEmployeeRoutes(app) {
   app.get("/api/employees/:id", async (req, res) => {
     try {
       const employees = await loadEmployees();
-      const employee = employees.find((item) => item.employee_id === req.params.id);
+      const employee = findById(employees, 'employee_id', req.params.id);
       if (!employee) {
-        res.status(404).json({ error: "Сотрудник не найден" });
+        res.status(404).json({ error: "Співробітник не знайдено" });
         return;
       }
       res.json({ employee });
@@ -101,12 +108,14 @@ export function registerEmployeeRoutes(app) {
       }
 
       // Валидация обязательных полей
-      if (!baseEmployee.first_name || !baseEmployee.first_name.trim()) {
-        res.status(400).json({ error: "Имя обязательно для заполнения" });
+      const firstNameError = validateRequired(baseEmployee.first_name, 'first_name', "Ім'я обов'язкове для заповнення");
+      if (firstNameError) {
+        res.status(400).json({ error: firstNameError });
         return;
       }
-      if (!baseEmployee.last_name || !baseEmployee.last_name.trim()) {
-        res.status(400).json({ error: "Фамилия обязательна для заполнения" });
+      const lastNameError = validateRequired(baseEmployee.last_name, 'last_name', "Прізвище обов'язкове для заповнення");
+      if (lastNameError) {
+        res.status(400).json({ error: lastNameError });
         return;
       }
 
@@ -122,10 +131,8 @@ export function registerEmployeeRoutes(app) {
       await saveEmployees(employees);
 
       // Логирование создания
-      const employeeName = [baseEmployee.last_name, baseEmployee.first_name, baseEmployee.middle_name]
-        .filter(Boolean)
-        .join(" ");
-      await addLog("CREATE", employeeId, employeeName, "", "", "", "Создан новый сотрудник");
+      const employeeName = buildFullName(baseEmployee);
+      await addLog("CREATE", employeeId, employeeName, "", "", "", "Створено нового співробітника");
 
       res.status(201).json({ employee_id: employeeId });
     } catch (err) {
@@ -142,7 +149,7 @@ export function registerEmployeeRoutes(app) {
       const index = employees.findIndex((item) => item.employee_id === req.params.id);
 
       if (index === -1) {
-        res.status(404).json({ error: "Сотрудник не найден" });
+        res.status(404).json({ error: "Співробітник не знайдено" });
         return;
       }
 
@@ -160,12 +167,14 @@ export function registerEmployeeRoutes(app) {
       next.employee_id = req.params.id;
 
       // Валидация обязательных полей
-      if (!next.first_name || !next.first_name.trim()) {
-        res.status(400).json({ error: "Имя обязательно для заполнения" });
+      const firstNameError = validateRequired(next.first_name, 'first_name', "Ім'я обов'язкове для заповнення");
+      if (firstNameError) {
+        res.status(400).json({ error: firstNameError });
         return;
       }
-      if (!next.last_name || !next.last_name.trim()) {
-        res.status(400).json({ error: "Фамилия обязательна для заполнения" });
+      const lastNameError = validateRequired(next.last_name, 'last_name', "Прізвище обов'язкове для заповнення");
+      if (lastNameError) {
+        res.status(400).json({ error: lastNameError });
         return;
       }
 
@@ -210,9 +219,7 @@ export function registerEmployeeRoutes(app) {
       await saveEmployees(employees);
 
       // Логирование изменений
-      const employeeName = [next.last_name, next.first_name, next.middle_name]
-        .filter(Boolean)
-        .join(" ");
+      const employeeName = buildFullName(next);
 
       // Находим измененные поля
       const changedFields = detectChangedFields(current, next);
@@ -245,11 +252,11 @@ export function registerEmployeeRoutes(app) {
   app.delete("/api/employees/:id", async (req, res) => {
     try {
       const employees = await loadEmployees();
-      const deletedEmployee = employees.find((item) => item.employee_id === req.params.id);
+      const deletedEmployee = findById(employees, 'employee_id', req.params.id);
       const nextEmployees = employees.filter((item) => item.employee_id !== req.params.id);
 
       if (nextEmployees.length === employees.length) {
-        res.status(404).json({ error: "Сотрудник не найден" });
+        res.status(404).json({ error: "Співробітник не знайдено" });
         return;
       }
 
@@ -257,19 +264,14 @@ export function registerEmployeeRoutes(app) {
 
       // Логирование удаления
       if (deletedEmployee) {
-        const employeeName = [deletedEmployee.last_name, deletedEmployee.first_name, deletedEmployee.middle_name]
-          .filter(Boolean)
-          .join(" ");
-        await addLog("DELETE", req.params.id, employeeName, "", "", "", "Сотрудник удален");
+        const employeeName = buildFullName(deletedEmployee);
+        await addLog("DELETE", req.params.id, employeeName, "", "", "", "Співробітник видалено");
       }
 
       // Удаляем директорию с файлами сотрудника с защитой от path traversal
       const employeeDir = path.join(FILES_DIR, `employee_${req.params.id}`);
-      const resolvedDir = path.resolve(employeeDir);
-      const allowedDir = path.resolve(FILES_DIR);
-
-      if (resolvedDir.startsWith(allowedDir + path.sep)) {
-        await fsPromises.rm(resolvedDir, { recursive: true, force: true }).catch(() => {});
+      if (validatePath(employeeDir, FILES_DIR)) {
+        await fsPromises.rm(employeeDir, { recursive: true, force: true }).catch(() => {});
       }
 
       res.status(204).end();

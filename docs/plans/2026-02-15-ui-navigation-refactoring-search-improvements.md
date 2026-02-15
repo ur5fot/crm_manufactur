@@ -161,13 +161,13 @@ Add new search input that filters visible form fields within the current employe
 - Modify: `server/src/routes/*.js`
 - Modify: `server/src/utils.js`
 
-- [ ] extract repeated validation patterns (employee_id required, template_id required) into middleware or utility functions
-- [ ] consolidate duplicate employee lookup logic into reusable functions
-- [ ] extract magic numbers (pagination limits, default values) to named constants
-- [ ] review error messages for consistency (Ukrainian for user-facing, English for technical)
-- [ ] add JSDoc comments to complex route handlers
-- [ ] verify no regressions after refactoring
-- [ ] run backend unit tests and E2E test suite - must pass
+- [x] extract repeated validation patterns (employee_id required, template_id required) into middleware or utility functions
+- [x] consolidate duplicate employee lookup logic into reusable functions
+- [x] extract magic numbers (pagination limits, default values) to named constants
+- [x] review error messages for consistency (Ukrainian for user-facing, English for technical)
+- [x] add JSDoc comments to complex route handlers
+- [x] verify no regressions after refactoring
+- [x] run backend unit tests and E2E test suite - must pass
 
 ### Task 11: Verify acceptance criteria
 

@@ -1,6 +1,6 @@
 import { DATA_DIR } from "../store.js";
 import { loadFieldsSchema, loadEmployees, loadTemplates, loadGeneratedDocuments } from "../store.js";
-import { openFolder } from "../utils.js";
+import { openFolder, MIN_SEARCH_LENGTH, MAX_SEARCH_LENGTH, MAX_EMPLOYEE_RESULTS, MAX_TEMPLATE_RESULTS, MAX_DOCUMENT_RESULTS, findById, buildFullName } from "../utils.js";
 import { generateDeclinedNames, generateDeclinedGradePosition } from "../declension.js";
 
 export function registerMiscRoutes(app) {
@@ -64,12 +64,12 @@ export function registerMiscRoutes(app) {
   app.get("/api/search", async (req, res) => {
     try {
       const q = req.query.q;
-      if (!q || q.trim().length < 2) {
-        res.status(400).json({ error: "Параметр q обов'язковий (мінімум 2 символи)" });
+      if (!q || q.trim().length < MIN_SEARCH_LENGTH) {
+        res.status(400).json({ error: `Параметр q обов'язковий (мінімум ${MIN_SEARCH_LENGTH} символи)` });
         return;
       }
-      if (q.trim().length > 200) {
-        res.status(400).json({ error: "Пошуковий запит занадто довгий (максимум 200 символів)" });
+      if (q.trim().length > MAX_SEARCH_LENGTH) {
+        res.status(400).json({ error: `Пошуковий запит занадто довгий (максимум ${MAX_SEARCH_LENGTH} символів)` });
         return;
       }
 
@@ -107,7 +107,7 @@ export function registerMiscRoutes(app) {
         if (doc.docx_filename && doc.docx_filename.toLowerCase().includes(query)) return true;
         const emp = employeeMap.get(doc.employee_id);
         if (emp) {
-          const name = [emp.last_name, emp.first_name, emp.middle_name].filter(Boolean).join(" ");
+          const name = buildFullName(emp);
           if (name.toLowerCase().includes(query)) return true;
         }
         const tmpl = templateMap.get(doc.template_id);
@@ -122,7 +122,7 @@ export function registerMiscRoutes(app) {
           employee_id: doc.employee_id,
           docx_filename: doc.docx_filename,
           generation_date: doc.generation_date,
-          employee_name: emp ? [emp.last_name, emp.first_name, emp.middle_name].filter(Boolean).join(" ") : "",
+          employee_name: emp ? buildFullName(emp) : "",
           template_name: tmpl ? tmpl.template_name : ""
         };
       });
@@ -130,7 +130,7 @@ export function registerMiscRoutes(app) {
       matchedDocuments.sort((a, b) => (b.generation_date || "").localeCompare(a.generation_date || ""));
 
       res.json({
-        employees: matchedEmployees.slice(0, 20).map(e => ({
+        employees: matchedEmployees.slice(0, MAX_EMPLOYEE_RESULTS).map(e => ({
           employee_id: e.employee_id,
           last_name: e.last_name,
           first_name: e.first_name,
@@ -138,8 +138,8 @@ export function registerMiscRoutes(app) {
           employment_status: e.employment_status,
           department: e.department
         })),
-        templates: matchedTemplates.slice(0, 10),
-        documents: matchedDocuments.slice(0, 10),
+        templates: matchedTemplates.slice(0, MAX_TEMPLATE_RESULTS),
+        documents: matchedDocuments.slice(0, MAX_DOCUMENT_RESULTS),
         total: {
           employees: matchedEmployees.length,
           templates: matchedTemplates.length,
@@ -161,7 +161,7 @@ export function registerMiscRoutes(app) {
 
       let employee;
       if (req.params.employeeId) {
-        employee = activeEmployees.find(e => e.employee_id === req.params.employeeId);
+        employee = findById(activeEmployees, 'employee_id', req.params.employeeId);
         if (!employee) {
           res.status(404).json({ error: "Співробітник не знайдено" });
           return;
@@ -270,8 +270,7 @@ export function registerMiscRoutes(app) {
         });
       }
 
-      const employeeName = [employee.last_name, employee.first_name, employee.middle_name]
-        .filter(Boolean).join(' ');
+      const employeeName = buildFullName(employee);
 
       res.json({
         employee_name: employeeName,
