@@ -587,6 +587,7 @@ async function handlePhotoUpload(event) {
     const result = await api.uploadEmployeePhoto(form.employee_id, formData);
     form.photo = result?.path || '';
     photoVersion.value++;
+    updateFormSnapshot();
     await loadEmployees(true);
   } catch (error) {
     photoError.value = error.message;
@@ -608,6 +609,7 @@ async function deletePhoto() {
     await api.deleteEmployeePhoto(form.employee_id);
     form.photo = '';
     photoVersion.value++;
+    updateFormSnapshot();
     await loadEmployees(true);
   } catch (error) {
     photoError.value = error.message;

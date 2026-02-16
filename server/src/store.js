@@ -1089,8 +1089,8 @@ export async function addStatusHistoryEntry(entryData) {
     const newId = getNextId(history, "history_id");
 
     const newEntry = {
-      history_id: newId,
       ...entryData,
+      history_id: newId,
       changed_at: entryData.changed_at || new Date().toISOString()
     };
 
