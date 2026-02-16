@@ -11,7 +11,7 @@ const route = useRoute();
 
 // Fallback employee fields
 const employeeFields = [
-  "employee_id", "last_name", "first_name", "middle_name", "birth_date",
+  "photo", "employee_id", "last_name", "first_name", "middle_name", "birth_date",
   "employment_status", "additional_status", "gender", "blood_group", "department",
   "grade", "position", "specialty", "work_state", "work_type", "fit_status",
   "order_ref", "location", "residence_place", "registration_place", "email",

@@ -1104,6 +1104,27 @@ export async function addStatusHistoryEntry(entryData) {
 }
 
 /**
+ * Remove all status history entries for a given employee
+ * @param {string} employeeId - The employee ID whose history to remove
+ */
+export async function removeStatusHistoryForEmployee(employeeId) {
+  const previousLock = statusHistoryWriteLock;
+  let releaseLock;
+  statusHistoryWriteLock = new Promise(resolve => { releaseLock = resolve; });
+
+  try {
+    await previousLock;
+    const history = await loadStatusHistory();
+    const filtered = history.filter(h => h.employee_id !== employeeId);
+    if (filtered.length !== history.length) {
+      await writeCsv(STATUS_HISTORY_PATH, STATUS_HISTORY_COLUMNS, filtered);
+    }
+  } finally {
+    releaseLock();
+  }
+}
+
+/**
  * Synchronizes employees_import_sample.csv with fields_schema.csv
  * Adds missing columns from schema, removes obsolete columns
  * Preserves UTF-8 BOM encoding for Excel compatibility

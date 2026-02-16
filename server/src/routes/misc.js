@@ -174,8 +174,8 @@ export function registerMiscRoutes(app) {
 
       const placeholders = [];
 
-      // Fields from schema
-      for (const field of schema) {
+      // Fields from schema (exclude photo — file path, not template data)
+      for (const field of schema.filter(f => f.field_type !== 'photo')) {
         placeholders.push({
           placeholder: `{${field.field_name}}`,
           label: field.field_label || field.field_name,

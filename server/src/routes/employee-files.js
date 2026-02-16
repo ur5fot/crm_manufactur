@@ -287,6 +287,9 @@ export function registerEmployeeFileRoutes(app, importUpload, employeeFileUpload
 
       if (index === -1) {
         await fsPromises.unlink(req.file.path).catch(() => {});
+        // Clean up empty directory created by multer for non-existent employee
+        const dir = path.dirname(req.file.path);
+        await fsPromises.rmdir(dir).catch(() => {});
         res.status(404).json({ error: "Співробітник не знайдено" });
         return;
       }

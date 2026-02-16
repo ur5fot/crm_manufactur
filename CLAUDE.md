@@ -193,6 +193,7 @@ To prevent race conditions when multiple requests modify the same CSV file, the 
 - **templatesWriteLock**: Serializes all writes to templates.csv
 - **generatedDocumentsWriteLock**: Serializes all writes to generated_documents.csv
 - **logWriteLock**: Serializes all writes to logs.csv
+- **statusHistoryWriteLock**: Serializes all writes to status_history.csv
 
 These locks ensure that only one write operation occurs at a time per file, preventing data corruption from concurrent modifications.
 
@@ -306,6 +307,7 @@ let employeeWriteLock = Promise.resolve();
 let templatesWriteLock = Promise.resolve();
 let generatedDocumentsWriteLock = Promise.resolve();
 let logWriteLock = Promise.resolve();
+let statusHistoryWriteLock = Promise.resolve();
 ```
 
 **How It Works**:
@@ -2309,7 +2311,7 @@ All API endpoints are served under the `/api` prefix:
 - Query parameters:
   - q (required): Search query string (minimum 2 characters)
 - Search logic:
-  - Employees: searched across all non-file text fields from fields_schema.csv
+  - Employees: searched across all non-file, non-photo text fields from fields_schema.csv
   - Templates: searched by template_name and description
   - Documents: searched by filename, associated employee name, and template name
 - Results limited per type: 20 employees, 10 templates, 10 documents

@@ -77,10 +77,10 @@ export function createPhotoUpload(appConfig) {
     limits: { fileSize: fileSize * 1024 * 1024 },
     fileFilter: (_req, file, cb) => {
       const ext = path.extname(file.originalname).toLowerCase();
-      if (ALLOWED_IMAGE_EXTENSIONS.includes(ext)) {
-        cb(null, true);
-      } else {
+      if (!ALLOWED_IMAGE_EXTENSIONS.includes(ext) || !file.mimetype.startsWith('image/')) {
         cb(new Error("Дозволені лише зображення (jpg, png, gif, webp)"));
+      } else {
+        cb(null, true);
       }
     }
   });

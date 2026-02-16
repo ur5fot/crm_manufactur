@@ -10,7 +10,8 @@ import {
   getEmployeeColumnsSync,
   getDocumentFieldsSync,
   addStatusHistoryEntry,
-  loadStatusHistory
+  loadStatusHistory,
+  removeStatusHistoryForEmployee
 } from "../store.js";
 import { mergeRow } from "../csv.js";
 import {
@@ -316,6 +317,11 @@ export function registerEmployeeRoutes(app) {
       if (validatePath(employeeDir, FILES_DIR)) {
         await fsPromises.rm(employeeDir, { recursive: true, force: true }).catch(() => {});
       }
+
+      // Clean up status history entries for deleted employee
+      await removeStatusHistoryForEmployee(req.params.id).catch(err => {
+        console.error('Failed to clean up status history:', err);
+      });
 
       res.status(204).end();
     } catch (err) {
