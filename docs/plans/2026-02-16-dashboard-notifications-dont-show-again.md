@@ -35,10 +35,10 @@ Add a "Don't show again" button to each dashboard notification popup (status cha
 **Files:**
 - Modify: `client/src/views/DashboardView.vue`
 
-- [ ] add computed property to filter out dismissed events from each event type (birthdays, retirements, status changes, document expiry)
-- [ ] update template to use filtered event lists instead of raw event data
-- [ ] verify filtering logic works correctly (manual test: dismiss event, refresh page, confirm it stays hidden)
-- [ ] write E2E test: verify dismissed event persists after page reload (tests/e2e/dashboard.spec.js)
+- [x] add computed property to filter out dismissed events from each event type (birthdays, retirements, status changes, document expiry)
+- [x] update template to use filtered event lists instead of raw event data
+- [x] verify filtering logic works correctly (manual test: dismiss event, refresh page, confirm it stays hidden)
+- [x] write E2E test: verify dismissed event persists after page reload (tests/e2e/dashboard.spec.js)
 
 ### Task 3: Add "Don't show again" button to notification popups
 

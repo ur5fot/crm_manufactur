@@ -95,6 +95,63 @@ const dashboardStats = computed(() => {
   return { total, statusCounts, other: total - counted };
 });
 
+// Filtered notification lists (excluding dismissed events)
+const filteredStatusReturning = computed(() => {
+  return statusReturning.value.filter(emp => {
+    const eventId = generateEventId('status_returning', emp.id, notifiedDate);
+    return !dismissedEvents.value.has(eventId);
+  });
+});
+
+const filteredStatusStarting = computed(() => {
+  return statusStarting.value.filter(emp => {
+    const eventId = generateEventId('status_starting', emp.id, notifiedDate);
+    return !dismissedEvents.value.has(eventId);
+  });
+});
+
+const filteredDocExpiryToday = computed(() => {
+  return docExpiryToday.value.filter(evt => {
+    const eventId = generateEventId('doc_expiry_today', evt.employee_id, evt.expiry_date);
+    return !dismissedEvents.value.has(eventId);
+  });
+});
+
+const filteredDocExpiryWeek = computed(() => {
+  return docExpiryWeek.value.filter(evt => {
+    const eventId = generateEventId('doc_expiry_week', evt.employee_id, evt.expiry_date);
+    return !dismissedEvents.value.has(eventId);
+  });
+});
+
+const filteredBirthdayToday = computed(() => {
+  return birthdayToday.value.filter(evt => {
+    const eventId = generateEventId('birthday_today', evt.employee_id, evt.current_year_birthday);
+    return !dismissedEvents.value.has(eventId);
+  });
+});
+
+const filteredBirthdayNext7Days = computed(() => {
+  return birthdayNext7Days.value.filter(evt => {
+    const eventId = generateEventId('birthday_week', evt.employee_id, evt.current_year_birthday);
+    return !dismissedEvents.value.has(eventId);
+  });
+});
+
+const filteredRetirementToday = computed(() => {
+  return retirementToday.value.filter(evt => {
+    const eventId = generateEventId('retirement_today', evt.employee_id, evt.retirement_date);
+    return !dismissedEvents.value.has(eventId);
+  });
+});
+
+const filteredRetirementThisMonth = computed(() => {
+  return retirementThisMonth.value.filter(evt => {
+    const eventId = generateEventId('retirement_month', evt.employee_id, evt.retirement_date);
+    return !dismissedEvents.value.has(eventId);
+  });
+});
+
 const formattedLastUpdated = computed(() => {
   if (!lastUpdated.value) return '';
   const d = lastUpdated.value;
@@ -577,10 +634,10 @@ onUnmounted(() => {
           <button class="close-btn" @click="closeStatusNotification">×</button>
         </div>
         <div class="vacation-notification-body">
-          <div v-if="statusStarting.length > 0" class="notification-section">
+          <div v-if="filteredStatusStarting.length > 0" class="notification-section">
             <p class="notification-message">📋 Сьогодні змінюють статус:</p>
             <ul class="vacation-employees-list">
-              <li v-for="emp in statusStarting" :key="emp.id" class="vacation-employee starting">
+              <li v-for="emp in filteredStatusStarting" :key="emp.id" class="vacation-employee starting">
                 <div class="employee-info">
                   <span class="employee-name">{{ statusEmoji(emp.statusType) }} {{ emp.name }}</span>
                   <span v-if="emp.position" class="employee-position">{{ emp.position }}</span>
@@ -592,10 +649,10 @@ onUnmounted(() => {
               </li>
             </ul>
           </div>
-          <div v-if="statusReturning.length > 0" class="notification-section">
+          <div v-if="filteredStatusReturning.length > 0" class="notification-section">
             <p class="notification-message">🏢 Сьогодні повертаються:</p>
             <ul class="vacation-employees-list">
-              <li v-for="emp in statusReturning" :key="emp.id" class="vacation-employee returning">
+              <li v-for="emp in filteredStatusReturning" :key="emp.id" class="vacation-employee returning">
                 <div class="employee-info">
                   <span class="employee-name">{{ emp.name }}</span>
                   <span v-if="emp.position" class="employee-position">{{ emp.position }}</span>
@@ -618,10 +675,10 @@ onUnmounted(() => {
           <button class="close-btn" @click="closeDocExpiryNotification">&times;</button>
         </div>
         <div class="vacation-notification-body">
-          <div v-if="docExpiryToday.length > 0" class="notification-section">
+          <div v-if="filteredDocExpiryToday.length > 0" class="notification-section">
             <p class="notification-message">⚠️ Термін дії сплив або спливає сьогодні:</p>
             <ul class="vacation-employees-list">
-              <li v-for="(evt, idx) in docExpiryToday" :key="'doc-today-' + idx" class="vacation-employee starting">
+              <li v-for="(evt, idx) in filteredDocExpiryToday" :key="'doc-today-' + idx" class="vacation-employee starting">
                 <div class="employee-info">
                   <span class="employee-name">{{ docExpiryEmoji(evt) }} {{ evt.name }}</span>
                 </div>
@@ -632,10 +689,10 @@ onUnmounted(() => {
               </li>
             </ul>
           </div>
-          <div v-if="docExpiryWeek.length > 0" class="notification-section">
+          <div v-if="filteredDocExpiryWeek.length > 0" class="notification-section">
             <p class="notification-message">📄 Термін дії спливає найближчим часом:</p>
             <ul class="vacation-employees-list">
-              <li v-for="(evt, idx) in docExpiryWeek" :key="'doc-week-' + idx" class="vacation-employee returning">
+              <li v-for="(evt, idx) in filteredDocExpiryWeek" :key="'doc-week-' + idx" class="vacation-employee returning">
                 <div class="employee-info">
                   <span class="employee-name">📄 {{ evt.name }}</span>
                 </div>
@@ -660,10 +717,10 @@ onUnmounted(() => {
           <button class="close-btn" @click="closeBirthdayNotification">&times;</button>
         </div>
         <div class="vacation-notification-body">
-          <div v-if="birthdayToday.length > 0" class="notification-section">
+          <div v-if="filteredBirthdayToday.length > 0" class="notification-section">
             <p class="notification-message">🎂 Сьогодні день народження:</p>
             <ul class="vacation-employees-list">
-              <li v-for="(evt, idx) in birthdayToday" :key="'bday-today-' + idx" class="vacation-employee starting">
+              <li v-for="(evt, idx) in filteredBirthdayToday" :key="'bday-today-' + idx" class="vacation-employee starting">
                 <div class="employee-info">
                   <span class="employee-name">🎂 {{ evt.employee_name }}</span>
                 </div>
@@ -674,10 +731,10 @@ onUnmounted(() => {
               </li>
             </ul>
           </div>
-          <div v-if="birthdayNext7Days.length > 0" class="notification-section">
+          <div v-if="filteredBirthdayNext7Days.length > 0" class="notification-section">
             <p class="notification-message">🎉 Найближчі дні народження:</p>
             <ul class="vacation-employees-list">
-              <li v-for="(evt, idx) in birthdayNext7Days" :key="'bday-week-' + idx" class="vacation-employee returning">
+              <li v-for="(evt, idx) in filteredBirthdayNext7Days" :key="'bday-week-' + idx" class="vacation-employee returning">
                 <div class="employee-info">
                   <span class="employee-name">🎉 {{ evt.employee_name }}</span>
                 </div>
@@ -702,10 +759,10 @@ onUnmounted(() => {
           <button class="close-btn" @click="closeRetirementNotification">&times;</button>
         </div>
         <div class="vacation-notification-body">
-          <div v-if="retirementToday.length > 0" class="notification-section">
+          <div v-if="filteredRetirementToday.length > 0" class="notification-section">
             <p class="notification-message">👴 Виходять на пенсію сьогодні:</p>
             <ul class="vacation-employees-list">
-              <li v-for="(evt, idx) in retirementToday" :key="'retire-today-' + idx" class="vacation-employee starting">
+              <li v-for="(evt, idx) in filteredRetirementToday" :key="'retire-today-' + idx" class="vacation-employee starting">
                 <div class="employee-info">
                   <span class="employee-name">👴 {{ evt.employee_name }}</span>
                 </div>
@@ -716,10 +773,10 @@ onUnmounted(() => {
               </li>
             </ul>
           </div>
-          <div v-if="retirementThisMonth.length > 0" class="notification-section">
+          <div v-if="filteredRetirementThisMonth.length > 0" class="notification-section">
             <p class="notification-message">ℹ️ Виходять на пенсію цього місяця:</p>
             <ul class="vacation-employees-list">
-              <li v-for="(evt, idx) in retirementThisMonth" :key="'retire-month-' + idx" class="vacation-employee returning">
+              <li v-for="(evt, idx) in filteredRetirementThisMonth" :key="'retire-month-' + idx" class="vacation-employee returning">
                 <div class="employee-info">
                   <span class="employee-name">ℹ️ {{ evt.employee_name }}</span>
                 </div>

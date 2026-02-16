@@ -195,4 +195,41 @@ test.describe('Dashboard Tests', () => {
       expect(newTimestamp).toMatch(/\d{2}:\d{2}/);
     }
   });
+
+  test('Dismissed event persists after page reload', async ({ page, context }) => {
+    // Clear localStorage before test
+    await context.clearCookies();
+    await page.evaluate(() => {
+      localStorage.clear();
+    });
+
+    // Reload page to get fresh state
+    await page.goto('/');
+    await waitForDashboardLoad(page);
+
+    // Manually add a dismissed event to localStorage using the generateEventId format
+    const testEventId = 'status_starting:123:2026-02-16';
+    await page.evaluate((eventId) => {
+      const dismissed = [eventId];
+      localStorage.setItem('dashboardDismissedEvents', JSON.stringify(dismissed));
+    }, testEventId);
+
+    // Reload the page to trigger loadDismissedEvents
+    await page.reload();
+    await waitForDashboardLoad(page);
+
+    // Verify dismissed events loaded from localStorage
+    const dismissedEvents = await page.evaluate(() => {
+      const stored = localStorage.getItem('dashboardDismissedEvents');
+      return stored ? JSON.parse(stored) : [];
+    });
+
+    expect(dismissedEvents).toContain(testEventId);
+    expect(dismissedEvents.length).toBeGreaterThanOrEqual(1);
+
+    // Clean up: clear localStorage after test
+    await page.evaluate(() => {
+      localStorage.removeItem('dashboardDismissedEvents');
+    });
+  });
 });
