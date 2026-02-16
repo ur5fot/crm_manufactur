@@ -16,7 +16,7 @@ import {
 import { mergeRow, normalizeRows } from "../csv.js";
 import { getNextId, normalizeEmployeeInput, openFolder } from "../utils.js";
 
-export function registerEmployeeFileRoutes(app, importUpload, employeeFileUpload) {
+export function registerEmployeeFileRoutes(app, importUpload, employeeFileUpload, photoUpload) {
   // Upload file for employee document field
   app.post("/api/employees/:id/files", (req, res, next) => {
     employeeFileUpload.single("file")(req, res, (err) => {
@@ -261,6 +261,120 @@ export function registerEmployeeFileRoutes(app, importUpload, employeeFileUpload
         "",
         `Удален документ: ${formattedFieldName}`
       );
+
+      res.status(204).end();
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Upload employee photo
+  app.post("/api/employees/:id/photo", (req, res, next) => {
+    photoUpload.single("photo")(req, res, (err) => {
+      if (err) return res.status(400).json({ error: err.message });
+      next();
+    });
+  }, async (req, res) => {
+    try {
+      if (!req.file) {
+        res.status(400).json({ error: "Файл фото обов'язковий" });
+        return;
+      }
+
+      const employees = await loadEmployees();
+      const index = employees.findIndex((item) => item.employee_id === req.params.id);
+
+      if (index === -1) {
+        await fsPromises.unlink(req.file.path).catch(() => {});
+        res.status(404).json({ error: "Співробітник не знайдено" });
+        return;
+      }
+
+      const employee = employees[index];
+      const oldPhoto = employee.photo;
+
+      // Delete old photo file if it exists and is different from new one
+      if (oldPhoto) {
+        const oldFullPath = path.resolve(ROOT_DIR, oldPhoto);
+        const normalizedOldPath = path.resolve(oldFullPath);
+        const normalizedFilesDir = path.resolve(FILES_DIR);
+        if (normalizedOldPath.startsWith(normalizedFilesDir + path.sep)) {
+          // Only delete if it's a different file (different extension)
+          const newFullPath = path.resolve(req.file.path);
+          if (normalizedOldPath.toLowerCase() !== newFullPath.toLowerCase()) {
+            await fsPromises.unlink(normalizedOldPath).catch(() => {});
+          }
+        }
+      }
+
+      const relativePath = path
+        .relative(ROOT_DIR, req.file.path)
+        .split(path.sep)
+        .join("/");
+
+      const updated = mergeRow(getEmployeeColumnsSync(), employee, { photo: relativePath });
+      updated.employee_id = req.params.id;
+      employees[index] = updated;
+
+      await saveEmployees(employees);
+
+      // Log photo upload
+      const employeeName = [employee.last_name, employee.first_name, employee.middle_name]
+        .filter(Boolean)
+        .join(" ");
+      await addLog("UPDATE", req.params.id, employeeName, "Фото (photo)", oldPhoto || "", relativePath, "Завантажено фото співробітника");
+
+      res.json({ path: relativePath });
+    } catch (err) {
+      if (req.file && req.file.path) {
+        await fsPromises.unlink(req.file.path).catch(() => {});
+      }
+      console.error(err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Delete employee photo
+  app.delete("/api/employees/:id/photo", async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      const employees = await loadEmployees();
+      const index = employees.findIndex((item) => item.employee_id === id);
+
+      if (index === -1) {
+        res.status(404).json({ error: "Співробітник не знайдено" });
+        return;
+      }
+
+      const employee = employees[index];
+      const photoPath = employee.photo;
+
+      if (!photoPath) {
+        res.status(404).json({ error: "Фото не знайдено" });
+        return;
+      }
+
+      // Delete physical file
+      const fullPath = path.resolve(ROOT_DIR, photoPath);
+      const normalizedFullPath = path.resolve(fullPath);
+      const normalizedFilesDir = path.resolve(FILES_DIR);
+      if (normalizedFullPath.startsWith(normalizedFilesDir + path.sep)) {
+        await fsPromises.unlink(normalizedFullPath).catch(() => {});
+      }
+
+      // Clear photo field
+      const updated = mergeRow(getEmployeeColumnsSync(), employee, { photo: "" });
+      updated.employee_id = id;
+      employees[index] = updated;
+      await saveEmployees(employees);
+
+      // Log photo deletion
+      const employeeName = [employee.last_name, employee.first_name, employee.middle_name]
+        .filter(Boolean)
+        .join(" ");
+      await addLog("UPDATE", id, employeeName, "Фото (photo)", photoPath, "", "Видалено фото співробітника");
 
       res.status(204).end();
     } catch (err) {

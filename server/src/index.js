@@ -6,7 +6,7 @@ import {
   initializeEmployeeColumns,
   loadConfig
 } from "./store.js";
-import { createImportUpload, createEmployeeFileUpload } from "./upload-config.js";
+import { createImportUpload, createEmployeeFileUpload, createPhotoUpload } from "./upload-config.js";
 import { registerDashboardRoutes } from "./routes/dashboard.js";
 import { registerReportRoutes } from "./routes/reports.js";
 import { registerEmployeeRoutes } from "./routes/employees.js";
@@ -45,6 +45,7 @@ app.use("/files", express.static(FILES_DIR));
 
 const importUpload = createImportUpload(appConfig);
 const employeeFileUpload = createEmployeeFileUpload(appConfig);
+const photoUpload = createPhotoUpload(appConfig);
 
 // Register dashboard and config routes
 registerDashboardRoutes(app);
@@ -56,7 +57,7 @@ registerReportRoutes(app);
 registerEmployeeRoutes(app);
 
 // Register employee file and import routes
-registerEmployeeFileRoutes(app, importUpload, employeeFileUpload);
+registerEmployeeFileRoutes(app, importUpload, employeeFileUpload, photoUpload);
 
 // Register template routes
 registerTemplateRoutes(app, appConfig);

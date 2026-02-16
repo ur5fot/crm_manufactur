@@ -48,6 +48,40 @@ export function createEmployeeFileUpload(appConfig) {
   });
 }
 
+const ALLOWED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+
+export function createPhotoUpload(appConfig) {
+  const maxSizeMB = parseInt(appConfig.max_file_upload_mb, 10);
+  const fileSize = (isNaN(maxSizeMB) || maxSizeMB <= 0) ? 10 : maxSizeMB;
+
+  const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+      const employeeId = req.params.id;
+      const targetDir = path.join(FILES_DIR, `employee_${employeeId}`);
+      fs.mkdir(targetDir, { recursive: true }, (error) => {
+        cb(error, targetDir);
+      });
+    },
+    filename: (req, file, cb) => {
+      const ext = path.extname(file.originalname).toLowerCase() || ".jpg";
+      cb(null, `photo${ext}`);
+    }
+  });
+
+  return multer({
+    storage,
+    limits: { fileSize: fileSize * 1024 * 1024 },
+    fileFilter: (_req, file, cb) => {
+      const ext = path.extname(file.originalname).toLowerCase();
+      if (ALLOWED_IMAGE_EXTENSIONS.includes(ext)) {
+        cb(null, true);
+      } else {
+        cb(new Error("Дозволені лише зображення (jpg, png, gif, webp)"));
+      }
+    }
+  });
+}
+
 export function createTemplateUpload(appConfig) {
   const maxSizeMB = parseInt(appConfig.max_file_upload_mb, 10);
   const fileSize = (isNaN(maxSizeMB) || maxSizeMB <= 0) ? 10 : maxSizeMB;

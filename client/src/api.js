@@ -52,6 +52,17 @@ export const api = {
       method: "DELETE"
     });
   },
+  uploadEmployeePhoto(id, formData) {
+    return request(`/employees/${id}/photo`, {
+      method: "POST",
+      body: formData
+    });
+  },
+  deleteEmployeePhoto(id) {
+    return request(`/employees/${id}/photo`, {
+      method: "DELETE"
+    });
+  },
   openDataFolder() {
     return request("/open-data-folder", { method: "POST" });
   },

@@ -44,14 +44,14 @@ Two features for the employee card view:
 ## Implementation Steps
 
 ### Task 1: Add photo field to schema and backend photo endpoints
-- [ ] Add `photo` field to `data/fields_schema.template.csv` with `field_type: photo` (new type, distinct from `file` — won't appear in documents table, no companion date fields auto-generated)
-- [ ] Add `photo` to `DEFAULT_EMPLOYEE_COLUMNS` in `server/src/schema.js`
-- [ ] Update `loadEmployeeColumns()` in `server/src/schema.js` to push `photo` type fields without `_issue_date`/`_expiry_date` companions (handle `field_type === 'photo'` same as text — just the field itself)
-- [ ] Add `POST /api/employees/:id/photo` endpoint in `server/src/routes/employee-files.js` — accepts image file (JPG/PNG/GIF/WebP), saves as `photo.{ext}` in `files/employee_{id}/`, stores relative path in employee's `photo` field, deletes old photo file if exists, logs UPDATE action
-- [ ] Add `DELETE /api/employees/:id/photo` endpoint in `server/src/routes/employee-files.js` — deletes photo file, clears `photo` field in employee record, logs UPDATE action
-- [ ] Add `uploadEmployeePhoto(id, formData)` and `deleteEmployeePhoto(id)` to `client/src/api.js`
-- [ ] Write unit tests for photo upload/delete endpoints in `server/test/photo-api.test.js` (success and error cases: missing file, invalid type, employee not found)
-- [ ] Run tests — must pass before next task
+- [x] Add `photo` field to `data/fields_schema.template.csv` with `field_type: photo` (new type, distinct from `file` — won't appear in documents table, no companion date fields auto-generated)
+- [x] Add `photo` to `DEFAULT_EMPLOYEE_COLUMNS` in `server/src/schema.js`
+- [x] Update `loadEmployeeColumns()` in `server/src/schema.js` to push `photo` type fields without `_issue_date`/`_expiry_date` companions (handle `field_type === 'photo'` same as text — just the field itself)
+- [x] Add `POST /api/employees/:id/photo` endpoint in `server/src/routes/employee-files.js` — accepts image file (JPG/PNG/GIF/WebP), saves as `photo.{ext}` in `files/employee_{id}/`, stores relative path in employee's `photo` field, deletes old photo file if exists, logs UPDATE action
+- [x] Add `DELETE /api/employees/:id/photo` endpoint in `server/src/routes/employee-files.js` — deletes photo file, clears `photo` field in employee record, logs UPDATE action
+- [x] Add `uploadEmployeePhoto(id, formData)` and `deleteEmployeePhoto(id)` to `client/src/api.js`
+- [x] Write unit tests for photo upload/delete endpoints in `server/test/photo-api.test.js` (success and error cases: missing file, invalid type, employee not found)
+- [x] Run tests — must pass before next task
 
 ### Task 2: Frontend photo display and management in employee card
 - [ ] Add photo display area to the top of the employee card in `EmployeeCardsView.vue` — show photo image (from `/files/employee_{id}/photo.{ext}`) or placeholder avatar icon when no photo

@@ -1,6 +1,7 @@
 // Fallback список колонок если fields_schema.csv недоступен
 // Должен соответствовать fields_schema.template.csv
 const DEFAULT_EMPLOYEE_COLUMNS = [
+  "photo",
   "employee_id",
   "last_name",
   "first_name",
@@ -232,6 +233,7 @@ export const LOG_COLUMNS = [
 ];
 
 export const FIELD_LABELS = {
+  photo: "Фото",
   employee_id: "ID сотрудника",
   last_name: "Фамилия",
   first_name: "Имя",
