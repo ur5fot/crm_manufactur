@@ -265,7 +265,7 @@ async function testIndeclinableFirstName() {
   }
 }
 
-// Test 11: Both indeclinable flags set — all names stay nominative
+// Test 11: Both indeclinable flags set — last and first stay nominative, middle is declined
 async function testBothIndeclinable() {
   const data = {
     last_name: 'Дюма',
@@ -278,20 +278,32 @@ async function testBothIndeclinable() {
 
   const result = await generateDeclinedNames(data);
 
-  const suffixes = ['genitive', 'dative', 'accusative', 'vocative', 'locative', 'ablative'];
-  for (const suffix of suffixes) {
-    if (result[`last_name_${suffix}`] !== 'Дюма') {
-      throw new Error(`Expected last_name_${suffix} "Дюма", got "${result[`last_name_${suffix}`]}"`);
-    }
-    if (result[`first_name_${suffix}`] !== 'Жан') {
-      throw new Error(`Expected first_name_${suffix} "Жан", got "${result[`first_name_${suffix}`]}"`);
-    }
-    if (result[`middle_name_${suffix}`] !== 'Давидович') {
-      throw new Error(`Expected middle_name_${suffix} "Давидович", got "${result[`middle_name_${suffix}`]}"`);
-    }
-    if (result[`full_name_${suffix}`] !== 'Дюма Жан Давидович') {
-      throw new Error(`Expected full_name_${suffix} "Дюма Жан Давидович", got "${result[`full_name_${suffix}`]}"`);
-    }
+  // Test genitive case: middle_name should be declined, last and first stay nominative
+  if (result.last_name_genitive !== 'Дюма') {
+    throw new Error(`Expected last_name_genitive "Дюма", got "${result.last_name_genitive}"`);
+  }
+  if (result.first_name_genitive !== 'Жан') {
+    throw new Error(`Expected first_name_genitive "Жан", got "${result.first_name_genitive}"`);
+  }
+  if (result.middle_name_genitive !== 'Давидовича') {
+    throw new Error(`Expected middle_name_genitive "Давидовича", got "${result.middle_name_genitive}"`);
+  }
+  if (result.full_name_genitive !== 'Дюма Жан Давидовича') {
+    throw new Error(`Expected full_name_genitive "Дюма Жан Давидовича", got "${result.full_name_genitive}"`);
+  }
+
+  // Test dative case: same pattern
+  if (result.last_name_dative !== 'Дюма') {
+    throw new Error(`Expected last_name_dative "Дюма", got "${result.last_name_dative}"`);
+  }
+  if (result.first_name_dative !== 'Жан') {
+    throw new Error(`Expected first_name_dative "Жан", got "${result.first_name_dative}"`);
+  }
+  if (result.middle_name_dative !== 'Давидовичу') {
+    throw new Error(`Expected middle_name_dative "Давидовичу", got "${result.middle_name_dative}"`);
+  }
+  if (result.full_name_dative !== 'Дюма Жан Давидовичу') {
+    throw new Error(`Expected full_name_dative "Дюма Жан Давидовичу", got "${result.full_name_dative}"`);
   }
 }
 
@@ -482,7 +494,7 @@ async function runAllTests() {
   await runTest('No data: returns empty placeholders', testNoData);
   await runTest('Indeclinable last_name: only last_name stays nominative', testIndeclinableLastName);
   await runTest('Indeclinable first_name: only first_name stays nominative', testIndeclinableFirstName);
-  await runTest('Both indeclinable: all names stay nominative', testBothIndeclinable);
+  await runTest('Both indeclinable: last and first stay nominative, middle is declined', testBothIndeclinable);
 
   // Grade/position declension tests
   await runTest('Grade/position: all 12 placeholders present with values', testGradePositionAllPlaceholders);

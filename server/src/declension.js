@@ -63,12 +63,13 @@ export async function generateDeclinedNames(data) {
   const skipLastName = data.indeclinable_name === 'yes';
   const skipFirstName = data.indeclinable_first_name === 'yes';
 
-  // If all name parts are indeclinable, return nominative for all cases
-  if (skipLastName && skipFirstName) {
+  // If both last and first names are indeclinable AND no middle name exists, return early
+  // (middle_name is always declined, so if it exists we can't take the early return)
+  if (skipLastName && skipFirstName && !middleName) {
     for (const { suffix } of CASES) {
       result[`last_name_${suffix}`] = lastName;
       result[`first_name_${suffix}`] = firstName;
-      result[`middle_name_${suffix}`] = middleName;
+      result[`middle_name_${suffix}`] = '';
       result[`full_name_${suffix}`] = fullName;
     }
     return result;
