@@ -9,7 +9,7 @@ export function registerMiscRoutes(app) {
       await openFolder(DATA_DIR);
       res.json({ ok: true });
     } catch (error) {
-      res.status(500).json({ error: "Не удалось открыть папку data" });
+      res.status(500).json({ error: "Не вдалося відкрити папку data" });
     }
   });
 

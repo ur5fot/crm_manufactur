@@ -3,6 +3,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { readCsv, writeCsv } from "./csv.js";
 import { EMPLOYEE_COLUMNS, LOG_COLUMNS, FIELD_SCHEMA_COLUMNS, loadEmployeeColumns, getCachedEmployeeColumns, loadDocumentFields, getCachedDocumentFields } from "./schema.js";
+import { getNextId } from "./utils.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -1028,20 +1029,6 @@ export async function saveGeneratedDocuments(rows) {
   } finally {
     releaseLock();
   }
-}
-
-function getNextId(items, idField) {
-  if (items.length === 0) {
-    return "1";
-  }
-  const ids = items
-    .map((item) => parseInt(item[idField], 10))
-    .filter((id) => !isNaN(id));
-  if (ids.length === 0) {
-    return "1";
-  }
-  const maxId = ids.reduce((max, id) => Math.max(max, id), 0);
-  return String(maxId + 1);
 }
 
 /**

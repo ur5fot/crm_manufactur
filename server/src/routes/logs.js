@@ -3,8 +3,15 @@ import { validatePagination } from "../utils.js";
 
 export function registerLogRoutes(app) {
   app.get("/api/logs", async (req, res) => {
+    let paginationParams;
     try {
-      const { offset, limit } = validatePagination(req.query.offset, req.query.limit);
+      paginationParams = validatePagination(req.query.offset, req.query.limit);
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+      return;
+    }
+    try {
+      const { offset, limit } = paginationParams;
       const logs = await loadLogs();
       // Сортировка по убыванию (новые сначала)
       logs.sort((a, b) => {

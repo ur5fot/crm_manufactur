@@ -26,7 +26,7 @@ export function registerEmployeeFileRoutes(app, importUpload, employeeFileUpload
   }, async (req, res) => {
     try {
       if (!req.file) {
-        res.status(400).json({ error: "Файл обязателен" });
+        res.status(400).json({ error: "Файл обов'язковий" });
         return;
       }
 
@@ -36,7 +36,7 @@ export function registerEmployeeFileRoutes(app, importUpload, employeeFileUpload
       if (index === -1) {
         // Удаляем временный файл
         await fsPromises.unlink(req.file.path).catch(() => {});
-        res.status(404).json({ error: "Сотрудник не найден" });
+        res.status(404).json({ error: "Співробітник не знайдено" });
         return;
       }
 
@@ -44,7 +44,7 @@ export function registerEmployeeFileRoutes(app, importUpload, employeeFileUpload
       if (!getDocumentFieldsSync().includes(fileField)) {
         // Удаляем временный файл
         await fsPromises.unlink(req.file.path).catch(() => {});
-        res.status(400).json({ error: "Неверное поле документа" });
+        res.status(400).json({ error: "Невірне поле документа" });
         return;
       }
 
@@ -199,9 +199,9 @@ export function registerEmployeeFileRoutes(app, importUpload, employeeFileUpload
     try {
       const { id, fieldName } = req.params;
 
-      // Проверка что поле является документом
+      // Перевірка що поле є документом
       if (!getDocumentFieldsSync().includes(fieldName)) {
-        res.status(400).json({ error: "Неверное поле документа" });
+        res.status(400).json({ error: "Невірне поле документа" });
         return;
       }
 
@@ -209,7 +209,7 @@ export function registerEmployeeFileRoutes(app, importUpload, employeeFileUpload
       const index = employees.findIndex((item) => item.employee_id === id);
 
       if (index === -1) {
-        res.status(404).json({ error: "Сотрудник не найден" });
+        res.status(404).json({ error: "Співробітник не знайдено" });
         return;
       }
 

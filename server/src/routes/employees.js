@@ -122,7 +122,7 @@ export function registerEmployeeRoutes(app) {
       const employeeId = baseEmployee.employee_id || getNextId(employees, "employee_id");
 
       if (employees.some((item) => item.employee_id === employeeId)) {
-        res.status(409).json({ error: "ID сотрудника уже существует" });
+        res.status(409).json({ error: "ID співробітника вже існує" });
         return;
       }
 
