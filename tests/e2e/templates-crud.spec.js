@@ -2,7 +2,7 @@ const { test, expect } = require('@playwright/test');
 
 test.describe('Templates CRUD Operations', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('http://localhost:5173');
+    await page.goto('/');
 
     // Close any notification popups that might appear
     await page.waitForTimeout(1000);
@@ -12,8 +12,9 @@ test.describe('Templates CRUD Operations', () => {
       await closeButtons.nth(i).click({ timeout: 1000 }).catch(() => {});
     }
 
-    // Navigate to templates view
-    await page.click('text=Шаблони');
+    // Navigate to documents view and templates tab
+    await page.click('text=Документи');
+    await page.click('button:has-text("Шаблони")');
     await expect(page.locator('text=Шаблони документів')).toBeVisible();
   });
 

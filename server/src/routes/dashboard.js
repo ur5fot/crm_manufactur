@@ -8,6 +8,10 @@ import {
   loadConfig
 } from "../store.js";
 
+/**
+ * Register dashboard and configuration routes
+ * @param {Express.Application} app - Express app instance
+ */
 export function registerDashboardRoutes(app) {
   app.get("/api/health", (req, res) => {
     res.json({ ok: true });

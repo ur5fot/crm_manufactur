@@ -1,16 +1,27 @@
 import { loadLogs } from "../store.js";
+import { validatePagination } from "../utils.js";
 
 export function registerLogRoutes(app) {
   app.get("/api/logs", async (req, res) => {
+    let paginationParams;
     try {
+      paginationParams = validatePagination(req.query.offset, req.query.limit);
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+      return;
+    }
+    try {
+      const { offset, limit } = paginationParams;
       const logs = await loadLogs();
-      // Sort descending (newest first)
+      // Сортировка по убыванию (новые сначала)
       logs.sort((a, b) => {
         const dateA = new Date(a.timestamp);
         const dateB = new Date(b.timestamp);
         return dateB - dateA;
       });
-      res.json({ logs });
+      const total = logs.length;
+      const paginated = logs.slice(offset, offset + limit);
+      res.json({ logs: paginated, total });
     } catch (err) {
       console.error(err);
       res.status(500).json({ error: err.message });

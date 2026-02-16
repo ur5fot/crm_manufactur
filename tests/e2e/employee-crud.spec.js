@@ -1,5 +1,6 @@
 const { test, expect } = require('@playwright/test');
 const { setupTestData, cleanupTestData, waitForEmployeesLoad } = require('../helpers/test-utils');
+const { API_URL } = require('./test-config');
 
 test.describe('Employee CRUD Operations', () => {
   let testEmployeeId = null;
@@ -46,7 +47,7 @@ test.describe('Employee CRUD Operations', () => {
     expect(sidebarText).toContain('Тестовий Іван');
 
     // Get created employee ID from API
-    const response = await page.request.get('http://localhost:3000/api/employees');
+    const response = await page.request.get(`${API_URL}/api/employees`);
     const data = await response.json();
     const createdEmployee = data.employees.find(e =>
       e.last_name === 'Тестовий' && e.first_name === 'Іван'
@@ -87,12 +88,12 @@ test.describe('Employee CRUD Operations', () => {
     expect(departmentValue).toBe('IT відділ');
 
     // Assert API saved change
-    const response = await page.request.get(`http://localhost:3000/api/employees/${employeeId}`);
+    const response = await page.request.get(`${API_URL}/api/employees/${employeeId}`);
     const data = await response.json();
     expect(data.employee.department).toBe('IT відділ');
 
     // Assert audit log entry created
-    const logsResponse = await page.request.get('http://localhost:3000/api/logs');
+    const logsResponse = await page.request.get(`${API_URL}/api/logs`);
     const logsData = await logsResponse.json();
 
     // Check that logs exist and contain UPDATE action
@@ -147,7 +148,7 @@ test.describe('Employee CRUD Operations', () => {
     expect(sidebarText).not.toContain(employeeName);
 
     // Assert API deleted employee (should return 404 or empty)
-    const response = await page.request.get(`http://localhost:3000/api/employees/${employeeId}`);
+    const response = await page.request.get(`${API_URL}/api/employees/${employeeId}`);
     expect(response.status()).toBe(404);
   });
 
@@ -194,7 +195,7 @@ test.describe('Employee CRUD Operations', () => {
     expect(sidebarText).toContain(employeeName);
 
     // Assert API still has employee
-    const response = await page.request.get(`http://localhost:3000/api/employees/${employeeId}`);
+    const response = await page.request.get(`${API_URL}/api/employees/${employeeId}`);
     expect(response.status()).toBe(200);
     const data = await response.json();
     expect(data.employee.last_name).toBe(lastNameValue);

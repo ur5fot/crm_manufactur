@@ -2,7 +2,7 @@ const { test, expect } = require('@playwright/test');
 
 test.describe('Templates Modal - Simple Tests', () => {
   test('Modal відкривається і закривається', async ({ page }) => {
-    await page.goto('http://localhost:5173');
+    await page.goto('/');
 
     // Close any notification popups
     await page.waitForTimeout(500);
@@ -13,7 +13,8 @@ test.describe('Templates Modal - Simple Tests', () => {
     }
 
     // Navigate to templates
-    await page.click('text=Шаблони');
+    await page.click('text=Документи');
+    await page.click('button:has-text("Шаблони")');
     await page.waitForTimeout(1000);
 
     // Open create modal
@@ -32,7 +33,7 @@ test.describe('Templates Modal - Simple Tests', () => {
   });
 
   test('Валідація обовязкових полів працює', async ({ page }) => {
-    await page.goto('http://localhost:5173');
+    await page.goto('/');
 
     // Close popups
     await page.waitForTimeout(500);
@@ -42,7 +43,8 @@ test.describe('Templates Modal - Simple Tests', () => {
       await closeButtons.nth(i).click({ timeout: 1000 }).catch(() => {});
     }
 
-    await page.click('text=Шаблони');
+    await page.click('text=Документи');
+    await page.click('button:has-text("Шаблони")');
     await page.waitForTimeout(1000);
 
     // Open modal
@@ -62,7 +64,7 @@ test.describe('Templates Modal - Simple Tests', () => {
   });
 
   test('Форма правильно заповнюється даними', async ({ page }) => {
-    await page.goto('http://localhost:5173');
+    await page.goto('/');
 
     // Close popups
     await page.waitForTimeout(500);
@@ -72,7 +74,8 @@ test.describe('Templates Modal - Simple Tests', () => {
       await closeButtons.nth(i).click({ timeout: 1000 }).catch(() => {});
     }
 
-    await page.click('text=Шаблони');
+    await page.click('text=Документи');
+    await page.click('button:has-text("Шаблони")');
     await page.waitForTimeout(1000);
 
     await page.click('button:has-text("Новий шаблон")');

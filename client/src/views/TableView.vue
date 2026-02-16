@@ -1,21 +1,28 @@
 <script setup>
-import { ref, reactive, computed, onMounted } from "vue";
+import { ref, computed, reactive, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { api } from "../api";
 import { useFieldsSchema } from "../composables/useFieldsSchema";
+import { displayName } from "../utils/employee";
 
 const router = useRouter();
+
+// Use shared fields schema composable
 const { summaryColumns, dictionaries, loadFieldsSchema } = useFieldsSchema();
 
 // State
 const employees = ref([]);
+const searchTerm = ref("");
 const loading = ref(false);
 const errorMessage = ref("");
-const searchTerm = ref("");
-const editingCells = reactive({}); // { employeeId_fieldName: value }
-const columnFilters = reactive({}); // { fieldName: [selectedValues] }
 
-// Computed
+// Inline editing state
+const editingCells = reactive({}); // { employeeId_fieldName: value }
+
+// Column filters state
+const columnFilters = reactive({}); // { fieldName: selectedValue[] }
+
+// Computed filtered employees
 const filteredEmployees = computed(() => {
   const query = searchTerm.value.trim().toLowerCase();
   let result = employees.value;
@@ -42,11 +49,13 @@ const filteredEmployees = computed(() => {
     if (filterValues && filterValues.length > 0) {
       result = result.filter((employee) => {
         const value = employee[fieldName];
+        // Check for empty value
         if (filterValues.includes("__EMPTY__")) {
           if (!value || value.trim() === "") {
             return true;
           }
         }
+        // Check for specific values
         return filterValues.includes(value);
       });
     }
@@ -55,29 +64,34 @@ const filteredEmployees = computed(() => {
   return result;
 });
 
-// Methods
-function displayName(employee) {
-  const parts = [employee.last_name, employee.first_name, employee.middle_name].filter(Boolean);
-  return parts.length ? parts.join(" ") : "Без імені";
-}
-
+// Load employees
 async function loadEmployees() {
   loading.value = true;
+  errorMessage.value = "";
   try {
     const data = await api.getEmployees();
-    employees.value = (data.employees || []).filter(e => e.active !== "no");
-  } catch (e) {
-    errorMessage.value = e.message;
+    employees.value = data.employees || [];
+  } catch (error) {
+    errorMessage.value = error.message;
   } finally {
     loading.value = false;
   }
 }
 
-function openEmployeeCard(employeeId) {
-  router.push({ name: 'cards', params: { id: employeeId } });
+// Export table data
+async function exportTableData() {
+  errorMessage.value = '';
+  try {
+    await api.exportCSV(columnFilters, searchTerm.value);
+  } catch (e) {
+    console.error('Export error:', e);
+    errorMessage.value = `Помилка експорту: ${e.message}`;
+  }
 }
 
+// Inline cell editing functions
 function startEditCell(employeeId, fieldName, currentValue) {
+  // Check if editing is allowed for this field in table
   const col = summaryColumns.value.find(c => c.key === fieldName);
   if (col && !col.editable) return;
 
@@ -109,14 +123,17 @@ async function saveCell(employee, fieldName) {
   errorMessage.value = "";
   try {
     const statusFields = ['employment_status', 'status_start_date', 'status_end_date'];
+    // Status fields managed only via popup — don't allow inline editing
     if (statusFields.includes(fieldName)) {
       delete editingCells[key];
       return;
     }
     const updatedEmployee = { ...employee, [fieldName]: newValue };
+    // Don't overwrite status fields during inline editing
     for (const sf of statusFields) delete updatedEmployee[sf];
     await api.updateEmployee(employee.employee_id, updatedEmployee);
 
+    // Update local data
     const index = employees.value.findIndex(e => e.employee_id === employee.employee_id);
     if (index !== -1) {
       employees.value[index][fieldName] = newValue;
@@ -128,6 +145,12 @@ async function saveCell(employee, fieldName) {
   }
 }
 
+// Navigate to employee card
+function openEmployeeCard(employeeId) {
+  router.push({ name: 'cards', params: { id: employeeId } });
+}
+
+// Column filter functions
 function toggleFilter(fieldName, value) {
   if (!columnFilters[fieldName]) {
     columnFilters[fieldName] = [];
@@ -140,6 +163,7 @@ function toggleFilter(fieldName, value) {
     columnFilters[fieldName].splice(index, 1);
   }
 
+  // Remove empty arrays
   if (columnFilters[fieldName].length === 0) {
     delete columnFilters[fieldName];
   }
@@ -167,16 +191,6 @@ function hasActiveFilters(fieldName) {
 
 function getColumnFilterCount(fieldName) {
   return columnFilters[fieldName]?.length || 0;
-}
-
-async function exportTableData() {
-  errorMessage.value = '';
-  try {
-    await api.exportCSV(columnFilters, searchTerm.value);
-  } catch (e) {
-    console.error('Export error:', e);
-    errorMessage.value = `Помилка експорту: ${e.message}`;
-  }
 }
 
 // Lifecycle
@@ -234,7 +248,7 @@ onMounted(async () => {
                     </span>
                   </div>
 
-                  <!-- Dropdown з фільтрами -->
+                  <!-- Dropdown with filters -->
                   <div v-if="col.type === 'select'" class="filter-dropdown" @click.stop>
                     <div class="filter-dropdown-content">
                       <label class="filter-checkbox-label">
@@ -278,7 +292,7 @@ onMounted(async () => {
                 class="editable-cell"
                 @dblclick.stop="startEditCell(employee.employee_id, col.key, employee[col.key])"
               >
-                <!-- Режим редактирования -->
+                <!-- Edit mode -->
                 <div v-if="isEditingCell(employee.employee_id, col.key)" class="edit-cell" @click.stop>
                   <select
                     v-if="col.type === 'select'"
@@ -323,7 +337,7 @@ onMounted(async () => {
                     </button>
                   </div>
                 </div>
-                <!-- Режим просмотра -->
+                <!-- View mode -->
                 <div v-else class="view-cell" :title="'Клік для редагування'">
                   {{ employee[col.key] || '—' }}
                 </div>

@@ -1,6 +1,7 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
 const { setupTestData, cleanupTestData, waitForEmployeesLoad } = require('../helpers/test-utils');
+const { API_URL } = require('./test-config');
 
 // Utility to get today's date in YYYY-MM-DD format
 function getDate(daysOffset = 0) {
@@ -53,7 +54,7 @@ test.describe('Status Changes and Retirement', () => {
     await page.waitForTimeout(1500);
 
     // Get created employee ID from API
-    const response = await page.request.get('http://localhost:3000/api/employees');
+    const response = await page.request.get(`${API_URL}/api/employees`);
     const data = await response.json();
     const employees = data.employees;
     const newEmployee = employees.find(emp => emp.last_name === 'Статусов' && emp.first_name === 'Петро');
@@ -87,7 +88,7 @@ test.describe('Status Changes and Retirement', () => {
     await page.waitForTimeout(1500);
 
     // Verify status updated via API
-    const checkResponse = await page.request.get(`http://localhost:3000/api/employees/${employeeId}`);
+    const checkResponse = await page.request.get(`${API_URL}/api/employees/${employeeId}`);
     const checkData = await checkResponse.json();
     const updatedEmployee = checkData.employee;
 
@@ -112,7 +113,7 @@ test.describe('Status Changes and Retirement', () => {
     // Debug: log what we're sending
     console.log('Creating employee with data:', JSON.stringify(employeeData, null, 2));
 
-    const createResponse = await page.request.post('http://localhost:3000/api/employees', {
+    const createResponse = await page.request.post(`${API_URL}/api/employees`, {
       headers: {
         'Content-Type': 'application/json'
       },
@@ -122,7 +123,7 @@ test.describe('Status Changes and Retirement', () => {
     const employeeId = createData.employee_id;
 
     // Debug: verify employee was created with correct data
-    const verifyResponse = await page.request.get(`http://localhost:3000/api/employees/${employeeId}`);
+    const verifyResponse = await page.request.get(`${API_URL}/api/employees/${employeeId}`);
     const verifyData = await verifyResponse.json();
     console.log('Employee created with:', JSON.stringify(verifyData.employee, null, 2));
 
@@ -136,7 +137,7 @@ test.describe('Status Changes and Retirement', () => {
     await page.waitForTimeout(2000); // Additional buffer for async operations
 
     // Check employee status via API - should be restored to "Працює"
-    const response = await page.request.get(`http://localhost:3000/api/employees/${employeeId}`);
+    const response = await page.request.get(`${API_URL}/api/employees/${employeeId}`);
     const responseData = await response.json();
     const employee = responseData.employee;
 
@@ -160,7 +161,7 @@ test.describe('Status Changes and Retirement', () => {
     await setupTestData();
 
     // Get retirement age from config
-    const configResponse = await page.request.get('http://localhost:3000/api/config');
+    const configResponse = await page.request.get(`${API_URL}/api/config`);
     const config = await configResponse.json();
     const retirementAge = parseInt(config.retirement_age_years || '60', 10);
 
@@ -174,7 +175,7 @@ test.describe('Status Changes and Retirement', () => {
       employment_status: 'Працює'
     };
 
-    const createResponse = await page.request.post('http://localhost:3000/api/employees', {
+    const createResponse = await page.request.post(`${API_URL}/api/employees`, {
       data: employeeData
     });
     const createData = await createResponse.json();
@@ -200,7 +201,7 @@ test.describe('Status Changes and Retirement', () => {
     }
 
     // Check employee status via API - should be auto-changed to "Звільнений" (options[1])
-    const response = await page.request.get(`http://localhost:3000/api/employees/${employeeId}`);
+    const response = await page.request.get(`${API_URL}/api/employees/${employeeId}`);
     const responseData = await response.json();
     const employee = responseData.employee;
 
@@ -213,7 +214,7 @@ test.describe('Status Changes and Retirement', () => {
     expect(employee.employment_status).toBe('Звільнений');
 
     // Verify audit log entry for auto-dismiss (status change to Звільнений)
-    const logsResponse = await page.request.get('http://localhost:3000/api/logs');
+    const logsResponse = await page.request.get(`${API_URL}/api/logs`);
     const logsData = await logsResponse.json();
     const logs = logsData.logs;
 

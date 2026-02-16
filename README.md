@@ -15,6 +15,73 @@ A comprehensive CRM system for managing employee records, documents, and templat
 - Audit logging for all operations
 - File management for employee documents
 - Dashboard with statistics and events
+- Dark/light theme toggle with persistent preference
+- Three-level search capabilities:
+  - Global search across employees, templates, and documents
+  - Employee list search within cards view sidebar
+  - Within-card field search to filter form fields by label and value
+- Organized navigation:
+  - Main tabs: Dashboard, Cards, Table, Reports, Documents
+  - Documents tab combines Templates and Document History in sub-tabs
+  - System Settings dropdown (three dots menu) for Import and Logs
+
+## Navigation Structure
+
+The application uses a tabbed navigation interface with the following organization:
+
+### Main Tabs
+
+Located in the header tab bar:
+
+- **Dashboard** - Statistics, notifications, and recent events
+- **Cards (Картки)** - Employee card-based editing interface with sidebar list
+- **Table (Таблиця)** - Employee table view with sorting and filtering
+- **Reports (Звіти)** - Custom reports with dynamic filter builder
+- **Documents (Документи)** - Template management and document history (combines two sub-tabs)
+
+### Documents Tab Sub-tabs
+
+The Documents section contains two sub-tabs for document management:
+
+- **Templates (Шаблони)** - Manage DOCX templates, upload template files, extract placeholders
+- **Document History (Історія документів)** - View all generated documents with filters and pagination
+
+### System Settings Dropdown
+
+Accessible via the three-dots menu (⋮) in the top-right corner:
+
+- **System Settings (Налаштування системи)** - Contains Import and Logs sub-tabs:
+  - **Import (Імпорт)** - CSV import interface for bulk employee operations
+  - **Logs (Логи)** - Audit log viewer with pagination
+- **Open Data Folder (Відкрити папку даних)** - Opens the data directory in file manager
+
+## Search Capabilities
+
+The application provides three levels of search functionality:
+
+### Global Search
+
+Located in the header (input field in top bar):
+- Searches across employees, templates, and documents simultaneously
+- Minimum 2 characters required
+- Results grouped by type with counts
+- Click on result to navigate to details or download
+- Debounced input (300ms delay) for performance
+
+### Employee List Search (Cards View)
+
+Located in the employee sidebar of the Cards view:
+- Filters the employee list in real-time
+- Searches across: last_name, first_name, middle_name, employee_id, employment_status
+- Case-insensitive substring matching
+
+### Within-Card Field Search
+
+Located within the employee card in Cards view (above form fields):
+- Filters visible form fields within the current employee card
+- Matches against both field labels (from schema) and field values (from employee data)
+- Case-insensitive substring matching
+- Useful for finding specific fields in large forms
 
 ## Technology Stack
 
@@ -27,7 +94,7 @@ A comprehensive CRM system for managing employee records, documents, and templat
 **Frontend:**
 - Vue.js 3
 - Bootstrap for UI components
-- Native fetch API for API communication
+- Fetch API for API communication
 
 **Testing:**
 - Playwright for E2E tests
@@ -236,6 +303,34 @@ Download generated document file.
 - Content-Disposition: attachment; filename="..."
 - Body: DOCX file binary
 
+### Search API
+
+#### GET /api/search
+Search across employees, templates, and documents.
+
+**Query Parameters:**
+- q (required) - Search query string (minimum 2 characters)
+
+**Response:**
+```json
+{
+  "employees": [{ "employee_id": "1", "full_name": "..." }],
+  "templates": [{ "template_id": "1", "template_name": "..." }],
+  "documents": [{ "document_id": "1", "filename": "...", "employee": {...}, "template": {...} }],
+  "total": {
+    "employees": 5,
+    "templates": 2,
+    "documents": 3
+  }
+}
+```
+
+**Notes:**
+- Employees searched across all text fields
+- Templates searched by name and description
+- Documents searched by filename, employee name, and template name
+- Results limited: 20 employees, 10 templates, 10 documents
+
 ### Employees API
 
 (Additional employee endpoints documented separately)
@@ -344,9 +439,6 @@ Tests run automatically via GitHub Actions on push to `master`/`feature/*` branc
 .
 ├── client/                 # Vue.js frontend
 │   ├── src/
-│   │   ├── App.vue        # App shell (topbar navigation + view switching)
-│   │   ├── api.js         # API client
-│   │   ├── main.js        # Vue app init + route definitions
 │   │   ├── views/         # View components (one per route)
 │   │   │   ├── DashboardView.vue
 │   │   │   ├── EmployeeCardsView.vue
@@ -354,30 +446,37 @@ Tests run automatically via GitHub Actions on push to `master`/`feature/*` branc
 │   │   │   ├── ReportsView.vue
 │   │   │   ├── TemplatesView.vue
 │   │   │   ├── DocumentHistoryView.vue
+│   │   │   ├── DocumentsView.vue
+│   │   │   ├── SystemSettingsView.vue
 │   │   │   ├── ImportView.vue
-│   │   │   ├── LogsView.vue
-│   │   │   └── PlaceholderReferenceView.vue
-│   │   └── composables/   # Shared Vue composition functions
-│   │       ├── useFieldsSchema.js
-│   │       └── useEmployeeForm.js
+│   │   │   ├── PlaceholderReferenceView.vue
+│   │   │   └── LogsView.vue
+│   │   ├── composables/   # Reusable logic
+│   │   │   ├── useFieldsSchema.js
+│   │   │   └── useEmployeeForm.js
+│   │   ├── utils/         # Utility modules
+│   │   │   ├── constants.js
+│   │   │   └── employee.js
+│   │   ├── App.vue        # Root component with navigation
+│   │   ├── api.js         # API client
+│   │   └── main.js        # App initialization & routing
 │   └── package.json
 ├── server/                 # Node.js backend
 │   ├── src/
-│   │   ├── index.js       # Express setup + route registration
+│   │   ├── routes/        # API route modules (organized by feature)
+│   │   │   ├── dashboard.js
+│   │   │   ├── reports.js
+│   │   │   ├── employees.js
+│   │   │   ├── employee-files.js
+│   │   │   ├── templates.js
+│   │   │   ├── documents.js
+│   │   │   ├── logs.js
+│   │   │   └── misc.js
+│   │   ├── index.js       # Express server setup & route registration
 │   │   ├── store.js       # CSV data storage
 │   │   ├── docx-generator.js  # DOCX generation
-│   │   ├── schema.js      # Employee field schema
-│   │   ├── utils.js       # Utility functions
-│   │   ├── upload-config.js  # Multer file upload configuration
-│   │   └── routes/        # API route modules
-│   │       ├── dashboard.js
-│   │       ├── employees.js
-│   │       ├── employee-files.js
-│   │       ├── templates.js
-│   │       ├── documents.js
-│   │       ├── reports.js
-│   │       ├── logs.js
-│   │       └── misc.js
+│   │   ├── utils.js       # Shared utilities
+│   │   └── schema.js      # Employee field schema
 │   ├── test/              # Unit & integration tests
 │   └── package.json
 ├── tests/
@@ -393,7 +492,8 @@ Tests run automatically via GitHub Actions on push to `master`/`feature/*` branc
 │   ├── documents/         # Generated DOCX files
 │   └── employee_*/        # Employee-specific files
 └── docs/                  # Documentation
-    └── templates-system-improvements.md
+    ├── plans/             # Development plans
+    └── plans/completed/   # Completed plans
 ```
 
 ## Data Storage
@@ -426,7 +526,7 @@ Configuration is stored in `data/config.csv`:
 ## Documentation
 
 For detailed documentation on the templates system, see:
-- [Templates System Documentation](docs/templates-system-improvements.md)
+- [Templates System Documentation](docs/plans/completed/templates-system-improvements.md)
 
 ## License
 

@@ -2,6 +2,7 @@ const { test, expect } = require('@playwright/test');
 const { setupTestData, cleanupTestData } = require('../helpers/test-utils');
 const fs = require('fs');
 const path = require('path');
+const { API_URL } = require('./test-config');
 
 async function waitForDashboardLoad(page, timeout = 10000) {
   // Wait for dashboard stat cards to load
@@ -48,7 +49,7 @@ test.describe('Dashboard Tests', () => {
     }
 
     // Verify total employees count
-    const response = await page.request.get('http://localhost:3000/api/employees');
+    const response = await page.request.get(`${API_URL}/api/employees`);
     const data = await response.json();
     const employees = data.employees || data;
 
@@ -106,7 +107,7 @@ test.describe('Dashboard Tests', () => {
     expect(timelineCards.length).toBeGreaterThanOrEqual(2); // Should have "Сьогодні" and "Найближчі 7 днів"
 
     // Check if document expiry API endpoint works
-    const expiryResponse = await page.request.get('http://localhost:3000/api/document-expiry');
+    const expiryResponse = await page.request.get(`${API_URL}/api/document-expiry`);
     expect(expiryResponse.ok()).toBeTruthy();
     const expiryData = await expiryResponse.json();
 
@@ -124,7 +125,7 @@ test.describe('Dashboard Tests', () => {
     expect(timelineCards.length).toBeGreaterThanOrEqual(2);
 
     // Check if birthday API endpoint works
-    const birthdayResponse = await page.request.get('http://localhost:3000/api/birthday-events');
+    const birthdayResponse = await page.request.get(`${API_URL}/api/birthday-events`);
     expect(birthdayResponse.ok()).toBeTruthy();
     const birthdayData = await birthdayResponse.json();
 

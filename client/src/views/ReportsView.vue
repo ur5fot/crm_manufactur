@@ -1,11 +1,14 @@
 <script setup>
-import { ref, computed, watch, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import { api } from "../api";
 import { useFieldsSchema } from "../composables/useFieldsSchema";
 
-const { allFieldsSchema, documentFields, getFieldType, loadFieldsSchema } = useFieldsSchema();
-
-const errorMessage = ref("");
+const {
+  allFieldsSchema,
+  documentFields,
+  loadFieldsSchema,
+  getFieldType
+} = useFieldsSchema();
 
 // Custom reports state
 const customFilters = ref([]);
@@ -15,11 +18,52 @@ const selectedColumns = ref([]);
 const reportSortColumn = ref(null);
 const reportSortDirection = ref('asc');
 const columnSearchTerm = ref('');
+const errorMessage = ref('');
 
 // App config
 const appConfig = ref({
   max_report_preview_rows: 100
 });
+
+// Watch for filter field changes to reset condition if field type changes
+watch(() => customFilters.value, (newFilters, oldFilters) => {
+  if (!oldFilters) return;
+
+  newFilters.forEach((filter, index) => {
+    const oldFilter = oldFilters[index];
+    if (!oldFilter || !filter.field || !oldFilter.field) return;
+
+    // If field changed, check if current condition is still valid
+    if (filter.field !== oldFilter.field) {
+      const newFieldType = getFieldType(filter.field);
+      const oldFieldType = getFieldType(oldFilter.field);
+
+      // If field type changed, reset condition to first available option
+      if (newFieldType !== oldFieldType) {
+        const availableOptions = filterConditionOptions(filter);
+        filter.condition = availableOptions[0]?.value || 'contains';
+        filter.value = '';
+        filter.valueFrom = '';
+        filter.valueTo = '';
+      }
+    }
+  });
+}, { deep: true });
+
+// Load config
+onMounted(async () => {
+  await loadFieldsSchema();
+  await loadConfig();
+});
+
+async function loadConfig() {
+  try {
+    const data = await api.getConfig();
+    appConfig.value = data;
+  } catch (error) {
+    console.error('Failed to load config:', error);
+  }
+}
 
 // Get filter condition options based on field type
 const filterConditionOptions = (filter) => {
@@ -96,7 +140,6 @@ const filteredColumnsForSelector = computed(() => {
   );
 });
 
-// Custom reports functions
 function addCustomFilter() {
   customFilters.value.push({
     field: '',
@@ -180,6 +223,7 @@ function exportCustomReportCSV() {
 }
 
 function sortReportPreview(fieldKey) {
+  // Toggle sort direction if clicking same column, otherwise default to ascending
   if (reportSortColumn.value === fieldKey) {
     reportSortDirection.value = reportSortDirection.value === 'asc' ? 'desc' : 'asc';
   } else {
@@ -187,16 +231,19 @@ function sortReportPreview(fieldKey) {
     reportSortDirection.value = 'asc';
   }
 
+  // Sort the results array
   customReportResults.value.sort((a, b) => {
     const valA = a[fieldKey] || '';
     const valB = b[fieldKey] || '';
 
+    // Try numeric comparison first
     const numA = parseFloat(valA);
     const numB = parseFloat(valB);
     if (!isNaN(numA) && !isNaN(numB)) {
       return reportSortDirection.value === 'asc' ? numA - numB : numB - numA;
     }
 
+    // String comparison
     const strA = String(valA).toLowerCase();
     const strB = String(valB).toLowerCase();
     if (reportSortDirection.value === 'asc') {
@@ -206,40 +253,6 @@ function sortReportPreview(fieldKey) {
     }
   });
 }
-
-// Watch for filter field changes and reset condition when field type changes
-watch(() => customFilters.value, (newFilters, oldFilters) => {
-  if (!oldFilters) return;
-
-  newFilters.forEach((filter, index) => {
-    const oldFilter = oldFilters[index];
-    if (!oldFilter || !filter.field || !oldFilter.field) return;
-
-    if (filter.field !== oldFilter.field) {
-      const newFieldType = getFieldType(filter.field);
-      const oldFieldType = getFieldType(oldFilter.field);
-
-      if (newFieldType !== oldFieldType) {
-        const availableOptions = filterConditionOptions(filter);
-        filter.condition = availableOptions[0]?.value || 'contains';
-        filter.value = '';
-        filter.valueFrom = '';
-        filter.valueTo = '';
-      }
-    }
-  });
-}, { deep: true });
-
-onMounted(async () => {
-  try {
-    const config = await api.getConfig();
-    appConfig.value = config;
-  } catch (error) {
-    console.error('Failed to load config:', error);
-  }
-
-  await loadFieldsSchema();
-});
 </script>
 
 <template>

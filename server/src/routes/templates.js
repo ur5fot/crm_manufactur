@@ -2,19 +2,15 @@ import path from "path";
 import fs from "fs";
 import fsPromises from "fs/promises";
 import { execFile } from "child_process";
-import {
-  FILES_DIR,
-  loadEmployees,
-  loadTemplates,
-  saveTemplates,
-  addGeneratedDocument,
-  addLog
-} from "../store.js";
+import { FILES_DIR, loadTemplates, saveTemplates, addLog, loadEmployees, addGeneratedDocument } from "../store.js";
 import { extractPlaceholders, generateDocx } from "../docx-generator.js";
-import { getOpenCommand, getNextId } from "../utils.js";
+import { getOpenCommand, getNextId, validateRequired, validatePath, findById, buildFullName } from "../utils.js";
 import { createTemplateUpload } from "../upload-config.js";
 
 export function registerTemplateRoutes(app, appConfig) {
+  const templateUpload = createTemplateUpload(appConfig);
+
+  // Get all templates
   app.get("/api/templates", async (req, res) => {
     try {
       const templates = await loadTemplates();
@@ -27,12 +23,13 @@ export function registerTemplateRoutes(app, appConfig) {
     }
   });
 
+  // Get single template
   app.get("/api/templates/:id", async (req, res) => {
     try {
       const templates = await loadTemplates();
-      const template = templates.find((t) => t.template_id === req.params.id);
+      const template = findById(templates, 'template_id', req.params.id);
       if (!template) {
-        res.status(404).json({ error: "Шаблон не найден" });
+        res.status(404).json({ error: "Шаблон не знайдено" });
         return;
       }
       res.json({ template });
@@ -42,18 +39,21 @@ export function registerTemplateRoutes(app, appConfig) {
     }
   });
 
+  // Create new template
   app.post("/api/templates", async (req, res) => {
     try {
       const payload = req.body || {};
       const templates = await loadTemplates();
 
       // Validation
-      if (!payload.template_name || !payload.template_name.trim()) {
-        res.status(400).json({ error: "Назва шаблону обов'язкова" });
+      const nameError = validateRequired(payload.template_name, 'template_name', "Назва шаблону обов'язкова");
+      if (nameError) {
+        res.status(400).json({ error: nameError });
         return;
       }
-      if (!payload.template_type || !payload.template_type.trim()) {
-        res.status(400).json({ error: "Тип шаблону обов'язковий" });
+      const typeError = validateRequired(payload.template_type, 'template_type', "Тип шаблону обов'язковий");
+      if (typeError) {
+        res.status(400).json({ error: typeError });
         return;
       }
 
@@ -90,6 +90,7 @@ export function registerTemplateRoutes(app, appConfig) {
     }
   });
 
+  // Update template
   app.put("/api/templates/:id", async (req, res) => {
     try {
       const payload = req.body || {};
@@ -97,17 +98,19 @@ export function registerTemplateRoutes(app, appConfig) {
       const index = templates.findIndex((t) => t.template_id === req.params.id);
 
       if (index === -1) {
-        res.status(404).json({ error: "Шаблон не найден" });
+        res.status(404).json({ error: "Шаблон не знайдено" });
         return;
       }
 
       // Validation
-      if (!payload.template_name || !payload.template_name.trim()) {
-        res.status(400).json({ error: "Назва шаблону обов'язкова" });
+      const nameError = validateRequired(payload.template_name, 'template_name', "Назва шаблону обов'язкова");
+      if (nameError) {
+        res.status(400).json({ error: nameError });
         return;
       }
-      if (!payload.template_type || !payload.template_type.trim()) {
-        res.status(400).json({ error: "Тип шаблону обов'язковий" });
+      const typeError = validateRequired(payload.template_type, 'template_type', "Тип шаблону обов'язковий");
+      if (typeError) {
+        res.status(400).json({ error: typeError });
         return;
       }
 
@@ -140,13 +143,15 @@ export function registerTemplateRoutes(app, appConfig) {
     }
   });
 
+  // Delete template (soft delete)
   app.delete("/api/templates/:id", async (req, res) => {
     try {
       const templates = await loadTemplates();
+      const template = findById(templates, 'template_id', req.params.id);
       const index = templates.findIndex((t) => t.template_id === req.params.id);
 
-      if (index === -1) {
-        res.status(404).json({ error: "Шаблон не найден" });
+      if (index === -1 || !template) {
+        res.status(404).json({ error: "Шаблон не знайдено" });
         return;
       }
 
@@ -157,11 +162,11 @@ export function registerTemplateRoutes(app, appConfig) {
       await addLog(
         "DELETE_TEMPLATE",
         req.params.id,
-        templates[index].template_name,
+        template.template_name,
         "",
         "",
         "",
-        `Видалено шаблон: ${templates[index].template_name}`
+        `Видалено шаблон: ${template.template_name}`
       );
 
       res.status(204).end();
@@ -171,8 +176,7 @@ export function registerTemplateRoutes(app, appConfig) {
     }
   });
 
-  const templateUpload = createTemplateUpload(appConfig);
-
+  // Upload template DOCX file
   app.post("/api/templates/:id/upload", templateUpload.single('file'), async (req, res) => {
     try {
       if (!req.file) {
@@ -181,17 +185,23 @@ export function registerTemplateRoutes(app, appConfig) {
       }
 
       const templates = await loadTemplates();
-      const template = templates.find((t) => t.template_id === req.params.id);
+      const template = findById(templates, 'template_id', req.params.id);
 
       if (!template) {
         // Clean up uploaded file
         await fsPromises.unlink(req.file.path);
-        res.status(404).json({ error: "Шаблон не найден" });
+        res.status(404).json({ error: "Шаблон не знайдено" });
         return;
       }
 
       // Extract placeholders from uploaded DOCX
       const placeholders = await extractPlaceholders(req.file.path);
+
+      // Delete old DOCX file if exists
+      if (template.docx_filename) {
+        const oldFilePath = path.join(FILES_DIR, 'templates', template.docx_filename);
+        await fsPromises.unlink(oldFilePath).catch(() => {});
+      }
 
       // Update template record
       template.docx_filename = req.file.filename;
@@ -233,21 +243,21 @@ export function registerTemplateRoutes(app, appConfig) {
       const template = templates.find((t) => t.template_id === req.params.id && t.active !== 'no');
 
       if (!template) {
-        res.status(404).json({ error: "Шаблон не найден" });
+        res.status(404).json({ error: "Шаблон не знайдено" });
         return;
       }
 
       if (!template.docx_filename) {
-        res.status(400).json({ error: "Шаблон не имеет загруженного DOCX файла" });
+        res.status(400).json({ error: "Шаблон не має завантаженого DOCX файлу" });
         return;
       }
 
       const filePath = path.join(FILES_DIR, 'templates', template.docx_filename);
+      const allowedDir = path.join(FILES_DIR, 'templates');
       const resolvedPath = path.resolve(filePath);
-      const allowedDir = path.resolve(path.join(FILES_DIR, 'templates'));
 
-      if (!resolvedPath.startsWith(allowedDir + path.sep) && resolvedPath !== allowedDir) {
-        res.status(403).json({ error: "Недопустимый путь к файлу" });
+      if (!validatePath(filePath, allowedDir)) {
+        res.status(403).json({ error: "Недопустимий шлях до файлу" });
         return;
       }
 
@@ -277,21 +287,21 @@ export function registerTemplateRoutes(app, appConfig) {
       const template = templates.find((t) => t.template_id === req.params.id && t.active !== 'no');
 
       if (!template) {
-        res.status(404).json({ error: "Шаблон не найден" });
+        res.status(404).json({ error: "Шаблон не знайдено" });
         return;
       }
 
       if (!template.docx_filename) {
-        res.status(400).json({ error: "Шаблон не имеет загруженного DOCX файла" });
+        res.status(400).json({ error: "Шаблон не має завантаженого DOCX файлу" });
         return;
       }
 
       const filePath = path.join(FILES_DIR, 'templates', template.docx_filename);
+      const allowedDir = path.join(FILES_DIR, 'templates');
       const resolvedPath = path.resolve(filePath);
-      const allowedDir = path.resolve(path.join(FILES_DIR, 'templates'));
 
-      if (!resolvedPath.startsWith(allowedDir + path.sep) && resolvedPath !== allowedDir) {
-        res.status(403).json({ error: "Недопустимый путь к файлу" });
+      if (!validatePath(filePath, allowedDir)) {
+        res.status(403).json({ error: "Недопустимий шлях до файлу" });
         return;
       }
 
@@ -323,7 +333,7 @@ export function registerTemplateRoutes(app, appConfig) {
 
       // Load template
       const templates = await loadTemplates();
-      const template = templates.find((t) => t.template_id === req.params.id);
+      const template = findById(templates, 'template_id', req.params.id);
 
       if (!template) {
         res.status(404).json({ error: "Шаблон не знайдено" });
@@ -331,29 +341,25 @@ export function registerTemplateRoutes(app, appConfig) {
       }
 
       // Validate template has DOCX file
-      if (!template.docx_filename) {
-        res.status(400).json({ error: "Шаблон не має завантаженого DOCX файлу" });
+      const docxError = validateRequired(template.docx_filename, 'docx_filename', "Шаблон не має завантаженого DOCX файлу");
+      if (docxError) {
+        res.status(400).json({ error: docxError });
         return;
       }
 
       // Load employee data
       const employees = await loadEmployees();
-      const employee = employees.find((e) => e.employee_id === employee_id);
+      const employee = findById(employees, 'employee_id', employee_id);
 
       if (!employee) {
         res.status(404).json({ error: "Співробітник не знайдено" });
         return;
       }
 
-      // Prepare data with employee fields + special placeholders
-      const now = new Date();
-      const currentDate = now.toLocaleDateString('uk-UA'); // DD.MM.YYYY format
-      const currentDateTime = now.toLocaleString('uk-UA'); // DD.MM.YYYY HH:mm:ss format
-
+      // Prepare data with employee fields
+      // Note: special placeholders (current_date, current_datetime) are added by prepareData() in docx-generator.js
       const data = {
-        ...employee,
-        current_date: currentDate,
-        current_datetime: currentDateTime
+        ...employee
       };
 
       // Generate DOCX filename
@@ -366,10 +372,9 @@ export function registerTemplateRoutes(app, appConfig) {
 
       // Paths with path traversal protection
       const templatePath = path.join(FILES_DIR, 'templates', template.docx_filename);
-      const resolvedTemplatePath = path.resolve(templatePath);
-      const allowedTemplateDir = path.resolve(FILES_DIR, 'templates');
+      const allowedTemplateDir = path.join(FILES_DIR, 'templates');
 
-      if (!resolvedTemplatePath.startsWith(allowedTemplateDir + path.sep)) {
+      if (!validatePath(templatePath, allowedTemplateDir)) {
         res.status(403).json({ error: "Недозволений шлях до шаблону" });
         return;
       }
@@ -396,10 +401,11 @@ export function registerTemplateRoutes(app, appConfig) {
       });
 
       // Add audit log
+      const employeeName = buildFullName(employee);
       await addLog(
         "GENERATE_DOCUMENT",
         employee_id,
-        `${employee.last_name || ''} ${employee.first_name || ''}`.trim(),
+        employeeName,
         "",
         "",
         "",

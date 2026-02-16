@@ -6,6 +6,7 @@ import {
   initializeEmployeeColumns,
   loadConfig
 } from "./store.js";
+import { createImportUpload, createEmployeeFileUpload } from "./upload-config.js";
 import { registerDashboardRoutes } from "./routes/dashboard.js";
 import { registerReportRoutes } from "./routes/reports.js";
 import { registerEmployeeRoutes } from "./routes/employees.js";
@@ -39,14 +40,34 @@ try {
 app.use(cors());
 app.use(express.json({ limit: "10mb" }));
 app.use("/files", express.static(FILES_DIR));
+// SECURITY: DATA_DIR static serving removed - sensitive CSV files should not be publicly accessible
+// app.use("/data", express.static(DATA_DIR));
 
+const importUpload = createImportUpload(appConfig);
+const employeeFileUpload = createEmployeeFileUpload(appConfig);
+
+// Register dashboard and config routes
 registerDashboardRoutes(app);
+
+// Register report and export routes
 registerReportRoutes(app);
+
+// Register employee CRUD routes
 registerEmployeeRoutes(app);
-registerEmployeeFileRoutes(app, appConfig);
+
+// Register employee file and import routes
+registerEmployeeFileRoutes(app, importUpload, employeeFileUpload);
+
+// Register template routes
 registerTemplateRoutes(app, appConfig);
+
+// Register document history routes
 registerDocumentRoutes(app);
+
+// Register log routes
 registerLogRoutes(app);
+
+// Register miscellaneous routes (schema, search, placeholder preview, open folder)
 registerMiscRoutes(app);
 
 app.listen(port, () => {

@@ -1,10 +1,14 @@
 import {
   getStatusReport,
-  getCustomReport,
   exportEmployees
 } from "../store.js";
 
+/**
+ * Register report and export route handlers
+ * @param {import('express').Application} app - Express application instance
+ */
 export function registerReportRoutes(app) {
+  // GET /api/reports/statuses - Employment status report
   app.get("/api/reports/statuses", async (req, res) => {
     const type = req.query.type;
     if (type !== 'current' && type !== 'month') {
@@ -20,6 +24,7 @@ export function registerReportRoutes(app) {
     }
   });
 
+  // GET /api/reports/custom - Custom report with dynamic filters
   app.get("/api/reports/custom", async (req, res) => {
     try {
       let filters = [];
@@ -45,6 +50,7 @@ export function registerReportRoutes(app) {
         }
       }
 
+      const { getCustomReport } = await import('../store.js');
       const results = await getCustomReport(filters, columns);
       res.json({ results });
     } catch (err) {
@@ -53,6 +59,7 @@ export function registerReportRoutes(app) {
     }
   });
 
+  // GET /api/export - Export filtered employees to CSV
   app.get("/api/export", async (req, res) => {
     try {
       let filters = {};

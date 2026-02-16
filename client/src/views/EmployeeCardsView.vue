@@ -1,64 +1,101 @@
 <script setup>
-import { computed, onMounted, onUnmounted, reactive, ref, watch } from "vue";
+import { ref, computed, reactive, watch, onMounted, onUnmounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { api } from "../api";
 import { useFieldsSchema } from "../composables/useFieldsSchema";
 import { useEmployeeForm } from "../composables/useEmployeeForm";
-
-const { allFieldsSchema, fieldGroups, dictionaries, documentFields, loadFieldsSchema } = useFieldsSchema();
-const {
-  form,
-  isFormDirty,
-  showUnsavedChangesPopup,
-  pendingNavigation,
-  isNew,
-  changedFields,
-  emptyEmployee,
-  resetForm,
-  updateFormSnapshot,
-  closeUnsavedChangesPopup,
-  cancelNavigation
-} = useEmployeeForm();
+import { displayName } from "../utils/employee";
 
 const router = useRouter();
 const route = useRoute();
 
+// Fallback employee fields
+const employeeFields = [
+  "employee_id", "last_name", "first_name", "middle_name", "birth_date",
+  "employment_status", "additional_status", "gender", "blood_group", "department",
+  "grade", "position", "specialty", "work_state", "work_type", "fit_status",
+  "order_ref", "location", "residence_place", "registration_place", "email",
+  "phone", "phone_note", "education", "salary_grid", "salary_amount",
+  "bank_name", "bank_card_number", "bank_iban", "tax_id",
+  "personal_matter_file", "personal_matter_file_issue_date", "personal_matter_file_expiry_date",
+  "medical_commission_file", "medical_commission_file_issue_date", "medical_commission_file_expiry_date",
+  "veterans_certificate_file", "veterans_certificate_file_issue_date", "veterans_certificate_file_expiry_date",
+  "driver_license_file", "driver_license_file_issue_date", "driver_license_file_expiry_date",
+  "id_certificate_file", "id_certificate_file_issue_date", "id_certificate_file_expiry_date",
+  "foreign_passport_number", "foreign_passport_file", "foreign_passport_file_issue_date", "foreign_passport_file_expiry_date",
+  "criminal_record_file", "criminal_record_file_issue_date", "criminal_record_file_expiry_date",
+  "military_id_file", "military_id_file_issue_date", "military_id_file_expiry_date",
+  "medical_certificate_file", "medical_certificate_file_issue_date", "medical_certificate_file_expiry_date",
+  "insurance_file", "insurance_file_issue_date", "insurance_file_expiry_date",
+  "education_diploma_file", "education_diploma_file_issue_date", "education_diploma_file_expiry_date",
+  "status_start_date", "status_end_date", "notes"
+];
+
+// Load fields schema
+const { allFieldsSchema, fieldGroups, loadFieldsSchema } = useFieldsSchema();
+
+// Field labels computed from schema
+const fieldLabels = computed(() => {
+  const map = {};
+  allFieldsSchema.value.forEach(f => {
+    map[f.key] = f.label;
+  });
+  return map;
+});
+
+// Document fields from schema
+const documentFields = computed(() => {
+  return allFieldsSchema.value
+    .filter(field => field.type === 'file')
+    .map(field => ({
+      key: field.key,
+      label: field.label
+    }));
+});
+
+// Dictionaries for select fields
+const dictionaries = ref({});
+
+// Use employee form composable
+const {
+  form,
+  selectedId,
+  saving,
+  errorMessage,
+  isCreatingNew,
+  isFormDirty,
+  showUnsavedChangesPopup,
+  pendingNavigation,
+  changedFields,
+  isNew,
+  resetForm,
+  updateFormSnapshot,
+  selectEmployee,
+  startNew,
+  closeUnsavedChangesPopup,
+  saveAndContinue: saveAndContinueBase,
+  continueWithoutSaving: continueWithoutSavingBase,
+  cancelNavigation
+} = useEmployeeForm(allFieldsSchema, employeeFields, fieldLabels);
+
+// Employee list
 const employees = ref([]);
-const selectedId = ref("");
-const searchTerm = ref("");
-const isCreatingNew = ref(false);
 const loading = ref(false);
-const saving = ref(false);
-const errorMessage = ref("");
-const openingDataFolder = ref(false);
+const cardSearchTerm = ref("");
+const cardFieldSearchTerm = ref("");
 const openingEmployeeFolder = ref(false);
 
-// Employment status options from schema
+// Templates for document generation
+const templates = ref([]);
+
+// Employment status options
 const employmentOptions = computed(() => {
   const field = allFieldsSchema.value.find(f => f.key === 'employment_status');
   return field?.options || [];
 });
 
 const workingStatus = computed(() => employmentOptions.value[0] || '');
-
-// Templates management
-const templates = ref([]);
-const showTemplateDialog = ref(false);
-const templateDialogMode = ref('create');
-const templateForm = reactive({
-  template_id: '',
-  template_name: '',
-  template_type: '',
-  description: '',
-  placeholder_fields: '',
-  docx_filename: ''
-});
-
-// Template upload modal
-const showUploadTemplateModal = ref(false);
-const uploadTemplateId = ref('');
-const uploadTemplateName = ref('');
-const selectedTemplateFile = ref(null);
+const statusChangeOptions = computed(() => employmentOptions.value.slice(1));
 
 // Status change popup
 const showStatusChangePopup = ref(false);
@@ -66,10 +103,6 @@ const statusChangeForm = reactive({
   status: '',
   startDate: '',
   endDate: ''
-});
-
-const statusChangeOptions = computed(() => {
-  return employmentOptions.value.slice(1);
 });
 
 // Document upload popup
@@ -96,32 +129,62 @@ const docEditDatesSaving = ref(false);
 // Clear confirm popup
 const showClearConfirmPopup = ref(false);
 
-const filteredEmployees = computed(() => {
-  const query = searchTerm.value.trim().toLowerCase();
-  let result = employees.value;
-  if (query) {
-    result = result.filter((employee) => {
-      const haystack = [
-        displayName(employee),
-        employee.department,
-        employee.position,
-        employee.employee_id
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-      return haystack.includes(query);
+// Filtered employees for cards
+const filteredEmployeesForCards = computed(() => {
+  const query = cardSearchTerm.value.trim().toLowerCase();
+  if (!query) return employees.value;
+
+  return employees.value.filter((employee) => {
+    for (const field of allFieldsSchema.value) {
+      if (field.type === 'file') continue;
+      const val = employee[field.key];
+      if (val && String(val).toLowerCase().includes(query)) return true;
+    }
+    const name = displayName(employee);
+    if (name.toLowerCase().includes(query)) return true;
+    if (employee.employee_id && String(employee.employee_id).toLowerCase().includes(query)) return true;
+    return false;
+  });
+});
+
+// Filtered field groups for current employee card
+const filteredFieldGroups = computed(() => {
+  const query = cardFieldSearchTerm.value.trim().toLowerCase();
+  if (!query) return fieldGroups.value;
+
+  // Filter groups and fields based on label and value match
+  return fieldGroups.value.map(group => {
+    const filteredFields = group.fields.filter(field => {
+      // Match against field label
+      if (field.label.toLowerCase().includes(query)) return true;
+
+      // Match against field value (form is reactive, not a ref)
+      const val = form[field.key];
+      if (val && String(val).toLowerCase().includes(query)) return true;
+
+      return false;
     });
+
+    return {
+      ...group,
+      fields: filteredFields
+    };
+  }).filter(group => group.fields.length > 0); // Only include groups with matching fields
+});
+
+// Watch route params to handle employee selection
+watch(() => route.params.id, (newId) => {
+  if (route.name === 'cards' && newId && newId !== selectedId.value) {
+    if (isFormDirty.value) {
+      pendingNavigation.value = { name: 'cards', params: { id: newId } };
+      showUnsavedChangesPopup.value = true;
+    } else {
+      selectEmployee(newId);
+    }
   }
-  return result;
 });
 
 // Helper functions
-function displayName(employee) {
-  const parts = [employee.last_name, employee.first_name, employee.middle_name].filter(Boolean);
-  return parts.length ? parts.join(" ") : "Без імені";
-}
-
 function fileUrl(path) {
   if (!path) return "";
   if (path.startsWith("files/")) return `/${path}`;
@@ -158,57 +221,31 @@ function isDocExpired(doc) {
   return expiry < today;
 }
 
-// Data loading
-async function loadEmployees() {
-  loading.value = true;
-  errorMessage.value = "";
+// Load employees
+async function loadEmployees(silent = false) {
+  if (!silent) loading.value = true;
+  if (!silent) errorMessage.value = "";
   try {
     const data = await api.getEmployees();
     employees.value = data.employees || [];
   } catch (error) {
-    errorMessage.value = error.message;
+    if (!silent) errorMessage.value = error.message;
   } finally {
-    loading.value = false;
+    if (!silent) loading.value = false;
   }
 }
 
-async function selectEmployee(id) {
-  if (!id) return;
-  selectedId.value = id;
-  errorMessage.value = "";
+// Load templates
+async function loadTemplates() {
   try {
-    const data = await api.getEmployee(id);
-    Object.assign(form, emptyEmployee(), data.employee || {});
-    updateFormSnapshot();
-    isFormDirty.value = false;
+    const data = await api.getTemplates();
+    templates.value = data.templates || [];
   } catch (error) {
-    errorMessage.value = error.message;
+    console.error('Failed to load templates:', error);
   }
 }
 
-async function reloadEmployeePreservingDirty(employeeId) {
-  await loadEmployees();
-  await selectEmployee(employeeId);
-}
-
-function openEmployeeCard(employeeId) {
-  isCreatingNew.value = false;
-  router.push({ name: 'cards', params: { id: employeeId } });
-}
-
-function startNew() {
-  if (isFormDirty.value) {
-    openClearConfirmPopup();
-    return;
-  }
-  selectedId.value = "";
-  resetForm();
-  isCreatingNew.value = true;
-  if (route.name === 'cards' && route.params.id) {
-    router.push({ name: 'cards' });
-  }
-}
-
+// Save employee
 async function saveEmployee() {
   saving.value = true;
   errorMessage.value = "";
@@ -226,16 +263,19 @@ async function saveEmployee() {
 
     const payload = { ...form };
 
+    // Remove status fields for existing employees
     if (!isNew.value) {
       delete payload.employment_status;
       delete payload.status_start_date;
       delete payload.status_end_date;
     }
 
+    // Set default status for new employees
     if (isNew.value && !payload.employment_status && workingStatus.value) {
       payload.employment_status = workingStatus.value;
     }
 
+    // Clean empty document fields for new employees
     if (isNew.value) {
       documentFields.value.forEach(doc => {
         if (!payload[doc.key] || payload[doc.key].trim() === "") {
@@ -264,10 +304,12 @@ async function saveEmployee() {
   }
 }
 
+// Delete employee
 async function deleteEmployee() {
   if (!form.employee_id) return;
   const confirmed = window.confirm("Видалити співробітника та всі пов'язані записи?");
   if (!confirmed) return;
+
   saving.value = true;
   errorMessage.value = "";
   try {
@@ -281,7 +323,7 @@ async function deleteEmployee() {
   }
 }
 
-// Status change
+// Status change functions
 function openStatusChangePopup() {
   const currentStatus = form.employment_status || '';
   statusChangeForm.status = currentStatus === workingStatus.value ? '' : currentStatus;
@@ -357,7 +399,7 @@ async function resetStatus() {
   }
 }
 
-// Document upload
+// Document upload functions
 function openDocUploadPopup(doc) {
   docUploadForm.fieldKey = doc.key;
   docUploadForm.fieldLabel = doc.label;
@@ -412,7 +454,7 @@ async function submitDocUpload() {
   }
 }
 
-// Document edit dates
+// Document edit dates functions
 function openDocEditDatesPopup(doc) {
   const issueDateField = `${doc.key}_issue_date`;
   const expiryDateField = `${doc.key}_expiry_date`;
@@ -461,46 +503,10 @@ async function submitDocEditDates() {
   }
 }
 
-// Clear confirm popup
-function openClearConfirmPopup() {
-  showClearConfirmPopup.value = true;
-}
-
-function closeClearConfirmPopup() {
-  showClearConfirmPopup.value = false;
-}
-
-function confirmClearForm() {
-  closeClearConfirmPopup();
-  // Force clear: bypass dirty check by resetting dirty state first
-  isFormDirty.value = false;
-  selectedId.value = "";
-  resetForm();
-  isCreatingNew.value = true;
-  if (route.name === 'cards' && route.params.id) {
-    router.push({ name: 'cards' });
-  }
-}
-
-// Unsaved changes popup handlers
-async function saveAndContinue() {
-  if (saving.value) return;
-  await saveEmployee();
-  if (!errorMessage.value && pendingNavigation.value) {
-    isFormDirty.value = false;
-    const target = pendingNavigation.value;
-    closeUnsavedChangesPopup();
-    router.push(target);
-  }
-}
-
-function continueWithoutSaving() {
-  if (pendingNavigation.value) {
-    isFormDirty.value = false;
-    const target = pendingNavigation.value;
-    closeUnsavedChangesPopup();
-    router.push(target);
-  }
+// Helper to reload employee preserving dirty state
+async function reloadEmployeePreservingDirty(employeeId) {
+  await loadEmployees();
+  await selectEmployee(employeeId);
 }
 
 // Document operations
@@ -517,8 +523,10 @@ function openDocument(fieldKey) {
 
 async function deleteDocument(doc) {
   if (!form.employee_id || !form[doc.key]) return;
+
   const confirmed = window.confirm(`Видалити документ "${doc.label}"?`);
   if (!confirmed) return;
+
   errorMessage.value = "";
   try {
     await api.deleteEmployeeFile(form.employee_id, doc.key);
@@ -528,19 +536,6 @@ async function deleteDocument(doc) {
     await loadEmployees();
   } catch (error) {
     errorMessage.value = error.message;
-  }
-}
-
-// Folder operations
-async function openDataFolder() {
-  openingDataFolder.value = true;
-  errorMessage.value = "";
-  try {
-    await api.openDataFolder();
-  } catch (error) {
-    errorMessage.value = error.message;
-  } finally {
-    openingDataFolder.value = false;
   }
 }
 
@@ -557,171 +552,63 @@ async function openEmployeeFolder() {
   }
 }
 
-// Templates management functions
-async function loadTemplates() {
-  try {
-    const data = await api.getTemplates();
-    templates.value = data.templates || [];
-  } catch (error) {
-    errorMessage.value = error.message;
-  }
-}
-
-function openCreateTemplateDialog() {
-  templateDialogMode.value = 'create';
-  Object.assign(templateForm, {
-    template_id: '',
-    template_name: '',
-    template_type: '',
-    description: '',
-    placeholder_fields: '',
-    docx_filename: ''
-  });
-  showTemplateDialog.value = true;
-}
-
-function editTemplate(template) {
-  templateDialogMode.value = 'edit';
-  Object.assign(templateForm, {
-    template_id: template.template_id,
-    template_name: template.template_name,
-    template_type: template.template_type,
-    description: template.description || '',
-    placeholder_fields: template.placeholder_fields || '',
-    docx_filename: template.docx_filename || ''
-  });
-  showTemplateDialog.value = true;
-}
-
-async function saveTemplate() {
-  try {
-    const payload = {
-      template_name: templateForm.template_name,
-      template_type: templateForm.template_type,
-      description: templateForm.description || ''
-    };
-    if (templateDialogMode.value === 'create') {
-      await api.createTemplate(payload);
-      alert('✓ Шаблон створено успішно');
-    } else {
-      await api.updateTemplate(templateForm.template_id, payload);
-      alert('✓ Шаблон оновлено успішно');
-    }
-    closeTemplateDialog();
-    await loadTemplates();
-  } catch (error) {
-    alert('Помилка збереження: ' + error.message);
-  }
-}
-
-function closeTemplateDialog() {
-  showTemplateDialog.value = false;
-  Object.assign(templateForm, {
-    template_id: '',
-    template_name: '',
-    template_type: '',
-    description: '',
-    placeholder_fields: '',
-    docx_filename: ''
-  });
-}
-
-function uploadTemplateFile(template) {
-  uploadTemplateId.value = template.template_id;
-  uploadTemplateName.value = template.template_name;
-  selectedTemplateFile.value = null;
-  showUploadTemplateModal.value = true;
-}
-
-function closeUploadTemplateModal() {
-  showUploadTemplateModal.value = false;
-  uploadTemplateId.value = '';
-  uploadTemplateName.value = '';
-  selectedTemplateFile.value = null;
-}
-
-function onTemplateFileSelected(event) {
-  const file = event.target.files?.[0];
-  if (file) {
-    if (!file.name.toLowerCase().endsWith('.docx')) {
-      alert('Помилка: файл повинен мати розширення .docx');
-      event.target.value = '';
-      return;
-    }
-    selectedTemplateFile.value = file;
-  }
-}
-
-async function uploadTemplateDocx() {
-  if (!selectedTemplateFile.value) {
-    alert('Будь ласка, оберіть файл DOCX');
-    return;
-  }
-  try {
-    const formData = new FormData();
-    formData.append('file', selectedTemplateFile.value);
-    const result = await api.uploadTemplateFile(uploadTemplateId.value, formData);
-    alert(`✓ Файл завантажено успішно!\n\nВиявлені плейсхолдери:\n${result.placeholders.join(', ') || '(немає)'}`);
-    closeUploadTemplateModal();
-    await loadTemplates();
-  } catch (error) {
-    alert('Помилка завантаження файлу: ' + error.message);
-  }
-}
-
-async function deleteTemplate(template) {
-  const confirmed = confirm(`Видалити шаблон "${template.template_name}"?\n\nЦя дія не видаляє файл DOCX, а лише позначає шаблон як неактивний.`);
-  if (!confirmed) return;
-  try {
-    await api.deleteTemplate(template.template_id);
-    alert('Шаблон успішно видалено');
-    await loadTemplates();
-  } catch (error) {
-    alert('Помилка видалення шаблону: ' + error.message);
-  }
-}
-
-async function openTemplateDocx(template) {
-  try {
-    await api.openTemplateFile(template.template_id);
-  } catch (error) {
-    alert('Ошибка открытия файла: ' + error.message);
-  }
-}
-
-async function reextractTemplatePlaceholders() {
-  try {
-    const result = await api.reextractPlaceholders(templateForm.template_id);
-    templateForm.placeholder_fields = result.placeholders.join(', ');
-    alert(`Плейсхолдеры обновлены: ${result.placeholders.join(', ') || '(нет)'}`);
-    await loadTemplates();
-  } catch (error) {
-    alert('Ошибка обновления плейсхолдеров: ' + error.message);
-  }
-}
-
+// Template generation
 async function generateDocumentForEmployee(template) {
   try {
     const employeeId = form.employee_id;
+
     if (!employeeId) {
       alert('Помилка: не знайдено ID співробітника. Спочатку збережіть співробітника.');
       return;
     }
+
     if (!template.docx_filename) {
       alert('Помилка: для цього шаблону не завантажено файл DOCX');
       return;
     }
+
     const result = await api.generateDocument(template.template_id, employeeId, {});
+
     const downloadUrl = api.downloadDocument(result.document_id);
     window.open(downloadUrl, '_blank');
+
     alert(`✓ Документ "${template.template_name}" успішно згенеровано та завантажено`);
   } catch (error) {
     alert('Помилка генерування документа: ' + error.message);
   }
 }
 
-// Keyboard handler
-function handleKeydown(e) {
+// Clear confirm popup
+function openClearConfirmPopup() {
+  showClearConfirmPopup.value = true;
+}
+
+function closeClearConfirmPopup() {
+  showClearConfirmPopup.value = false;
+}
+
+function confirmClearForm() {
+  closeClearConfirmPopup();
+  startNew();
+}
+
+// Open employee card
+function openEmployeeCard(employeeId) {
+  isCreatingNew.value = false;
+  router.push({ name: 'cards', params: { id: employeeId } });
+}
+
+// Unsaved changes handlers
+function saveAndContinue() {
+  saveAndContinueBase(saveEmployee, router);
+}
+
+function continueWithoutSaving() {
+  continueWithoutSavingBase(router);
+}
+
+// Global keydown handler
+function handleGlobalKeydown(e) {
   if (e.key === 'Escape') {
     if (showUnsavedChangesPopup.value) {
       cancelNavigation();
@@ -737,26 +624,10 @@ function handleKeydown(e) {
   }
 }
 
-// Watch route.params.id to handle URL changes within cards view
-watch(() => route.params.id, (newId) => {
-  if (route.name === 'cards' && newId && newId !== selectedId.value) {
-    if (isFormDirty.value) {
-      pendingNavigation.value = { name: 'cards', params: { id: newId } };
-      showUnsavedChangesPopup.value = true;
-    } else {
-      selectEmployee(newId);
-    }
-  }
-});
-
-// Navigation guard removal function
-let removeBeforeEach = null;
-
-onMounted(async () => {
-  document.addEventListener('keydown', handleKeydown);
-
-  // Setup navigation guard for unsaved changes
-  removeBeforeEach = router.beforeEach((to, from, next) => {
+// Setup navigation guard
+let removeNavigationGuard;
+function setupNavigationGuard() {
+  removeNavigationGuard = router.beforeEach((to, from, next) => {
     if (from.name === 'cards' && to.name !== 'cards' && isFormDirty.value) {
       pendingNavigation.value = to;
       showUnsavedChangesPopup.value = true;
@@ -765,328 +636,65 @@ onMounted(async () => {
       next();
     }
   });
+}
 
-  // Setup beforeunload handler for browser refresh/close
-  window.addEventListener('beforeunload', handleBeforeUnload);
+// Setup beforeunload handler
+let beforeUnloadHandler;
 
+function setupBeforeUnload() {
+  beforeUnloadHandler = (e) => {
+    if (isFormDirty.value && route.name === 'cards') {
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  };
+  window.addEventListener('beforeunload', beforeUnloadHandler);
+}
+
+onMounted(async () => {
+  document.addEventListener('keydown', handleGlobalKeydown);
+  setupNavigationGuard();
+  setupBeforeUnload();
+
+  // Load schema first
   await loadFieldsSchema();
+
+  // Load data
   await loadEmployees();
   await loadTemplates();
 
-  // Restore view state from route params
+  // Form dictionaries from schema
+  const dict = {};
+  allFieldsSchema.value.forEach(field => {
+    if (field.type === 'select' && field.options && field.options.length > 0) {
+      dict[field.key] = field.options.map(opt => ({
+        value: opt,
+        label: opt
+      }));
+    }
+  });
+  dictionaries.value = dict;
+
+  // Load employee if ID in route
   if (route.params.id) {
-    selectEmployee(route.params.id);
-  } else if (employees.value.length > 0) {
+    await selectEmployee(route.params.id);
+  } else if (employees.value.length > 0 && !form.employee_id) {
     openEmployeeCard(employees.value[0].employee_id);
   }
 });
 
-function handleBeforeUnload(e) {
-  if (isFormDirty.value && route.name === 'cards') {
-    e.preventDefault();
-    e.returnValue = '';
-  }
-}
-
 onUnmounted(() => {
-  document.removeEventListener('keydown', handleKeydown);
-  window.removeEventListener('beforeunload', handleBeforeUnload);
-  if (removeBeforeEach) {
-    removeBeforeEach();
+  document.removeEventListener('keydown', handleGlobalKeydown);
+  if (removeNavigationGuard) {
+    removeNavigationGuard();
+  }
+  if (beforeUnloadHandler) {
+    window.removeEventListener('beforeunload', beforeUnloadHandler);
   }
 });
 </script>
 
 <template>
-  <!-- Status change popup -->
-  <div v-if="showStatusChangePopup" class="vacation-notification-overlay" @click="closeStatusChangePopup">
-    <div class="vacation-notification-modal" @click.stop>
-      <div class="vacation-notification-header">
-        <h3>Зміна статусу роботи</h3>
-        <button class="close-btn" @click="closeStatusChangePopup">×</button>
-      </div>
-      <div class="vacation-notification-body">
-        <div class="status-change-form">
-          <div class="field">
-            <label for="status-change-select">Новий статус</label>
-            <select id="status-change-select" v-model="statusChangeForm.status">
-              <option value="">-- Оберіть статус --</option>
-              <option v-for="opt in statusChangeOptions" :key="opt" :value="opt">{{ opt }}</option>
-            </select>
-          </div>
-          <div class="field">
-            <label for="status-change-start">Дата початку *</label>
-            <input id="status-change-start" type="date" v-model="statusChangeForm.startDate" required />
-          </div>
-          <div class="field">
-            <label for="status-change-end">Дата завершення</label>
-            <input id="status-change-end" type="date" v-model="statusChangeForm.endDate" />
-          </div>
-        </div>
-      </div>
-      <div class="vacation-notification-footer status-change-footer">
-        <button class="secondary" type="button" @click="closeStatusChangePopup">Скасувати</button>
-        <button
-          class="primary"
-          type="button"
-          :disabled="!statusChangeForm.status || !statusChangeForm.startDate || saving"
-          @click="applyStatusChange"
-        >
-          Застосувати
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Document upload popup -->
-  <div v-if="showDocUploadPopup" class="vacation-notification-overlay" @click="closeDocUploadPopup">
-    <div class="vacation-notification-modal" @click.stop>
-      <div class="vacation-notification-header">
-        <h3>{{ docUploadForm.fieldLabel }}</h3>
-        <button class="close-btn" @click="closeDocUploadPopup">&times;</button>
-      </div>
-      <div class="vacation-notification-body">
-        <div class="status-change-form">
-          <div class="field">
-            <label>Файл (PDF або зображення)</label>
-            <input
-              type="file"
-              accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,application/pdf,image/jpeg,image/png,image/gif,image/webp"
-              @change="onDocUploadFileChange"
-            />
-          </div>
-          <div class="field">
-            <label>Дата видачі</label>
-            <input type="date" v-model="docUploadForm.issueDate" />
-          </div>
-          <div class="field">
-            <label>Дата закінчення</label>
-            <input type="date" v-model="docUploadForm.expiryDate" />
-          </div>
-        </div>
-      </div>
-      <div class="vacation-notification-footer status-change-footer">
-        <button class="secondary" type="button" @click="closeDocUploadPopup">Скасувати</button>
-        <button
-          class="primary"
-          type="button"
-          :disabled="!docUploadForm.file || docUploadSaving"
-          @click="submitDocUpload"
-        >
-          {{ docUploadSaving ? 'Завантаження...' : 'Завантажити' }}
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Document edit dates popup -->
-  <div v-if="showDocEditDatesPopup" class="vacation-notification-overlay" @click="closeDocEditDatesPopup">
-    <div class="vacation-notification-modal" @click.stop>
-      <div class="vacation-notification-header">
-        <h3>{{ docEditDatesForm.fieldLabel }} — дати</h3>
-        <button class="close-btn" @click="closeDocEditDatesPopup">&times;</button>
-      </div>
-      <div class="vacation-notification-body">
-        <div class="status-change-form">
-          <div class="field">
-            <label>Дата видачі</label>
-            <input type="date" v-model="docEditDatesForm.issueDate" />
-          </div>
-          <div class="field">
-            <label>Дата закінчення</label>
-            <input type="date" v-model="docEditDatesForm.expiryDate" />
-          </div>
-        </div>
-      </div>
-      <div class="vacation-notification-footer status-change-footer">
-        <button class="secondary" type="button" @click="closeDocEditDatesPopup">Скасувати</button>
-        <button
-          class="primary"
-          type="button"
-          :disabled="docEditDatesSaving"
-          @click="submitDocEditDates"
-        >
-          {{ docEditDatesSaving ? 'Збереження...' : 'Зберегти' }}
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Clear confirm popup -->
-  <div v-if="showClearConfirmPopup" class="vacation-notification-overlay" @click="closeClearConfirmPopup">
-    <div class="vacation-notification-modal" @click.stop>
-      <div class="vacation-notification-header">
-        <h3>Підтвердження очищення</h3>
-        <button class="close-btn" @click="closeClearConfirmPopup">&times;</button>
-      </div>
-      <div class="vacation-notification-body">
-        <p style="margin: 0; padding: 16px 0;">Ви впевнені, що хочете очистити форму? Всі незбережені дані будуть втрачені.</p>
-      </div>
-      <div class="vacation-notification-footer status-change-footer">
-        <button class="secondary" type="button" @click="closeClearConfirmPopup">Скасувати</button>
-        <button class="primary" type="button" @click="confirmClearForm">Так, очистити</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Unsaved changes warning popup -->
-  <div v-if="showUnsavedChangesPopup" class="vacation-notification-overlay" @click="cancelNavigation">
-    <div class="vacation-notification-modal" @click.stop style="max-width: 600px;">
-      <div class="vacation-notification-header">
-        <h3>Незбережені зміни</h3>
-        <button class="close-btn" @click="cancelNavigation">&times;</button>
-      </div>
-      <div class="vacation-notification-body">
-        <p style="margin: 0 0 12px 0;">У вас є незбережені зміни в наступних полях:</p>
-        <ul style="margin: 0 0 16px 20px; padding: 0;">
-          <li v-for="field in changedFields" :key="field" style="margin: 4px 0;">{{ field }}</li>
-        </ul>
-        <p style="margin: 0; font-weight: 500;">Зберегти перед виходом?</p>
-      </div>
-      <div class="vacation-notification-footer status-change-footer">
-        <button class="secondary" type="button" @click="cancelNavigation">Скасувати</button>
-        <button class="secondary" type="button" @click="continueWithoutSaving">Продовжити без збереження</button>
-        <button class="primary" type="button" @click="saveAndContinue" :disabled="saving">
-          {{ saving ? 'Збереження...' : 'Зберегти і продовжити' }}
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Template Create/Edit Dialog -->
-  <div v-if="showTemplateDialog" class="vacation-notification-overlay" @click="closeTemplateDialog">
-    <div class="vacation-notification-modal" @click.stop style="max-width: 600px;">
-      <div class="vacation-notification-header">
-        <h3>{{ templateDialogMode === 'create' ? 'Новий шаблон' : 'Редагувати шаблон' }}</h3>
-        <button class="close-btn" @click="closeTemplateDialog">&times;</button>
-      </div>
-      <div class="vacation-notification-body">
-        <div class="form-group">
-          <label for="template-name">Назва шаблону <span style="color: red;">*</span></label>
-          <input
-            id="template-name"
-            v-model="templateForm.template_name"
-            type="text"
-            required
-            placeholder="Наприклад: Заявка на відпустку"
-          />
-        </div>
-
-        <div class="form-group">
-          <label for="template-type">Тип документа <span style="color: red;">*</span></label>
-          <select id="template-type" v-model="templateForm.template_type" required>
-            <option value="">Оберіть тип</option>
-            <option value="Заявка">Заявка</option>
-            <option value="Службова записка">Службова записка</option>
-            <option value="Доповідь/Звіт">Доповідь/Звіт</option>
-            <option value="Інше">Інше</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label for="template-description">Опис</label>
-          <textarea
-            id="template-description"
-            v-model="templateForm.description"
-            rows="3"
-            placeholder="Опис шаблону та його призначення"
-          ></textarea>
-        </div>
-
-        <div v-if="templateForm.placeholder_fields || templateForm.docx_filename" class="form-group">
-          <label>Плейсхолдери (автоматично з DOCX)</label>
-          <input
-            v-model="templateForm.placeholder_fields"
-            type="text"
-            readonly
-            style="background-color: #f5f5f5; cursor: not-allowed;"
-          />
-          <button
-            v-if="templateDialogMode === 'edit' && templateForm.docx_filename"
-            class="secondary small"
-            type="button"
-            style="margin-top: 6px;"
-            @click="reextractTemplatePlaceholders"
-          >
-            Обновить плейсхолдеры
-          </button>
-        </div>
-      </div>
-      <div class="vacation-notification-footer status-change-footer">
-        <button class="secondary" type="button" @click="closeTemplateDialog">Скасувати</button>
-        <button
-          class="primary"
-          type="button"
-          @click="saveTemplate"
-          :disabled="!templateForm.template_name || !templateForm.template_type"
-        >
-          {{ templateDialogMode === 'create' ? 'Створити' : 'Зберегти' }}
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Template Upload DOCX Dialog -->
-  <div v-if="showUploadTemplateModal" class="vacation-notification-overlay" @click="closeUploadTemplateModal">
-    <div class="vacation-notification-modal" @click.stop style="max-width: 550px;">
-      <div class="vacation-notification-header">
-        <h3>Завантаження DOCX шаблону</h3>
-        <button class="close-btn" @click="closeUploadTemplateModal">&times;</button>
-      </div>
-      <div class="vacation-notification-body">
-        <p style="margin-bottom: 15px;">
-          <strong>{{ uploadTemplateName }}</strong>
-        </p>
-
-        <div class="help-box" style="background-color: #f0f8ff; border-left: 4px solid #0066cc; padding: 15px; margin-bottom: 20px;">
-          <h4 style="margin-top: 0; margin-bottom: 10px; color: #0066cc;">📋 Інструкція зі створення шаблону</h4>
-          <ul style="margin: 0; padding-left: 20px; line-height: 1.6;">
-            <li>Створіть DOCX файл у Microsoft Word або LibreOffice</li>
-            <li>Використовуйте плейсхолдери у форматі <code>{{'{'}}field_name{{'}'}}</code></li>
-            <li>Доступні поля співробітника: <code>{{'{'}}last_name{{'}'}}</code>, <code>{{'{'}}first_name{{'}'}}</code>, <code>{{'{'}}position{{'}'}}</code>, та ін.</li>
-            <li>Спеціальні плейсхолдери: <code>{{'{'}}current_date{{'}'}}</code>, <code>{{'{'}}current_datetime{{'}'}}</code></li>
-            <li>
-              Відмінювання ПІБ — додайте суфікс падежу до <code>last_name</code>, <code>first_name</code>, <code>middle_name</code>, <code>full_name</code>:
-              <br/>
-              <code style="font-size: 0.85em;">_genitive</code> (родовий: Іванова),
-              <code style="font-size: 0.85em;">_dative</code> (давальний: Іванову),
-              <code style="font-size: 0.85em;">_accusative</code> (знахідний),
-              <code style="font-size: 0.85em;">_vocative</code> (кличний),
-              <code style="font-size: 0.85em;">_locative</code> (місцевий),
-              <code style="font-size: 0.85em;">_ablative</code> (орудний)
-            </li>
-            <li>Приклад: "Надати <code>{{'{'}}full_name_dative{{'}'}}</code> відпустку" → "Надати Іванову Петру Миколайовичу відпустку"</li>
-          </ul>
-        </div>
-
-        <div class="form-group">
-          <label for="template-file-input">Оберіть DOCX файл <span style="color: red;">*</span></label>
-          <input
-            id="template-file-input"
-            type="file"
-            accept=".docx"
-            @change="onTemplateFileSelected"
-          />
-          <p v-if="selectedTemplateFile" style="margin-top: 10px; color: #28a745;">
-            ✓ Обрано: {{ selectedTemplateFile.name }}
-          </p>
-        </div>
-      </div>
-      <div class="vacation-notification-footer status-change-footer">
-        <button class="secondary" type="button" @click="closeUploadTemplateModal">Скасувати</button>
-        <button
-          class="primary"
-          type="button"
-          @click="uploadTemplateDocx"
-          :disabled="!selectedTemplateFile"
-        >
-          Завантажити
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Main cards layout -->
   <div class="layout">
     <aside class="panel">
       <div class="panel-header">
@@ -1103,18 +711,28 @@ onUnmounted(() => {
         </div>
         <div class="status-bar">
           <span v-if="loading">Завантаження...</span>
+          <span v-else-if="cardSearchTerm.trim()">{{ filteredEmployeesForCards.length }} з {{ employees.length }}</span>
           <span v-else>{{ employees.length }} всього</span>
         </div>
       </div>
-      <input
-        v-model="searchTerm"
-        class="search-input"
-        type="search"
-        placeholder="Пошук за ПІБ, підрозділом або ID"
-      />
+      <div class="card-search-wrapper">
+        <input
+          v-model="cardSearchTerm"
+          class="search-input"
+          type="search"
+          placeholder="Пошук за будь-яким полем"
+        />
+        <button
+          v-if="cardSearchTerm"
+          class="card-search-clear"
+          type="button"
+          @click="cardSearchTerm = ''"
+          title="Очистити пошук"
+        >&times;</button>
+      </div>
       <div class="employee-list">
         <div
-          v-for="(employee, index) in filteredEmployees"
+          v-for="(employee, index) in filteredEmployeesForCards"
           :key="employee.employee_id"
           class="employee-card"
           :class="{ active: employee.employee_id === selectedId }"
@@ -1173,14 +791,31 @@ onUnmounted(() => {
 
       <div v-if="errorMessage" class="alert">{{ errorMessage }}</div>
 
+      <!-- Field search within current card -->
+      <div class="card-field-search-wrapper">
+        <input
+          v-model="cardFieldSearchTerm"
+          class="search-input"
+          type="search"
+          placeholder="Пошук по полях картки..."
+        />
+        <button
+          v-if="cardFieldSearchTerm"
+          class="card-search-clear"
+          @click="cardFieldSearchTerm = ''"
+          title="Очистити пошук"
+        >
+          ✕
+        </button>
+      </div>
+
       <div class="detail-grid">
-        <div v-for="group in fieldGroups" :key="group.title" class="section">
+        <div v-for="group in filteredFieldGroups" :key="group.title" class="section">
           <div class="section-title">{{ group.title }}</div>
           <div class="form-grid">
             <template v-for="field in group.fields" :key="field.key">
             <div class="field">
               <label :for="field.key">{{ field.label }}<span v-if="field.key === 'first_name' || field.key === 'last_name' || field.key === 'gender'" style="color: red;"> *</span></label>
-              <!-- employment_status: readonly display + buttons -->
               <template v-if="field.key === 'employment_status'">
                 <div class="status-field-row">
                   <input
@@ -1354,7 +989,7 @@ onUnmounted(() => {
           <div class="panel-header">
             <div class="section-title">Генерування документів</div>
             <div class="button-group">
-              <button class="secondary small" type="button" @click="openCreateTemplateDialog">➕ Новий шаблон</button>
+              <button class="secondary small" type="button" @click="router.push({ name: 'templates' })">➕ Керувати шаблонами</button>
               <button class="secondary small" type="button"
                 @click="router.push({ name: 'placeholder-reference', params: { employeeId: selectedId } })">
                 Плейсхолдери
@@ -1366,7 +1001,7 @@ onUnmounted(() => {
           </div>
           <div v-else-if="templates.length === 0" class="empty-state">
             Немає доступних шаблонів документів.
-            <a href="#" @click.prevent="openCreateTemplateDialog">Створити шаблон</a>
+            <a href="#" @click.prevent="router.push({ name: 'templates' })">Створити шаблон</a>
           </div>
           <div v-else class="document-generation-grid">
             <div
@@ -1383,12 +1018,6 @@ onUnmounted(() => {
                   ⚠ Файл DOCX не завантажено
                 </div>
               </div>
-              <div class="template-card-actions">
-                <button class="icon-btn" title="Редагувати" @click="editTemplate(template)">✎</button>
-                <button class="icon-btn" title="Відкрити DOCX" @click="openTemplateDocx(template)" :disabled="!template.docx_filename">📄</button>
-                <button class="icon-btn" title="Завантажити DOCX" @click="uploadTemplateFile(template)">📁</button>
-                <button class="icon-btn" title="Видалити" @click="deleteTemplate(template)">🗑</button>
-              </div>
               <button
                 class="primary small"
                 type="button"
@@ -1400,21 +1029,135 @@ onUnmounted(() => {
             </div>
           </div>
         </div>
-
-        <div class="section">
-          <div class="panel-header">
-            <div class="section-title">CSV файли</div>
-            <button
-              class="secondary"
-              type="button"
-              :disabled="openingDataFolder"
-              @click="openDataFolder"
-            >
-              {{ openingDataFolder ? "Відкриваємо..." : "Відкрити папку data" }}
-            </button>
-          </div>
-        </div>
       </div>
     </section>
+
+    <!-- Unsaved Changes Popup -->
+    <div v-if="showUnsavedChangesPopup" class="vacation-notification-overlay" @click="cancelNavigation">
+      <div class="vacation-notification-modal" @click.stop>
+        <div class="card-header">
+          <h3>⚠️ Незбережені зміни</h3>
+          <button class="close-btn" @click="cancelNavigation">&times;</button>
+        </div>
+        <div class="card-content">
+          <p>У вас є незбережені зміни у формі. Що бажаєте зробити?</p>
+          <div v-if="changedFields.length > 0" class="changed-fields-list">
+            <div class="changed-fields-label">Змінені поля:</div>
+            <ul>
+              <li v-for="(field, idx) in changedFields" :key="idx">{{ field }}</li>
+            </ul>
+          </div>
+        </div>
+        <div class="button-group">
+          <button class="primary" @click="saveAndContinue">Зберегти та продовжити</button>
+          <button class="secondary" @click="continueWithoutSaving">Продовжити без збереження</button>
+          <button class="secondary" @click="cancelNavigation">Скасувати</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Status Change Popup -->
+    <div v-if="showStatusChangePopup" class="vacation-notification-overlay" @click="closeStatusChangePopup">
+      <div class="vacation-notification-modal" @click.stop>
+        <div class="card-header">
+          <h3>Зміна статусу працевлаштування</h3>
+          <button class="close-btn" @click="closeStatusChangePopup">&times;</button>
+        </div>
+        <div class="card-content">
+          <div class="form-group">
+            <label>Новий статус:</label>
+            <select v-model="statusChangeForm.status" required>
+              <option value="">— Виберіть статус —</option>
+              <option v-for="opt in statusChangeOptions" :key="opt" :value="opt">{{ opt }}</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Дата початку:</label>
+            <input type="date" v-model="statusChangeForm.startDate" required />
+          </div>
+          <div class="form-group">
+            <label>Дата закінчення (опціонально):</label>
+            <input type="date" v-model="statusChangeForm.endDate" />
+          </div>
+        </div>
+        <div class="button-group">
+          <button class="primary" @click="applyStatusChange">Застосувати</button>
+          <button class="secondary" @click="closeStatusChangePopup">Скасувати</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Doc Upload Popup -->
+    <div v-if="showDocUploadPopup" class="vacation-notification-overlay" @click="closeDocUploadPopup">
+      <div class="vacation-notification-modal" @click.stop>
+        <div class="card-header">
+          <h3>Завантаження документа: {{ docUploadForm.fieldLabel }}</h3>
+          <button class="close-btn" @click="closeDocUploadPopup">&times;</button>
+        </div>
+        <div class="card-content">
+          <div class="form-group">
+            <label>Файл:</label>
+            <input type="file" @change="onDocUploadFileChange" required />
+          </div>
+          <div class="form-group">
+            <label>Дата видачі:</label>
+            <input type="date" v-model="docUploadForm.issueDate" />
+          </div>
+          <div class="form-group">
+            <label>Дата закінчення:</label>
+            <input type="date" v-model="docUploadForm.expiryDate" />
+          </div>
+        </div>
+        <div class="button-group">
+          <button class="primary" @click="submitDocUpload" :disabled="docUploadSaving">
+            {{ docUploadSaving ? 'Завантаження...' : 'Завантажити' }}
+          </button>
+          <button class="secondary" @click="closeDocUploadPopup">Скасувати</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Doc Edit Dates Popup -->
+    <div v-if="showDocEditDatesPopup" class="vacation-notification-overlay" @click="closeDocEditDatesPopup">
+      <div class="vacation-notification-modal" @click.stop>
+        <div class="card-header">
+          <h3>Редагування дат: {{ docEditDatesForm.fieldLabel }}</h3>
+          <button class="close-btn" @click="closeDocEditDatesPopup">&times;</button>
+        </div>
+        <div class="card-content">
+          <div class="form-group">
+            <label>Дата видачі:</label>
+            <input type="date" v-model="docEditDatesForm.issueDate" />
+          </div>
+          <div class="form-group">
+            <label>Дата закінчення:</label>
+            <input type="date" v-model="docEditDatesForm.expiryDate" />
+          </div>
+        </div>
+        <div class="button-group">
+          <button class="primary" @click="submitDocEditDates" :disabled="docEditDatesSaving">
+            {{ docEditDatesSaving ? 'Збереження...' : 'Зберегти' }}
+          </button>
+          <button class="secondary" @click="closeDocEditDatesPopup">Скасувати</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Clear Confirm Popup -->
+    <div v-if="showClearConfirmPopup" class="vacation-notification-overlay" @click="closeClearConfirmPopup">
+      <div class="vacation-notification-modal" @click.stop>
+        <div class="card-header">
+          <h3>⚠️ Підтвердження</h3>
+          <button class="close-btn" @click="closeClearConfirmPopup">&times;</button>
+        </div>
+        <div class="card-content">
+          <p>Ви впевнені, що хочете очистити форму? Всі незбережені зміни будуть втрачені.</p>
+        </div>
+        <div class="button-group">
+          <button class="danger" @click="confirmClearForm">Так, очистити</button>
+          <button class="secondary" @click="closeClearConfirmPopup">Скасувати</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>

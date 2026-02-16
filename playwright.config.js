@@ -26,7 +26,7 @@ module.exports = defineConfig({
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: 'http://localhost:5173',
+    baseURL: process.env.BASE_URL || 'http://localhost:5173',
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
@@ -36,6 +36,11 @@ module.exports = defineConfig({
 
     /* Timeout for each action (click, fill, etc.) */
     actionTimeout: 10000,
+  },
+
+  /* Environment-specific configuration */
+  env: {
+    API_URL: process.env.API_URL || 'http://localhost:3000',
   },
 
   /* Global timeout for each test */

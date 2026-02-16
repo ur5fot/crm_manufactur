@@ -5,168 +5,28 @@ import fsPromises from "fs/promises";
 import {
   DATA_DIR,
   FILES_DIR,
-  ROOT_DIR,
   loadEmployees,
   saveEmployees,
   addLog,
   formatFieldNameWithLabel,
+  ROOT_DIR,
   getEmployeeColumnsSync,
   getDocumentFieldsSync
 } from "../store.js";
 import { mergeRow, normalizeRows } from "../csv.js";
-import { openFolder, getNextId } from "../utils.js";
-import { createImportUpload, createEmployeeFileUpload } from "../upload-config.js";
+import { getNextId, normalizeEmployeeInput, openFolder } from "../utils.js";
 
-export function registerEmployeeFileRoutes(app, appConfig) {
-  const importUpload = createImportUpload(appConfig);
-  const upload = createEmployeeFileUpload(appConfig);
-
-  app.post("/api/employees/:id/open-folder", async (req, res) => {
-    try {
-      const employeeId = req.params.id;
-      const employeeFolder = path.join(FILES_DIR, `employee_${employeeId}`);
-      const resolvedFolder = path.resolve(employeeFolder);
-      const allowedDir = path.resolve(FILES_DIR);
-
-      // Path traversal protection - validate before directory creation
-      if (!resolvedFolder.startsWith(allowedDir + path.sep)) {
-        res.status(403).json({ error: "Недозволений шлях до папки" });
-        return;
-      }
-
-      // Создаем папку если она не существует
-      await fsPromises.mkdir(employeeFolder, { recursive: true });
-
-      // Пытаемся открыть папку (graceful degradation в headless)
-      await openFolder(employeeFolder);
-
-      res.json({ ok: true });
-    } catch (error) {
-      // Ошибка только если security validation провалилась
-      console.error('Open folder error:', error);
-      res.status(500).json({ error: "Не удалось открыть папку сотрудника" });
-    }
-  });
-
-  // API endpoint for downloading CSV import template
-  app.get("/api/download/import-template", async (req, res) => {
-    try {
-      const templatePath = path.join(DATA_DIR, "employees_import_sample.csv");
-      res.download(templatePath, "employees_import_sample.csv");
-    } catch (error) {
-      res.status(500).json({ error: "Не удалось загрузить шаблон CSV" });
-    }
-  });
-
-  app.post("/api/employees/import", importUpload.single("file"), async (req, res) => {
-    if (!req.file) {
-      res.status(400).json({ error: "Файл CSV не найден" });
-      return;
-    }
-
-    let records;
-    try {
-      const content = req.file.buffer.toString("utf8");
-      records = parse(content, {
-        columns: true,
-        delimiter: ";",
-        skip_empty_lines: true,
-        bom: true,
-        relax_quotes: true,
-        relax_column_count: true,
-        trim: true
-      });
-    } catch (error) {
-      res.status(400).json({ error: "Неверный формат CSV" });
-      return;
-    }
-
-    if (!records || records.length === 0) {
-      res.status(400).json({ error: "CSV не содержит данных" });
-      return;
-    }
-
-    const headerColumns = Object.keys(records[0] || {});
-    const hasKnownHeaders = headerColumns.some((column) => getEmployeeColumnsSync().includes(column));
-    if (!hasKnownHeaders) {
-      res.status(400).json({ error: "Заголовки CSV не совпадают с employees.csv" });
-      return;
-    }
-
-    const employees = await loadEmployees();
-    const existingIds = new Set(employees.map((item) => item.employee_id));
-    const nextEmployees = [...employees];
-
-    const errors = [];
-    const maxErrors = 50;
-    let added = 0;
-    let skipped = 0;
-
-    records.forEach((record, index) => {
-      const normalized = normalizeRows(getEmployeeColumnsSync(), [record])[0];
-      const hasAnyValue = getEmployeeColumnsSync().some((column) => String(normalized[column] || "").trim());
-      if (!hasAnyValue) {
-        skipped += 1;
-        return;
-      }
-
-      const hasFirstName = String(normalized.first_name || "").trim();
-      const hasLastName = String(normalized.last_name || "").trim();
-      if (!hasFirstName || !hasLastName) {
-        skipped += 1;
-        if (errors.length < maxErrors) {
-          errors.push({ row: index + 2, reason: "Не указаны имя и фамилия (оба поля обязательны)" });
-        }
-        return;
-      }
-
-      let employeeId = String(normalized.employee_id || "").trim();
-      if (employeeId && existingIds.has(employeeId)) {
-        skipped += 1;
-        if (errors.length < maxErrors) {
-          errors.push({ row: index + 2, reason: "ID уже существует" });
-        }
-        return;
-      }
-
-      if (!employeeId) {
-        employeeId = getNextId(nextEmployees, "employee_id");
-      }
-
-      // Очищаем файловые поля — файлы загружаются только через upload endpoint
-      for (const docField of getDocumentFieldsSync()) {
-        normalized[docField] = "";
-      }
-
-      normalized.employee_id = employeeId;
-      existingIds.add(employeeId);
-      nextEmployees.push(normalized);
-      added += 1;
-    });
-
-    await saveEmployees(nextEmployees);
-
-    // Логирование импортированных сотрудников
-    for (let i = employees.length; i < nextEmployees.length; i++) {
-      const employee = nextEmployees[i];
-      const employeeName = [employee.last_name, employee.first_name, employee.middle_name]
-        .filter(Boolean)
-        .join(" ");
-      await addLog("CREATE", employee.employee_id, employeeName, "", "", "", "Створено співробітника (імпорт)");
-    }
-
-    res.json({ added, skipped, errors });
-  });
-
+export function registerEmployeeFileRoutes(app, importUpload, employeeFileUpload) {
+  // Upload file for employee document field
   app.post("/api/employees/:id/files", (req, res, next) => {
-    upload.single("file")(req, res, (err) => {
+    employeeFileUpload.single("file")(req, res, (err) => {
       if (err) return res.status(400).json({ error: err.message });
       next();
     });
   }, async (req, res) => {
     try {
       if (!req.file) {
-        res.status(400).json({ error: "Файл обязателен" });
+        res.status(400).json({ error: "Файл обов'язковий" });
         return;
       }
 
@@ -176,7 +36,7 @@ export function registerEmployeeFileRoutes(app, appConfig) {
       if (index === -1) {
         // Удаляем временный файл
         await fsPromises.unlink(req.file.path).catch(() => {});
-        res.status(404).json({ error: "Сотрудник не найден" });
+        res.status(404).json({ error: "Співробітник не знайдено" });
         return;
       }
 
@@ -184,7 +44,7 @@ export function registerEmployeeFileRoutes(app, appConfig) {
       if (!getDocumentFieldsSync().includes(fileField)) {
         // Удаляем временный файл
         await fsPromises.unlink(req.file.path).catch(() => {});
-        res.status(400).json({ error: "Неверное поле документа" });
+        res.status(400).json({ error: "Невірне поле документа" });
         return;
       }
 
@@ -334,13 +194,14 @@ export function registerEmployeeFileRoutes(app, appConfig) {
     }
   });
 
+  // Delete employee file
   app.delete("/api/employees/:id/files/:fieldName", async (req, res) => {
     try {
       const { id, fieldName } = req.params;
 
-      // Проверка что поле является документом
+      // Перевірка що поле є документом
       if (!getDocumentFieldsSync().includes(fieldName)) {
-        res.status(400).json({ error: "Неверное поле документа" });
+        res.status(400).json({ error: "Невірне поле документа" });
         return;
       }
 
@@ -348,7 +209,7 @@ export function registerEmployeeFileRoutes(app, appConfig) {
       const index = employees.findIndex((item) => item.employee_id === id);
 
       if (index === -1) {
-        res.status(404).json({ error: "Сотрудник не найден" });
+        res.status(404).json({ error: "Співробітник не знайдено" });
         return;
       }
 
@@ -381,9 +242,9 @@ export function registerEmployeeFileRoutes(app, appConfig) {
       const expiryDateField = `${fieldName}_expiry_date`;
       if (columns.includes(issueDateField)) clearData[issueDateField] = "";
       if (columns.includes(expiryDateField)) clearData[expiryDateField] = "";
-      const updatedEmployee = mergeRow(columns, employee, clearData);
-      updatedEmployee.employee_id = id;
-      employees[index] = updatedEmployee;
+      const updated = mergeRow(columns, employee, clearData);
+      updated.employee_id = id;
+      employees[index] = updated;
       await saveEmployees(employees);
 
       // Логирование удаления
@@ -405,6 +266,145 @@ export function registerEmployeeFileRoutes(app, appConfig) {
     } catch (err) {
       console.error(err);
       res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Open employee folder
+  app.post("/api/employees/:id/open-folder", async (req, res) => {
+    try {
+      const employeeId = req.params.id;
+      const employeeFolder = path.join(FILES_DIR, `employee_${employeeId}`);
+      const resolvedFolder = path.resolve(employeeFolder);
+      const allowedDir = path.resolve(FILES_DIR);
+
+      // Path traversal protection - validate before directory creation
+      if (!resolvedFolder.startsWith(allowedDir + path.sep)) {
+        res.status(403).json({ error: "Недозволений шлях до папки" });
+        return;
+      }
+
+      // Создаем папку если она не существует
+      await fsPromises.mkdir(employeeFolder, { recursive: true });
+
+      // Пытаемся открыть папку (graceful degradation в headless)
+      await openFolder(employeeFolder);
+
+      res.json({ ok: true });
+    } catch (error) {
+      // Ошибка только если security validation провалилась
+      console.error('Open folder error:', error);
+      res.status(500).json({ error: "Не удалось открыть папку сотрудника" });
+    }
+  });
+
+  // Import employees from CSV
+  app.post("/api/employees/import", importUpload.single("file"), async (req, res) => {
+    if (!req.file) {
+      res.status(400).json({ error: "Файл CSV не найден" });
+      return;
+    }
+
+    let records;
+    try {
+      const content = req.file.buffer.toString("utf8");
+      records = parse(content, {
+        columns: true,
+        delimiter: ";",
+        skip_empty_lines: true,
+        bom: true,
+        relax_quotes: true,
+        relax_column_count: true,
+        trim: true
+      });
+    } catch (error) {
+      res.status(400).json({ error: "Неверный формат CSV" });
+      return;
+    }
+
+    if (!records || records.length === 0) {
+      res.status(400).json({ error: "CSV не содержит данных" });
+      return;
+    }
+
+    const headerColumns = Object.keys(records[0] || {});
+    const hasKnownHeaders = headerColumns.some((column) => getEmployeeColumnsSync().includes(column));
+    if (!hasKnownHeaders) {
+      res.status(400).json({ error: "Заголовки CSV не совпадают с employees.csv" });
+      return;
+    }
+
+    const employees = await loadEmployees();
+    const existingIds = new Set(employees.map((item) => item.employee_id));
+    const nextEmployees = [...employees];
+
+    const errors = [];
+    const maxErrors = 50;
+    let added = 0;
+    let skipped = 0;
+
+    records.forEach((record, index) => {
+      const normalized = normalizeRows(getEmployeeColumnsSync(), [record])[0];
+      const hasAnyValue = getEmployeeColumnsSync().some((column) => String(normalized[column] || "").trim());
+      if (!hasAnyValue) {
+        skipped += 1;
+        return;
+      }
+
+      const hasFirstName = String(normalized.first_name || "").trim();
+      const hasLastName = String(normalized.last_name || "").trim();
+      if (!hasFirstName || !hasLastName) {
+        skipped += 1;
+        if (errors.length < maxErrors) {
+          errors.push({ row: index + 2, reason: "Не указаны имя и фамилия (оба поля обязательны)" });
+        }
+        return;
+      }
+
+      let employeeId = String(normalized.employee_id || "").trim();
+      if (employeeId && existingIds.has(employeeId)) {
+        skipped += 1;
+        if (errors.length < maxErrors) {
+          errors.push({ row: index + 2, reason: "ID уже существует" });
+        }
+        return;
+      }
+
+      if (!employeeId) {
+        employeeId = getNextId(nextEmployees, "employee_id");
+      }
+
+      // Очищаем файловые поля — файлы загружаются только через upload endpoint
+      for (const docField of getDocumentFieldsSync()) {
+        normalized[docField] = "";
+      }
+
+      normalized.employee_id = employeeId;
+      existingIds.add(employeeId);
+      nextEmployees.push(normalized);
+      added += 1;
+    });
+
+    await saveEmployees(nextEmployees);
+
+    // Логирование импортированных сотрудников
+    for (let i = employees.length; i < nextEmployees.length; i++) {
+      const employee = nextEmployees[i];
+      const employeeName = [employee.last_name, employee.first_name, employee.middle_name]
+        .filter(Boolean)
+        .join(" ");
+      await addLog("CREATE", employee.employee_id, employeeName, "", "", "", "Створено співробітника (імпорт)");
+    }
+
+    res.json({ added, skipped, errors });
+  });
+
+  // Download CSV import template
+  app.get("/api/download/import-template", async (req, res) => {
+    try {
+      const templatePath = path.join(DATA_DIR, "employees_import_sample.csv");
+      res.download(templatePath, "employees_import_sample.csv");
+    } catch (error) {
+      res.status(500).json({ error: "Не удалось загрузить шаблон CSV" });
     }
   });
 }

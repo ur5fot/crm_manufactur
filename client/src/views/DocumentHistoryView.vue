@@ -1,106 +1,3 @@
-<script setup>
-import { ref, reactive, computed, onMounted } from "vue";
-import { api } from "../api";
-
-const generatedDocuments = ref([]);
-const documentHistoryLoading = ref(false);
-const documentHistoryError = ref('');
-const documentHistoryFilters = reactive({
-  template_id: '',
-  employee_id: '',
-  start_date: '',
-  end_date: ''
-});
-const documentHistoryPagination = reactive({
-  offset: 0,
-  limit: 50,
-  total: 0
-});
-const documentHistorySearchTerm = ref('');
-
-const templates = ref([]);
-
-async function loadTemplates() {
-  try {
-    const data = await api.getTemplates();
-    templates.value = data.templates || [];
-  } catch (error) {
-    console.error("Failed to load templates:", error);
-  }
-}
-
-async function loadDocumentHistory() {
-  documentHistoryLoading.value = true;
-  documentHistoryError.value = "";
-  try {
-    const filters = {
-      template_id: documentHistoryFilters.template_id || undefined,
-      employee_id: documentHistoryFilters.employee_id || undefined,
-      start_date: documentHistoryFilters.start_date || undefined,
-      end_date: documentHistoryFilters.end_date || undefined,
-      offset: documentHistoryPagination.offset,
-      limit: documentHistoryPagination.limit
-    };
-
-    const data = await api.getGeneratedDocuments(filters);
-    generatedDocuments.value = data.documents || [];
-    documentHistoryPagination.total = data.total || 0;
-  } catch (error) {
-    documentHistoryError.value = error.message;
-    generatedDocuments.value = [];
-    documentHistoryPagination.total = 0;
-  } finally {
-    documentHistoryLoading.value = false;
-  }
-}
-
-function clearDocumentHistoryFilters() {
-  documentHistoryFilters.template_id = '';
-  documentHistoryFilters.employee_id = '';
-  documentHistoryFilters.start_date = '';
-  documentHistoryFilters.end_date = '';
-  documentHistorySearchTerm.value = '';
-  documentHistoryPagination.offset = 0;
-  loadDocumentHistory();
-}
-
-function goToDocumentHistoryPage(page) {
-  documentHistoryPagination.offset = (page - 1) * documentHistoryPagination.limit;
-  loadDocumentHistory();
-}
-
-function downloadGeneratedDocument(documentId) {
-  const downloadUrl = api.downloadDocument(documentId);
-  window.open(downloadUrl, '_blank');
-}
-
-const filteredDocuments = computed(() => {
-  if (!documentHistorySearchTerm.value) {
-    return generatedDocuments.value;
-  }
-  const search = documentHistorySearchTerm.value.toLowerCase();
-  return generatedDocuments.value.filter(doc => {
-    return (
-      (doc.template_name && doc.template_name.toLowerCase().includes(search)) ||
-      (doc.employee_name && doc.employee_name.toLowerCase().includes(search)) ||
-      (doc.document_id && doc.document_id.toString().includes(search))
-    );
-  });
-});
-
-const documentHistoryCurrentPage = computed(() => {
-  return Math.floor(documentHistoryPagination.offset / documentHistoryPagination.limit) + 1;
-});
-
-const documentHistoryTotalPages = computed(() => {
-  return Math.ceil(documentHistoryPagination.total / documentHistoryPagination.limit);
-});
-
-onMounted(async () => {
-  await Promise.all([loadTemplates(), loadDocumentHistory()]);
-});
-</script>
-
 <template>
   <div class="layout-table">
     <div class="panel table-panel">
@@ -112,8 +9,8 @@ onMounted(async () => {
       </div>
 
       <!-- Filters -->
-      <div class="filters-section" style="padding: 16px; background: #f5f5f5; border-radius: 8px; margin-bottom: 16px;">
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+      <div class="filters-section">
+        <div class="filters-grid">
           <div class="field">
             <label>Шаблон</label>
             <select v-model="documentHistoryFilters.template_id">
@@ -144,7 +41,7 @@ onMounted(async () => {
           </div>
         </div>
 
-        <div style="display: flex; gap: 8px; margin-top: 12px;">
+        <div class="filters-actions">
           <button class="primary" type="button" @click="loadDocumentHistory">
             Застосувати фільтри
           </button>
@@ -229,3 +126,111 @@ onMounted(async () => {
     </div>
   </div>
 </template>
+
+<script setup>
+import { ref, reactive, computed, onMounted } from "vue";
+import { api } from "../api";
+
+// Document history management
+const generatedDocuments = ref([]);
+const templates = ref([]);
+const documentHistoryLoading = ref(false);
+const documentHistoryError = ref('');
+const documentHistoryFilters = reactive({
+  template_id: '',
+  employee_id: '',
+  start_date: '',
+  end_date: ''
+});
+const documentHistoryPagination = reactive({
+  offset: 0,
+  limit: 50,
+  total: 0
+});
+const documentHistorySearchTerm = ref('');
+
+// Load templates for filter dropdown
+async function loadTemplates() {
+  try {
+    const data = await api.getTemplates();
+    templates.value = data.templates || [];
+  } catch (error) {
+    console.error('Failed to load templates:', error);
+  }
+}
+
+// Document history functions
+async function loadDocumentHistory() {
+  documentHistoryLoading.value = true;
+  documentHistoryError.value = "";
+  try {
+    const filters = {
+      template_id: documentHistoryFilters.template_id || undefined,
+      employee_id: documentHistoryFilters.employee_id || undefined,
+      start_date: documentHistoryFilters.start_date || undefined,
+      end_date: documentHistoryFilters.end_date || undefined,
+      offset: documentHistoryPagination.offset,
+      limit: documentHistoryPagination.limit
+    };
+
+    const data = await api.getGeneratedDocuments(filters);
+    generatedDocuments.value = data.documents || [];
+    documentHistoryPagination.total = data.total || 0;
+  } catch (error) {
+    documentHistoryError.value = error.message;
+    generatedDocuments.value = [];
+    documentHistoryPagination.total = 0;
+  } finally {
+    documentHistoryLoading.value = false;
+  }
+}
+
+function clearDocumentHistoryFilters() {
+  documentHistoryFilters.template_id = '';
+  documentHistoryFilters.employee_id = '';
+  documentHistoryFilters.start_date = '';
+  documentHistoryFilters.end_date = '';
+  documentHistorySearchTerm.value = '';
+  documentHistoryPagination.offset = 0;
+  loadDocumentHistory();
+}
+
+function goToDocumentHistoryPage(page) {
+  documentHistoryPagination.offset = (page - 1) * documentHistoryPagination.limit;
+  loadDocumentHistory();
+}
+
+function downloadGeneratedDocument(documentId) {
+  const downloadUrl = api.downloadDocument(documentId);
+  window.open(downloadUrl, '_blank');
+}
+
+// Computed values for document history
+const filteredDocuments = computed(() => {
+  if (!documentHistorySearchTerm.value) {
+    return generatedDocuments.value;
+  }
+  const search = documentHistorySearchTerm.value.toLowerCase();
+  return generatedDocuments.value.filter(doc => {
+    return (
+      (doc.template_name && doc.template_name.toLowerCase().includes(search)) ||
+      (doc.employee_name && doc.employee_name.toLowerCase().includes(search)) ||
+      (doc.document_id && doc.document_id.toString().includes(search))
+    );
+  });
+});
+
+const documentHistoryCurrentPage = computed(() => {
+  return Math.floor(documentHistoryPagination.offset / documentHistoryPagination.limit) + 1;
+});
+
+const documentHistoryTotalPages = computed(() => {
+  return Math.ceil(documentHistoryPagination.total / documentHistoryPagination.limit);
+});
+
+// Initialize on mount
+onMounted(() => {
+  loadTemplates();
+  loadDocumentHistory();
+});
+</script>

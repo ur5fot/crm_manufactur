@@ -1,46 +1,3 @@
-<script setup>
-import { ref } from "vue";
-import { api } from "../api";
-
-const loading = ref(false);
-const errorMessage = ref("");
-const importFile = ref(null);
-const importResult = ref(null);
-const importing = ref(false);
-
-function onImportFileChange(event) {
-  importFile.value = event.target.files?.[0] || null;
-  importResult.value = null;
-}
-
-function resetImport() {
-  importFile.value = null;
-  importResult.value = null;
-}
-
-async function importEmployees() {
-  if (!importFile.value) {
-    return;
-  }
-  importing.value = true;
-  errorMessage.value = "";
-  try {
-    const formData = new FormData();
-    formData.append("file", importFile.value);
-    const result = await api.importEmployees(formData);
-    importResult.value = {
-      added: result?.added ?? 0,
-      skipped: result?.skipped ?? 0,
-      errors: result?.errors || []
-    };
-  } catch (error) {
-    errorMessage.value = error.message;
-  } finally {
-    importing.value = false;
-  }
-}
-</script>
-
 <template>
   <div class="layout-cards">
     <div class="panel">
@@ -112,3 +69,45 @@ async function importEmployees() {
     </div>
   </div>
 </template>
+
+<script setup>
+import { ref } from "vue";
+import { api } from "../api";
+
+const importFile = ref(null);
+const importResult = ref(null);
+const importing = ref(false);
+const errorMessage = ref("");
+
+function onImportFileChange(event) {
+  importFile.value = event.target.files?.[0] || null;
+  importResult.value = null;
+}
+
+function resetImport() {
+  importFile.value = null;
+  importResult.value = null;
+}
+
+async function importEmployees() {
+  if (!importFile.value) {
+    return;
+  }
+  importing.value = true;
+  errorMessage.value = "";
+  try {
+    const formData = new FormData();
+    formData.append("file", importFile.value);
+    const result = await api.importEmployees(formData);
+    importResult.value = {
+      added: result?.added ?? 0,
+      skipped: result?.skipped ?? 0,
+      errors: result?.errors || []
+    };
+  } catch (error) {
+    errorMessage.value = error.message;
+  } finally {
+    importing.value = false;
+  }
+}
+</script>

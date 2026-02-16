@@ -9,12 +9,14 @@
 
 import { test, expect } from '@playwright/test';
 
+const API_URL = process.env.API_URL || 'http://localhost:3000';
+
 test.describe('Birth Date Validation', () => {
   let employeeId;
 
   test.beforeAll(async ({ request }) => {
     // Создаем тестового сотрудника
-    const response = await request.post('http://localhost:3000/api/employees', {
+    const response = await request.post(`${API_URL}/api/employees`, {
       data: {
         first_name: 'Тест',
         last_name: 'Дата народження',
@@ -29,12 +31,12 @@ test.describe('Birth Date Validation', () => {
   test.afterAll(async ({ request }) => {
     // Удаляем тестового сотрудника
     if (employeeId) {
-      await request.delete(`http://localhost:3000/api/employees/${employeeId}`);
+      await request.delete(`${API_URL}/api/employees/${employeeId}`);
     }
   });
 
   test('должен успешно сохранить валидную дату рождения', async ({ request }) => {
-    const response = await request.put(`http://localhost:3000/api/employees/${employeeId}`, {
+    const response = await request.put(`${API_URL}/api/employees/${employeeId}`, {
       data: {
         birth_date: '1990-05-15'
       }
@@ -46,7 +48,7 @@ test.describe('Birth Date Validation', () => {
   });
 
   test('должен отклонить дату в неправильном формате', async ({ request }) => {
-    const response = await request.put(`http://localhost:3000/api/employees/${employeeId}`, {
+    const response = await request.put(`${API_URL}/api/employees/${employeeId}`, {
       data: {
         birth_date: '15-05-1990' // DD-MM-YYYY вместо YYYY-MM-DD
       }
@@ -58,7 +60,7 @@ test.describe('Birth Date Validation', () => {
   });
 
   test('должен отклонить невалидную календарную дату (30 февраля)', async ({ request }) => {
-    const response = await request.put(`http://localhost:3000/api/employees/${employeeId}`, {
+    const response = await request.put(`${API_URL}/api/employees/${employeeId}`, {
       data: {
         birth_date: '2000-02-30'
       }
@@ -70,7 +72,7 @@ test.describe('Birth Date Validation', () => {
   });
 
   test('должен отклонить невалидную календарную дату (31 апреля)', async ({ request }) => {
-    const response = await request.put(`http://localhost:3000/api/employees/${employeeId}`, {
+    const response = await request.put(`${API_URL}/api/employees/${employeeId}`, {
       data: {
         birth_date: '2000-04-31'
       }
@@ -82,7 +84,7 @@ test.describe('Birth Date Validation', () => {
   });
 
   test('должен отклонить некорректную дату (13-й месяц)', async ({ request }) => {
-    const response = await request.put(`http://localhost:3000/api/employees/${employeeId}`, {
+    const response = await request.put(`${API_URL}/api/employees/${employeeId}`, {
       data: {
         birth_date: '2000-13-01'
       }
@@ -95,7 +97,7 @@ test.describe('Birth Date Validation', () => {
 
   test('должен успешно обновить birth_date даже если другие даты невалидны (legacy data)', async ({ request }) => {
     // Сначала устанавливаем валидную дату
-    let response = await request.put(`http://localhost:3000/api/employees/${employeeId}`, {
+    let response = await request.put(`${API_URL}/api/employees/${employeeId}`, {
       data: {
         birth_date: '1985-03-20',
         status_start_date: '2024-01-15'
@@ -104,7 +106,7 @@ test.describe('Birth Date Validation', () => {
     expect(response.ok()).toBeTruthy();
 
     // Теперь обновляем только birth_date - status_start_date остается без изменений
-    response = await request.put(`http://localhost:3000/api/employees/${employeeId}`, {
+    response = await request.put(`${API_URL}/api/employees/${employeeId}`, {
       data: {
         birth_date: '1986-04-25'
       }
@@ -117,7 +119,7 @@ test.describe('Birth Date Validation', () => {
   });
 
   test('должен успешно очистить дату рождения (пустая строка)', async ({ request }) => {
-    const response = await request.put(`http://localhost:3000/api/employees/${employeeId}`, {
+    const response = await request.put(`${API_URL}/api/employees/${employeeId}`, {
       data: {
         birth_date: ''
       }
@@ -129,7 +131,7 @@ test.describe('Birth Date Validation', () => {
   });
 
   test('должен успешно сохранить дату високосного года (29 февраля)', async ({ request }) => {
-    const response = await request.put(`http://localhost:3000/api/employees/${employeeId}`, {
+    const response = await request.put(`${API_URL}/api/employees/${employeeId}`, {
       data: {
         birth_date: '2000-02-29' // 2000 - високосный год
       }
@@ -141,7 +143,7 @@ test.describe('Birth Date Validation', () => {
   });
 
   test('должен отклонить 29 февраля в невисокосном году', async ({ request }) => {
-    const response = await request.put(`http://localhost:3000/api/employees/${employeeId}`, {
+    const response = await request.put(`${API_URL}/api/employees/${employeeId}`, {
       data: {
         birth_date: '2001-02-29' // 2001 - НЕ високосный год
       }

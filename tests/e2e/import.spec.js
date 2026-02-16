@@ -1,6 +1,7 @@
 const { test, expect } = require('@playwright/test');
 const path = require('path');
 const fs = require('fs');
+const { API_URL } = require('./test-config');
 
 /**
  * Dismiss any notification popups on the page
@@ -40,8 +41,8 @@ async function dismissNotifications(page) {
 
 test.describe('CSV Import', () => {
   test.beforeEach(async ({ page }) => {
-    // Navigate to import page
-    await page.goto('/import');
+    // Navigate to system settings page
+    await page.goto('/system-settings');
 
     // Wait for page to load
     await page.waitForLoadState('networkidle');
@@ -49,12 +50,16 @@ test.describe('CSV Import', () => {
     // Close any notification popups
     await dismissNotifications(page);
 
-    await expect(page.locator('.panel-title')).toContainText('Імпорт співробітників з CSV');
+    // Click on Import tab
+    await page.click('.subtab-btn:has-text("Імпорт")');
+    await page.waitForTimeout(500);
+
+    await expect(page.locator('.panel-title').last()).toContainText('Імпорт співробітників з CSV');
   });
 
   test('Импортировать валидный CSV', async ({ page }) => {
     // Get initial employee count from API
-    const initialResponse = await page.request.get('http://localhost:3000/api/employees');
+    const initialResponse = await page.request.get(`${API_URL}/api/employees`);
     const initialData = await initialResponse.json();
     const initialCount = initialData.employees.length;
 
@@ -95,7 +100,7 @@ test.describe('CSV Import', () => {
     await expect(table).toContainText('Українка');
 
     // Verify via API that employees were created
-    const finalResponse = await page.request.get('http://localhost:3000/api/employees');
+    const finalResponse = await page.request.get(`${API_URL}/api/employees`);
     const finalData = await finalResponse.json();
     expect(finalData.employees.length).toBe(initialCount + 3);
 

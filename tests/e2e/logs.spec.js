@@ -1,5 +1,6 @@
 const { test, expect } = require('@playwright/test');
 const { setupTestData, cleanupTestData } = require('../helpers/test-utils');
+const { API_URL } = require('./test-config');
 
 async function waitForLogsLoad(page, timeout = 10000) {
   // Wait for logs view to load
@@ -17,8 +18,14 @@ test.describe('Audit Logs Tests', () => {
   });
 
   test('Просмотр логов изменений', async ({ page }) => {
-    // Navigate to logs page
-    await page.goto('/logs');
+    // Navigate to system settings page
+    await page.goto('/system-settings');
+    await page.waitForLoadState('networkidle');
+
+    // Click on Logs tab
+    await page.click('.subtab-btn:has-text("Логи")');
+    await page.waitForTimeout(500);
+
     await waitForLogsLoad(page);
 
     // Verify logs table/container is visible
@@ -26,7 +33,7 @@ test.describe('Audit Logs Tests', () => {
     await expect(logsContainer).toBeVisible({ timeout: 5000 });
 
     // Check if logs are loaded from API
-    const logsResponse = await page.request.get('http://localhost:3000/api/logs');
+    const logsResponse = await page.request.get(`${API_URL}/api/logs`);
     expect(logsResponse.ok()).toBeTruthy();
     const logsData = await logsResponse.json();
 
@@ -61,7 +68,7 @@ test.describe('Audit Logs Tests', () => {
     };
 
     // CREATE: Create employee via API
-    const createResponse = await page.request.post('http://localhost:3000/api/employees', {
+    const createResponse = await page.request.post(`${API_URL}/api/employees`, {
       data: employeeData
     });
     expect(createResponse.ok()).toBeTruthy();
@@ -72,7 +79,7 @@ test.describe('Audit Logs Tests', () => {
     await page.waitForTimeout(500);
 
     // UPDATE: Edit employee via API
-    const updateResponse = await page.request.put(`http://localhost:3000/api/employees/${employeeId}`, {
+    const updateResponse = await page.request.put(`${API_URL}/api/employees/${employeeId}`, {
       data: {
         ...employeeData,
         employee_id: employeeId,
@@ -85,14 +92,20 @@ test.describe('Audit Logs Tests', () => {
     await page.waitForTimeout(500);
 
     // DELETE: Delete employee via API
-    const deleteResponse = await page.request.delete(`http://localhost:3000/api/employees/${employeeId}`);
+    const deleteResponse = await page.request.delete(`${API_URL}/api/employees/${employeeId}`);
     expect(deleteResponse.ok()).toBeTruthy();
 
     // Wait a bit for log to be written
     await page.waitForTimeout(500);
 
-    // Navigate to logs page
-    await page.goto('/logs');
+    // Navigate to system settings page
+    await page.goto('/system-settings');
+    await page.waitForLoadState('networkidle');
+
+    // Click on Logs tab
+    await page.click('.subtab-btn:has-text("Логи")');
+    await page.waitForTimeout(500);
+
     await waitForLogsLoad(page);
 
     // Search for employee logs
@@ -108,7 +121,7 @@ test.describe('Audit Logs Tests', () => {
     expect(logCount).toBeGreaterThanOrEqual(2);
 
     // Check for specific action types in logs via API
-    const logsResponse = await page.request.get('http://localhost:3000/api/logs');
+    const logsResponse = await page.request.get(`${API_URL}/api/logs`);
     const logsData = await logsResponse.json();
     const logs = logsData.logs || logsData;
 

@@ -1,11 +1,8 @@
 import path from "path";
 import fs from "fs";
-import {
-  FILES_DIR,
-  loadGeneratedDocuments,
-  loadTemplates,
-  loadEmployees
-} from "../store.js";
+import { FILES_DIR } from "../store.js";
+import { loadGeneratedDocuments, loadTemplates, loadEmployees } from "../store.js";
+import { validatePagination, validatePath, findById, buildFullName } from "../utils.js";
 
 export function registerDocumentRoutes(app) {
   // Get list of generated documents with filtering and pagination
@@ -69,9 +66,14 @@ export function registerDocumentRoutes(app) {
       const total = filtered.length;
 
       // Apply pagination with validation to prevent DoS
-      const rawOffset = parseInt(offset, 10);
-      const offsetNum = isNaN(rawOffset) || rawOffset < 0 ? 0 : rawOffset;
-      const limitNum = Math.min(Math.max(parseInt(limit, 10) || 50, 1), 1000);
+      let paginationParams;
+      try {
+        paginationParams = validatePagination(offset, limit);
+      } catch (err) {
+        res.status(400).json({ error: err.message });
+        return;
+      }
+      const { offset: offsetNum, limit: limitNum } = paginationParams;
 
       const paginated = filtered.slice(offsetNum, offsetNum + limitNum);
 
@@ -86,8 +88,8 @@ export function registerDocumentRoutes(app) {
           template_name: template ? template.template_name : 'Unknown Template',
           employee_id: doc.employee_id,
           employee_name: employee
-            ? `${employee.last_name || ''} ${employee.first_name || ''} ${employee.middle_name || ''}`.trim()
-            : 'Unknown Employee',
+            ? buildFullName(employee)
+            : 'Невідомий співробітник',
           docx_filename: doc.docx_filename,
           generation_date: doc.generation_date,
           generated_by: doc.generated_by
@@ -111,7 +113,7 @@ export function registerDocumentRoutes(app) {
     try {
       // Load document from generated_documents.csv
       const documents = await loadGeneratedDocuments();
-      const document = documents.find((d) => d.document_id === req.params.id);
+      const document = findById(documents, 'document_id', req.params.id);
 
       if (!document) {
         res.status(404).json({ error: "Документ не знайдено" });
@@ -124,10 +126,9 @@ export function registerDocumentRoutes(app) {
 
       // Validate file exists and prevent path traversal
       const filePath = path.join(FILES_DIR, 'documents', sanitizedFilename);
-      const resolvedPath = path.resolve(filePath);
-      const allowedDir = path.resolve(FILES_DIR, 'documents');
+      const allowedDir = path.join(FILES_DIR, 'documents');
 
-      if (!resolvedPath.startsWith(allowedDir + path.sep)) {
+      if (!validatePath(filePath, allowedDir)) {
         res.status(403).json({ error: "Недозволений шлях до файлу" });
         return;
       }

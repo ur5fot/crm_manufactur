@@ -65,7 +65,7 @@ export const api = {
     });
   },
   getLogs() {
-    return request("/logs");
+    return request("/logs?limit=1000");
   },
   getFieldsSchema() {
     return request("/fields-schema");
@@ -178,6 +178,9 @@ export const api = {
   getPlaceholderPreview(employeeId) {
     const path = employeeId ? `/placeholder-preview/${employeeId}` : '/placeholder-preview';
     return request(path);
+  },
+  globalSearch(q) {
+    return request(`/search?q=${encodeURIComponent(q)}`);
   },
   getGeneratedDocuments(filters = {}) {
     const queryParams = new URLSearchParams();

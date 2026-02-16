@@ -1,16 +1,31 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
-import { useRoute, useRouter } from "vue-router";
+import { useRouter, useRoute } from "vue-router";
 import { api } from "../api";
 
-const route = useRoute();
 const router = useRouter();
+const route = useRoute();
 
+// State
 const placeholderRefData = ref(null);
 const placeholderRefLoading = ref(false);
 const placeholderRefError = ref('');
 const placeholderRefSearch = ref('');
 
+// Computed filtered placeholders
+const filteredPlaceholders = computed(() => {
+  if (!placeholderRefData.value) return [];
+  const items = placeholderRefData.value.placeholders || [];
+  if (!placeholderRefSearch.value) return items;
+  const term = placeholderRefSearch.value.toLowerCase();
+  return items.filter(p =>
+    p.placeholder.toLowerCase().includes(term) ||
+    p.label.toLowerCase().includes(term) ||
+    p.value.toLowerCase().includes(term)
+  );
+});
+
+// Load placeholder preview data
 async function loadPlaceholderPreview() {
   placeholderRefLoading.value = true;
   placeholderRefError.value = '';
@@ -25,22 +40,12 @@ async function loadPlaceholderPreview() {
   }
 }
 
-const filteredPlaceholders = computed(() => {
-  if (!placeholderRefData.value) return [];
-  const items = placeholderRefData.value.placeholders || [];
-  if (!placeholderRefSearch.value) return items;
-  const term = placeholderRefSearch.value.toLowerCase();
-  return items.filter(p =>
-    p.placeholder.toLowerCase().includes(term) ||
-    p.label.toLowerCase().includes(term) ||
-    p.value.toLowerCase().includes(term)
-  );
-});
-
+// Copy placeholder to clipboard
 function copyPlaceholder(text) {
   navigator.clipboard.writeText(text).catch(() => {});
 }
 
+// Lifecycle
 onMounted(() => {
   loadPlaceholderPreview();
 });

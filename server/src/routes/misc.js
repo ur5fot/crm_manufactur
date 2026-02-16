@@ -1,10 +1,7 @@
-import {
-  DATA_DIR,
-  loadFieldsSchema,
-  loadEmployees
-} from "../store.js";
+import { DATA_DIR } from "../store.js";
+import { loadFieldsSchema, loadEmployees, loadTemplates, loadGeneratedDocuments } from "../store.js";
+import { openFolder, MIN_SEARCH_LENGTH, MAX_SEARCH_LENGTH, MAX_EMPLOYEE_RESULTS, MAX_TEMPLATE_RESULTS, MAX_DOCUMENT_RESULTS, findById, buildFullName } from "../utils.js";
 import { generateDeclinedNames, generateDeclinedGradePosition } from "../declension.js";
-import { openFolder } from "../utils.js";
 
 export function registerMiscRoutes(app) {
   app.post("/api/open-data-folder", async (req, res) => {
@@ -12,7 +9,7 @@ export function registerMiscRoutes(app) {
       await openFolder(DATA_DIR);
       res.json({ ok: true });
     } catch (error) {
-      res.status(500).json({ error: "Не удалось открыть папку data" });
+      res.status(500).json({ error: "Не вдалося відкрити папку data" });
     }
   });
 
@@ -26,6 +23,7 @@ export function registerMiscRoutes(app) {
       return;
     }
 
+    // Группируем поля по группам
     const groups = {};
     const tableFields = [];
     const allFields = [];
@@ -44,11 +42,13 @@ export function registerMiscRoutes(app) {
 
       allFields.push(fieldData);
 
+      // Группировка для карточек
       if (!groups[field.field_group]) {
         groups[field.field_group] = [];
       }
       groups[field.field_group].push(fieldData);
 
+      // Поля для сводной таблицы
       if (field.show_in_table === 'yes') {
         tableFields.push(fieldData);
       }
@@ -61,22 +61,111 @@ export function registerMiscRoutes(app) {
     });
   });
 
+  app.get("/api/search", async (req, res) => {
+    try {
+      const q = req.query.q;
+      if (!q || q.trim().length < MIN_SEARCH_LENGTH) {
+        res.status(400).json({ error: `Параметр q обов'язковий (мінімум ${MIN_SEARCH_LENGTH} символи)` });
+        return;
+      }
+      if (q.trim().length > MAX_SEARCH_LENGTH) {
+        res.status(400).json({ error: `Пошуковий запит занадто довгий (максимум ${MAX_SEARCH_LENGTH} символів)` });
+        return;
+      }
+
+      const query = q.trim().toLowerCase();
+
+      const [employees, templates, documents, schema] = await Promise.all([
+        loadEmployees(),
+        loadTemplates(),
+        loadGeneratedDocuments(),
+        loadFieldsSchema()
+      ]);
+
+      const activeTemplates = templates.filter(t => t.active !== 'no');
+
+      const textFieldKeys = schema.filter(f => f.field_type !== 'file').map(f => f.field_name);
+
+      const matchedEmployees = employees.filter(emp => {
+        for (const key of textFieldKeys) {
+          const val = emp[key];
+          if (val && String(val).toLowerCase().includes(query)) return true;
+        }
+        return false;
+      });
+
+      const matchedTemplates = activeTemplates.filter(t => {
+        return (t.template_name && t.template_name.toLowerCase().includes(query)) ||
+          (t.description && t.description.toLowerCase().includes(query));
+      });
+
+      const employeeMap = new Map(employees.map(e => [e.employee_id, e]));
+      const templateMap = new Map(activeTemplates.map(t => [t.template_id, t]));
+
+      const matchedDocuments = documents.filter(doc => {
+        if (doc.docx_filename && doc.docx_filename.toLowerCase().includes(query)) return true;
+        const emp = employeeMap.get(doc.employee_id);
+        if (emp) {
+          const name = buildFullName(emp);
+          if (name.toLowerCase().includes(query)) return true;
+        }
+        const tmpl = templateMap.get(doc.template_id);
+        if (tmpl && tmpl.template_name && tmpl.template_name.toLowerCase().includes(query)) return true;
+        return false;
+      }).map(doc => {
+        const emp = employeeMap.get(doc.employee_id);
+        const tmpl = templateMap.get(doc.template_id);
+        return {
+          document_id: doc.document_id,
+          template_id: doc.template_id,
+          employee_id: doc.employee_id,
+          docx_filename: doc.docx_filename,
+          generation_date: doc.generation_date,
+          employee_name: emp ? buildFullName(emp) : "",
+          template_name: tmpl ? tmpl.template_name : ""
+        };
+      });
+
+      matchedDocuments.sort((a, b) => (b.generation_date || "").localeCompare(a.generation_date || ""));
+
+      res.json({
+        employees: matchedEmployees.slice(0, MAX_EMPLOYEE_RESULTS).map(e => ({
+          employee_id: e.employee_id,
+          last_name: e.last_name,
+          first_name: e.first_name,
+          middle_name: e.middle_name,
+          employment_status: e.employment_status,
+          department: e.department
+        })),
+        templates: matchedTemplates.slice(0, MAX_TEMPLATE_RESULTS),
+        documents: matchedDocuments.slice(0, MAX_DOCUMENT_RESULTS),
+        total: {
+          employees: matchedEmployees.length,
+          templates: matchedTemplates.length,
+          documents: matchedDocuments.length
+        }
+      });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // Placeholder preview (reference page)
   app.get("/api/placeholder-preview/:employeeId?", async (req, res) => {
     try {
       const schema = await loadFieldsSchema();
       const employees = await loadEmployees();
-      const activeEmployees = employees.filter(e => e.active !== 'no');
 
       let employee;
       if (req.params.employeeId) {
-        employee = activeEmployees.find(e => e.employee_id === req.params.employeeId);
+        employee = findById(employees, 'employee_id', req.params.employeeId);
         if (!employee) {
           res.status(404).json({ error: "Співробітник не знайдено" });
           return;
         }
       } else {
-        employee = activeEmployees[0];
+        employee = employees[0];
         if (!employee) {
           res.status(404).json({ error: "Немає активних співробітників" });
           return;
@@ -163,7 +252,10 @@ export function registerMiscRoutes(app) {
       });
 
       // Case variant placeholders (_upper and _cap for all text placeholders)
-      for (const p of [...placeholders]) {
+      // Create variants only for original placeholders, not for the variants themselves
+      const originalPlaceholdersCount = placeholders.length;
+      for (let i = 0; i < originalPlaceholdersCount; i++) {
+        const p = placeholders[i];
         const val = typeof p.value === 'string' ? p.value : '';
         placeholders.push({
           placeholder: p.placeholder.replace('}', '_upper}'),
@@ -179,8 +271,7 @@ export function registerMiscRoutes(app) {
         });
       }
 
-      const employeeName = [employee.last_name, employee.first_name, employee.middle_name]
-        .filter(Boolean).join(' ');
+      const employeeName = buildFullName(employee);
 
       res.json({
         employee_name: employeeName,

@@ -1,93 +1,3 @@
-<script setup>
-import { ref, computed, onMounted } from "vue";
-import { api } from "../api";
-
-const loading = ref(false);
-const errorMessage = ref("");
-const logs = ref([]);
-const logsSearchTerm = ref("");
-
-const allFieldsSchema = ref([]);
-
-const fieldLabels = computed(() => {
-  const map = {};
-  allFieldsSchema.value.forEach(f => {
-    map[f.key] = f.label;
-  });
-  return map;
-});
-
-const filteredLogs = computed(() => {
-  const query = logsSearchTerm.value.trim().toLowerCase();
-  if (!query) {
-    return logs.value;
-  }
-  return logs.value.filter((log) => {
-    const haystack = [
-      log.action,
-      log.employee_id,
-      log.employee_name,
-      log.field_name,
-      log.old_value,
-      log.new_value,
-      log.details,
-      log.timestamp
-    ]
-      .filter(Boolean)
-      .join(" ")
-      .toLowerCase();
-    return haystack.includes(query);
-  });
-});
-
-function getFieldLabel(fieldName) {
-  if (!fieldName) return "";
-  const label = fieldLabels.value[fieldName] || fieldName;
-  return `${label} (${fieldName})`;
-}
-
-function getDetailLabel(detail) {
-  if (!detail) return "";
-  const match = detail.match(/Изменено поле: (\w+)/);
-  if (match) {
-    const fieldName = match[1];
-    const label = fieldLabels.value[fieldName] || fieldName;
-    return `Змінено поле: ${label} (${fieldName})`;
-  }
-  return detail;
-}
-
-async function loadSchema() {
-  try {
-    const data = await api.getFieldsSchema();
-    allFieldsSchema.value = (data.allFields || []).map(f => ({
-      key: f.key,
-      label: f.label,
-      type: f.type,
-    }));
-  } catch (error) {
-    console.error("Failed to load schema:", error);
-  }
-}
-
-async function loadLogs() {
-  loading.value = true;
-  errorMessage.value = "";
-  try {
-    const data = await api.getLogs();
-    logs.value = data.logs || [];
-  } catch (error) {
-    errorMessage.value = error.message;
-  } finally {
-    loading.value = false;
-  }
-}
-
-onMounted(async () => {
-  await Promise.all([loadSchema(), loadLogs()]);
-});
-</script>
-
 <template>
   <div class="layout-table">
     <div class="panel table-panel">
@@ -157,3 +67,97 @@ onMounted(async () => {
     </div>
   </div>
 </template>
+
+<script setup>
+import { ref, computed, onMounted } from "vue";
+import { api } from "../api";
+
+const logs = ref([]);
+const logsSearchTerm = ref("");
+const loading = ref(false);
+const errorMessage = ref("");
+
+// Field labels mapping (loaded from schema)
+const allFieldsSchema = ref([]);
+const fieldLabels = computed(() => {
+  const map = {};
+  allFieldsSchema.value.forEach(f => {
+    map[f.key] = f.label;
+  });
+  return map;
+});
+
+const filteredLogs = computed(() => {
+  const query = logsSearchTerm.value.trim().toLowerCase();
+  if (!query) {
+    return logs.value;
+  }
+  return logs.value.filter((log) => {
+    const haystack = [
+      log.action,
+      log.employee_id,
+      log.employee_name,
+      log.field_name,
+      log.old_value,
+      log.new_value,
+      log.details,
+      log.timestamp
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+    return haystack.includes(query);
+  });
+});
+
+async function loadLogs() {
+  loading.value = true;
+  errorMessage.value = "";
+  try {
+    const data = await api.getLogs();
+    logs.value = data.logs || [];
+  } catch (error) {
+    errorMessage.value = error.message;
+  } finally {
+    loading.value = false;
+  }
+}
+
+async function loadFieldsSchema() {
+  try {
+    const response = await api.getFieldsSchema();
+    allFieldsSchema.value = (response.allFields || []).map(f => ({
+      key: f.key,
+      label: f.label,
+      type: f.type,
+      options: f.options || [],
+      group: f.group
+    }));
+  } catch (error) {
+    console.error("Failed to load fields schema:", error);
+  }
+}
+
+function getFieldLabel(fieldName) {
+  if (!fieldName) return "";
+  const label = fieldLabels.value[fieldName] || fieldName;
+  return `${label} (${fieldName})`;
+}
+
+function getDetailLabel(detail) {
+  if (!detail) return "";
+  // Replace "Изменено поле: field_name" with "Изменено поле: Label (field_name)"
+  const match = detail.match(/Изменено поле: (\w+)/);
+  if (match) {
+    const fieldName = match[1];
+    const label = fieldLabels.value[fieldName] || fieldName;
+    return `Змінено поле: ${label} (${fieldName})`;
+  }
+  return detail;
+}
+
+onMounted(async () => {
+  await loadFieldsSchema();
+  await loadLogs();
+});
+</script>

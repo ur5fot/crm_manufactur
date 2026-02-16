@@ -3,6 +3,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { readCsv, writeCsv } from "./csv.js";
 import { EMPLOYEE_COLUMNS, LOG_COLUMNS, FIELD_SCHEMA_COLUMNS, loadEmployeeColumns, getCachedEmployeeColumns, loadDocumentFields, getCachedDocumentFields } from "./schema.js";
+import { getNextId } from "./utils.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -687,22 +688,15 @@ export async function getBirthdayEvents() {
     if (birthParts.length !== 3) return;
 
     const birthYear = parseInt(birthParts[0], 10);
-    const birthMonth = parseInt(birthParts[1], 10);
-    const birthDay = parseInt(birthParts[2], 10);
+    let birthMonth = parseInt(birthParts[1], 10);
+    let birthDay = parseInt(birthParts[2], 10);
 
     if (isNaN(birthYear) || isNaN(birthMonth) || isNaN(birthDay)) return;
 
-    // Handle leap day (Feb 29) in non-leap years
+    // Handle leap day (Feb 29) in non-leap years - celebrate on Feb 28 instead
     const isLeapYear = (year) => (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
     if (birthMonth === 2 && birthDay === 29 && !isLeapYear(currentYear)) {
-      return; // Skip Feb 29 birthdays in non-leap years
-    }
-    if (birthMonth === 2 && birthDay === 29 && !isLeapYear(currentYear + 1)) {
-      // For next year check, skip if next year is not a leap year
-      const thisYearBirthday = new Date(currentYear, birthMonth - 1, birthDay);
-      if (thisYearBirthday < nowDateOnly || thisYearBirthday > in7days) {
-        return; // Not in range and next year won't have this date
-      }
+      birthDay = 28; // Celebrate on Feb 28 in non-leap years
     }
 
     // Проверяем день рождения в текущем году и следующем (для случая перехода через Новый год)
@@ -789,15 +783,15 @@ export async function getRetirementEvents(retirementAge = 60) {
     if (birthParts.length !== 3) return;
 
     const birthYear = parseInt(birthParts[0], 10);
-    const birthMonth = parseInt(birthParts[1], 10);
-    const birthDay = parseInt(birthParts[2], 10);
+    let birthMonth = parseInt(birthParts[1], 10);
+    let birthDay = parseInt(birthParts[2], 10);
 
     if (isNaN(birthYear) || isNaN(birthMonth) || isNaN(birthDay)) return;
 
-    // Handle leap day (Feb 29) in non-leap years
+    // Handle leap day (Feb 29) in non-leap years - celebrate on Feb 28 instead
     const isLeapYear = (year) => (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
     if (birthMonth === 2 && birthDay === 29 && !isLeapYear(currentYear)) {
-      return; // Skip Feb 29 birthdays in non-leap years
+      birthDay = 28; // Celebrate on Feb 28 in non-leap years
     }
 
     // Проверяем день рождения в текущем году и следующем (для случая перехода через Новый год)
@@ -1035,20 +1029,6 @@ export async function saveGeneratedDocuments(rows) {
   } finally {
     releaseLock();
   }
-}
-
-function getNextId(items, idField) {
-  if (items.length === 0) {
-    return "1";
-  }
-  const ids = items
-    .map((item) => parseInt(item[idField], 10))
-    .filter((id) => !isNaN(id));
-  if (ids.length === 0) {
-    return "1";
-  }
-  const maxId = ids.reduce((max, id) => Math.max(max, id), 0);
-  return String(maxId + 1);
 }
 
 /**
