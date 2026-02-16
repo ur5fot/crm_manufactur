@@ -100,6 +100,9 @@ Located within the employee card in Cards view (above form fields):
 - Playwright for E2E tests
 - Node.js native test runner for unit/integration tests
 
+**Development:**
+- [Ralphex](https://github.com/umputun/ralphex) - autonomous plan execution and progress monitoring
+
 ## Installation
 
 ### Prerequisites
