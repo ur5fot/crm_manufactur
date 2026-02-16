@@ -74,15 +74,15 @@ Two features for the employee card view:
 - [x] Run tests — must pass before next task
 
 ### Task 4: Frontend status history popup in employee card
-- [ ] Add a small history icon button (e.g., clock icon) next to the `employment_status` field in `EmployeeCardsView.vue`
-- [ ] On click, fetch status history via `api.getEmployeeStatusHistory(id)` and show in a modal popup
-- [ ] Popup content: table or timeline showing each status change — columns: date/time, old status, new status, start date, end date, changed by
-- [ ] Format dates as DD.MM.YYYY, timestamps as DD.MM.YYYY HH:MM
-- [ ] Show "no history" message if empty
-- [ ] Style popup using existing modal pattern (`vacation-notification-overlay` / `vacation-notification-card`)
-- [ ] Support dark theme
-- [ ] Add E2E test in `tests/e2e/status-history.spec.js` — test popup opens, displays history after status change
-- [ ] Run tests — must pass before next task
+- [x] Add a small history icon button (e.g., clock icon) next to the `employment_status` field in `EmployeeCardsView.vue`
+- [x] On click, fetch status history via `api.getEmployeeStatusHistory(id)` and show in a modal popup
+- [x] Popup content: table or timeline showing each status change — columns: date/time, old status, new status, start date, end date, changed by
+- [x] Format dates as DD.MM.YYYY, timestamps as DD.MM.YYYY HH:MM
+- [x] Show "no history" message if empty
+- [x] Style popup using existing modal pattern (`vacation-notification-overlay` / `vacation-notification-card`)
+- [x] Support dark theme
+- [x] Add E2E test in `tests/e2e/status-history.spec.js` — test popup opens, displays history after status change
+- [x] Run tests — must pass before next task
 
 ### Task 5: Verify acceptance criteria
 - [ ] Verify photo upload/change/delete works end-to-end

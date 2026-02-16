@@ -1892,6 +1892,75 @@ button.small {
   cursor: default;
 }
 
+/* Status history button */
+.status-history-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
+  flex-shrink: 0;
+}
+
+.status-history-btn:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* Status history modal */
+.status-history-modal {
+  max-width: 700px;
+}
+
+.status-history-loading,
+.status-history-empty {
+  padding: 16px 0;
+  text-align: center;
+  color: var(--muted);
+}
+
+.status-history-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.status-history-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.status-history-table th,
+.status-history-table td {
+  padding: 8px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+
+.status-history-table th {
+  font-weight: 600;
+  color: var(--muted);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.status-history-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.status-history-table tbody tr:hover {
+  background: var(--bg-accent);
+}
+
 /* Status change popup form */
 .status-change-form {
   display: flex;

@@ -90,6 +90,11 @@ const photoUploading = ref(false);
 const photoError = ref("");
 const photoInputRef = ref(null);
 
+// Status history popup
+const showStatusHistoryPopup = ref(false);
+const statusHistoryLoading = ref(false);
+const statusHistory = ref([]);
+
 // Templates for document generation
 const templates = ref([]);
 
@@ -609,6 +614,46 @@ async function deletePhoto() {
   }
 }
 
+// Status history functions
+async function openStatusHistoryPopup() {
+  if (!form.employee_id) return;
+  showStatusHistoryPopup.value = true;
+  statusHistoryLoading.value = true;
+  try {
+    const data = await api.getEmployeeStatusHistory(form.employee_id);
+    statusHistory.value = data.history || [];
+  } catch (error) {
+    statusHistory.value = [];
+    console.error('Failed to load status history:', error);
+  } finally {
+    statusHistoryLoading.value = false;
+  }
+}
+
+function closeStatusHistoryPopup() {
+  showStatusHistoryPopup.value = false;
+}
+
+function formatHistoryTimestamp(isoStr) {
+  if (!isoStr) return '';
+  const d = new Date(isoStr);
+  if (isNaN(d.getTime())) return isoStr;
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const hh = String(d.getHours()).padStart(2, '0');
+  const min = String(d.getMinutes()).padStart(2, '0');
+  return `${dd}.${mm}.${d.getFullYear()} ${hh}:${min}`;
+}
+
+function formatHistoryDate(dateStr) {
+  if (!dateStr) return '—';
+  const d = new Date(dateStr + 'T00:00:00');
+  if (isNaN(d.getTime())) return dateStr;
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  return `${dd}.${mm}.${d.getFullYear()}`;
+}
+
 // Template generation
 async function generateDocumentForEmployee(template) {
   try {
@@ -675,6 +720,8 @@ function handleGlobalKeydown(e) {
       closeDocUploadPopup();
     } else if (showDocEditDatesPopup.value) {
       closeDocEditDatesPopup();
+    } else if (showStatusHistoryPopup.value) {
+      closeStatusHistoryPopup();
     } else if (showStatusChangePopup.value) {
       closeStatusChangePopup();
     }
@@ -936,6 +983,18 @@ onUnmounted(() => {
                     @click="resetStatus"
                   >
                     Скинути статус
+                  </button>
+                  <button
+                    v-if="!isNew"
+                    class="status-history-btn"
+                    type="button"
+                    title="Історія змін статусу"
+                    @click="openStatusHistoryPopup"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="10"/>
+                      <polyline points="12 6 12 12 16 14"/>
+                    </svg>
                   </button>
                 </div>
               </template>
@@ -1251,6 +1310,53 @@ onUnmounted(() => {
         <div class="button-group">
           <button class="danger" @click="confirmClearForm">Так, очистити</button>
           <button class="secondary" @click="closeClearConfirmPopup">Скасувати</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Status History Popup -->
+    <div v-if="showStatusHistoryPopup" class="vacation-notification-overlay" @click="closeStatusHistoryPopup">
+      <div class="vacation-notification-modal status-history-modal" @click.stop>
+        <div class="card-header">
+          <h3>Історія змін статусу</h3>
+          <button class="close-btn" @click="closeStatusHistoryPopup">&times;</button>
+        </div>
+        <div class="card-content">
+          <div v-if="statusHistoryLoading" class="status-history-loading">Завантаження...</div>
+          <div v-else-if="statusHistory.length === 0" class="status-history-empty">
+            Історія змін статусу відсутня.
+          </div>
+          <div v-else class="status-history-list">
+            <table class="status-history-table">
+              <thead>
+                <tr>
+                  <th>Дата/час</th>
+                  <th>Попередній статус</th>
+                  <th>Новий статус</th>
+                  <th>Період</th>
+                  <th>Змінено</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="entry in statusHistory" :key="entry.history_id">
+                  <td>{{ formatHistoryTimestamp(entry.changed_at) }}</td>
+                  <td>{{ entry.old_status || '—' }}</td>
+                  <td>{{ entry.new_status || '—' }}</td>
+                  <td>
+                    <template v-if="entry.new_start_date || entry.new_end_date">
+                      {{ formatHistoryDate(entry.new_start_date) }}
+                      <template v-if="entry.new_end_date"> — {{ formatHistoryDate(entry.new_end_date) }}</template>
+                    </template>
+                    <template v-else>—</template>
+                  </td>
+                  <td>{{ entry.changed_by || '—' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="button-group">
+          <button class="secondary" @click="closeStatusHistoryPopup">Закрити</button>
         </div>
       </div>
     </div>
