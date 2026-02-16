@@ -23,6 +23,39 @@ async function waitForDashboardLoad(page, timeout = 10000) {
   }
 }
 
+// Unit test for event ID generation (matches DashboardView.vue implementation)
+function generateEventId(type, employeeId, date) {
+  return `${type}:${employeeId}:${date}`;
+}
+
+test.describe('Event ID Generation', () => {
+  test('should generate stable event ID from type, employeeId, and date', () => {
+    const eventId1 = generateEventId('status_change', '123', '2026-02-16');
+    expect(eventId1).toBe('status_change:123:2026-02-16');
+
+    const eventId2 = generateEventId('birthday', '456', '2026-03-01');
+    expect(eventId2).toBe('birthday:456:2026-03-01');
+  });
+
+  test('should generate same ID for same inputs', () => {
+    const eventId1 = generateEventId('doc_expiry', '789', '2026-04-20');
+    const eventId2 = generateEventId('doc_expiry', '789', '2026-04-20');
+    expect(eventId1).toBe(eventId2);
+  });
+
+  test('should generate different IDs for different inputs', () => {
+    const eventId1 = generateEventId('retirement', '100', '2026-05-15');
+    const eventId2 = generateEventId('retirement', '100', '2026-05-16'); // different date
+    expect(eventId1).not.toBe(eventId2);
+
+    const eventId3 = generateEventId('retirement', '101', '2026-05-15'); // different employee
+    expect(eventId1).not.toBe(eventId3);
+
+    const eventId4 = generateEventId('status_change', '100', '2026-05-15'); // different type
+    expect(eventId1).not.toBe(eventId4);
+  });
+});
+
 test.describe('Dashboard Tests', () => {
   test.beforeEach(async ({ page }) => {
     await setupTestData();

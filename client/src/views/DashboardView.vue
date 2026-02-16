@@ -45,11 +45,40 @@ let birthdayNotifiedDate = '';
 const retirementNotifiedIds = new Set();
 let retirementNotifiedDate = '';
 
+// Dismissed events (persistent via localStorage)
+const dismissedEvents = ref(new Set());
+
 // Dynamic status values from employees (get employment_status field options)
 const employmentOptions = ref([]);
 const workingStatus = computed(() => employmentOptions.value[0] || '');
 
 const shortDays = ['Нд', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+
+// Generate stable event ID for dismiss persistence
+function generateEventId(type, employeeId, date) {
+  return `${type}:${employeeId}:${date}`;
+}
+
+// Load dismissed events from localStorage
+function loadDismissedEvents() {
+  const stored = localStorage.getItem('dashboardDismissedEvents');
+  if (stored) {
+    try {
+      const parsed = JSON.parse(stored);
+      dismissedEvents.value = new Set(parsed);
+    } catch (error) {
+      console.error('Failed to load dismissed events:', error);
+      dismissedEvents.value = new Set();
+    }
+  }
+}
+
+// Save dismissed event to localStorage
+function dismissEvent(eventId) {
+  dismissedEvents.value.add(eventId);
+  const arr = Array.from(dismissedEvents.value);
+  localStorage.setItem('dashboardDismissedEvents', JSON.stringify(arr));
+}
 
 // Statistics
 const dashboardStats = computed(() => {
@@ -525,6 +554,7 @@ async function loadFieldsSchema() {
 }
 
 onMounted(async () => {
+  loadDismissedEvents();
   await loadFieldsSchema();
   await loadEmployees();
   await loadDashboardEvents();

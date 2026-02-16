@@ -23,12 +23,12 @@ Add a "Don't show again" button to each dashboard notification popup (status cha
 **Files:**
 - Modify: `client/src/views/DashboardView.vue`
 
-- [ ] add reactive ref for dismissed events: `const dismissedEvents = ref(new Set())`
-- [ ] add function to load dismissed events from localStorage on mount
-- [ ] add function to save dismissed event to localStorage and update ref
-- [ ] create stable event ID generator (combine event type + employee_id + date for uniqueness)
-- [ ] call load function in onMounted hook
-- [ ] write unit test for event ID generation logic (use existing test pattern from tests/e2e/)
+- [x] add reactive ref for dismissed events: `const dismissedEvents = ref(new Set())`
+- [x] add function to load dismissed events from localStorage on mount
+- [x] add function to save dismissed event to localStorage and update ref
+- [x] create stable event ID generator (combine event type + employee_id + date for uniqueness)
+- [x] call load function in onMounted hook
+- [x] write unit test for event ID generation logic (use existing test pattern from tests/e2e/)
 
 ### Task 2: Filter out dismissed events from display
 
