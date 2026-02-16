@@ -428,11 +428,14 @@ async function checkStatusChanges() {
 
   const newReturning = returningToday.filter(e => !notifiedEmployeeIds.has(e.id));
   const newStarting = startingToday.filter(e => !notifiedEmployeeIds.has(e.id));
-  if (newReturning.length > 0 || newStarting.length > 0) {
+  // Update raw data first
+  statusReturning.value = newReturning;
+  statusStarting.value = newStarting;
+
+  // Check filtered arrays to determine visibility (respects dismissed events)
+  if (filteredStatusReturning.value.length > 0 || filteredStatusStarting.value.length > 0) {
     newReturning.forEach(e => notifiedEmployeeIds.add(e.id));
     newStarting.forEach(e => notifiedEmployeeIds.add(e.id));
-    statusReturning.value = newReturning;
-    statusStarting.value = newStarting;
     showStatusNotification.value = true;
   }
 
@@ -454,9 +457,12 @@ async function checkDocumentExpiry() {
     const weekItems = data.thisWeek || [];
 
     docExpiryNotifiedDate = today;
-    if (todayItems.length > 0 || weekItems.length > 0) {
-      docExpiryToday.value = todayItems;
-      docExpiryWeek.value = weekItems;
+    // Update raw data first
+    docExpiryToday.value = todayItems;
+    docExpiryWeek.value = weekItems;
+
+    // Check filtered arrays to determine visibility (respects dismissed events)
+    if (filteredDocExpiryToday.value.length > 0 || filteredDocExpiryWeek.value.length > 0) {
       showDocExpiryNotification.value = true;
     }
   } catch (error) {
@@ -476,9 +482,12 @@ async function checkBirthdayEvents() {
     const next7DaysItems = data.next7Days || [];
 
     birthdayNotifiedDate = today;
-    if (todayItems.length > 0 || next7DaysItems.length > 0) {
-      birthdayToday.value = todayItems;
-      birthdayNext7Days.value = next7DaysItems;
+    // Update raw data first
+    birthdayToday.value = todayItems;
+    birthdayNext7Days.value = next7DaysItems;
+
+    // Check filtered arrays to determine visibility (respects dismissed events)
+    if (filteredBirthdayToday.value.length > 0 || filteredBirthdayNext7Days.value.length > 0) {
       showBirthdayNotification.value = true;
     }
   } catch (error) {
@@ -534,9 +543,12 @@ async function checkRetirementEvents() {
 
     newThisMonthItems.forEach(item => retirementNotifiedIds.add(item.employee_id));
 
-    if (newTodayItems.length > 0 || newThisMonthItems.length > 0) {
-      retirementToday.value = newTodayItems;
-      retirementThisMonth.value = newThisMonthItems;
+    // Update raw data first
+    retirementToday.value = newTodayItems;
+    retirementThisMonth.value = newThisMonthItems;
+
+    // Check filtered arrays to determine visibility (respects dismissed events)
+    if (filteredRetirementToday.value.length > 0 || filteredRetirementThisMonth.value.length > 0) {
       showRetirementNotification.value = true;
     }
   } catch (error) {
