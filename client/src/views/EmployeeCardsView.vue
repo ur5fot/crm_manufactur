@@ -146,7 +146,7 @@ const filteredEmployeesForCards = computed(() => {
 
   return employees.value.filter((employee) => {
     for (const field of allFieldsSchema.value) {
-      if (field.type === 'file') continue;
+      if (field.type === 'file' || field.type === 'photo') continue;
       const val = employee[field.key];
       if (val && String(val).toLowerCase().includes(query)) return true;
     }

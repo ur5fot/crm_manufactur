@@ -58,6 +58,10 @@ export function createPhotoUpload(appConfig) {
     destination: (req, file, cb) => {
       const employeeId = req.params.id;
       const targetDir = path.join(FILES_DIR, `employee_${employeeId}`);
+      const resolved = path.resolve(targetDir);
+      if (!resolved.startsWith(path.resolve(FILES_DIR) + path.sep)) {
+        return cb(new Error("Недозволений шлях"));
+      }
       fs.mkdir(targetDir, { recursive: true }, (error) => {
         cb(error, targetDir);
       });

@@ -1091,7 +1091,7 @@ export async function addStatusHistoryEntry(entryData) {
     const newEntry = {
       ...entryData,
       history_id: newId,
-      changed_at: entryData.changed_at || new Date().toISOString()
+      changed_at: new Date().toISOString()
     };
 
     history.push(newEntry);
