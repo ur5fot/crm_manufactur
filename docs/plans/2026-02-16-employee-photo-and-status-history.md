@@ -63,15 +63,15 @@ Two features for the employee card view:
 - [x] Run tests — must pass before next task
 
 ### Task 3: Backend status history storage and API
-- [ ] Define `STATUS_HISTORY_COLUMNS` in `server/src/schema.js`: `history_id`, `employee_id`, `old_status`, `new_status`, `old_start_date`, `old_end_date`, `new_start_date`, `new_end_date`, `changed_at`, `changed_by`
-- [ ] Add `status_history.csv` initialization in `server/src/store.js` — `ensureCsvFile()` pattern, add `statusHistoryWriteLock`, add `loadStatusHistory()` and `saveStatusHistory()` functions
-- [ ] Add `addStatusHistoryEntry(entry)` function in `server/src/store.js` — appends new entry with auto-increment `history_id`, uses write lock
-- [ ] Modify employee update logic in `server/src/routes/employees.js` — when `employment_status` changes, call `addStatusHistoryEntry()` with old/new status, old/new start/end dates, timestamp
-- [ ] Also record status history when status is auto-reset by system (in the expired status check logic)
-- [ ] Add `GET /api/employees/:id/status-history` endpoint in `server/src/routes/employees.js` — returns all status history entries for the employee, sorted by `changed_at` descending
-- [ ] Add `getEmployeeStatusHistory(id)` to `client/src/api.js`
-- [ ] Write unit tests in `server/test/status-history.test.js` — test addStatusHistoryEntry, test history retrieval, test recording on status change
-- [ ] Run tests — must pass before next task
+- [x] Define `STATUS_HISTORY_COLUMNS` in `server/src/schema.js`: `history_id`, `employee_id`, `old_status`, `new_status`, `old_start_date`, `old_end_date`, `new_start_date`, `new_end_date`, `changed_at`, `changed_by`
+- [x] Add `status_history.csv` initialization in `server/src/store.js` — `ensureCsvFile()` pattern, add `statusHistoryWriteLock`, add `loadStatusHistory()` and `saveStatusHistory()` functions
+- [x] Add `addStatusHistoryEntry(entry)` function in `server/src/store.js` — appends new entry with auto-increment `history_id`, uses write lock
+- [x] Modify employee update logic in `server/src/routes/employees.js` — when `employment_status` changes, call `addStatusHistoryEntry()` with old/new status, old/new start/end dates, timestamp
+- [x] Also record status history when status is auto-reset by system (in the expired status check logic) — N/A: no auto-reset logic exists in codebase yet
+- [x] Add `GET /api/employees/:id/status-history` endpoint in `server/src/routes/employees.js` — returns all status history entries for the employee, sorted by `changed_at` descending
+- [x] Add `getEmployeeStatusHistory(id)` to `client/src/api.js`
+- [x] Write unit tests in `server/test/status-history.test.js` — test addStatusHistoryEntry, test history retrieval, test recording on status change
+- [x] Run tests — must pass before next task
 
 ### Task 4: Frontend status history popup in employee card
 - [ ] Add a small history icon button (e.g., clock icon) next to the `employment_status` field in `EmployeeCardsView.vue`

@@ -232,6 +232,19 @@ export const LOG_COLUMNS = [
   "details"
 ];
 
+export const STATUS_HISTORY_COLUMNS = [
+  "history_id",
+  "employee_id",
+  "old_status",
+  "new_status",
+  "old_start_date",
+  "old_end_date",
+  "new_start_date",
+  "new_end_date",
+  "changed_at",
+  "changed_by"
+];
+
 export const FIELD_LABELS = {
   photo: "Фото",
   employee_id: "ID сотрудника",

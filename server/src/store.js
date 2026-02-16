@@ -2,7 +2,7 @@ import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
 import { readCsv, writeCsv } from "./csv.js";
-import { EMPLOYEE_COLUMNS, LOG_COLUMNS, FIELD_SCHEMA_COLUMNS, loadEmployeeColumns, getCachedEmployeeColumns, loadDocumentFields, getCachedDocumentFields } from "./schema.js";
+import { EMPLOYEE_COLUMNS, LOG_COLUMNS, FIELD_SCHEMA_COLUMNS, STATUS_HISTORY_COLUMNS, loadEmployeeColumns, getCachedEmployeeColumns, loadDocumentFields, getCachedDocumentFields } from "./schema.js";
 import { getNextId } from "./utils.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -18,6 +18,7 @@ const FIELD_SCHEMA_PATH = path.join(DATA_DIR, "fields_schema.csv");
 const CONFIG_PATH = path.join(DATA_DIR, "config.csv");
 const TEMPLATES_PATH = path.join(DATA_DIR, "templates.csv");
 const GENERATED_DOCUMENTS_PATH = path.join(DATA_DIR, "generated_documents.csv");
+const STATUS_HISTORY_PATH = path.join(DATA_DIR, "status_history.csv");
 
 // Simple in-memory lock for log writes to prevent race conditions
 let logWriteLock = Promise.resolve();
@@ -31,6 +32,9 @@ let templatesWriteLock = Promise.resolve();
 
 // Simple in-memory lock for generated_documents writes to prevent race conditions
 let generatedDocumentsWriteLock = Promise.resolve();
+
+// Simple in-memory lock for status_history writes to prevent race conditions
+let statusHistoryWriteLock = Promise.resolve();
 
 export async function ensureDataDirs() {
   await fs.mkdir(DATA_DIR, { recursive: true });
@@ -1056,6 +1060,62 @@ export async function addGeneratedDocument(documentData) {
     await writeCsv(GENERATED_DOCUMENTS_PATH, GENERATED_DOCUMENT_COLUMNS, documents);
 
     return newDocId;
+  } finally {
+    releaseLock();
+  }
+}
+
+/**
+ * Load status history from status_history.csv
+ * @returns {Promise<Array>} Array of status history records
+ */
+export async function loadStatusHistory() {
+  return readCsv(STATUS_HISTORY_PATH, STATUS_HISTORY_COLUMNS);
+}
+
+/**
+ * Save status history to status_history.csv with write lock
+ * @param {Array} rows - Status history records to save
+ * @returns {Promise<void>}
+ */
+export async function saveStatusHistory(rows) {
+  const previousLock = statusHistoryWriteLock;
+  let releaseLock;
+  statusHistoryWriteLock = new Promise(resolve => { releaseLock = resolve; });
+
+  try {
+    await previousLock;
+    await writeCsv(STATUS_HISTORY_PATH, STATUS_HISTORY_COLUMNS, rows);
+  } finally {
+    releaseLock();
+  }
+}
+
+/**
+ * Atomically adds a new status history entry with race condition protection
+ * @param {Object} entryData - Status history data without history_id
+ * @returns {Promise<string>} The new history_id
+ */
+export async function addStatusHistoryEntry(entryData) {
+  const previousLock = statusHistoryWriteLock;
+  let releaseLock;
+  statusHistoryWriteLock = new Promise(resolve => { releaseLock = resolve; });
+
+  try {
+    await previousLock;
+    const history = await loadStatusHistory();
+    const newId = getNextId(history, "history_id");
+
+    const newEntry = {
+      history_id: newId,
+      ...entryData,
+      changed_at: entryData.changed_at || new Date().toISOString()
+    };
+
+    history.push(newEntry);
+    await writeCsv(STATUS_HISTORY_PATH, STATUS_HISTORY_COLUMNS, history);
+
+    return newId;
   } finally {
     releaseLock();
   }

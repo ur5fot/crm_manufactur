@@ -63,6 +63,9 @@ export const api = {
       method: "DELETE"
     });
   },
+  getEmployeeStatusHistory(id) {
+    return request(`/employees/${id}/status-history`);
+  },
   openDataFolder() {
     return request("/open-data-folder", { method: "POST" });
   },

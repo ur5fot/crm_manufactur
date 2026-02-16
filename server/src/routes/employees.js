@@ -8,7 +8,9 @@ import {
   addLogs,
   formatFieldNameWithLabel,
   getEmployeeColumnsSync,
-  getDocumentFieldsSync
+  getDocumentFieldsSync,
+  addStatusHistoryEntry,
+  loadStatusHistory
 } from "../store.js";
 import { mergeRow } from "../csv.js";
 import {
@@ -241,7 +243,43 @@ export function registerEmployeeRoutes(app) {
         await addLogs(logEntries);
       }
 
+      // Record status history when employment_status changes
+      if (changedFields.includes('employment_status')) {
+        await addStatusHistoryEntry({
+          employee_id: req.params.id,
+          old_status: current.employment_status || '',
+          new_status: next.employment_status || '',
+          old_start_date: current.status_start_date || '',
+          old_end_date: current.status_end_date || '',
+          new_start_date: next.status_start_date || '',
+          new_end_date: next.status_end_date || '',
+          changed_by: 'user'
+        });
+      }
+
       res.json({ employee: next });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // GET status history for employee
+  app.get("/api/employees/:id/status-history", async (req, res) => {
+    try {
+      const employees = await loadEmployees();
+      const employee = findById(employees, 'employee_id', req.params.id);
+      if (!employee) {
+        res.status(404).json({ error: "Співробітник не знайдено" });
+        return;
+      }
+
+      const allHistory = await loadStatusHistory();
+      const history = allHistory
+        .filter(h => h.employee_id === req.params.id)
+        .sort((a, b) => (b.changed_at || '').localeCompare(a.changed_at || ''));
+
+      res.json({ history });
     } catch (err) {
       console.error(err);
       res.status(500).json({ error: err.message });
