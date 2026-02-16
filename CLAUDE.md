@@ -242,6 +242,13 @@ These locks ensure that only one write operation occurs at a time per file, prev
 - Controls: field name, data type, display label (Ukrainian), validation, UI visibility
 - Changes trigger automatic schema migration in employees.csv
 
+**status_history.csv**
+- Records every employment status change for audit trail
+- Columns: history_id, employee_id, old_status, new_status, old_start_date, old_end_date, new_start_date, new_end_date, changed_at, changed_by
+- Auto-created with headers by `ensureCsvFile()` on first read
+- Entries created automatically when `employment_status` field changes via PUT
+- Sorted by `changed_at` descending when queried
+
 ---
 
 ## File Organization
@@ -269,6 +276,7 @@ Per-employee folders for uploaded documents:
 - Example: employee_123/
 - Used for storing employee-specific files (contracts, certificates, etc.)
 - Created on-demand when first document is uploaded for employee
+- Employee photo stored as `photo.{ext}` (e.g., `photo.jpg`, `photo.png`) — old photo file deleted on re-upload
 
 ---
 
@@ -1972,6 +1980,8 @@ End-to-end tests validate complete user workflows across the full stack (databas
 - `theme-toggle.spec.js`: Dark/light theme toggle and persistence
 - `card-search.spec.js`: Employee card search filtering
 - `global-search.spec.js`: Global search UI and navigation
+- `employee-photo.spec.js`: Employee photo upload, display, and delete
+- `status-history.spec.js`: Status history popup open, display, and close
 
 **Configuration** (`playwright.config.js`):
 - Test directory: `./tests/e2e`
@@ -2045,6 +2055,8 @@ Unit and integration tests focus on backend business logic, API endpoints, and d
 - `retirement-events.test.js`: Retirement event processing logic
 - `retirement-api.test.js`: Retirement API endpoint validation
 - `search-api.test.js`: Global search API endpoint validation
+- `photo-api.test.js`: Employee photo upload and delete API validation
+- `status-history.test.js`: Status history recording and retrieval API validation
 
 **Test Framework**: Node.js native test runner (no external dependencies)
 
@@ -2359,6 +2371,25 @@ All API endpoints are served under the `/api` prefix:
 - Security: Path traversal validation
 - Returns: 204 No Content
 
+**POST /api/employees/:id/photo**
+- Upload employee photo (JPG, PNG, GIF, WebP)
+- Request: Multipart form with `photo` field
+- Saves as `files/employee_{id}/photo.{ext}` (old photo deleted on re-upload)
+- Updates employee `photo` field with relative path
+- Creates audit log entry
+- 404 if employee not found, 400 if no file or invalid type
+
+**DELETE /api/employees/:id/photo**
+- Delete employee photo file and clear `photo` field
+- 404 if employee not found or no photo exists
+- Creates audit log entry
+
+**GET /api/employees/:id/status-history**
+- Get employment status change history for employee
+- Returns: `{ history: [...] }` sorted by `changed_at` descending (newest first)
+- Each entry: history_id, employee_id, old_status, new_status, old_start_date, old_end_date, new_start_date, new_end_date, changed_at, changed_by
+- 404 if employee not found
+
 **POST /api/employees/:id/open-folder**
 - Open employee folder in system file manager
 - Creates folder if not exists
@@ -2401,7 +2432,7 @@ All API endpoints are served under the `/api` prefix:
 - Each field includes:
   - field_name: Database column name
   - field_label: Ukrainian display label
-  - field_type: Data type (text, select, date, file, textarea, number)
+  - field_type: Data type (text, select, date, file, photo, textarea, number)
   - field_options: Pipe-delimited options for select fields
   - field_group: Group name for form sections
   - required: 'yes' or 'no'

@@ -97,8 +97,8 @@ Two features for the employee card view:
 - [x] Verify test coverage meets project standard (80%+)
 
 ### Task 6: [Final] Update documentation
-- [ ] Update `CLAUDE.md` — add photo field type documentation, status history CSV structure, new API endpoints
-- [ ] Update `README.md` if needed — add photo and status history to feature list
+- [x] Update `CLAUDE.md` — add photo field type documentation, status history CSV structure, new API endpoints
+- [x] Update `README.md` if needed — add photo and status history to feature list
 
 *Note: ralphex automatically moves completed plans to `docs/plans/completed/`*
 

@@ -9,6 +9,8 @@ A comprehensive CRM system for managing employee records, documents, and templat
 ## Features
 
 - Employee management (CRUD operations)
+- Employee photo upload and display in card view
+- Employment status history tracking with timeline popup
 - Document templates with DOCX file upload
 - Automated document generation with placeholder replacement
 - Document history tracking
@@ -82,6 +84,22 @@ Located within the employee card in Cards view (above form fields):
 - Matches against both field labels (from schema) and field values (from employee data)
 - Case-insensitive substring matching
 - Useful for finding specific fields in large forms
+
+### Employee Photo
+
+Each employee card displays a photo area in the header:
+- Circular photo display (72x72px) with hover overlay for upload/change
+- Supports JPG, PNG, GIF, WebP formats
+- Upload, replace, and delete via hover controls
+- Placeholder avatar icon when no photo is set
+
+### Employment Status History
+
+A clock icon button next to the employment status field opens a popup with the complete status change timeline:
+- Shows date/time, old status, new status, period, and who made the change
+- Dates formatted as DD.MM.YYYY, timestamps as DD.MM.YYYY HH:MM
+- Empty state message when no history exists
+- History recorded automatically on every employment status change
 
 ## Dashboard Notifications
 
@@ -362,6 +380,19 @@ Search across employees, templates, and documents.
 ### Employees API
 
 (Additional employee endpoints documented separately)
+
+### Employee Photo API
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/employees/:id/photo` | Upload employee photo (JPG/PNG/GIF/WebP) |
+| DELETE | `/api/employees/:id/photo` | Delete employee photo |
+
+### Employee Status History API
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/employees/:id/status-history` | Get status change history (newest first) |
 
 ## Placeholder Syntax
 
