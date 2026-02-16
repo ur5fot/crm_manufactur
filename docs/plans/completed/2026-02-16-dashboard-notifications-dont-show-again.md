@@ -61,5 +61,5 @@ Add a "Don't show again" button to each dashboard notification popup (status cha
 
 ### Task 5: Update documentation
 
-- [ ] update CLAUDE.md if needed (add pattern to Frontend Patterns or Dashboard section)
-- [ ] move this plan to `docs/plans/completed/`
+- [x] update CLAUDE.md if needed (add pattern to Frontend Patterns or Dashboard section)
+- [x] move this plan to `docs/plans/completed/`

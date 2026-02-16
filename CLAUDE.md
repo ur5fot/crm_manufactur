@@ -3311,6 +3311,75 @@ export async function getDocumentExpiryEvents(threshold_days = 30) {
 - Refresh button to reload events
 - Event counts displayed in dashboard stats
 
+**Notification Dismissal (Don't Show Again)**:
+
+The dashboard supports permanent dismissal of notification events via localStorage persistence.
+
+**Implementation Pattern**:
+```javascript
+// Reactive state for dismissed events
+const dismissedEvents = ref(new Set());
+
+// Generate stable event ID for persistence
+function generateEventId(type, employeeId, date) {
+  return `${type}:${employeeId}:${date}`;
+}
+
+// Load dismissed events from localStorage on mount
+function loadDismissedEvents() {
+  const stored = localStorage.getItem('dashboardDismissedEvents');
+  if (stored) {
+    try {
+      const parsed = JSON.parse(stored);
+      dismissedEvents.value = new Set(parsed);
+    } catch (error) {
+      console.error('Failed to load dismissed events:', error);
+      dismissedEvents.value = new Set();
+    }
+  }
+}
+
+// Save dismissed event to localStorage
+function dismissEvent(eventId) {
+  dismissedEvents.value.add(eventId);
+  const arr = Array.from(dismissedEvents.value);
+  localStorage.setItem('dashboardDismissedEvents', JSON.stringify(arr));
+}
+
+// Filter events by dismissed status
+const filteredBirthdayToday = computed(() => {
+  return birthdayToday.value.filter(evt => {
+    const eventId = generateEventId('birthday_today', evt.employee_id, evt.current_year_birthday);
+    return !dismissedEvents.value.has(eventId);
+  });
+});
+```
+
+**Key Features**:
+- **Stable Event IDs**: Format `{type}:{employeeId}:{date}` ensures uniqueness
+- **localStorage Persistence**: Dismissed events survive page reloads and navigation
+- **Filtered Display**: Computed properties filter dismissed events from notification lists
+- **Per-Event Dismissal**: Each notification type (status, birthday, retirement, document expiry) can be dismissed independently
+- **Bulk Dismissal**: "Don't show again" button dismisses all events shown in current notification modal
+
+**Event ID Types**:
+- `status_starting:{employee_id}:{notified_date}` - Status change starting today
+- `status_returning:{employee_id}:{notified_date}` - Status ending/returning today
+- `birthday_today:{employee_id}:{birthday_date}` - Birthday today
+- `birthday_week:{employee_id}:{birthday_date}` - Birthday within next 7 days
+- `retirement_today:{employee_id}:{retirement_date}` - Retirement today
+- `retirement_month:{employee_id}:{retirement_date}` - Retirement this month
+- `doc_expiry_today:{employee_id}:{expiry_date}` - Document expiring today
+- `doc_expiry_week:{employee_id}:{expiry_date}` - Document expiring this week
+
+**User Flow**:
+1. User sees notification popup on dashboard load
+2. Clicks "Більше не показувати" (Don't show again) button
+3. All events in that notification are added to dismissedEvents Set
+4. Events saved to localStorage as JSON array
+5. Notification modal closes
+6. On page reload, dismissed events are filtered out and won't show again
+
 ### Custom Reports with Dynamic Filters
 
 The reporting system allows users to create ad-hoc queries with multiple filter conditions across all employee fields.
