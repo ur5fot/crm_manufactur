@@ -182,6 +182,11 @@ const filteredFieldGroups = computed(() => {
   }).filter(group => group.fields.length > 0); // Only include groups with matching fields
 });
 
+// Clear photo error when switching employees
+watch(selectedId, () => {
+  photoError.value = "";
+});
+
 // Watch route params to handle employee selection
 watch(() => route.params.id, (newId) => {
   if (route.name === 'cards' && newId && newId !== selectedId.value) {

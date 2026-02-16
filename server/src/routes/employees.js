@@ -244,18 +244,22 @@ export function registerEmployeeRoutes(app) {
         await addLogs(logEntries);
       }
 
-      // Record status history when employment_status changes
+      // Record status history when employment_status changes (best-effort: employee update already committed)
       if (changedFields.includes('employment_status')) {
-        await addStatusHistoryEntry({
-          employee_id: req.params.id,
-          old_status: current.employment_status || '',
-          new_status: next.employment_status || '',
-          old_start_date: current.status_start_date || '',
-          old_end_date: current.status_end_date || '',
-          new_start_date: next.status_start_date || '',
-          new_end_date: next.status_end_date || '',
-          changed_by: 'user'
-        });
+        try {
+          await addStatusHistoryEntry({
+            employee_id: req.params.id,
+            old_status: current.employment_status || '',
+            new_status: next.employment_status || '',
+            old_start_date: current.status_start_date || '',
+            old_end_date: current.status_end_date || '',
+            new_start_date: next.status_start_date || '',
+            new_end_date: next.status_end_date || '',
+            changed_by: 'user'
+          });
+        } catch (historyErr) {
+          console.error('Failed to record status history:', historyErr);
+        }
       }
 
       res.json({ employee: next });
