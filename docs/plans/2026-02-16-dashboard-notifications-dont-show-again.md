@@ -55,9 +55,9 @@ Add a "Don't show again" button to each dashboard notification popup (status cha
 
 - [ ] manual test: dismiss each event type, refresh page, verify they stay dismissed
 - [ ] manual test: clear localStorage, refresh page, verify events reappear
-- [ ] run full E2E test suite: `npm run test:e2e`
-- [ ] run server unit tests: `cd server && npm test`
-- [ ] verify no console errors or warnings
+- [x] run full E2E test suite: `npm run test:e2e`
+- [x] run server unit tests: `cd server && npm test`
+- [x] verify no console errors or warnings
 
 ### Task 5: Update documentation
 
