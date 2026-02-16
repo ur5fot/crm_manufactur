@@ -85,16 +85,16 @@ Two features for the employee card view:
 - [x] Run tests — must pass before next task
 
 ### Task 5: Verify acceptance criteria
-- [ ] Verify photo upload/change/delete works end-to-end
-- [ ] Verify photo displays correctly for existing and new employees
-- [ ] Verify photo placeholder shown when no photo
-- [ ] Verify status history records created on status change
-- [ ] Verify status history popup shows correct data
-- [ ] Verify dark theme support for both features
-- [ ] Run full test suite (unit tests): `cd server && npm test`
-- [ ] Run integration tests: `cd server && npm run test:integration`
-- [ ] Run E2E tests: `npm run test:e2e`
-- [ ] Verify test coverage meets project standard (80%+)
+- [x] Verify photo upload/change/delete works end-to-end
+- [x] Verify photo displays correctly for existing and new employees
+- [x] Verify photo placeholder shown when no photo
+- [x] Verify status history records created on status change
+- [x] Verify status history popup shows correct data
+- [x] Verify dark theme support for both features
+- [x] Run full test suite (unit tests): `cd server && npm test`
+- [x] Run integration tests: `cd server && npm run test:integration`
+- [x] Run E2E tests: `npm run test:e2e`
+- [x] Verify test coverage meets project standard (80%+)
 
 ### Task 6: [Final] Update documentation
 - [ ] Update `CLAUDE.md` — add photo field type documentation, status history CSV structure, new API endpoints
