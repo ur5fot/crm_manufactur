@@ -13,6 +13,7 @@ data/config.csv
 data/employees_import_sample.csv
 data/templates.csv
 data/generated_documents.csv
+data/status_history.csv
 
 # Claude Code та Ralphex (особисті налаштування та output)
 .claude/

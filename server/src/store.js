@@ -1074,24 +1074,6 @@ export async function loadStatusHistory() {
 }
 
 /**
- * Save status history to status_history.csv with write lock
- * @param {Array} rows - Status history records to save
- * @returns {Promise<void>}
- */
-export async function saveStatusHistory(rows) {
-  const previousLock = statusHistoryWriteLock;
-  let releaseLock;
-  statusHistoryWriteLock = new Promise(resolve => { releaseLock = resolve; });
-
-  try {
-    await previousLock;
-    await writeCsv(STATUS_HISTORY_PATH, STATUS_HISTORY_COLUMNS, rows);
-  } finally {
-    releaseLock();
-  }
-}
-
-/**
  * Atomically adds a new status history entry with race condition protection
  * @param {Object} entryData - Status history data without history_id
  * @returns {Promise<string>} The new history_id

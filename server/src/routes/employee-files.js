@@ -294,20 +294,6 @@ export function registerEmployeeFileRoutes(app, importUpload, employeeFileUpload
       const employee = employees[index];
       const oldPhoto = employee.photo;
 
-      // Delete old photo file if it exists and is different from new one
-      if (oldPhoto) {
-        const oldFullPath = path.resolve(ROOT_DIR, oldPhoto);
-        const normalizedOldPath = path.resolve(oldFullPath);
-        const normalizedFilesDir = path.resolve(FILES_DIR);
-        if (normalizedOldPath.startsWith(normalizedFilesDir + path.sep)) {
-          // Only delete if it's a different file (different extension)
-          const newFullPath = path.resolve(req.file.path);
-          if (normalizedOldPath.toLowerCase() !== newFullPath.toLowerCase()) {
-            await fsPromises.unlink(normalizedOldPath).catch(() => {});
-          }
-        }
-      }
-
       const relativePath = path
         .relative(ROOT_DIR, req.file.path)
         .split(path.sep)
@@ -318,6 +304,18 @@ export function registerEmployeeFileRoutes(app, importUpload, employeeFileUpload
       employees[index] = updated;
 
       await saveEmployees(employees);
+
+      // Delete old photo file after successful save (if different from new one)
+      if (oldPhoto) {
+        const oldFullPath = path.resolve(ROOT_DIR, oldPhoto);
+        const normalizedFilesDir = path.resolve(FILES_DIR);
+        if (oldFullPath.startsWith(normalizedFilesDir + path.sep)) {
+          const newFullPath = path.resolve(req.file.path);
+          if (oldFullPath.toLowerCase() !== newFullPath.toLowerCase()) {
+            await fsPromises.unlink(oldFullPath).catch(() => {});
+          }
+        }
+      }
 
       // Log photo upload
       const employeeName = [employee.last_name, employee.first_name, employee.middle_name]
@@ -358,10 +356,8 @@ export function registerEmployeeFileRoutes(app, importUpload, employeeFileUpload
 
       // Delete physical file
       const fullPath = path.resolve(ROOT_DIR, photoPath);
-      const normalizedFullPath = path.resolve(fullPath);
-      const normalizedFilesDir = path.resolve(FILES_DIR);
-      if (normalizedFullPath.startsWith(normalizedFilesDir + path.sep)) {
-        await fsPromises.unlink(normalizedFullPath).catch(() => {});
+      if (fullPath.startsWith(path.resolve(FILES_DIR) + path.sep)) {
+        await fsPromises.unlink(fullPath).catch(() => {});
       }
 
       // Clear photo field

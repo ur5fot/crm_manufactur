@@ -84,7 +84,7 @@ export function registerMiscRoutes(app) {
 
       const activeTemplates = templates.filter(t => t.active !== 'no');
 
-      const textFieldKeys = schema.filter(f => f.field_type !== 'file').map(f => f.field_name);
+      const textFieldKeys = schema.filter(f => f.field_type !== 'file' && f.field_type !== 'photo').map(f => f.field_name);
 
       const matchedEmployees = employees.filter(emp => {
         for (const key of textFieldKeys) {

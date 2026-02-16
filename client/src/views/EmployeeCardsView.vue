@@ -563,12 +563,12 @@ async function openEmployeeFolder() {
 }
 
 // Photo functions
+const photoVersion = ref(0);
 const photoUrl = computed(() => {
   const p = form.photo;
   if (!p) return '';
   const base = import.meta.env.VITE_API_URL || '';
-  if (p.startsWith('files/')) return `${base}/${p}`;
-  return `${base}/${p}`;
+  return `${base}/${p}?v=${photoVersion.value}`;
 });
 
 function triggerPhotoUpload() {
@@ -586,6 +586,7 @@ async function handlePhotoUpload(event) {
     formData.append('photo', file);
     const result = await api.uploadEmployeePhoto(form.employee_id, formData);
     form.photo = result?.path || '';
+    photoVersion.value++;
     await loadEmployees(true);
   } catch (error) {
     photoError.value = error.message;
@@ -606,6 +607,7 @@ async function deletePhoto() {
   try {
     await api.deleteEmployeePhoto(form.employee_id);
     form.photo = '';
+    photoVersion.value++;
     await loadEmployees(true);
   } catch (error) {
     photoError.value = error.message;

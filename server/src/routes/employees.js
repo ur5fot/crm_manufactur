@@ -157,7 +157,7 @@ export function registerEmployeeRoutes(app) {
 
       // Запрещаем изменение файловых полей через PUT — только через upload endpoint
       // Build updates object safely to prevent prototype pollution
-      const allowedColumns = getEmployeeColumnsSync().filter(col => !getDocumentFieldsSync().includes(col));
+      const allowedColumns = getEmployeeColumnsSync().filter(col => !getDocumentFieldsSync().includes(col) && col !== 'photo');
       const updates = {};
       for (const col of allowedColumns) {
         if (col in payload && col !== '__proto__' && col !== 'constructor' && col !== 'prototype') {

@@ -25,13 +25,15 @@ export function useFieldsSchema() {
         .filter(groupName => groupName && groupName !== 'Документи')
         .map(groupName => ({
           title: groupName,
-          fields: groups[groupName].map(field => ({
-            key: field.key,
-            label: field.label,
-            type: field.type,
-            optionsKey: field.type === 'select' ? field.key : undefined,
-            readOnly: field.key === 'employee_id'
-          }))
+          fields: groups[groupName]
+            .filter(field => field.type !== 'photo')
+            .map(field => ({
+              key: field.key,
+              label: field.label,
+              type: field.type,
+              optionsKey: field.type === 'select' ? field.key : undefined,
+              readOnly: field.key === 'employee_id'
+            }))
         }));
 
       // Формируем колонки для сводной таблицы
