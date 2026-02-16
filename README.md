@@ -526,7 +526,7 @@ Configuration is stored in `data/config.csv`:
 ## Documentation
 
 For detailed documentation on the templates system, see:
-- [Templates System Documentation](docs/templates-system-improvements.md)
+- [Templates System Documentation](docs/plans/completed/templates-system-improvements.md)
 
 ## License
 

@@ -1262,7 +1262,7 @@ export function useFieldsSchema() {
 // client/src/composables/useEmployeeForm.js
 import { ref, computed } from "vue";
 
-export function useEmployeeForm(employeeFields) {
+export function useEmployeeForm(allFieldsSchema, employeeFields, fieldLabels) {
   const form = ref({});
   const savedFormSnapshot = ref(null);
 
