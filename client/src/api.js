@@ -65,7 +65,7 @@ export const api = {
     });
   },
   getLogs() {
-    return request("/logs");
+    return request("/logs?limit=1000");
   },
   getFieldsSchema() {
     return request("/fields-schema");

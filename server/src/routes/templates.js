@@ -197,6 +197,12 @@ export function registerTemplateRoutes(app, appConfig) {
       // Extract placeholders from uploaded DOCX
       const placeholders = await extractPlaceholders(req.file.path);
 
+      // Delete old DOCX file if exists
+      if (template.docx_filename) {
+        const oldFilePath = path.join(FILES_DIR, 'templates', template.docx_filename);
+        await fsPromises.unlink(oldFilePath).catch(() => {});
+      }
+
       // Update template record
       template.docx_filename = req.file.filename;
       template.placeholder_fields = placeholders.join(', ');

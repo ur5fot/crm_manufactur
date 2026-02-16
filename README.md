@@ -94,7 +94,7 @@ Located within the employee card in Cards view (above form fields):
 **Frontend:**
 - Vue.js 3
 - Bootstrap for UI components
-- Axios for API communication
+- Fetch API for API communication
 
 **Testing:**
 - Playwright for E2E tests

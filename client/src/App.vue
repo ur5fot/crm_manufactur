@@ -29,6 +29,7 @@ const currentTheme = ref(localStorage.getItem('theme') || 'light');
 
 // Dropdown menu state
 const showDropdown = ref(false);
+const dropdownRef = ref(null);
 
 function toggleDropdown() {
   showDropdown.value = !showDropdown.value;
@@ -163,8 +164,7 @@ onUnmounted(() => {
 });
 
 function handleClickOutside(event) {
-  const dropdown = document.querySelector('.dropdown-wrapper');
-  if (dropdown && !dropdown.contains(event.target)) {
+  if (dropdownRef.value && !dropdownRef.value.contains(event.target)) {
     showDropdown.value = false;
   }
 }
@@ -254,7 +254,7 @@ function handleClickOutside(event) {
           >
             {{ currentTheme === 'light' ? '🌙' : '☀️' }}
           </button>
-          <div class="dropdown-wrapper">
+          <div ref="dropdownRef" class="dropdown-wrapper">
             <button
               class="icon-btn dropdown-toggle-btn"
               @click="toggleDropdown"

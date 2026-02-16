@@ -47,7 +47,7 @@ The system is optimized for organizations with up to 10,000 employees and emphas
 - **Build Tool**: Vite for fast development and production builds
 - **Router**: Vue Router 5 for SPA navigation
 - **UI Framework**: Bootstrap 5 for responsive components
-- **HTTP Client**: Axios for API communication
+- **HTTP Client**: Fetch API for API communication
 - **Styling**: Custom CSS with Bootstrap customizations
 
 ### Testing

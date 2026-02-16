@@ -131,7 +131,7 @@ test.describe('Card Search', () => {
     const filteredSectionCount = await filteredSections.count();
 
     // Should have fewer sections after filtering
-    expect(filteredSectionCount).toBeLessThanOrEqual(initialSectionCount);
+    expect(filteredSectionCount).toBeLessThan(initialSectionCount);
 
     // Check that email field is visible
     const emailField = page.locator('label:has-text("Ел. пошта")');

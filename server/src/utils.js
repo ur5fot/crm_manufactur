@@ -117,7 +117,7 @@ export function validatePagination(offset, limit) {
     MAX_PAGINATION_LIMIT
   );
 
-  if (offsetNum < 0 || isNaN(offsetNum)) {
+  if (offsetNum < 0) {
     throw new Error('Invalid offset parameter');
   }
 
