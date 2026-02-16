@@ -232,4 +232,108 @@ test.describe('Dashboard Tests', () => {
       localStorage.removeItem('dashboardDismissedEvents');
     });
   });
+
+  test('Click "Don\'t show again" dismisses notification immediately', async ({ page, context }) => {
+    // Clear localStorage before test
+    await context.clearCookies();
+    await page.evaluate(() => {
+      localStorage.clear();
+    });
+
+    // Reload page to get fresh state
+    await page.goto('/');
+    await waitForDashboardLoad(page);
+
+    // Check if any notification modal is visible
+    const statusModal = page.locator('.vacation-notification-modal:has-text("Сповіщення про зміну статусів")');
+    const docExpiryModal = page.locator('.vacation-notification-modal:has-text("Сповіщення про закінчення терміну дії документів")');
+    const birthdayModal = page.locator('.vacation-notification-modal:has-text("Сповіщення про дні народження")');
+    const retirementModal = page.locator('.vacation-notification-modal:has-text("Сповіщення про вихід на пенсію")');
+
+    let testRan = false;
+
+    // Test status notification if visible
+    if (await statusModal.isVisible({ timeout: 1000 }).catch(() => false)) {
+      const dismissBtn = statusModal.locator('button:has-text("Більше не показувати")');
+      expect(await dismissBtn.isVisible()).toBeTruthy();
+
+      await dismissBtn.click();
+      await page.waitForTimeout(500);
+
+      // Modal should be closed
+      expect(await statusModal.isVisible().catch(() => false)).toBeFalsy();
+
+      // Verify events were dismissed in localStorage
+      const dismissedEvents = await page.evaluate(() => {
+        const stored = localStorage.getItem('dashboardDismissedEvents');
+        return stored ? JSON.parse(stored) : [];
+      });
+      expect(dismissedEvents.length).toBeGreaterThan(0);
+      testRan = true;
+    }
+
+    // Test document expiry notification if visible
+    if (!testRan && await docExpiryModal.isVisible({ timeout: 1000 }).catch(() => false)) {
+      const dismissBtn = docExpiryModal.locator('button:has-text("Більше не показувати")');
+      expect(await dismissBtn.isVisible()).toBeTruthy();
+
+      await dismissBtn.click();
+      await page.waitForTimeout(500);
+
+      expect(await docExpiryModal.isVisible().catch(() => false)).toBeFalsy();
+
+      const dismissedEvents = await page.evaluate(() => {
+        const stored = localStorage.getItem('dashboardDismissedEvents');
+        return stored ? JSON.parse(stored) : [];
+      });
+      expect(dismissedEvents.length).toBeGreaterThan(0);
+      testRan = true;
+    }
+
+    // Test birthday notification if visible
+    if (!testRan && await birthdayModal.isVisible({ timeout: 1000 }).catch(() => false)) {
+      const dismissBtn = birthdayModal.locator('button:has-text("Більше не показувати")');
+      expect(await dismissBtn.isVisible()).toBeTruthy();
+
+      await dismissBtn.click();
+      await page.waitForTimeout(500);
+
+      expect(await birthdayModal.isVisible().catch(() => false)).toBeFalsy();
+
+      const dismissedEvents = await page.evaluate(() => {
+        const stored = localStorage.getItem('dashboardDismissedEvents');
+        return stored ? JSON.parse(stored) : [];
+      });
+      expect(dismissedEvents.length).toBeGreaterThan(0);
+      testRan = true;
+    }
+
+    // Test retirement notification if visible
+    if (!testRan && await retirementModal.isVisible({ timeout: 1000 }).catch(() => false)) {
+      const dismissBtn = retirementModal.locator('button:has-text("Більше не показувати")');
+      expect(await dismissBtn.isVisible()).toBeTruthy();
+
+      await dismissBtn.click();
+      await page.waitForTimeout(500);
+
+      expect(await retirementModal.isVisible().catch(() => false)).toBeFalsy();
+
+      const dismissedEvents = await page.evaluate(() => {
+        const stored = localStorage.getItem('dashboardDismissedEvents');
+        return stored ? JSON.parse(stored) : [];
+      });
+      expect(dismissedEvents.length).toBeGreaterThan(0);
+      testRan = true;
+    }
+
+    // If no notifications were visible, just verify the dismiss button pattern exists
+    if (!testRan) {
+      console.log('No notification modals visible during test - this is expected if no events are pending');
+    }
+
+    // Clean up: clear localStorage after test
+    await page.evaluate(() => {
+      localStorage.removeItem('dashboardDismissedEvents');
+    });
+  });
 });

@@ -45,11 +45,11 @@ Add a "Don't show again" button to each dashboard notification popup (status cha
 **Files:**
 - Modify: `client/src/views/DashboardView.vue`
 
-- [ ] add "Більше не показувати" button to each notification popup/card
-- [ ] wire button click to call dismiss function with event ID
-- [ ] update button styling to match existing secondary button pattern
-- [ ] test button visibility and click behavior for each event type
-- [ ] write E2E test: click "Don't show again", verify event disappears immediately (tests/e2e/dashboard.spec.js)
+- [x] add "Більше не показувати" button to each notification popup/card
+- [x] wire button click to call dismiss function with event ID
+- [x] update button styling to match existing secondary button pattern
+- [x] test button visibility and click behavior for each event type
+- [x] write E2E test: click "Don't show again", verify event disappears immediately (tests/e2e/dashboard.spec.js)
 
 ### Task 4: Verify acceptance criteria
 

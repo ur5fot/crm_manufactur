@@ -579,6 +579,58 @@ function closeRetirementNotification() {
   showRetirementNotification.value = false;
 }
 
+function dismissStatusNotification() {
+  // Dismiss all status change events shown in this notification
+  filteredStatusStarting.value.forEach(emp => {
+    const eventId = generateEventId('status_starting', emp.id, notifiedDate);
+    dismissEvent(eventId);
+  });
+  filteredStatusReturning.value.forEach(emp => {
+    const eventId = generateEventId('status_returning', emp.id, notifiedDate);
+    dismissEvent(eventId);
+  });
+  closeStatusNotification();
+}
+
+function dismissDocExpiryNotification() {
+  // Dismiss all document expiry events shown in this notification
+  filteredDocExpiryToday.value.forEach(evt => {
+    const eventId = generateEventId('doc_expiry_today', evt.employee_id, evt.expiry_date);
+    dismissEvent(eventId);
+  });
+  filteredDocExpiryWeek.value.forEach(evt => {
+    const eventId = generateEventId('doc_expiry_week', evt.employee_id, evt.expiry_date);
+    dismissEvent(eventId);
+  });
+  closeDocExpiryNotification();
+}
+
+function dismissBirthdayNotification() {
+  // Dismiss all birthday events shown in this notification
+  filteredBirthdayToday.value.forEach(evt => {
+    const eventId = generateEventId('birthday_today', evt.employee_id, evt.current_year_birthday);
+    dismissEvent(eventId);
+  });
+  filteredBirthdayNext7Days.value.forEach(evt => {
+    const eventId = generateEventId('birthday_week', evt.employee_id, evt.current_year_birthday);
+    dismissEvent(eventId);
+  });
+  closeBirthdayNotification();
+}
+
+function dismissRetirementNotification() {
+  // Dismiss all retirement events shown in this notification
+  filteredRetirementToday.value.forEach(evt => {
+    const eventId = generateEventId('retirement_today', evt.employee_id, evt.retirement_date);
+    dismissEvent(eventId);
+  });
+  filteredRetirementThisMonth.value.forEach(evt => {
+    const eventId = generateEventId('retirement_month', evt.employee_id, evt.retirement_date);
+    dismissEvent(eventId);
+  });
+  closeRetirementNotification();
+}
+
 function startDashboardRefresh() {
   stopDashboardRefresh();
   refreshIntervalId.value = setInterval(async () => {
@@ -664,6 +716,7 @@ onUnmounted(() => {
         </div>
         <div class="vacation-notification-footer">
           <button class="primary" @click="closeStatusNotification">Зрозуміло</button>
+          <button class="secondary" @click="dismissStatusNotification">Більше не показувати</button>
         </div>
       </div>
     </div>
@@ -706,6 +759,7 @@ onUnmounted(() => {
         </div>
         <div class="vacation-notification-footer">
           <button class="primary" @click="closeDocExpiryNotification">Зрозуміло</button>
+          <button class="secondary" @click="dismissDocExpiryNotification">Більше не показувати</button>
         </div>
       </div>
     </div>
@@ -748,6 +802,7 @@ onUnmounted(() => {
         </div>
         <div class="vacation-notification-footer">
           <button class="primary" @click="closeBirthdayNotification">Зрозуміло</button>
+          <button class="secondary" @click="dismissBirthdayNotification">Більше не показувати</button>
         </div>
       </div>
     </div>
@@ -790,6 +845,7 @@ onUnmounted(() => {
         </div>
         <div class="vacation-notification-footer">
           <button class="primary" @click="closeRetirementNotification">Зрозуміло</button>
+          <button class="secondary" @click="dismissRetirementNotification">Більше не показувати</button>
         </div>
       </div>
     </div>
