@@ -118,7 +118,7 @@
               v-model="templateForm.placeholder_fields"
               type="text"
               readonly
-              style="background-color: #f5f5f5; cursor: not-allowed;"
+              class="readonly-input"
             />
             <button
               v-if="templateDialogMode === 'edit' && templateForm.docx_filename"
@@ -157,8 +157,8 @@
             <strong>{{ uploadTemplateName }}</strong>
           </p>
 
-          <div class="help-box" style="background-color: #f0f8ff; border-left: 4px solid #0066cc; padding: 15px; margin-bottom: 20px;">
-            <h4 style="margin-top: 0; margin-bottom: 10px; color: #0066cc;">📋 Інструкція зі створення шаблону</h4>
+          <div class="help-box">
+            <h4 style="margin-top: 0; margin-bottom: 10px;">📋 Інструкція зі створення шаблону</h4>
             <ul style="margin: 0; padding-left: 20px; line-height: 1.6;">
               <li>Створіть DOCX файл у Microsoft Word або LibreOffice</li>
               <li>Використовуйте плейсхолдери у форматі <code>{{'{'}}field_name{{'}'}}</code></li>
