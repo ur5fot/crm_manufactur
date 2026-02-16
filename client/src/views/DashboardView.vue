@@ -68,6 +68,7 @@ function loadDismissedEvents() {
       dismissedEvents.value = new Set(parsed);
     } catch (error) {
       console.error('Failed to load dismissed events:', error);
+      localStorage.removeItem('dashboardDismissedEvents'); // Clear corrupted data
       dismissedEvents.value = new Set();
     }
   }
@@ -77,7 +78,11 @@ function loadDismissedEvents() {
 function dismissEvent(eventId) {
   dismissedEvents.value.add(eventId);
   const arr = Array.from(dismissedEvents.value);
-  localStorage.setItem('dashboardDismissedEvents', JSON.stringify(arr));
+  try {
+    localStorage.setItem('dashboardDismissedEvents', JSON.stringify(arr));
+  } catch (error) {
+    console.error('Failed to save dismissed event:', error);
+  }
 }
 
 // Statistics

@@ -83,6 +83,31 @@ Located within the employee card in Cards view (above form fields):
 - Case-insensitive substring matching
 - Useful for finding specific fields in large forms
 
+## Dashboard Notifications
+
+The dashboard displays real-time notifications for important events such as status changes, birthdays, retirements, and document expiries.
+
+### Dismissing Notifications
+
+Dashboard notifications can be permanently dismissed using the "Більше не показувати" (Don't show again) button:
+
+- Each notification popup includes a dismiss button at the bottom
+- Clicking dismiss will hide that specific event permanently
+- Dismissed events are stored locally in your browser (localStorage)
+- Dismissed events won't reappear even after page reload or navigation
+- Each event type (status changes, birthdays, retirements, document expiries) can be dismissed independently
+- Clearing browser data will reset dismissed notifications
+
+**Note**: Dismissals are stored per browser/device. If you access the dashboard from a different browser or device, previously dismissed notifications may appear again.
+
+### Browser Storage
+
+The application uses browser localStorage to store user preferences:
+- Theme preference (dark/light mode)
+- Dismissed dashboard notifications
+
+No sensitive data is stored in browser storage. Clearing browser data will reset these preferences.
+
 ## Technology Stack
 
 **Backend:**
