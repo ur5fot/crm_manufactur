@@ -75,6 +75,7 @@ async function prepareData(data) {
 
   // Handle user-provided data (null safety)
   for (const key in data) {
+    if (key === 'photo') continue; // Skip photo field (file path, not template data)
     const value = data[key];
     prepared[key] = (value === null || value === undefined) ? '' : String(value);
   }

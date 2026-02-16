@@ -483,10 +483,11 @@ export function registerEmployeeFileRoutes(app, importUpload, employeeFileUpload
         employeeId = getNextId(nextEmployees, "employee_id");
       }
 
-      // Очищаем файловые поля — файлы загружаются только через upload endpoint
+      // Очищаем файловые поля и фото — файлы загружаются только через upload endpoint
       for (const docField of getDocumentFieldsSync()) {
         normalized[docField] = "";
       }
+      normalized.photo = "";
 
       normalized.employee_id = employeeId;
       existingIds.add(employeeId);

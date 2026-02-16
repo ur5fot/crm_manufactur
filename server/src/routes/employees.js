@@ -104,10 +104,11 @@ export function registerEmployeeRoutes(app) {
 
       const baseEmployee = normalizeEmployeeInput(payload);
 
-      // Запрещаем установку файловых полей через create — только через upload endpoint
+      // Запрещаем установку файловых полей и фото через create — только через upload endpoint
       for (const docField of getDocumentFieldsSync()) {
         baseEmployee[docField] = "";
       }
+      baseEmployee.photo = "";
 
       // Валидация обязательных полей
       const firstNameError = validateRequired(baseEmployee.first_name, 'first_name', "Ім'я обов'язкове для заповнення");
