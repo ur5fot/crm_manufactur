@@ -486,12 +486,14 @@ a {
 }
 
 /* Hide native browser search clear button */
-.search-input::-webkit-search-cancel-button {
+.search-input::-webkit-search-cancel-button,
+.global-search-input::-webkit-search-cancel-button {
   display: none;
   -webkit-appearance: none;
 }
 
-.search-input::-ms-clear {
+.search-input::-ms-clear,
+.global-search-input::-ms-clear {
   display: none;
 }
 

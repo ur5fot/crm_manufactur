@@ -64,8 +64,20 @@ const tabs = [
   { key: 'documents', label: 'Документи' },
 ];
 
+// Track last viewed employee ID for cards tab persistence
+const lastCardsEmployeeId = ref(null);
+watch(() => route.params.id, (newId) => {
+  if (route.name === 'cards' && newId) {
+    lastCardsEmployeeId.value = newId;
+  }
+});
+
 function switchView(view) {
-  router.push({ name: view });
+  if (view === 'cards' && lastCardsEmployeeId.value) {
+    router.push({ name: 'cards', params: { id: lastCardsEmployeeId.value } });
+  } else {
+    router.push({ name: view });
+  }
 }
 
 // Theme toggle function
