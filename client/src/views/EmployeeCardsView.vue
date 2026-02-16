@@ -85,6 +85,11 @@ const cardSearchTerm = ref("");
 const cardFieldSearchTerm = ref("");
 const openingEmployeeFolder = ref(false);
 
+// Photo state
+const photoUploading = ref(false);
+const photoError = ref("");
+const photoInputRef = ref(null);
+
 // Templates for document generation
 const templates = ref([]);
 
@@ -552,6 +557,58 @@ async function openEmployeeFolder() {
   }
 }
 
+// Photo functions
+const photoUrl = computed(() => {
+  const p = form.photo;
+  if (!p) return '';
+  const base = import.meta.env.VITE_API_URL || '';
+  if (p.startsWith('files/')) return `${base}/${p}`;
+  return `${base}/${p}`;
+});
+
+function triggerPhotoUpload() {
+  photoInputRef.value?.click();
+}
+
+async function handlePhotoUpload(event) {
+  const file = event.target.files?.[0];
+  if (!file || !form.employee_id) return;
+
+  photoUploading.value = true;
+  photoError.value = "";
+  try {
+    const formData = new FormData();
+    formData.append('photo', file);
+    const result = await api.uploadEmployeePhoto(form.employee_id, formData);
+    form.photo = result?.path || '';
+    await loadEmployees(true);
+  } catch (error) {
+    photoError.value = error.message;
+  } finally {
+    photoUploading.value = false;
+    // Reset input so same file can be re-selected
+    if (photoInputRef.value) photoInputRef.value.value = '';
+  }
+}
+
+async function deletePhoto() {
+  if (!form.employee_id || !form.photo) return;
+  const confirmed = window.confirm("Видалити фото співробітника?");
+  if (!confirmed) return;
+
+  photoUploading.value = true;
+  photoError.value = "";
+  try {
+    await api.deleteEmployeePhoto(form.employee_id);
+    form.photo = '';
+    await loadEmployees(true);
+  } catch (error) {
+    photoError.value = error.message;
+  } finally {
+    photoUploading.value = false;
+  }
+}
+
 // Template generation
 async function generateDocumentForEmployee(template) {
   try {
@@ -754,8 +811,45 @@ onUnmounted(() => {
 
     <section class="panel">
       <div class="panel-header">
-        <div class="panel-title">
-          {{ isNew ? "Новий співробітник" : "Картка співробітника" }}
+        <div class="panel-header-left">
+          <div v-if="!isNew" class="employee-photo-area" @click="triggerPhotoUpload">
+            <img
+              v-if="form.photo"
+              :src="photoUrl"
+              alt="Фото"
+              class="employee-photo-img"
+            />
+            <div v-else class="employee-photo-placeholder">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+              </svg>
+            </div>
+            <div class="employee-photo-overlay">
+              <span v-if="photoUploading" class="photo-overlay-text">...</span>
+              <template v-else>
+                <span v-if="form.photo" class="photo-overlay-text">Змінити</span>
+                <span v-else class="photo-overlay-text">Додати</span>
+              </template>
+            </div>
+            <button
+              v-if="form.photo && !photoUploading"
+              class="photo-delete-btn"
+              type="button"
+              title="Видалити фото"
+              @click.stop="deletePhoto"
+            >&times;</button>
+            <input
+              ref="photoInputRef"
+              type="file"
+              accept="image/jpeg,image/png,image/gif,image/webp"
+              style="display: none;"
+              @change="handlePhotoUpload"
+            />
+          </div>
+          <div class="panel-title">
+            {{ isNew ? "Новий співробітник" : "Картка співробітника" }}
+          </div>
         </div>
         <div class="actions">
           <button
@@ -789,6 +883,7 @@ onUnmounted(() => {
         </div>
       </div>
 
+      <div v-if="photoError" class="alert">{{ photoError }}</div>
       <div v-if="errorMessage" class="alert">{{ errorMessage }}</div>
 
       <!-- Field search within current card -->

@@ -54,13 +54,13 @@ Two features for the employee card view:
 - [x] Run tests — must pass before next task
 
 ### Task 2: Frontend photo display and management in employee card
-- [ ] Add photo display area to the top of the employee card in `EmployeeCardsView.vue` — show photo image (from `/files/employee_{id}/photo.{ext}`) or placeholder avatar icon when no photo
-- [ ] Add upload button (visible when no photo or on hover) — opens file picker for images, calls `api.uploadEmployeePhoto()`, refreshes display
-- [ ] Add change/delete controls (visible on hover over existing photo) — change replaces photo via upload, delete calls `api.deleteEmployeePhoto()`
-- [ ] Style photo area: circular or rounded rectangle, ~120x120px, positioned top-left of card header area, responsive
-- [ ] Handle loading states and errors (upload failure toast/message)
-- [ ] Add E2E test in `tests/e2e/employee-photo.spec.js` — test photo upload, display, and delete
-- [ ] Run tests — must pass before next task
+- [x] Add photo display area to the top of the employee card in `EmployeeCardsView.vue` — show photo image (from `/files/employee_{id}/photo.{ext}`) or placeholder avatar icon when no photo
+- [x] Add upload button (visible when no photo or on hover) — opens file picker for images, calls `api.uploadEmployeePhoto()`, refreshes display
+- [x] Add change/delete controls (visible on hover over existing photo) — change replaces photo via upload, delete calls `api.deleteEmployeePhoto()`
+- [x] Style photo area: circular or rounded rectangle, ~120x120px, positioned top-left of card header area, responsive
+- [x] Handle loading states and errors (upload failure toast/message)
+- [x] Add E2E test in `tests/e2e/employee-photo.spec.js` — test photo upload, display, and delete
+- [x] Run tests — must pass before next task
 
 ### Task 3: Backend status history storage and API
 - [ ] Define `STATUS_HISTORY_COLUMNS` in `server/src/schema.js`: `history_id`, `employee_id`, `old_status`, `new_status`, `old_start_date`, `old_end_date`, `new_start_date`, `new_end_date`, `changed_at`, `changed_by`
