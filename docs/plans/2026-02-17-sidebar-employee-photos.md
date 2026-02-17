@@ -43,7 +43,7 @@ Add small circular photo thumbnails to each employee card in the sidebar list of
 - [x] Run E2E tests: `npm run test:e2e`
 
 ### Task 3: [Final] Update documentation
-- [ ] Update `CLAUDE.md` if needed (sidebar photo pattern)
+- [x] Update `CLAUDE.md` if needed (sidebar photo pattern)
 
 *Note: ralphex automatically moves completed plans to `docs/plans/completed/`*
 
