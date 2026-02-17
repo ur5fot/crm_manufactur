@@ -11,7 +11,12 @@ import {
   getDocumentFieldsSync,
   addStatusHistoryEntry,
   loadStatusHistory,
-  removeStatusHistoryForEmployee
+  removeStatusHistoryForEmployee,
+  loadReprimands,
+  addReprimand,
+  updateReprimand,
+  deleteReprimand,
+  removeReprimandsForEmployee
 } from "../store.js";
 import { mergeRow } from "../csv.js";
 import {
@@ -301,6 +306,154 @@ export function registerEmployeeRoutes(app) {
     }
   });
 
+  // GET reprimands for employee
+  app.get("/api/employees/:id/reprimands", async (req, res) => {
+    try {
+      const employees = await loadEmployees();
+      const employee = findById(employees, 'employee_id', req.params.id);
+      if (!employee) {
+        res.status(404).json({ error: "Співробітник не знайдено" });
+        return;
+      }
+
+      const allReprimands = await loadReprimands();
+      const reprimands = allReprimands
+        .filter(r => r.employee_id === req.params.id)
+        .sort((a, b) => (b.record_date || '').localeCompare(a.record_date || ''));
+
+      res.json({ reprimands });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // POST create reprimand for employee
+  app.post("/api/employees/:id/reprimands", async (req, res) => {
+    try {
+      const employees = await loadEmployees();
+      const employee = findById(employees, 'employee_id', req.params.id);
+      if (!employee) {
+        res.status(404).json({ error: "Співробітник не знайдено" });
+        return;
+      }
+
+      const { record_date, record_type, order_number, note } = req.body || {};
+
+      if (!record_date || !String(record_date).trim()) {
+        res.status(400).json({ error: "Дата запису обов'язкова" });
+        return;
+      }
+      if (!record_type || !String(record_type).trim()) {
+        res.status(400).json({ error: "Тип запису обов'язковий" });
+        return;
+      }
+
+      const reprimand = await addReprimand({
+        employee_id: req.params.id,
+        record_date: String(record_date).trim(),
+        record_type: String(record_type).trim(),
+        order_number: order_number ? String(order_number).trim() : "",
+        note: note ? String(note).trim() : ""
+      });
+
+      const employeeName = buildFullName(employee);
+      await addLog("CREATE", req.params.id, employeeName, "reprimand", "", reprimand.record_id, `Додано запис: ${reprimand.record_type}`);
+
+      res.status(201).json({ reprimand });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // PUT update reprimand for employee
+  app.put("/api/employees/:id/reprimands/:recordId", async (req, res) => {
+    try {
+      const employees = await loadEmployees();
+      const employee = findById(employees, 'employee_id', req.params.id);
+      if (!employee) {
+        res.status(404).json({ error: "Співробітник не знайдено" });
+        return;
+      }
+
+      const { record_date, record_type, order_number, note } = req.body || {};
+
+      if (!record_date || !String(record_date).trim()) {
+        res.status(400).json({ error: "Дата запису обов'язкова" });
+        return;
+      }
+      if (!record_type || !String(record_type).trim()) {
+        res.status(400).json({ error: "Тип запису обов'язковий" });
+        return;
+      }
+
+      const updated = await updateReprimand(req.params.recordId, {
+        record_date: String(record_date).trim(),
+        record_type: String(record_type).trim(),
+        order_number: order_number !== undefined ? String(order_number).trim() : "",
+        note: note !== undefined ? String(note).trim() : ""
+      });
+
+      if (!updated) {
+        res.status(404).json({ error: "Запис не знайдено" });
+        return;
+      }
+
+      // Verify the record belongs to this employee
+      if (updated.employee_id !== req.params.id) {
+        res.status(403).json({ error: "Запис не належить цьому співробітнику" });
+        return;
+      }
+
+      const employeeName = buildFullName(employee);
+      await addLog("UPDATE", req.params.id, employeeName, "reprimand", req.params.recordId, req.params.recordId, `Оновлено запис: ${updated.record_type}`);
+
+      res.json({ reprimand: updated });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // DELETE single reprimand for employee
+  app.delete("/api/employees/:id/reprimands/:recordId", async (req, res) => {
+    try {
+      const employees = await loadEmployees();
+      const employee = findById(employees, 'employee_id', req.params.id);
+      if (!employee) {
+        res.status(404).json({ error: "Співробітник не знайдено" });
+        return;
+      }
+
+      // Load reprimands to verify ownership before deletion
+      const allReprimands = await loadReprimands();
+      const record = allReprimands.find(r => r.record_id === req.params.recordId);
+      if (!record) {
+        res.status(404).json({ error: "Запис не знайдено" });
+        return;
+      }
+      if (record.employee_id !== req.params.id) {
+        res.status(403).json({ error: "Запис не належить цьому співробітнику" });
+        return;
+      }
+
+      const deleted = await deleteReprimand(req.params.recordId);
+      if (!deleted) {
+        res.status(404).json({ error: "Запис не знайдено" });
+        return;
+      }
+
+      const employeeName = buildFullName(employee);
+      await addLog("DELETE", req.params.id, employeeName, "reprimand", req.params.recordId, "", `Видалено запис: ${record.record_type}`);
+
+      res.status(204).end();
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // DELETE employee (hard delete + physical file cleanup)
   app.delete("/api/employees/:id", async (req, res) => {
     try {
@@ -332,6 +485,11 @@ export function registerEmployeeRoutes(app) {
       // Clean up status history entries for deleted employee
       await removeStatusHistoryForEmployee(req.params.id).catch(err => {
         console.error('Failed to clean up status history:', err);
+      });
+
+      // Clean up reprimand records for deleted employee
+      await removeReprimandsForEmployee(req.params.id).catch(err => {
+        console.error('Failed to clean up reprimands:', err);
       });
 
       res.status(204).end();

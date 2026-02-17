@@ -58,15 +58,15 @@
 - [x] Run tests: `cd server && npm test` — must pass before next task
 
 ### Task 2: Add API endpoints
-- [ ] Add to `server/src/routes/employees.js`:
+- [x] Add to `server/src/routes/employees.js`:
   - `GET /api/employees/:id/reprimands` — list reprimands for employee, sorted by record_date desc
   - `POST /api/employees/:id/reprimands` — create new reprimand (validate: record_date, record_type required)
   - `PUT /api/employees/:id/reprimands/:recordId` — update existing reprimand (validate: record_date, record_type required)
   - `DELETE /api/employees/:id/reprimands/:recordId` — delete single reprimand by ID
-- [ ] Add audit log entries for POST, PUT and DELETE operations
-- [ ] Add cleanup call in DELETE employee endpoint (removeReprimandsForEmployee)
-- [ ] Write integration test `server/test/reprimands-api.test.js` — test all 4 endpoints (success + error cases)
-- [ ] Run tests: `cd server && npm test` — must pass before next task
+- [x] Add audit log entries for POST, PUT and DELETE operations
+- [x] Add cleanup call in DELETE employee endpoint (removeReprimandsForEmployee)
+- [x] Write integration test `server/test/reprimands-api.test.js` — test all 4 endpoints (success + error cases)
+- [x] Run tests: `cd server && npm test` — must pass before next task
 
 ### Task 3: Add frontend API methods and composable
 - [ ] Add to `client/src/api.js`:
