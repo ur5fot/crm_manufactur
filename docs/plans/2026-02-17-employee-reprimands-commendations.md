@@ -96,14 +96,14 @@
 - [x] Run tests: `npm run test:e2e` — must pass before next task
 
 ### Task 5: Verify acceptance criteria
-- [ ] Verify: can add dogana with all fields (date, type, order number, note)
-- [ ] Verify: can add vidznaka with all fields
-- [ ] Verify: history table shows records sorted by date desc
-- [ ] Verify: can edit existing record (all fields update correctly)
-- [ ] Verify: can delete individual records with confirmation
-- [ ] Verify: deleting employee cleans up reprimand records
-- [ ] Run full test suite: `cd server && npm test`
-- [ ] Run E2E tests: `npm run test:e2e`
+- [x] Verify: can add dogana with all fields (date, type, order number, note)
+- [x] Verify: can add vidznaka with all fields
+- [x] Verify: history table shows records sorted by date desc
+- [x] Verify: can edit existing record (all fields update correctly)
+- [x] Verify: can delete individual records with confirmation
+- [x] Verify: deleting employee cleans up reprimand records
+- [x] Run full test suite: `cd server && npm test`
+- [x] Run E2E tests: `npm run test:e2e`
 
 ### Task 6: [Final] Update documentation
 - [ ] Update CLAUDE.md: add reprimands CSV to Data Files Overview, add API endpoints, add composable description
