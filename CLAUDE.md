@@ -82,8 +82,22 @@ crm_manufactur/
 │   │   │   ├── PlaceholderReferenceView.vue # Placeholder reference guide
 │   │   │   └── LogsView.vue              # Audit log viewer
 │   │   ├── composables/        # Shared composable functions
-│   │   │   ├── useFieldsSchema.js        # Field schema loading and utilities
-│   │   │   └── useEmployeeForm.js        # Employee form state and dirty tracking
+│   │   │   ├── useFieldsSchema.js        # Field schema loading and utilities (singleton)
+│   │   │   ├── useEmployeeForm.js        # Employee form state and dirty tracking
+│   │   │   ├── useEmployeePhoto.js       # Employee photo upload, display, delete
+│   │   │   ├── useEmployeeDocuments.js   # Employee document upload, dates, delete
+│   │   │   ├── useStatusManagement.js    # Employment status change and history
+│   │   │   ├── useDocumentGeneration.js  # Template loading and document generation
+│   │   │   ├── useDismissedEvents.js     # Dashboard notification dismissal (localStorage)
+│   │   │   ├── useDashboardNotifications.js # Dashboard notification checking and display
+│   │   │   ├── useDashboardStats.js      # Dashboard statistics cards
+│   │   │   ├── useDashboardTimeline.js   # Dashboard timeline events
+│   │   │   ├── useDashboardReport.js     # Dashboard report toggle (current/month)
+│   │   │   ├── useCustomReport.js        # Custom report filters, results, CSV export
+│   │   │   ├── useTemplatesManagement.js # Template CRUD operations
+│   │   │   ├── useTemplateUpload.js      # Template DOCX file upload
+│   │   │   ├── useTableInlineEdit.js     # Table inline cell editing
+│   │   │   └── useTableColumnFilters.js  # Table column checkbox filters
 │   │   ├── utils/              # Utility modules
 │   │   │   ├── constants.js              # Application-wide constants
 │   │   │   └── employee.js               # Employee display name utility
@@ -1328,12 +1342,40 @@ export function useEmployeeForm(allFieldsSchema, employeeFields, fieldLabels) {
 
 **Used by**: EmployeeCardsView (for unsaved changes warning and dirty state tracking)
 
+**Additional Composables** (extracted from view components):
+
+| Composable | Extracted From | Purpose |
+|------------|---------------|---------|
+| `useEmployeePhoto.js` | EmployeeCardsView | Photo upload, display with cache-busting, delete |
+| `useEmployeeDocuments.js` | EmployeeCardsView | Document upload/delete, date editing, expiry checking |
+| `useStatusManagement.js` | EmployeeCardsView | Status change popup, status reset, status history |
+| `useDocumentGeneration.js` | EmployeeCardsView | Template list loading, document generation trigger |
+| `useDismissedEvents.js` | DashboardView | localStorage-based notification dismissal |
+| `useDashboardNotifications.js` | DashboardView | All 4 notification types (status, birthday, retirement, doc expiry) |
+| `useDashboardStats.js` | DashboardView | Dashboard stat cards, employee count by status |
+| `useDashboardTimeline.js` | DashboardView | Timeline events loading and formatting |
+| `useDashboardReport.js` | DashboardView | Report toggle (current/month), absent/status-change counts |
+| `useCustomReport.js` | ReportsView | Filter builder, report execution, sorting, CSV export |
+| `useTemplatesManagement.js` | TemplatesView | Template CRUD operations (list, create, edit, delete) |
+| `useTemplateUpload.js` | TemplatesView | DOCX file upload modal and file handling |
+| `useTableInlineEdit.js` | TableView | Inline cell editing (start, save, cancel) |
+| `useTableColumnFilters.js` | TableView | Column checkbox filters (toggle, clear, count) |
+
+**Dependency Injection Pattern**:
+Composables receive external dependencies via function parameters rather than importing them internally. This keeps composables testable and decoupled. The parent view wires composables together:
+```javascript
+// View wires composables together
+const { allFieldsSchema, getFieldType } = useFieldsSchema();
+const { customFilters, runCustomReport } = useCustomReport(allFieldsSchema, documentFields, getFieldType, appConfig);
+```
+
 **Composable Pattern Benefits**:
 - Reusable logic across multiple views
 - Testable in isolation
 - Follows Vue 3 Composition API conventions
 - Clear separation of concerns (data fetching, state management, business logic)
 - Type-safe with proper return signatures
+- Dependencies injected via parameters for decoupling
 
 ### Form Validation and Unsaved Changes Warning
 
