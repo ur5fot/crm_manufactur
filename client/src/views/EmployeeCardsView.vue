@@ -64,6 +64,7 @@ const {
   errorMessage,
   isCreatingNew,
   isFormDirty,
+  savedFormSnapshot,
   showUnsavedChangesPopup,
   pendingNavigation,
   changedFields,
@@ -592,7 +593,10 @@ async function handlePhotoUpload(event) {
     const result = await api.uploadEmployeePhoto(form.employee_id, formData);
     form.photo = result?.path || '';
     photoVersion.value++;
-    updateFormSnapshot();
+    // Only update photo in snapshot to preserve dirty state for other fields
+    if (savedFormSnapshot.value) {
+      savedFormSnapshot.value.photo = form.photo;
+    }
     await loadEmployees(true);
   } catch (error) {
     photoError.value = error.message;
@@ -614,7 +618,10 @@ async function deletePhoto() {
     await api.deleteEmployeePhoto(form.employee_id);
     form.photo = '';
     photoVersion.value++;
-    updateFormSnapshot();
+    // Only update photo in snapshot to preserve dirty state for other fields
+    if (savedFormSnapshot.value) {
+      savedFormSnapshot.value.photo = form.photo;
+    }
     await loadEmployees(true);
   } catch (error) {
     photoError.value = error.message;

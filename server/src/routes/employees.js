@@ -3,7 +3,7 @@ import fsPromises from "fs/promises";
 import {
   FILES_DIR,
   loadEmployees,
-  saveEmployees,
+  withEmployeeLock,
   addLog,
   addLogs,
   formatFieldNameWithLabel,
@@ -101,7 +101,6 @@ export function registerEmployeeRoutes(app) {
   app.post("/api/employees", async (req, res) => {
     try {
       const payload = req.body || {};
-      const employees = await loadEmployees();
 
       const baseEmployee = normalizeEmployeeInput(payload);
 
@@ -123,16 +122,19 @@ export function registerEmployeeRoutes(app) {
         return;
       }
 
-      const employeeId = baseEmployee.employee_id || getNextId(employees, "employee_id");
+      // Use withEmployeeLock for atomic read-modify-write to prevent lost updates
+      let employeeId;
+      await withEmployeeLock(async (employees) => {
+        employeeId = baseEmployee.employee_id || getNextId(employees, "employee_id");
 
-      if (employees.some((item) => item.employee_id === employeeId)) {
-        res.status(409).json({ error: "ID співробітника вже існує" });
-        return;
-      }
+        if (employees.some((item) => item.employee_id === employeeId)) {
+          throw Object.assign(new Error("ID співробітника вже існує"), { statusCode: 409 });
+        }
 
-      baseEmployee.employee_id = employeeId;
-      employees.push(baseEmployee);
-      await saveEmployees(employees);
+        baseEmployee.employee_id = employeeId;
+        employees.push(baseEmployee);
+        return employees;
+      });
 
       // Логирование создания
       const employeeName = buildFullName(baseEmployee);
@@ -140,6 +142,10 @@ export function registerEmployeeRoutes(app) {
 
       res.status(201).json({ employee_id: employeeId });
     } catch (err) {
+      if (err.statusCode) {
+        res.status(err.statusCode).json({ error: err.message });
+        return;
+      }
       console.error(err);
       res.status(500).json({ error: err.message });
     }
@@ -149,13 +155,6 @@ export function registerEmployeeRoutes(app) {
   app.put("/api/employees/:id", async (req, res) => {
     try {
       const payload = req.body || {};
-      const employees = await loadEmployees();
-      const index = employees.findIndex((item) => item.employee_id === req.params.id);
-
-      if (index === -1) {
-        res.status(404).json({ error: "Співробітник не знайдено" });
-        return;
-      }
 
       // Запрещаем изменение файловых полей через PUT — только через upload endpoint
       // Build updates object safely to prevent prototype pollution
@@ -166,67 +165,73 @@ export function registerEmployeeRoutes(app) {
           updates[col] = payload[col];
         }
       }
-      const current = employees[index];
-      const next = mergeRow(getEmployeeColumnsSync(), current, updates);
-      next.employee_id = req.params.id;
 
-      // Валидация обязательных полей
-      const firstNameError = validateRequired(next.first_name, 'first_name', "Ім'я обов'язкове для заповнення");
-      if (firstNameError) {
-        res.status(400).json({ error: firstNameError });
-        return;
-      }
-      const lastNameError = validateRequired(next.last_name, 'last_name', "Прізвище обов'язкове для заповнення");
-      if (lastNameError) {
-        res.status(400).json({ error: lastNameError });
-        return;
-      }
+      // Use withEmployeeLock for atomic read-modify-write to prevent lost updates
+      let current;
+      let next;
+      let changedFields;
+      await withEmployeeLock(async (employees) => {
+        const index = employees.findIndex((item) => item.employee_id === req.params.id);
 
-      // Валидация дат (формат и корректность)
-      // ВАЖНО: Валидируем только поля которые были изменены в этом запросе
-      // Это предотвращает ошибки валидации из-за legacy невалидных данных в других полях
-      const dateFields = getEmployeeColumnsSync().filter(col =>
-        col.includes('_date') || col === 'birth_date'
-      );
+        if (index === -1) {
+          throw Object.assign(new Error("Співробітник не знайдено"), { statusCode: 404 });
+        }
 
-      // Находим какие поля были изменены в этом запросе
-      const changedDateFields = dateFields.filter(dateField => {
-        const currentValue = String(current[dateField] || "").trim();
-        const nextValue = String(next[dateField] || "").trim();
-        return currentValue !== nextValue;
+        current = employees[index];
+        next = mergeRow(getEmployeeColumnsSync(), current, updates);
+        next.employee_id = req.params.id;
+
+        // Валидация обязательных полей
+        const firstNameError = validateRequired(next.first_name, 'first_name', "Ім'я обов'язкове для заповнення");
+        if (firstNameError) {
+          throw Object.assign(new Error(firstNameError), { statusCode: 400 });
+        }
+        const lastNameError = validateRequired(next.last_name, 'last_name', "Прізвище обов'язкове для заповнення");
+        if (lastNameError) {
+          throw Object.assign(new Error(lastNameError), { statusCode: 400 });
+        }
+
+        // Валидация дат (формат и корректность)
+        // ВАЖНО: Валидируем только поля которые были изменены в этом запросе
+        // Это предотвращает ошибки валидации из-за legacy невалидных данных в других полях
+        const dateFields = getEmployeeColumnsSync().filter(col =>
+          col.includes('_date') || col === 'birth_date'
+        );
+
+        // Находим какие поля были изменены в этом запросе
+        const changedDateFields = dateFields.filter(dateField => {
+          const currentValue = String(current[dateField] || "").trim();
+          const nextValue = String(next[dateField] || "").trim();
+          return currentValue !== nextValue;
+        });
+
+        for (const dateField of changedDateFields) {
+          const error = validateDateField(next[dateField], dateField);
+          if (error) {
+            throw Object.assign(new Error(error), { statusCode: 400 });
+          }
+        }
+
+        // Валидация пар issue_date/expiry_date для документів
+        for (const docField of getDocumentFieldsSync()) {
+          const issueDateField = `${docField}_issue_date`;
+          const expiryDateField = `${docField}_expiry_date`;
+          const issueDate = String(next[issueDateField] || "").trim();
+          const expiryDate = String(next[expiryDateField] || "").trim();
+
+          if (issueDate && expiryDate && expiryDate < issueDate) {
+            throw Object.assign(new Error(`Дата закінчення не може бути раніше дати видачі для документа ${docField}`), { statusCode: 400 });
+          }
+        }
+
+        employees[index] = next;
+        changedFields = detectChangedFields(current, next);
+
+        return employees;
       });
-
-      for (const dateField of changedDateFields) {
-        const error = validateDateField(next[dateField], dateField);
-        if (error) {
-          res.status(400).json({ error });
-          return;
-        }
-      }
-
-      // Валидация пар issue_date/expiry_date для документів
-      for (const docField of getDocumentFieldsSync()) {
-        const issueDateField = `${docField}_issue_date`;
-        const expiryDateField = `${docField}_expiry_date`;
-        const issueDate = String(next[issueDateField] || "").trim();
-        const expiryDate = String(next[expiryDateField] || "").trim();
-
-        if (issueDate && expiryDate && expiryDate < issueDate) {
-          res.status(400).json({
-            error: `Дата закінчення не може бути раніше дати видачі для документа ${docField}`
-          });
-          return;
-        }
-      }
-      employees[index] = next;
-
-      await saveEmployees(employees);
 
       // Логирование изменений
       const employeeName = buildFullName(next);
-
-      // Находим измененные поля
-      const changedFields = detectChangedFields(current, next);
 
       // Логируем все изменения одной batch-операцией для предотвращения race condition
       if (changedFields.length > 0) {
@@ -265,6 +270,10 @@ export function registerEmployeeRoutes(app) {
 
       res.json({ employee: next });
     } catch (err) {
+      if (err.statusCode) {
+        res.status(err.statusCode).json({ error: err.message });
+        return;
+      }
       console.error(err);
       res.status(500).json({ error: err.message });
     }
@@ -295,16 +304,18 @@ export function registerEmployeeRoutes(app) {
   // DELETE employee (hard delete + physical file cleanup)
   app.delete("/api/employees/:id", async (req, res) => {
     try {
-      const employees = await loadEmployees();
-      const deletedEmployee = findById(employees, 'employee_id', req.params.id);
-      const nextEmployees = employees.filter((item) => item.employee_id !== req.params.id);
+      // Use withEmployeeLock for atomic read-modify-write to prevent lost updates
+      let deletedEmployee;
+      await withEmployeeLock(async (employees) => {
+        deletedEmployee = findById(employees, 'employee_id', req.params.id);
+        const nextEmployees = employees.filter((item) => item.employee_id !== req.params.id);
 
-      if (nextEmployees.length === employees.length) {
-        res.status(404).json({ error: "Співробітник не знайдено" });
-        return;
-      }
+        if (nextEmployees.length === employees.length) {
+          throw Object.assign(new Error("Співробітник не знайдено"), { statusCode: 404 });
+        }
 
-      await saveEmployees(nextEmployees);
+        return nextEmployees;
+      });
 
       // Логирование удаления
       if (deletedEmployee) {
@@ -325,6 +336,10 @@ export function registerEmployeeRoutes(app) {
 
       res.status(204).end();
     } catch (err) {
+      if (err.statusCode) {
+        res.status(err.statusCode).json({ error: err.message });
+        return;
+      }
       console.error(err);
       res.status(500).json({ error: err.message });
     }

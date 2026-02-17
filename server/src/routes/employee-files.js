@@ -5,8 +5,7 @@ import fsPromises from "fs/promises";
 import {
   DATA_DIR,
   FILES_DIR,
-  loadEmployees,
-  saveEmployees,
+  withEmployeeLock,
   addLog,
   formatFieldNameWithLabel,
   ROOT_DIR,
@@ -14,7 +13,7 @@ import {
   getDocumentFieldsSync
 } from "../store.js";
 import { mergeRow, normalizeRows } from "../csv.js";
-import { getNextId, normalizeEmployeeInput, openFolder } from "../utils.js";
+import { getNextId, openFolder } from "../utils.js";
 
 export function registerEmployeeFileRoutes(app, importUpload, employeeFileUpload, photoUpload) {
   // Upload file for employee document field
@@ -24,19 +23,13 @@ export function registerEmployeeFileRoutes(app, importUpload, employeeFileUpload
       next();
     });
   }, async (req, res) => {
+    // Track the current location of the uploaded file for cleanup on error.
+    // Starts as multer's temp path; updated to targetPath after successful rename.
+    let uploadedFilePath = req.file ? req.file.path : null;
+    let saveDone = false;
     try {
       if (!req.file) {
         res.status(400).json({ error: "Файл обов'язковий" });
-        return;
-      }
-
-      const employees = await loadEmployees();
-      const index = employees.findIndex((item) => item.employee_id === req.params.id);
-
-      if (index === -1) {
-        // Удаляем временный файл
-        await fsPromises.unlink(req.file.path).catch(() => {});
-        res.status(404).json({ error: "Співробітник не знайдено" });
         return;
       }
 
@@ -111,23 +104,9 @@ export function registerEmployeeFileRoutes(app, importUpload, employeeFileUpload
         .toLowerCase() + path.extname(req.file.originalname || ".pdf").toLowerCase();
       const targetPath = path.join(path.dirname(req.file.path), targetFileName);
 
-      // Запоминаем старый путь до переименования (для удаления orphaned файла после сохранения)
-      const oldFilePath = employees[index][fileField];
-
-      // Проверяем, совпадает ли старый файл с целевым путём
-      // На case-insensitive FS (macOS/Windows) сравниваем без учёта регистра, на Linux — точное совпадение
-      let oldFileIsSameAsTarget = false;
-      if (oldFilePath) {
-        const oldFullPath = path.resolve(ROOT_DIR, oldFilePath);
-        if (process.platform === 'linux') {
-          oldFileIsSameAsTarget = oldFullPath === targetPath;
-        } else {
-          oldFileIsSameAsTarget = oldFullPath.toLowerCase() === targetPath.toLowerCase();
-        }
-      }
-
       try {
         await fsPromises.rename(req.file.path, targetPath);
+        uploadedFilePath = targetPath;
       } catch (renameErr) {
         await fsPromises.unlink(req.file.path).catch(() => {});
         res.status(500).json({ error: "Ошибка сохранения файла" });
@@ -139,33 +118,53 @@ export function registerEmployeeFileRoutes(app, importUpload, employeeFileUpload
         .split(path.sep)
         .join("/");
 
-      // Сохраняем файл и даты (issue_date, expiry_date)
-      const updateData = { [fileField]: relativePath };
-      const issueDateField = `${fileField}_issue_date`;
-      const expiryDateField = `${fileField}_expiry_date`;
-      if (getEmployeeColumnsSync().includes(issueDateField)) {
-        updateData[issueDateField] = issueDate;
-      }
-      if (getEmployeeColumnsSync().includes(expiryDateField)) {
-        updateData[expiryDateField] = expiryDate;
-      }
+      // Use withEmployeeLock for atomic read-modify-write to prevent lost updates
+      let oldFilePath;
+      let oldFileIsSameAsTarget = false;
+      let employeeName;
+      await withEmployeeLock(async (employees) => {
+        const index = employees.findIndex((item) => item.employee_id === req.params.id);
 
-      const updated = mergeRow(getEmployeeColumnsSync(), employees[index], updateData);
-      updated.employee_id = req.params.id;
-      employees[index] = updated;
-
-      try {
-        await saveEmployees(employees);
-      } catch (saveErr) {
-        // CSV сохранение не удалось — откатываем файл только если он не перезаписал существующий
-        // Если старый и новый путь совпадают (re-upload с тем же расширением), откат невозможен —
-        // файл уже перезаписан rename, перемещение в temp оставит CSV без файла
-        if (!oldFileIsSameAsTarget) {
-          await fsPromises.rename(targetPath, req.file.path).catch(() => {});
+        if (index === -1) {
+          throw Object.assign(new Error("Співробітник не знайдено"), { statusCode: 404 });
         }
-        res.status(500).json({ error: "Ошибка сохранения данных" });
-        return;
-      }
+
+        // Запоминаем старый путь (для удаления orphaned файла после сохранения)
+        oldFilePath = employees[index][fileField];
+
+        // Проверяем, совпадает ли старый файл с целевым путём
+        // На case-insensitive FS (macOS/Windows) сравниваем без учёта регистра, на Linux — точное совпадение
+        if (oldFilePath) {
+          const oldFullPath = path.resolve(ROOT_DIR, oldFilePath);
+          if (process.platform === 'linux') {
+            oldFileIsSameAsTarget = oldFullPath === targetPath;
+          } else {
+            oldFileIsSameAsTarget = oldFullPath.toLowerCase() === targetPath.toLowerCase();
+          }
+        }
+
+        // Сохраняем файл и даты (issue_date, expiry_date)
+        const updateData = { [fileField]: relativePath };
+        const issueDateField = `${fileField}_issue_date`;
+        const expiryDateField = `${fileField}_expiry_date`;
+        if (getEmployeeColumnsSync().includes(issueDateField)) {
+          updateData[issueDateField] = issueDate;
+        }
+        if (getEmployeeColumnsSync().includes(expiryDateField)) {
+          updateData[expiryDateField] = expiryDate;
+        }
+
+        const updated = mergeRow(getEmployeeColumnsSync(), employees[index], updateData);
+        updated.employee_id = req.params.id;
+        employees[index] = updated;
+
+        employeeName = [updated.last_name, updated.first_name, updated.middle_name]
+          .filter(Boolean)
+          .join(" ");
+
+        return employees;
+      });
+      saveDone = true;
 
       // Удаляем старый файл после успешного сохранения CSV (предотвращаем orphaned files при смене расширения)
       // Пропускаем если старый путь совпадает с новым (case-insensitive — файл уже перезаписан rename)
@@ -176,18 +175,24 @@ export function registerEmployeeFileRoutes(app, importUpload, employeeFileUpload
         }
       }
 
-      // Логирование загрузки файла
-      const employeeName = [employees[index].last_name, employees[index].first_name, employees[index].middle_name]
-        .filter(Boolean)
-        .join(" ");
-      const formattedFieldName = await formatFieldNameWithLabel(fileField);
-      await addLog("UPDATE", req.params.id, employeeName, formattedFieldName, oldFilePath || "", relativePath, `Завантажено документ: ${formattedFieldName}`);
+      // Логирование загрузки файла (non-critical, don't fail the request)
+      try {
+        const formattedFieldName = await formatFieldNameWithLabel(fileField);
+        await addLog("UPDATE", req.params.id, employeeName, formattedFieldName, oldFilePath || "", relativePath, `Завантажено документ: ${formattedFieldName}`);
+      } catch (logErr) {
+        console.error("Failed to log file upload:", logErr);
+      }
 
       res.json({ path: relativePath });
     } catch (err) {
-      // Очищаем временный файл при непредвиденной ошибке
-      if (req.file && req.file.path) {
-        await fsPromises.unlink(req.file.path).catch(() => {});
+      // Only clean up the uploaded file if CSV save hasn't completed yet.
+      // After save, CSV references this file — deleting it would leave a broken reference.
+      if (!saveDone && uploadedFilePath) {
+        await fsPromises.unlink(uploadedFilePath).catch(() => {});
+      }
+      if (err.statusCode === 404) {
+        res.status(404).json({ error: err.message });
+        return;
       }
       console.error(err);
       res.status(500).json({ error: err.message });
@@ -205,23 +210,42 @@ export function registerEmployeeFileRoutes(app, importUpload, employeeFileUpload
         return;
       }
 
-      const employees = await loadEmployees();
-      const index = employees.findIndex((item) => item.employee_id === id);
+      // Use withEmployeeLock for atomic read-modify-write to prevent lost updates
+      let filePath;
+      let employeeName;
+      await withEmployeeLock(async (employees) => {
+        const index = employees.findIndex((item) => item.employee_id === id);
 
-      if (index === -1) {
-        res.status(404).json({ error: "Співробітник не знайдено" });
-        return;
-      }
+        if (index === -1) {
+          throw Object.assign(new Error("Співробітник не знайдено"), { statusCode: 404 });
+        }
 
-      const employee = employees[index];
-      const filePath = employee[fieldName];
+        const employee = employees[index];
+        filePath = employee[fieldName];
 
-      if (!filePath) {
-        res.status(404).json({ error: "Файл не найден" });
-        return;
-      }
+        if (!filePath) {
+          throw Object.assign(new Error("Файл не найден"), { statusCode: 404 });
+        }
 
-      // Удаляем физический файл (только если путь внутри FILES_DIR)
+        // Очищаем поле и companion date-колонки в CSV
+        const clearData = { [fieldName]: "" };
+        const columns = getEmployeeColumnsSync();
+        const issueDateField = `${fieldName}_issue_date`;
+        const expiryDateField = `${fieldName}_expiry_date`;
+        if (columns.includes(issueDateField)) clearData[issueDateField] = "";
+        if (columns.includes(expiryDateField)) clearData[expiryDateField] = "";
+        const updated = mergeRow(columns, employee, clearData);
+        updated.employee_id = id;
+        employees[index] = updated;
+
+        employeeName = [employee.last_name, employee.first_name, employee.middle_name]
+          .filter(Boolean)
+          .join(" ");
+
+        return employees;
+      });
+
+      // Удаляем физический файл после успешного сохранения CSV (только если путь внутри FILES_DIR)
       // SECURITY: Normalize paths before comparison to prevent path traversal
       const fullPath = path.resolve(ROOT_DIR, filePath);
       const normalizedFullPath = path.resolve(fullPath);
@@ -235,22 +259,7 @@ export function registerEmployeeFileRoutes(app, importUpload, employeeFileUpload
         }
       }
 
-      // Очищаем поле и companion date-колонки в CSV
-      const clearData = { [fieldName]: "" };
-      const columns = getEmployeeColumnsSync();
-      const issueDateField = `${fieldName}_issue_date`;
-      const expiryDateField = `${fieldName}_expiry_date`;
-      if (columns.includes(issueDateField)) clearData[issueDateField] = "";
-      if (columns.includes(expiryDateField)) clearData[expiryDateField] = "";
-      const updated = mergeRow(columns, employee, clearData);
-      updated.employee_id = id;
-      employees[index] = updated;
-      await saveEmployees(employees);
-
       // Логирование удаления
-      const employeeName = [employee.last_name, employee.first_name, employee.middle_name]
-        .filter(Boolean)
-        .join(" ");
       const formattedFieldName = await formatFieldNameWithLabel(fieldName);
       await addLog(
         "UPDATE",
@@ -264,6 +273,10 @@ export function registerEmployeeFileRoutes(app, importUpload, employeeFileUpload
 
       res.status(204).end();
     } catch (err) {
+      if (err.statusCode) {
+        res.status(err.statusCode).json({ error: err.message });
+        return;
+      }
       console.error(err);
       res.status(500).json({ error: err.message });
     }
@@ -276,37 +289,43 @@ export function registerEmployeeFileRoutes(app, importUpload, employeeFileUpload
       next();
     });
   }, async (req, res) => {
+    let saveDone = false;
+    let oldPhoto = null;
     try {
       if (!req.file) {
         res.status(400).json({ error: "Файл фото обов'язковий" });
         return;
       }
 
-      const employees = await loadEmployees();
-      const index = employees.findIndex((item) => item.employee_id === req.params.id);
-
-      if (index === -1) {
-        await fsPromises.unlink(req.file.path).catch(() => {});
-        // Clean up empty directory created by multer for non-existent employee
-        const dir = path.dirname(req.file.path);
-        await fsPromises.rmdir(dir).catch(() => {});
-        res.status(404).json({ error: "Співробітник не знайдено" });
-        return;
-      }
-
-      const employee = employees[index];
-      const oldPhoto = employee.photo;
-
       const relativePath = path
         .relative(ROOT_DIR, req.file.path)
         .split(path.sep)
         .join("/");
 
-      const updated = mergeRow(getEmployeeColumnsSync(), employee, { photo: relativePath });
-      updated.employee_id = req.params.id;
-      employees[index] = updated;
+      // Use withEmployeeLock to wrap the entire read-modify-write cycle,
+      // preventing lost updates from concurrent requests
+      let employeeName;
+      await withEmployeeLock(async (employees) => {
+        const index = employees.findIndex((item) => item.employee_id === req.params.id);
 
-      await saveEmployees(employees);
+        if (index === -1) {
+          throw Object.assign(new Error("Співробітник не знайдено"), { statusCode: 404, cleanupDir: true });
+        }
+
+        const employee = employees[index];
+        oldPhoto = employee.photo;
+
+        const updated = mergeRow(getEmployeeColumnsSync(), employee, { photo: relativePath });
+        updated.employee_id = req.params.id;
+        employees[index] = updated;
+
+        employeeName = [employee.last_name, employee.first_name, employee.middle_name]
+          .filter(Boolean)
+          .join(" ");
+
+        return employees;
+      });
+      saveDone = true;
 
       // Delete old photo file after successful save (if different from new one)
       if (oldPhoto) {
@@ -320,16 +339,39 @@ export function registerEmployeeFileRoutes(app, importUpload, employeeFileUpload
         }
       }
 
-      // Log photo upload
-      const employeeName = [employee.last_name, employee.first_name, employee.middle_name]
-        .filter(Boolean)
-        .join(" ");
-      await addLog("UPDATE", req.params.id, employeeName, "Фото (photo)", oldPhoto || "", relativePath, "Завантажено фото співробітника");
+      // Log photo upload (non-critical, don't fail the request)
+      try {
+        await addLog("UPDATE", req.params.id, employeeName, "Фото (photo)", oldPhoto || "", relativePath, "Завантажено фото співробітника");
+      } catch (logErr) {
+        console.error("Failed to log photo upload:", logErr);
+      }
 
       res.json({ path: relativePath });
     } catch (err) {
-      if (req.file && req.file.path) {
+      if (err.statusCode === 404) {
         await fsPromises.unlink(req.file.path).catch(() => {});
+        if (err.cleanupDir) {
+          const dir = path.dirname(req.file.path);
+          await fsPromises.rmdir(dir).catch(() => {});
+        }
+        res.status(404).json({ error: err.message });
+        return;
+      }
+      // Only clean up uploaded file if save hasn't completed yet
+      // Skip cleanup if new file overwrote the old photo (same extension re-upload) —
+      // deleting would leave CSV referencing a non-existent file
+      if (!saveDone && req.file && req.file.path) {
+        let isOverwrite = false;
+        if (oldPhoto) {
+          const oldFullPath = path.resolve(ROOT_DIR, oldPhoto);
+          const newFullPath = path.resolve(req.file.path);
+          isOverwrite = process.platform === 'linux'
+            ? oldFullPath === newFullPath
+            : oldFullPath.toLowerCase() === newFullPath.toLowerCase();
+        }
+        if (!isOverwrite) {
+          await fsPromises.unlink(req.file.path).catch(() => {});
+        }
       }
       console.error(err);
       res.status(500).json({ error: err.message });
@@ -341,42 +383,55 @@ export function registerEmployeeFileRoutes(app, importUpload, employeeFileUpload
     try {
       const { id } = req.params;
 
-      const employees = await loadEmployees();
-      const index = employees.findIndex((item) => item.employee_id === id);
+      // Use withEmployeeLock to wrap the entire read-modify-write cycle,
+      // preventing lost updates from concurrent requests
+      let photoPath;
+      let employeeName;
+      await withEmployeeLock(async (employees) => {
+        const index = employees.findIndex((item) => item.employee_id === id);
 
-      if (index === -1) {
-        res.status(404).json({ error: "Співробітник не знайдено" });
-        return;
-      }
+        if (index === -1) {
+          throw Object.assign(new Error("Співробітник не знайдено"), { statusCode: 404 });
+        }
 
-      const employee = employees[index];
-      const photoPath = employee.photo;
+        const employee = employees[index];
+        photoPath = employee.photo;
 
-      if (!photoPath) {
-        res.status(404).json({ error: "Фото не знайдено" });
-        return;
-      }
+        if (!photoPath) {
+          throw Object.assign(new Error("Фото не знайдено"), { statusCode: 404 });
+        }
 
-      // Delete physical file
+        // Clear photo field in DB
+        const updated = mergeRow(getEmployeeColumnsSync(), employee, { photo: "" });
+        updated.employee_id = id;
+        employees[index] = updated;
+
+        employeeName = [employee.last_name, employee.first_name, employee.middle_name]
+          .filter(Boolean)
+          .join(" ");
+
+        return employees;
+      });
+
+      // Delete physical file after successful DB save
       const fullPath = path.resolve(ROOT_DIR, photoPath);
       if (fullPath.startsWith(path.resolve(FILES_DIR) + path.sep)) {
         await fsPromises.unlink(fullPath).catch(() => {});
       }
 
-      // Clear photo field
-      const updated = mergeRow(getEmployeeColumnsSync(), employee, { photo: "" });
-      updated.employee_id = id;
-      employees[index] = updated;
-      await saveEmployees(employees);
-
-      // Log photo deletion
-      const employeeName = [employee.last_name, employee.first_name, employee.middle_name]
-        .filter(Boolean)
-        .join(" ");
-      await addLog("UPDATE", id, employeeName, "Фото (photo)", photoPath, "", "Видалено фото співробітника");
+      // Log photo deletion (non-critical, don't fail the request)
+      try {
+        await addLog("UPDATE", id, employeeName, "Фото (photo)", photoPath, "", "Видалено фото співробітника");
+      } catch (logErr) {
+        console.error("Failed to log photo deletion:", logErr);
+      }
 
       res.status(204).end();
     } catch (err) {
+      if (err.statusCode) {
+        res.status(err.statusCode).json({ error: err.message });
+        return;
+      }
       console.error(err);
       res.status(500).json({ error: err.message });
     }
@@ -446,63 +501,66 @@ export function registerEmployeeFileRoutes(app, importUpload, employeeFileUpload
       return;
     }
 
-    const employees = await loadEmployees();
-    const existingIds = new Set(employees.map((item) => item.employee_id));
-    const nextEmployees = [...employees];
-
     const errors = [];
     const maxErrors = 50;
     let added = 0;
     let skipped = 0;
+    let newEmployees = [];
 
-    records.forEach((record, index) => {
-      const normalized = normalizeRows(getEmployeeColumnsSync(), [record])[0];
-      const hasAnyValue = getEmployeeColumnsSync().some((column) => String(normalized[column] || "").trim());
-      if (!hasAnyValue) {
-        skipped += 1;
-        return;
-      }
+    // Use withEmployeeLock for atomic read-modify-write to prevent lost updates
+    await withEmployeeLock(async (employees) => {
+      const existingIds = new Set(employees.map((item) => item.employee_id));
+      const nextEmployees = [...employees];
 
-      const hasFirstName = String(normalized.first_name || "").trim();
-      const hasLastName = String(normalized.last_name || "").trim();
-      if (!hasFirstName || !hasLastName) {
-        skipped += 1;
-        if (errors.length < maxErrors) {
-          errors.push({ row: index + 2, reason: "Не указаны имя и фамилия (оба поля обязательны)" });
+      records.forEach((record, index) => {
+        const normalized = normalizeRows(getEmployeeColumnsSync(), [record])[0];
+        const hasAnyValue = getEmployeeColumnsSync().some((column) => String(normalized[column] || "").trim());
+        if (!hasAnyValue) {
+          skipped += 1;
+          return;
         }
-        return;
-      }
 
-      let employeeId = String(normalized.employee_id || "").trim();
-      if (employeeId && existingIds.has(employeeId)) {
-        skipped += 1;
-        if (errors.length < maxErrors) {
-          errors.push({ row: index + 2, reason: "ID уже существует" });
+        const hasFirstName = String(normalized.first_name || "").trim();
+        const hasLastName = String(normalized.last_name || "").trim();
+        if (!hasFirstName || !hasLastName) {
+          skipped += 1;
+          if (errors.length < maxErrors) {
+            errors.push({ row: index + 2, reason: "Не указаны имя и фамилия (оба поля обязательны)" });
+          }
+          return;
         }
-        return;
-      }
 
-      if (!employeeId) {
-        employeeId = getNextId(nextEmployees, "employee_id");
-      }
+        let employeeId = String(normalized.employee_id || "").trim();
+        if (employeeId && existingIds.has(employeeId)) {
+          skipped += 1;
+          if (errors.length < maxErrors) {
+            errors.push({ row: index + 2, reason: "ID уже существует" });
+          }
+          return;
+        }
 
-      // Очищаем файловые поля и фото — файлы загружаются только через upload endpoint
-      for (const docField of getDocumentFieldsSync()) {
-        normalized[docField] = "";
-      }
-      normalized.photo = "";
+        if (!employeeId) {
+          employeeId = getNextId(nextEmployees, "employee_id");
+        }
 
-      normalized.employee_id = employeeId;
-      existingIds.add(employeeId);
-      nextEmployees.push(normalized);
-      added += 1;
+        // Очищаем файловые поля и фото — файлы загружаются только через upload endpoint
+        for (const docField of getDocumentFieldsSync()) {
+          normalized[docField] = "";
+        }
+        normalized.photo = "";
+
+        normalized.employee_id = employeeId;
+        existingIds.add(employeeId);
+        nextEmployees.push(normalized);
+        added += 1;
+      });
+
+      newEmployees = nextEmployees.slice(employees.length);
+      return nextEmployees;
     });
 
-    await saveEmployees(nextEmployees);
-
     // Логирование импортированных сотрудников
-    for (let i = employees.length; i < nextEmployees.length; i++) {
-      const employee = nextEmployees[i];
+    for (const employee of newEmployees) {
       const employeeName = [employee.last_name, employee.first_name, employee.middle_name]
         .filter(Boolean)
         .join(" ");

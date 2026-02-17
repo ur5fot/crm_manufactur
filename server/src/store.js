@@ -194,6 +194,33 @@ export async function saveEmployees(rows) {
   }
 }
 
+/**
+ * Executes a read-modify-write transaction on employees.csv under the write lock.
+ * The callback receives the current employees array and must return the modified array.
+ * This prevents lost-update race conditions where concurrent requests could overwrite
+ * each other's changes.
+ *
+ * @param {function(Array): Promise<Array>} fn - Callback that receives employees and returns modified array
+ * @returns {Promise<Array>} The saved employees array
+ */
+export async function withEmployeeLock(fn) {
+  const previousLock = employeeWriteLock;
+  let releaseLock;
+  employeeWriteLock = new Promise(resolve => { releaseLock = resolve; });
+
+  try {
+    await previousLock;
+
+    const columns = await getEmployeeColumns();
+    const employees = await readCsv(EMPLOYEES_PATH, columns);
+    const result = await fn(employees);
+    await writeCsv(EMPLOYEES_PATH, columns, result);
+    return result;
+  } finally {
+    releaseLock();
+  }
+}
+
 export async function loadFieldsSchema() {
   return readCsv(FIELD_SCHEMA_PATH, FIELD_SCHEMA_COLUMNS);
 }
