@@ -1487,6 +1487,7 @@ button.small {
   max-width: 500px;
   width: 90%;
   animation: slideUp 0.3s ease;
+  overflow: hidden;
 }
 
 @keyframes slideUp {
@@ -1504,26 +1505,28 @@ button.small {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px 24px;
+  padding: 16px 24px;
   border-bottom: 1px solid var(--line);
+  background: var(--bg-accent);
 }
 
 .vacation-notification-header h3 {
   margin: 0;
-  font-size: 20px;
+  font-size: 16px;
+  font-weight: 600;
   color: var(--ink);
 }
 
 .close-btn {
   background: none;
   border: none;
-  font-size: 32px;
+  font-size: 24px;
   color: var(--muted);
   cursor: pointer;
   line-height: 1;
   padding: 0;
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1537,7 +1540,7 @@ button.small {
 }
 
 .vacation-notification-body {
-  padding: 24px;
+  padding: 20px 24px;
 }
 
 .notification-section {

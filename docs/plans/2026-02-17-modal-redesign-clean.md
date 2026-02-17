@@ -63,14 +63,14 @@ The global `label {}` rule forces uppercase on all labels. For modals this looks
 
 Improve the visual design of the modal itself:
 
-- [ ] In `styles.css`: update `.vacation-notification-modal` — add `overflow: hidden` so header border-radius clips correctly
-- [ ] Update `.vacation-notification-header`: make bg slightly tinted (`background: var(--bg-accent)`) so header stands out from body
-- [ ] Update `.vacation-notification-header h3`: increase to `font-size: 16px`, `font-weight: 600`, keep `color: var(--ink)`, add `margin: 0`
-- [ ] Update `.close-btn`: reduce font-size to `24px`, tighten the button size to `28px × 28px` for less visual weight
-- [ ] Update `.vacation-notification-body`: add `padding: 20px 24px`, ensure vertical spacing between form groups
-- [ ] Update `.vacation-notification-footer` (from Task 1): `padding: 16px 24px`, `border-top: 1px solid var(--line)`, flex row, gap 10px
-- [ ] In dark theme section (`[data-theme="dark"]`): check `--modal-bg` is set to the dark modal color (already `#2d2d2d` at line 39 — verify it's applied)
-- [ ] Visual check: open each modal type, confirm header/body/footer look clean, rounded corners clip properly
+- [x] In `styles.css`: update `.vacation-notification-modal` — add `overflow: hidden` so header border-radius clips correctly
+- [x] Update `.vacation-notification-header`: make bg slightly tinted (`background: var(--bg-accent)`) so header stands out from body
+- [x] Update `.vacation-notification-header h3`: increase to `font-size: 16px`, `font-weight: 600`, keep `color: var(--ink)`, add `margin: 0`
+- [x] Update `.close-btn`: reduce font-size to `24px`, tighten the button size to `28px × 28px` for less visual weight
+- [x] Update `.vacation-notification-body`: add `padding: 20px 24px`, ensure vertical spacing between form groups
+- [x] Update `.vacation-notification-footer` (from Task 1): `padding: 16px 24px`, `border-top: 1px solid var(--line)`, flex row, gap 10px
+- [x] In dark theme section (`[data-theme="dark"]`): check `--modal-bg` is set to the dark modal color (already `#2d2d2d` at line 39 — verify it's applied)
+- [x] Visual check: open each modal type, confirm header/body/footer look clean, rounded corners clip properly
 
 ### Task 4: Verify acceptance criteria
 
