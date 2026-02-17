@@ -1,11 +1,12 @@
 <script setup>
-import { ref, computed, reactive, watch, onMounted, onUnmounted } from "vue";
+import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { api } from "../api";
 import { useFieldsSchema } from "../composables/useFieldsSchema";
 import { useEmployeeForm } from "../composables/useEmployeeForm";
 import { useEmployeePhoto } from "../composables/useEmployeePhoto";
 import { useEmployeeDocuments } from "../composables/useEmployeeDocuments";
+import { useStatusManagement } from "../composables/useStatusManagement";
 import { displayName } from "../utils/employee";
 
 const router = useRouter();
@@ -129,30 +130,28 @@ const {
   confirmClearForm,
 } = useEmployeeDocuments(form, employees, selectedId, errorMessage);
 
-// Status history popup
-const showStatusHistoryPopup = ref(false);
-const statusHistoryLoading = ref(false);
-const statusHistory = ref([]);
+// Status management composable
+const {
+  employmentOptions,
+  workingStatus,
+  statusChangeOptions,
+  showStatusChangePopup,
+  statusChangeForm,
+  showStatusHistoryPopup,
+  statusHistoryLoading,
+  statusHistory,
+  openStatusChangePopup,
+  closeStatusChangePopup,
+  applyStatusChange,
+  resetStatus,
+  openStatusHistoryPopup,
+  closeStatusHistoryPopup,
+  formatHistoryTimestamp,
+  formatHistoryDate,
+} = useStatusManagement(allFieldsSchema, form, employees, saving, errorMessage);
 
 // Templates for document generation
 const templates = ref([]);
-
-// Employment status options
-const employmentOptions = computed(() => {
-  const field = allFieldsSchema.value.find(f => f.key === 'employment_status');
-  return field?.options || [];
-});
-
-const workingStatus = computed(() => employmentOptions.value[0] || '');
-const statusChangeOptions = computed(() => employmentOptions.value.slice(1));
-
-// Status change popup
-const showStatusChangePopup = ref(false);
-const statusChangeForm = reactive({
-  status: '',
-  startDate: '',
-  endDate: ''
-});
 
 // Filtered employees for cards
 const filteredEmployeesForCards = computed(() => {
@@ -309,128 +308,6 @@ async function deleteEmployee() {
   } finally {
     saving.value = false;
   }
-}
-
-// Status change functions
-function openStatusChangePopup() {
-  const currentStatus = form.employment_status || '';
-  statusChangeForm.status = currentStatus === workingStatus.value ? '' : currentStatus;
-  statusChangeForm.startDate = form.status_start_date || '';
-  statusChangeForm.endDate = form.status_end_date || '';
-  showStatusChangePopup.value = true;
-}
-
-function closeStatusChangePopup() {
-  showStatusChangePopup.value = false;
-}
-
-async function applyStatusChange() {
-  if (!statusChangeForm.status || !statusChangeForm.startDate) return;
-  if (!form.employee_id) return;
-  if (saving.value) return;
-  if (statusChangeForm.endDate && statusChangeForm.endDate < statusChangeForm.startDate) {
-    errorMessage.value = 'Дата завершення не може бути раніше дати початку';
-    return;
-  }
-
-  errorMessage.value = '';
-  saving.value = true;
-  try {
-    const currentEmployee = employees.value.find(e => e.employee_id === form.employee_id);
-    if (!currentEmployee) {
-      errorMessage.value = 'Співробітника не знайдено. Оновіть сторінку.';
-      saving.value = false;
-      return;
-    }
-    const payload = {
-      ...currentEmployee,
-      employment_status: statusChangeForm.status,
-      status_start_date: statusChangeForm.startDate,
-      status_end_date: statusChangeForm.endDate || ''
-    };
-    await api.updateEmployee(form.employee_id, payload);
-    await reloadEmployeePreservingDirty(form.employee_id);
-    closeStatusChangePopup();
-  } catch (error) {
-    errorMessage.value = error.message;
-  } finally {
-    saving.value = false;
-  }
-}
-
-async function resetStatus() {
-  if (!form.employee_id) return;
-  if (saving.value) return;
-
-  errorMessage.value = '';
-  saving.value = true;
-  try {
-    const currentEmployee = employees.value.find(e => e.employee_id === form.employee_id);
-    if (!currentEmployee) {
-      errorMessage.value = 'Співробітника не знайдено. Оновіть сторінку.';
-      saving.value = false;
-      return;
-    }
-    const payload = {
-      ...currentEmployee,
-      employment_status: workingStatus.value,
-      status_start_date: '',
-      status_end_date: ''
-    };
-    await api.updateEmployee(form.employee_id, payload);
-    await reloadEmployeePreservingDirty(form.employee_id);
-    closeStatusChangePopup();
-  } catch (error) {
-    errorMessage.value = error.message;
-  } finally {
-    saving.value = false;
-  }
-}
-
-// Helper to reload employee preserving dirty state
-async function reloadEmployeePreservingDirty(employeeId) {
-  await loadEmployees();
-  await selectEmployee(employeeId);
-}
-
-// Status history functions
-async function openStatusHistoryPopup() {
-  if (!form.employee_id) return;
-  showStatusHistoryPopup.value = true;
-  statusHistoryLoading.value = true;
-  try {
-    const data = await api.getEmployeeStatusHistory(form.employee_id);
-    statusHistory.value = data.history || [];
-  } catch (error) {
-    statusHistory.value = [];
-    console.error('Failed to load status history:', error);
-  } finally {
-    statusHistoryLoading.value = false;
-  }
-}
-
-function closeStatusHistoryPopup() {
-  showStatusHistoryPopup.value = false;
-}
-
-function formatHistoryTimestamp(isoStr) {
-  if (!isoStr) return '';
-  const d = new Date(isoStr);
-  if (isNaN(d.getTime())) return isoStr;
-  const dd = String(d.getDate()).padStart(2, '0');
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const hh = String(d.getHours()).padStart(2, '0');
-  const min = String(d.getMinutes()).padStart(2, '0');
-  return `${dd}.${mm}.${d.getFullYear()} ${hh}:${min}`;
-}
-
-function formatHistoryDate(dateStr) {
-  if (!dateStr) return '—';
-  const d = new Date(dateStr + 'T00:00:00');
-  if (isNaN(d.getTime())) return dateStr;
-  const dd = String(d.getDate()).padStart(2, '0');
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  return `${dd}.${mm}.${d.getFullYear()}`;
 }
 
 // Template generation
@@ -762,7 +639,7 @@ onUnmounted(() => {
                     class="secondary small"
                     type="button"
                     :disabled="saving"
-                    @click="resetStatus"
+                    @click="resetStatus(loadEmployees, selectEmployee)"
                   >
                     Скинути статус
                   </button>
@@ -1017,7 +894,7 @@ onUnmounted(() => {
           </div>
         </div>
         <div class="button-group">
-          <button class="primary" @click="applyStatusChange">Застосувати</button>
+          <button class="primary" @click="applyStatusChange(loadEmployees, selectEmployee)">Застосувати</button>
           <button class="secondary" @click="closeStatusChangePopup">Скасувати</button>
         </div>
       </div>

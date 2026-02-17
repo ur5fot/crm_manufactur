@@ -72,15 +72,15 @@
 - [x] Run E2E tests: `npm run test:e2e` - must pass before next task
 
 ### Task 3: Extract useStatusManagement from EmployeeCardsView
-- [ ] Create `client/src/composables/useStatusManagement.js` with:
+- [x] Create `client/src/composables/useStatusManagement.js` with:
   - State: `showStatusChangePopup`, `statusChangeForm` (reactive), `showStatusHistoryPopup`, `statusHistoryLoading`, `statusHistory`
   - Computed (accept allFieldsSchema as param): `employmentOptions`, `workingStatus`, `statusChangeOptions`
   - Functions: `openStatusChangePopup(form)`, `closeStatusChangePopup()`, `applyStatusChange(form, selectedId, employees, saving, errorMessage, loadEmployees)`, `resetStatus(form, selectedId, employees, saving, errorMessage, loadEmployees)`, `openStatusHistoryPopup(selectedId)`, `closeStatusHistoryPopup()`
   - Utility: `formatHistoryTimestamp(isoStr)`, `formatHistoryDate(dateStr)`
-- [ ] Update `EmployeeCardsView.vue` to import and use `useStatusManagement`
-- [ ] Remove extracted code from EmployeeCardsView script section
-- [ ] Verify status change, reset, and history popup work in browser
-- [ ] Run E2E tests: `npm run test:e2e` - must pass before next task
+- [x] Update `EmployeeCardsView.vue` to import and use `useStatusManagement`
+- [x] Remove extracted code from EmployeeCardsView script section
+- [x] Verify status change, reset, and history popup work in browser
+- [x] Run E2E tests: `npm run test:e2e` - must pass before next task
 
 ### Task 4: Extract useDocumentGeneration from EmployeeCardsView
 - [ ] Create `client/src/composables/useDocumentGeneration.js` with:
