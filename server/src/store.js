@@ -2,7 +2,7 @@ import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
 import { readCsv, writeCsv } from "./csv.js";
-import { EMPLOYEE_COLUMNS, LOG_COLUMNS, FIELD_SCHEMA_COLUMNS, STATUS_HISTORY_COLUMNS, loadEmployeeColumns, getCachedEmployeeColumns, loadDocumentFields, getCachedDocumentFields } from "./schema.js";
+import { EMPLOYEE_COLUMNS, LOG_COLUMNS, FIELD_SCHEMA_COLUMNS, STATUS_HISTORY_COLUMNS, REPRIMAND_COLUMNS, loadEmployeeColumns, getCachedEmployeeColumns, loadDocumentFields, getCachedDocumentFields } from "./schema.js";
 import { getNextId } from "./utils.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -20,6 +20,7 @@ const CONFIG_PATH = path.join(DATA_DIR, "config.csv");
 const TEMPLATES_PATH = path.join(DATA_DIR, "templates.csv");
 const GENERATED_DOCUMENTS_PATH = path.join(DATA_DIR, "generated_documents.csv");
 const STATUS_HISTORY_PATH = path.join(DATA_DIR, "status_history.csv");
+const REPRIMANDS_PATH = path.join(DATA_DIR, "reprimands.csv");
 
 // Simple in-memory lock for log writes to prevent race conditions
 let logWriteLock = Promise.resolve();
@@ -36,6 +37,9 @@ let generatedDocumentsWriteLock = Promise.resolve();
 
 // Simple in-memory lock for status_history writes to prevent race conditions
 let statusHistoryWriteLock = Promise.resolve();
+
+// Simple in-memory lock for reprimands writes to prevent race conditions
+let reprimandWriteLock = Promise.resolve();
 
 export async function ensureDataDirs() {
   await fs.mkdir(DATA_DIR, { recursive: true });
@@ -1281,7 +1285,124 @@ export async function syncCSVTemplate() {
 
     return { added: missingColumns, removed: obsoleteColumns, status: "updated" };
   } catch (error) {
-    console.error("❌ Ошибка синхронизации шаблона CSV:", error.message);
+    console.error("❌ Ошибка синхронизації шаблону CSV:", error.message);
     throw error;
+  }
+}
+
+/**
+ * Load reprimands/commendations from reprimands.csv
+ * @returns {Promise<Array>} Array of reprimand records
+ */
+export async function loadReprimands() {
+  return readCsv(REPRIMANDS_PATH, REPRIMAND_COLUMNS);
+}
+
+/**
+ * Atomically adds a new reprimand record with race condition protection
+ * @param {Object} data - Reprimand data without record_id/created_at
+ * @returns {Promise<Object>} The new reprimand record
+ */
+export async function addReprimand(data) {
+  const previousLock = reprimandWriteLock;
+  let releaseLock;
+  reprimandWriteLock = new Promise(resolve => { releaseLock = resolve; });
+
+  try {
+    await previousLock;
+    const reprimands = await loadReprimands();
+    const newId = getNextId(reprimands, "record_id");
+
+    const newRecord = {
+      record_id: newId,
+      employee_id: data.employee_id || "",
+      record_date: data.record_date || "",
+      record_type: data.record_type || "",
+      order_number: data.order_number || "",
+      note: data.note || "",
+      created_at: new Date().toISOString()
+    };
+
+    reprimands.push(newRecord);
+    await writeCsv(REPRIMANDS_PATH, REPRIMAND_COLUMNS, reprimands);
+
+    return newRecord;
+  } finally {
+    releaseLock();
+  }
+}
+
+/**
+ * Atomically updates an existing reprimand record
+ * @param {string} recordId - The record ID to update
+ * @param {Object} data - Updated fields (record_date, record_type, order_number, note)
+ * @returns {Promise<Object|null>} The updated record or null if not found
+ */
+export async function updateReprimand(recordId, data) {
+  const previousLock = reprimandWriteLock;
+  let releaseLock;
+  reprimandWriteLock = new Promise(resolve => { releaseLock = resolve; });
+
+  try {
+    await previousLock;
+    const reprimands = await loadReprimands();
+    const idx = reprimands.findIndex(r => r.record_id === String(recordId));
+    if (idx === -1) return null;
+
+    reprimands[idx] = {
+      ...reprimands[idx],
+      record_date: data.record_date !== undefined ? data.record_date : reprimands[idx].record_date,
+      record_type: data.record_type !== undefined ? data.record_type : reprimands[idx].record_type,
+      order_number: data.order_number !== undefined ? data.order_number : reprimands[idx].order_number,
+      note: data.note !== undefined ? data.note : reprimands[idx].note
+    };
+
+    await writeCsv(REPRIMANDS_PATH, REPRIMAND_COLUMNS, reprimands);
+    return reprimands[idx];
+  } finally {
+    releaseLock();
+  }
+}
+
+/**
+ * Deletes a single reprimand record by ID (hard delete)
+ * @param {string} recordId - The record ID to delete
+ * @returns {Promise<boolean>} true if deleted, false if not found
+ */
+export async function deleteReprimand(recordId) {
+  const previousLock = reprimandWriteLock;
+  let releaseLock;
+  reprimandWriteLock = new Promise(resolve => { releaseLock = resolve; });
+
+  try {
+    await previousLock;
+    const reprimands = await loadReprimands();
+    const filtered = reprimands.filter(r => r.record_id !== String(recordId));
+    if (filtered.length === reprimands.length) return false;
+    await writeCsv(REPRIMANDS_PATH, REPRIMAND_COLUMNS, filtered);
+    return true;
+  } finally {
+    releaseLock();
+  }
+}
+
+/**
+ * Remove all reprimand records for a given employee (cleanup on employee delete)
+ * @param {string} employeeId - The employee ID whose reprimands to remove
+ */
+export async function removeReprimandsForEmployee(employeeId) {
+  const previousLock = reprimandWriteLock;
+  let releaseLock;
+  reprimandWriteLock = new Promise(resolve => { releaseLock = resolve; });
+
+  try {
+    await previousLock;
+    const reprimands = await loadReprimands();
+    const filtered = reprimands.filter(r => r.employee_id !== String(employeeId));
+    if (filtered.length !== reprimands.length) {
+      await writeCsv(REPRIMANDS_PATH, REPRIMAND_COLUMNS, filtered);
+    }
+  } finally {
+    releaseLock();
   }
 }
