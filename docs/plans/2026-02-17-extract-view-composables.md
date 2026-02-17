@@ -161,16 +161,16 @@
 - [x] Run E2E tests: `npm run test:e2e` - must pass before next task
 
 ### Task 11: Extract useTableInlineEdit and useTableColumnFilters from TableView
-- [ ] Create `client/src/composables/useTableInlineEdit.js` with:
+- [x] Create `client/src/composables/useTableInlineEdit.js` with:
   - State: `editingCells` (reactive)
   - Functions: `startEditCell(employeeId, fieldName, currentValue)`, `cancelEditCell(employeeId, fieldName)`, `isEditingCell(employeeId, fieldName)`, `getEditValue(employeeId, fieldName)`, `saveCell(employee, fieldName, employees, summaryColumns)`
-- [ ] Create `client/src/composables/useTableColumnFilters.js` with:
+- [x] Create `client/src/composables/useTableColumnFilters.js` with:
   - State: `columnFilters` (reactive)
   - Functions: `toggleFilter(fieldName, value)`, `isFilterChecked(fieldName, value)`, `clearAllFilters()`, `getActiveFiltersCount()`, `hasActiveFilters(fieldName)`, `getColumnFilterCount(fieldName)`
-- [ ] Update `TableView.vue` to import and use both composables
-- [ ] Remove extracted code from TableView script section
-- [ ] Verify inline cell editing and column filters work in browser
-- [ ] Run E2E tests: `npm run test:e2e` - must pass before next task
+- [x] Update `TableView.vue` to import and use both composables
+- [x] Remove extracted code from TableView script section
+- [x] Verify inline cell editing and column filters work in browser
+- [x] Run E2E tests: `npm run test:e2e` - must pass before next task
 
 ### Task 12: Verify acceptance criteria
 - [ ] Verify all 5 views are significantly reduced in size (target: no view over 600 lines)

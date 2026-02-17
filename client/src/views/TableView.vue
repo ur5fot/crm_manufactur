@@ -1,8 +1,10 @@
 <script setup>
-import { ref, computed, reactive, onMounted } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { api } from "../api";
 import { useFieldsSchema } from "../composables/useFieldsSchema";
+import { useTableInlineEdit } from "../composables/useTableInlineEdit";
+import { useTableColumnFilters } from "../composables/useTableColumnFilters";
 import { displayName } from "../utils/employee";
 
 const router = useRouter();
@@ -16,11 +18,30 @@ const searchTerm = ref("");
 const loading = ref(false);
 const errorMessage = ref("");
 
-// Inline editing state
-const editingCells = reactive({}); // { employeeId_fieldName: value }
+// Composables
+const {
+  editingCells,
+  startEditCell,
+  cancelEditCell,
+  isEditingCell,
+  getEditValue,
+  saveCell: saveCellRaw,
+} = useTableInlineEdit(summaryColumns);
 
-// Column filters state
-const columnFilters = reactive({}); // { fieldName: selectedValue[] }
+const {
+  columnFilters,
+  toggleFilter,
+  isFilterChecked,
+  clearAllFilters,
+  getActiveFiltersCount,
+  hasActiveFilters,
+  getColumnFilterCount,
+} = useTableColumnFilters();
+
+// Wrap saveCell to pass dependencies
+function saveCell(employee, fieldName) {
+  return saveCellRaw(employee, fieldName, employees, errorMessage);
+}
 
 // Computed filtered employees
 const filteredEmployees = computed(() => {
@@ -89,108 +110,9 @@ async function exportTableData() {
   }
 }
 
-// Inline cell editing functions
-function startEditCell(employeeId, fieldName, currentValue) {
-  // Check if editing is allowed for this field in table
-  const col = summaryColumns.value.find(c => c.key === fieldName);
-  if (col && !col.editable) return;
-
-  const key = `${employeeId}_${fieldName}`;
-  editingCells[key] = currentValue || "";
-}
-
-function cancelEditCell(employeeId, fieldName) {
-  const key = `${employeeId}_${fieldName}`;
-  delete editingCells[key];
-}
-
-function isEditingCell(employeeId, fieldName) {
-  const key = `${employeeId}_${fieldName}`;
-  return key in editingCells;
-}
-
-function getEditValue(employeeId, fieldName) {
-  const key = `${employeeId}_${fieldName}`;
-  return editingCells[key];
-}
-
-async function saveCell(employee, fieldName) {
-  const key = `${employee.employee_id}_${fieldName}`;
-  const newValue = editingCells[key];
-
-  if (newValue === undefined) return;
-
-  errorMessage.value = "";
-  try {
-    const statusFields = ['employment_status', 'status_start_date', 'status_end_date'];
-    // Status fields managed only via popup — don't allow inline editing
-    if (statusFields.includes(fieldName)) {
-      delete editingCells[key];
-      return;
-    }
-    const updatedEmployee = { ...employee, [fieldName]: newValue };
-    // Don't overwrite status fields during inline editing
-    for (const sf of statusFields) delete updatedEmployee[sf];
-    await api.updateEmployee(employee.employee_id, updatedEmployee);
-
-    // Update local data
-    const index = employees.value.findIndex(e => e.employee_id === employee.employee_id);
-    if (index !== -1) {
-      employees.value[index][fieldName] = newValue;
-    }
-
-    delete editingCells[key];
-  } catch (error) {
-    errorMessage.value = error.message;
-  }
-}
-
 // Navigate to employee card
 function openEmployeeCard(employeeId) {
   router.push({ name: 'cards', params: { id: employeeId } });
-}
-
-// Column filter functions
-function toggleFilter(fieldName, value) {
-  if (!columnFilters[fieldName]) {
-    columnFilters[fieldName] = [];
-  }
-
-  const index = columnFilters[fieldName].indexOf(value);
-  if (index === -1) {
-    columnFilters[fieldName].push(value);
-  } else {
-    columnFilters[fieldName].splice(index, 1);
-  }
-
-  // Remove empty arrays
-  if (columnFilters[fieldName].length === 0) {
-    delete columnFilters[fieldName];
-  }
-}
-
-function isFilterChecked(fieldName, value) {
-  return columnFilters[fieldName]?.includes(value) || false;
-}
-
-function clearAllFilters() {
-  Object.keys(columnFilters).forEach(key => {
-    delete columnFilters[key];
-  });
-}
-
-function getActiveFiltersCount() {
-  return Object.keys(columnFilters).reduce((count, key) => {
-    return count + (columnFilters[key]?.length || 0);
-  }, 0);
-}
-
-function hasActiveFilters(fieldName) {
-  return columnFilters[fieldName] && columnFilters[fieldName].length > 0;
-}
-
-function getColumnFilterCount(fieldName) {
-  return columnFilters[fieldName]?.length || 0;
 }
 
 // Lifecycle
