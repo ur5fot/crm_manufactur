@@ -118,11 +118,15 @@ export function useReprimands() {
 
   async function deleteReprimandEntry(employeeId, recordId) {
     if (!employeeId || !recordId) return;
+    reprimandSaving.value = true;
+    reprimandError.value = '';
     try {
       await api.deleteEmployeeReprimand(employeeId, recordId);
       await loadReprimands(employeeId);
     } catch (error) {
       reprimandError.value = error.message;
+    } finally {
+      reprimandSaving.value = false;
     }
   }
 
@@ -144,7 +148,6 @@ export function useReprimands() {
     reprimandSaving,
     reprimandError,
     reprimandForm,
-    REPRIMAND_TYPE_OPTIONS,
     openReprimandsPopup,
     closeReprimandsPopup,
     openAddForm,

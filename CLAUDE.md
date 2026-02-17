@@ -273,7 +273,7 @@ These locks ensure that only one write operation occurs at a time per file, prev
 **reprimands.csv**
 - Records employee reprimands and commendations (dogany/vidznaky)
 - Columns: record_id, employee_id, record_date, record_type, order_number, note, created_at
-- Auto-created with headers by `ensureCsvFile()` on first read
+- Gitignored — auto-created with headers by `ensureCsvFile()` on first read
 - Hard delete (records fully removed, no soft delete)
 - Sorted by `record_date` descending when queried per employee
 - Cleaned up when employee is deleted (`removeReprimandsForEmployee`)
@@ -2474,13 +2474,13 @@ All API endpoints are served under the `/api` prefix:
 - Optional fields: order_number, note
 - Creates audit log entry
 - Returns: `{ reprimand: {...} }` with updated fields
-- 400 if validation fails; 404 if employee or record not found
+- 400 if validation fails; 404 if employee or record not found; 403 if record belongs to a different employee
 
 **DELETE /api/employees/:id/reprimands/:recordId**
 - Hard delete single reprimand or commendation record
 - Creates audit log entry
 - Returns: 204 No Content
-- 404 if employee or record not found
+- 404 if employee or record not found; 403 if record belongs to a different employee
 
 **POST /api/employees/:id/open-folder**
 - Open employee folder in system file manager

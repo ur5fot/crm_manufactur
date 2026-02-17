@@ -8,7 +8,7 @@ import { useEmployeePhoto } from "../composables/useEmployeePhoto";
 import { useEmployeeDocuments } from "../composables/useEmployeeDocuments";
 import { useStatusManagement } from "../composables/useStatusManagement";
 import { useDocumentGeneration } from "../composables/useDocumentGeneration";
-import { useReprimands } from "../composables/useReprimands";
+import { useReprimands, REPRIMAND_TYPE_OPTIONS } from "../composables/useReprimands";
 import { displayName } from "../utils/employee";
 
 const router = useRouter();
@@ -169,7 +169,6 @@ const {
   reprimandSaving,
   reprimandError,
   reprimandForm,
-  REPRIMAND_TYPE_OPTIONS,
   openReprimandsPopup,
   closeReprimandsPopup,
   openAddForm: openReprimandAddForm,
@@ -1039,6 +1038,7 @@ onUnmounted(() => {
         <div class="card-content">
           <div v-if="reprimandsLoading" class="status-history-loading">Завантаження...</div>
           <template v-else>
+            <div v-if="reprimandError && !showReprimandForm" class="alert">{{ reprimandError }}</div>
             <div v-if="reprimands.length === 0 && !showReprimandForm" class="status-history-empty">
               Записи відсутні.
             </div>

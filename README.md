@@ -532,9 +532,24 @@ Tests run automatically via GitHub Actions on push to `master`/`feature/*` branc
 │   │   │   ├── ImportView.vue
 │   │   │   ├── PlaceholderReferenceView.vue
 │   │   │   └── LogsView.vue
-│   │   ├── composables/   # Reusable logic
+│   │   ├── composables/   # Reusable logic (17 composables)
 │   │   │   ├── useFieldsSchema.js
-│   │   │   └── useEmployeeForm.js
+│   │   │   ├── useEmployeeForm.js
+│   │   │   ├── useEmployeePhoto.js
+│   │   │   ├── useEmployeeDocuments.js
+│   │   │   ├── useStatusManagement.js
+│   │   │   ├── useDocumentGeneration.js
+│   │   │   ├── useDismissedEvents.js
+│   │   │   ├── useDashboardNotifications.js
+│   │   │   ├── useDashboardStats.js
+│   │   │   ├── useDashboardTimeline.js
+│   │   │   ├── useDashboardReport.js
+│   │   │   ├── useCustomReport.js
+│   │   │   ├── useTemplatesManagement.js
+│   │   │   ├── useTemplateUpload.js
+│   │   │   ├── useTableInlineEdit.js
+│   │   │   ├── useTableColumnFilters.js
+│   │   │   └── useReprimands.js
 │   │   ├── utils/         # Utility modules
 │   │   │   ├── constants.js
 │   │   │   └── employee.js

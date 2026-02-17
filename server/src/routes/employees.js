@@ -319,7 +319,7 @@ export function registerEmployeeRoutes(app) {
       const allReprimands = await loadReprimands();
       const reprimands = allReprimands
         .filter(r => r.employee_id === req.params.id)
-        .sort((a, b) => (b.record_date || '').localeCompare(a.record_date || ''));
+        .sort((a, b) => (b.record_date || '') > (a.record_date || '') ? 1 : -1);
 
       res.json({ reprimands });
     } catch (err) {

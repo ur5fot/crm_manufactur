@@ -279,6 +279,53 @@ async function runAllTests() {
       if (res.status !== 404) throw new Error(`Expected 404, got ${res.status}`);
     });
 
+    // Test cross-employee ownership protection for PUT and DELETE
+    await runTest("PUT /api/employees/:id/reprimands/:recordId returns 403 when record belongs to different employee", async () => {
+      // Create a second employee and a reprimand for them
+      const otherEmpId = await createTestEmployee();
+      try {
+        const postRes = await fetch(`${BASE_URL}/employees/${otherEmpId}/reprimands`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ record_date: '2026-01-20', record_type: 'Зауваження' })
+        });
+        const postData = await postRes.json();
+        const otherReprimandId = postData.reprimand.record_id;
+
+        // Attempt to update other employee's reprimand via createdEmployeeId's route
+        const res = await fetch(`${BASE_URL}/employees/${createdEmployeeId}/reprimands/${otherReprimandId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ record_date: '2026-01-21', record_type: 'Догана' })
+        });
+        if (res.status !== 403) throw new Error(`Expected 403, got ${res.status}`);
+      } finally {
+        await deleteTestEmployee(otherEmpId);
+      }
+    });
+
+    await runTest("DELETE /api/employees/:id/reprimands/:recordId returns 403 when record belongs to different employee", async () => {
+      // Create a second employee and a reprimand for them
+      const otherEmpId = await createTestEmployee();
+      try {
+        const postRes = await fetch(`${BASE_URL}/employees/${otherEmpId}/reprimands`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ record_date: '2026-01-20', record_type: 'Зауваження' })
+        });
+        const postData = await postRes.json();
+        const otherReprimandId = postData.reprimand.record_id;
+
+        // Attempt to delete other employee's reprimand via createdEmployeeId's route
+        const res = await fetch(`${BASE_URL}/employees/${createdEmployeeId}/reprimands/${otherReprimandId}`, {
+          method: 'DELETE'
+        });
+        if (res.status !== 403) throw new Error(`Expected 403, got ${res.status}`);
+      } finally {
+        await deleteTestEmployee(otherEmpId);
+      }
+    });
+
     // Test cleanup on employee delete: employee should have 1 reprimand remaining
     // Create another reprimand, then delete the employee and verify reprimands are cleaned up
     await runTest("DELETE employee cleans up reprimand records", async () => {
