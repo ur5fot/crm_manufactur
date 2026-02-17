@@ -6,6 +6,8 @@ export function useDashboardReport(errorMessage) {
   const currentData = ref([]);
   const monthData = ref([]);
   const reportLoading = ref(false);
+  const currentLoaded = ref(false);
+  const monthLoaded = ref(false);
 
   const reportData = computed(() =>
     activeReport.value === 'current' ? currentData.value :
@@ -25,6 +27,8 @@ export function useDashboardReport(errorMessage) {
       ]);
       currentData.value = cur;
       monthData.value = mon;
+      currentLoaded.value = true;
+      monthLoaded.value = true;
     } catch (e) { console.error('Failed to load report counts:', e); }
   }
 
@@ -34,12 +38,13 @@ export function useDashboardReport(errorMessage) {
       return;
     }
     activeReport.value = type;
-    // Data may already be loaded by loadCounts(); fetch if not yet loaded
-    if (type === 'current' && currentData.value.length === 0) {
+    // Data may already be loaded by loadCounts(); only fetch if not yet loaded
+    if (type === 'current' && !currentLoaded.value) {
       reportLoading.value = true;
       try {
         const data = await api.getStatusReport(type);
         currentData.value = data;
+        currentLoaded.value = true;
         errorMessage.value = '';
       } catch (e) {
         currentData.value = [];
@@ -47,11 +52,12 @@ export function useDashboardReport(errorMessage) {
       } finally {
         reportLoading.value = false;
       }
-    } else if (type === 'month' && monthData.value.length === 0) {
+    } else if (type === 'month' && !monthLoaded.value) {
       reportLoading.value = true;
       try {
         const data = await api.getStatusReport(type);
         monthData.value = data;
+        monthLoaded.value = true;
         errorMessage.value = '';
       } catch (e) {
         monthData.value = [];
