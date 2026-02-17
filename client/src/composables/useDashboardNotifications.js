@@ -148,7 +148,7 @@ export function useDashboardNotifications(employees, employmentOptions, workingS
       try {
         await api.updateEmployee(employee.employee_id, employee);
       } catch (error) {
-        console.error(`Ошибка обновления сотрудника ${employee.employee_id}:`, error);
+        console.error(`Помилка оновлення співробітника ${employee.employee_id}:`, error);
       }
     }
 
