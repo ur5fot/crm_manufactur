@@ -89,11 +89,11 @@ The native browser date picker is light-themed by default. Add CSS to make it da
 
 ### Task 3: Verify acceptance criteria
 
-- [ ] Light mode: all modal forms — label above input, inputs full width, proper spacing between fields
-- [ ] Dark mode: date inputs are fully visible (text + calendar icon)
-- [ ] No regressions in non-modal forms (employee card `.field` layout — separate class, not affected)
-- [ ] `TemplatesView.vue` create template dialog still looks good
-- [ ] Reprimand "Новий запис" form: all 4 fields (Дата, Тип, № наказу, Примітка) are properly stacked and full-width
+- [x] Light mode: all modal forms — label above input, inputs full width, proper spacing between fields
+- [x] Dark mode: date inputs are fully visible (text + calendar icon)
+- [x] No regressions in non-modal forms (employee card `.field` layout — separate class, not affected)
+- [x] `TemplatesView.vue` create template dialog still looks good
+- [x] Reprimand "Новий запис" form: all 4 fields (Дата, Тип, № наказу, Примітка) are properly stacked and full-width
 
 ## Technical Details
 
