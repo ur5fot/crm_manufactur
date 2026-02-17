@@ -181,7 +181,7 @@ export function useEmployeeDocuments(form, employees, errorMessage) {
       return;
     }
     const base = import.meta.env.VITE_API_URL || "";
-    const url = `${base ? base + "/" : ""}${filePath}`;
+    const url = `${base}/${filePath}`;
     window.open(url, "_blank");
   }
 
