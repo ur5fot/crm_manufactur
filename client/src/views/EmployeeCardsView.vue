@@ -7,6 +7,7 @@ import { useEmployeeForm } from "../composables/useEmployeeForm";
 import { useEmployeePhoto } from "../composables/useEmployeePhoto";
 import { useEmployeeDocuments } from "../composables/useEmployeeDocuments";
 import { useStatusManagement } from "../composables/useStatusManagement";
+import { useDocumentGeneration } from "../composables/useDocumentGeneration";
 import { displayName } from "../utils/employee";
 
 const router = useRouter();
@@ -150,8 +151,12 @@ const {
   formatHistoryDate,
 } = useStatusManagement(allFieldsSchema, form, employees, saving, errorMessage);
 
-// Templates for document generation
-const templates = ref([]);
+// Document generation composable
+const {
+  templates,
+  loadTemplates,
+  generateDocumentForEmployee,
+} = useDocumentGeneration(form);
 
 // Filtered employees for cards
 const filteredEmployeesForCards = computed(() => {
@@ -219,16 +224,6 @@ async function loadEmployees(silent = false) {
     if (!silent) errorMessage.value = error.message;
   } finally {
     if (!silent) loading.value = false;
-  }
-}
-
-// Load templates
-async function loadTemplates() {
-  try {
-    const data = await api.getTemplates();
-    templates.value = data.templates || [];
-  } catch (error) {
-    console.error('Failed to load templates:', error);
   }
 }
 
@@ -307,32 +302,6 @@ async function deleteEmployee() {
     errorMessage.value = error.message;
   } finally {
     saving.value = false;
-  }
-}
-
-// Template generation
-async function generateDocumentForEmployee(template) {
-  try {
-    const employeeId = form.employee_id;
-
-    if (!employeeId) {
-      alert('Помилка: не знайдено ID співробітника. Спочатку збережіть співробітника.');
-      return;
-    }
-
-    if (!template.docx_filename) {
-      alert('Помилка: для цього шаблону не завантажено файл DOCX');
-      return;
-    }
-
-    const result = await api.generateDocument(template.template_id, employeeId, {});
-
-    const downloadUrl = api.downloadDocument(result.document_id);
-    window.open(downloadUrl, '_blank');
-
-    alert(`✓ Документ "${template.template_name}" успішно згенеровано та завантажено`);
-  } catch (error) {
-    alert('Помилка генерування документа: ' + error.message);
   }
 }
 

@@ -83,13 +83,13 @@
 - [x] Run E2E tests: `npm run test:e2e` - must pass before next task
 
 ### Task 4: Extract useDocumentGeneration from EmployeeCardsView
-- [ ] Create `client/src/composables/useDocumentGeneration.js` with:
+- [x] Create `client/src/composables/useDocumentGeneration.js` with:
   - State: `templates`
   - Functions: `loadTemplates()`, `generateDocumentForEmployee(template, selectedId)`
-- [ ] Update `EmployeeCardsView.vue` to import and use `useDocumentGeneration`
-- [ ] Remove extracted code from EmployeeCardsView script section
-- [ ] Verify template list loads and document generation works in browser
-- [ ] Run E2E tests: `npm run test:e2e` - must pass before next task
+- [x] Update `EmployeeCardsView.vue` to import and use `useDocumentGeneration`
+- [x] Remove extracted code from EmployeeCardsView script section
+- [x] Verify template list loads and document generation works in browser
+- [x] Run E2E tests: `npm run test:e2e` - must pass before next task
 
 ### Task 5: Extract useDismissedEvents from DashboardView
 - [ ] Create `client/src/composables/useDismissedEvents.js` with:
