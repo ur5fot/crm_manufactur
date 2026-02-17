@@ -51,15 +51,15 @@
 ## Implementation Steps
 
 ### Task 1: Extract useEmployeePhoto from EmployeeCardsView
-- [ ] Create `client/src/composables/useEmployeePhoto.js` with:
+- [x] Create `client/src/composables/useEmployeePhoto.js` with:
   - State: `photoUploading`, `photoError`, `photoInputRef`, `photoVersion`
   - Computed: `photoUrl(form)` - photo URL with cache-busting
   - Functions: `sidebarPhotoUrl(photoPath)`, `triggerPhotoUpload()`, `handlePhotoUpload(event, form, savedFormSnapshot, selectedId)`, `deletePhoto(form, savedFormSnapshot, selectedId)`
   - Accept dependencies via parameters: `api` access, form refs
-- [ ] Update `EmployeeCardsView.vue` to import and use `useEmployeePhoto`
-- [ ] Remove extracted code from EmployeeCardsView script section
-- [ ] Verify photo upload, display, and delete work in browser
-- [ ] Run E2E tests: `npm run test:e2e` - must pass before next task
+- [x] Update `EmployeeCardsView.vue` to import and use `useEmployeePhoto`
+- [x] Remove extracted code from EmployeeCardsView script section
+- [x] Verify photo upload, display, and delete work in browser
+- [x] Run E2E tests: `npm run test:e2e` - must pass before next task
 
 ### Task 2: Extract useEmployeeDocuments from EmployeeCardsView
 - [ ] Create `client/src/composables/useEmployeeDocuments.js` with:

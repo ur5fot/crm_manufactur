@@ -4,6 +4,7 @@ import { useRouter, useRoute } from "vue-router";
 import { api } from "../api";
 import { useFieldsSchema } from "../composables/useFieldsSchema";
 import { useEmployeeForm } from "../composables/useEmployeeForm";
+import { useEmployeePhoto } from "../composables/useEmployeePhoto";
 import { displayName } from "../utils/employee";
 
 const router = useRouter();
@@ -86,10 +87,18 @@ const cardSearchTerm = ref("");
 const cardFieldSearchTerm = ref("");
 const openingEmployeeFolder = ref(false);
 
-// Photo state
-const photoUploading = ref(false);
-const photoError = ref("");
-const photoInputRef = ref(null);
+// Photo composable
+const {
+  photoUploading,
+  photoError,
+  photoInputRef,
+  photoVersion,
+  photoUrl,
+  sidebarPhotoUrl,
+  triggerPhotoUpload,
+  handlePhotoUpload,
+  deletePhoto,
+} = useEmployeePhoto(form, savedFormSnapshot, selectedId);
 
 // Status history popup
 const showStatusHistoryPopup = ref(false);
@@ -181,11 +190,6 @@ const filteredFieldGroups = computed(() => {
       fields: filteredFields
     };
   }).filter(group => group.fields.length > 0); // Only include groups with matching fields
-});
-
-// Clear photo error when switching employees
-watch(selectedId, () => {
-  photoError.value = "";
 });
 
 // Watch route params to handle employee selection
@@ -568,73 +572,6 @@ async function openEmployeeFolder() {
   }
 }
 
-// Photo functions
-const photoVersion = ref(0);
-const photoUrl = computed(() => {
-  const p = form.photo;
-  if (!p) return '';
-  const base = import.meta.env.VITE_API_URL || '';
-  return `${base}/${p}?v=${photoVersion.value}`;
-});
-
-function sidebarPhotoUrl(photoPath) {
-  const base = import.meta.env.VITE_API_URL || '';
-  return `${base}/${photoPath}?v=${photoVersion.value}`;
-}
-
-function triggerPhotoUpload() {
-  photoInputRef.value?.click();
-}
-
-async function handlePhotoUpload(event) {
-  const file = event.target.files?.[0];
-  if (!file || !form.employee_id) return;
-
-  photoUploading.value = true;
-  photoError.value = "";
-  try {
-    const formData = new FormData();
-    formData.append('photo', file);
-    const result = await api.uploadEmployeePhoto(form.employee_id, formData);
-    form.photo = result?.path || '';
-    photoVersion.value++;
-    // Only update photo in snapshot to preserve dirty state for other fields
-    if (savedFormSnapshot.value) {
-      savedFormSnapshot.value.photo = form.photo;
-    }
-    await loadEmployees(true);
-  } catch (error) {
-    photoError.value = error.message;
-  } finally {
-    photoUploading.value = false;
-    // Reset input so same file can be re-selected
-    if (photoInputRef.value) photoInputRef.value.value = '';
-  }
-}
-
-async function deletePhoto() {
-  if (!form.employee_id || !form.photo) return;
-  const confirmed = window.confirm("Видалити фото співробітника?");
-  if (!confirmed) return;
-
-  photoUploading.value = true;
-  photoError.value = "";
-  try {
-    await api.deleteEmployeePhoto(form.employee_id);
-    form.photo = '';
-    photoVersion.value++;
-    // Only update photo in snapshot to preserve dirty state for other fields
-    if (savedFormSnapshot.value) {
-      savedFormSnapshot.value.photo = form.photo;
-    }
-    await loadEmployees(true);
-  } catch (error) {
-    photoError.value = error.message;
-  } finally {
-    photoUploading.value = false;
-  }
-}
-
 // Status history functions
 async function openStatusHistoryPopup() {
   if (!form.employee_id) return;
@@ -922,14 +859,14 @@ onUnmounted(() => {
               class="photo-delete-btn"
               type="button"
               title="Видалити фото"
-              @click.stop="deletePhoto"
+              @click.stop="deletePhoto(loadEmployees)"
             >&times;</button>
             <input
               ref="photoInputRef"
               type="file"
               accept="image/jpeg,image/png,image/gif,image/webp"
               style="display: none;"
-              @change="handlePhotoUpload"
+              @change="handlePhotoUpload($event, loadEmployees)"
             />
           </div>
           <div class="panel-title">
