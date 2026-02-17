@@ -62,14 +62,14 @@
 - [x] Run E2E tests: `npm run test:e2e` - must pass before next task
 
 ### Task 2: Extract useEmployeeDocuments from EmployeeCardsView
-- [ ] Create `client/src/composables/useEmployeeDocuments.js` with:
+- [x] Create `client/src/composables/useEmployeeDocuments.js` with:
   - State: `showDocUploadPopup`, `docUploadForm` (reactive), `docUploadSaving`, `showDocEditDatesPopup`, `docEditDatesForm` (reactive), `docEditDatesSaving`, `showClearConfirmPopup`
   - Functions: `openDocUploadPopup(doc)`, `closeDocUploadPopup()`, `onDocUploadFileChange(event)`, `submitDocUpload(form, employees, selectedId, loadEmployees)`, `openDocEditDatesPopup(doc)`, `closeDocEditDatesPopup()`, `submitDocEditDates(form, employees, selectedId, loadEmployees)`, `openDocument(fieldKey, form)`, `deleteDocument(doc, form, selectedId, loadEmployees)`, `openEmployeeFolder(selectedId)`
   - Utility: `fileUrl(path)`, `formatDocDate(dateStr)`, `isDocExpiringSoon(doc)`, `isDocExpired(doc)`
-- [ ] Update `EmployeeCardsView.vue` to import and use `useEmployeeDocuments`
-- [ ] Remove extracted code from EmployeeCardsView script section
-- [ ] Verify document upload, date editing, open, delete work in browser
-- [ ] Run E2E tests: `npm run test:e2e` - must pass before next task
+- [x] Update `EmployeeCardsView.vue` to import and use `useEmployeeDocuments`
+- [x] Remove extracted code from EmployeeCardsView script section
+- [x] Verify document upload, date editing, open, delete work in browser
+- [x] Run E2E tests: `npm run test:e2e` - must pass before next task
 
 ### Task 3: Extract useStatusManagement from EmployeeCardsView
 - [ ] Create `client/src/composables/useStatusManagement.js` with:
