@@ -92,14 +92,14 @@
 - [x] Run E2E tests: `npm run test:e2e` - must pass before next task
 
 ### Task 5: Extract useDismissedEvents from DashboardView
-- [ ] Create `client/src/composables/useDismissedEvents.js` with:
+- [x] Create `client/src/composables/useDismissedEvents.js` with:
   - State: `dismissedEvents` (Set ref)
   - Functions: `generateEventId(type, employeeId, date)`, `loadDismissedEvents()`, `dismissEvent(eventId)`
   - Pure localStorage-based composable with no external dependencies
-- [ ] Update `DashboardView.vue` to import and use `useDismissedEvents`
-- [ ] Remove extracted code from DashboardView script section
-- [ ] Verify dismiss functionality works in browser (dismiss notification, refresh page, verify still dismissed)
-- [ ] Run E2E tests: `npm run test:e2e` - must pass before next task
+- [x] Update `DashboardView.vue` to import and use `useDismissedEvents`
+- [x] Remove extracted code from DashboardView script section
+- [x] Verify dismiss functionality works in browser (dismiss notification, refresh page, verify still dismissed)
+- [x] Run E2E tests: `npm run test:e2e` - must pass before next task
 
 ### Task 6: Extract useDashboardNotifications from DashboardView
 - [ ] Create `client/src/composables/useDashboardNotifications.js` with:

@@ -3,8 +3,10 @@ import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import { api } from "../api";
 import { displayName } from "../utils/employee";
+import { useDismissedEvents } from "../composables/useDismissedEvents";
 
 const router = useRouter();
+const { dismissedEvents, generateEventId, loadDismissedEvents, dismissEvent } = useDismissedEvents();
 
 const employees = ref([]);
 const loading = ref(false);
@@ -45,45 +47,11 @@ let birthdayNotifiedDate = '';
 const retirementNotifiedIds = new Set();
 let retirementNotifiedDate = '';
 
-// Dismissed events (persistent via localStorage)
-const dismissedEvents = ref(new Set());
-
 // Dynamic status values from employees (get employment_status field options)
 const employmentOptions = ref([]);
 const workingStatus = computed(() => employmentOptions.value[0] || '');
 
 const shortDays = ['Нд', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
-
-// Generate stable event ID for dismiss persistence
-function generateEventId(type, employeeId, date) {
-  return `${type}:${employeeId}:${date}`;
-}
-
-// Load dismissed events from localStorage
-function loadDismissedEvents() {
-  const stored = localStorage.getItem('dashboardDismissedEvents');
-  if (stored) {
-    try {
-      const parsed = JSON.parse(stored);
-      dismissedEvents.value = new Set(parsed);
-    } catch (error) {
-      console.error('Failed to load dismissed events:', error);
-      localStorage.removeItem('dashboardDismissedEvents'); // Clear corrupted data
-      dismissedEvents.value = new Set();
-    }
-  }
-}
-
-// Save dismissed event to localStorage
-function dismissEvent(eventId) {
-  dismissedEvents.value.add(eventId);
-  const arr = Array.from(dismissedEvents.value);
-  try {
-    localStorage.setItem('dashboardDismissedEvents', JSON.stringify(arr));
-  } catch (error) {
-    console.error('Failed to save dismissed event:', error);
-  }
-}
 
 // Statistics
 const dashboardStats = computed(() => {
