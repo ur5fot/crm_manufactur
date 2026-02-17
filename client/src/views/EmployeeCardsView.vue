@@ -579,7 +579,7 @@ const photoUrl = computed(() => {
 
 function sidebarPhotoUrl(photoPath) {
   const base = import.meta.env.VITE_API_URL || '';
-  return `${base}/${photoPath}`;
+  return `${base}/${photoPath}?v=${photoVersion.value}`;
 }
 
 function triggerPhotoUpload() {

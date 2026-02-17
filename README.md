@@ -92,6 +92,7 @@ Each employee card displays a photo area in the header:
 - Supports JPG, PNG, GIF, WebP formats
 - Upload, replace, and delete via hover controls
 - Placeholder avatar icon when no photo is set
+- Small circular photo thumbnails (36px) in the sidebar employee list for quick visual identification
 
 ### Employment Status History
 
