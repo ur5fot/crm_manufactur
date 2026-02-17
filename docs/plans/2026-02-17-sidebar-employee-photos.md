@@ -26,13 +26,13 @@ Add small circular photo thumbnails to each employee card in the sidebar list of
 ## Implementation Steps
 
 ### Task 1: Add photo thumbnails to sidebar employee cards
-- [ ] Add small circular photo (36px) or placeholder SVG to each `.employee-card` in `EmployeeCardsView.vue` sidebar (lines 853-872) — use flexbox row layout with photo on the left, existing text on the right
-- [ ] Construct photo URL from `employee.photo` using same pattern as card header (`${base}/${employee.photo}`)
-- [ ] Show placeholder SVG icon (same person icon, smaller) when employee has no photo
-- [ ] Add CSS styles in `styles.css`: `.employee-card-photo` (36x36px, circular, flex-shrink: 0), `.employee-card-photo-img`, `.employee-card-photo-placeholder` — follow existing `.employee-photo-*` pattern but smaller
-- [ ] Verify dark theme support (use CSS variables like existing photo styles)
-- [ ] Update E2E test `tests/e2e/employee-photo.spec.js` — add test that sidebar shows photo after upload
-- [ ] Run tests — must pass before next task
+- [x] Add small circular photo (36px) or placeholder SVG to each `.employee-card` in `EmployeeCardsView.vue` sidebar (lines 853-872) — use flexbox row layout with photo on the left, existing text on the right
+- [x] Construct photo URL from `employee.photo` using same pattern as card header (`${base}/${employee.photo}`)
+- [x] Show placeholder SVG icon (same person icon, smaller) when employee has no photo
+- [x] Add CSS styles in `styles.css`: `.employee-card-photo` (36x36px, circular, flex-shrink: 0), `.employee-card-photo-img`, `.employee-card-photo-placeholder` — follow existing `.employee-photo-*` pattern but smaller
+- [x] Verify dark theme support (use CSS variables like existing photo styles)
+- [x] Update E2E test `tests/e2e/employee-photo.spec.js` — add test that sidebar shows photo after upload
+- [x] Run tests — must pass before next task
 
 ### Task 2: Verify acceptance criteria
 - [ ] Verify photos display correctly in sidebar for employees with photos

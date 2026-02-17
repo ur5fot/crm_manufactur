@@ -577,6 +577,11 @@ const photoUrl = computed(() => {
   return `${base}/${p}?v=${photoVersion.value}`;
 });
 
+function sidebarPhotoUrl(photoPath) {
+  const base = import.meta.env.VITE_API_URL || '';
+  return `${base}/${photoPath}`;
+}
+
 function triggerPhotoUpload() {
   photoInputRef.value?.click();
 }
@@ -859,14 +864,30 @@ onUnmounted(() => {
           :style="{ animationDelay: `${index * 0.04}s` }"
           @click="openEmployeeCard(employee.employee_id)"
         >
-          <div class="employee-name">{{ displayName(employee) }}</div>
-          <div class="employee-meta">
-            ID: {{ employee.employee_id }}
-            <span v-if="employee.position"> · {{ employee.position }}</span>
-            <span v-if="employee.department"> · {{ employee.department }}</span>
+          <div class="employee-card-photo">
+            <img
+              v-if="employee.photo"
+              :src="sidebarPhotoUrl(employee.photo)"
+              alt=""
+              class="employee-card-photo-img"
+            />
+            <div v-else class="employee-card-photo-placeholder">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+              </svg>
+            </div>
           </div>
-          <div class="employee-tags">
-            <span class="tag">{{ employee.employment_status || "без статусу" }}</span>
+          <div class="employee-card-info">
+            <div class="employee-name">{{ displayName(employee) }}</div>
+            <div class="employee-meta">
+              ID: {{ employee.employee_id }}
+              <span v-if="employee.position"> · {{ employee.position }}</span>
+              <span v-if="employee.department"> · {{ employee.department }}</span>
+            </div>
+            <div class="employee-tags">
+              <span class="tag">{{ employee.employment_status || "без статусу" }}</span>
+            </div>
           </div>
         </div>
       </div>

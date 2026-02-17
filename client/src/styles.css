@@ -540,8 +540,9 @@ a {
   transition: transform 0.2s ease, border 0.2s ease, box-shadow 0.2s ease;
   cursor: pointer;
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
   animation: fadeUp 0.45s ease both;
 }
 
@@ -554,6 +555,39 @@ a {
 .employee-card.active {
   border-color: rgba(15, 118, 110, 0.5);
   background: rgba(15, 118, 110, 0.08);
+}
+
+.employee-card-photo {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  border: 1.5px solid var(--line);
+  background: var(--bg);
+}
+
+.employee-card-photo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.employee-card-photo-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+}
+
+.employee-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
 }
 
 .employee-name {

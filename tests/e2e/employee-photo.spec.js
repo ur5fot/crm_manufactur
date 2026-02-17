@@ -140,6 +140,43 @@ test.describe('Employee Photo', () => {
     await expect(placeholder).toBeVisible({ timeout: 5000 });
   });
 
+  test('should show sidebar photo after upload', async ({ page, request }) => {
+    // Click first employee
+    const firstEmployee = page.locator('.employee-list > div').first();
+    await firstEmployee.click();
+    await page.waitForTimeout(500);
+
+    // Verify sidebar placeholder is shown initially
+    const sidebarPlaceholder = firstEmployee.locator('.employee-card-photo-placeholder');
+    await expect(sidebarPlaceholder).toBeVisible();
+
+    // Get employee ID from URL
+    const url = page.url();
+    const employeeId = url.split('/cards/')[1];
+
+    // Upload photo via API
+    const pngBuffer = createTestPng();
+    const response = await request.post(`${API_URL}/api/employees/${employeeId}/photo`, {
+      multipart: {
+        photo: {
+          name: 'test-photo.png',
+          mimeType: 'image/png',
+          buffer: pngBuffer
+        }
+      }
+    });
+    expect(response.ok()).toBeTruthy();
+
+    // Reload page to see photo in sidebar
+    await page.goto(`/cards/${employeeId}`);
+    await waitForEmployeesLoad(page);
+
+    // Find the active sidebar card and verify it has a photo img
+    const activeCard = page.locator('.employee-card.active');
+    const sidebarImg = activeCard.locator('.employee-card-photo-img');
+    await expect(sidebarImg).toBeVisible({ timeout: 5000 });
+  });
+
   test('should show hover overlay on photo area', async ({ page }) => {
     // Click first employee
     const firstEmployee = page.locator('.employee-list > div').first();
