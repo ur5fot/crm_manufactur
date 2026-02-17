@@ -1,7 +1,7 @@
 import { ref, computed, watch } from "vue";
 import { api } from "../api";
 
-export function useCustomReport(allFieldsSchema, documentFields, getFieldType, appConfig) {
+export function useCustomReport(allFieldsSchema, documentFields, getFieldType) {
   const customFilters = ref([]);
   const customReportResults = ref([]);
   const customReportLoading = ref(false);
@@ -157,10 +157,15 @@ export function useCustomReport(allFieldsSchema, documentFields, getFieldType, a
       ? selectedColumns.value
       : schema.filter(f => f.showInTable).map(f => f.key);
 
-    // Build lookup map for all fields including document date fields
+    // Build lookup map for all fields including document date fields (use unfiltered list)
     const allColumnsMap = {};
-    filteredColumnsForSelector.value.forEach(col => {
-      allColumnsMap[col.key] = col.label;
+    allFieldsSchema.value.forEach(f => {
+      allColumnsMap[f.key] = f.label;
+    });
+    const docFields = documentFields.value;
+    docFields.forEach(doc => {
+      allColumnsMap[`${doc.key}_issue_date`] = `${doc.label} - Дата видачі`;
+      allColumnsMap[`${doc.key}_expiry_date`] = `${doc.label} - Дата закінчення`;
     });
 
     const headers = columns.map(col => {

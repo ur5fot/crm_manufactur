@@ -129,7 +129,7 @@ const {
   openClearConfirmPopup,
   closeClearConfirmPopup,
   confirmClearForm,
-} = useEmployeeDocuments(form, employees, selectedId, errorMessage);
+} = useEmployeeDocuments(form, employees, errorMessage);
 
 // Status management composable
 const {

@@ -108,7 +108,7 @@ export function useTemplatesManagement() {
     try {
       await api.openTemplateFile(template.template_id);
     } catch (error) {
-      alert('Ошибка открытия файла: ' + error.message);
+      alert('Помилка відкриття файлу: ' + error.message);
     }
   }
 
@@ -116,10 +116,10 @@ export function useTemplatesManagement() {
     try {
       const result = await api.reextractPlaceholders(templateForm.template_id);
       templateForm.placeholder_fields = result.placeholders.join(', ');
-      alert(`Плейсхолдеры обновлены: ${result.placeholders.join(', ') || '(нет)'}`);
+      alert(`Плейсхолдери оновлено: ${result.placeholders.join(', ') || '(немає)'}`);
       await loadTemplates();
     } catch (error) {
-      alert('Ошибка обновления плейсхолдеров: ' + error.message);
+      alert('Помилка оновлення плейсхолдерів: ' + error.message);
     }
   }
 

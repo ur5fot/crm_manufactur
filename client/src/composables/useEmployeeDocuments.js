@@ -1,7 +1,7 @@
 import { ref, reactive } from "vue";
 import { api } from "../api";
 
-export function useEmployeeDocuments(form, employees, selectedId, errorMessage) {
+export function useEmployeeDocuments(form, employees, errorMessage) {
   // Document upload popup
   const showDocUploadPopup = ref(false);
   const docUploadForm = reactive({

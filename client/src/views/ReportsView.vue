@@ -33,7 +33,7 @@ const {
   runCustomReport,
   exportCustomReportCSV,
   sortReportPreview,
-} = useCustomReport(allFieldsSchema, documentFields, getFieldType, appConfig);
+} = useCustomReport(allFieldsSchema, documentFields, getFieldType);
 
 // Load config
 onMounted(async () => {
