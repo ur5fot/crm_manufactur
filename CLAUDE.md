@@ -97,7 +97,8 @@ crm_manufactur/
 │   │   │   ├── useTemplatesManagement.js # Template CRUD operations
 │   │   │   ├── useTemplateUpload.js      # Template DOCX file upload
 │   │   │   ├── useTableInlineEdit.js     # Table inline cell editing
-│   │   │   └── useTableColumnFilters.js  # Table column checkbox filters
+│   │   │   ├── useTableColumnFilters.js  # Table column checkbox filters
+│   │   │   └── useReprimands.js          # Employee reprimands/commendations CRUD popup
 │   │   ├── utils/              # Utility modules
 │   │   │   ├── constants.js              # Application-wide constants
 │   │   │   └── employee.js               # Employee display name utility
@@ -208,6 +209,7 @@ To prevent race conditions when multiple requests modify the same CSV file, the 
 - **generatedDocumentsWriteLock**: Serializes all writes to generated_documents.csv
 - **logWriteLock**: Serializes all writes to logs.csv
 - **statusHistoryWriteLock**: Serializes all writes to status_history.csv
+- **reprimandWriteLock**: Serializes all writes to reprimands.csv
 
 These locks ensure that only one write operation occurs at a time per file, preventing data corruption from concurrent modifications.
 
@@ -263,6 +265,15 @@ These locks ensure that only one write operation occurs at a time per file, prev
 - Auto-created with headers by `ensureCsvFile()` on first read
 - Entries created automatically when `employment_status` field changes via PUT
 - Sorted by `changed_at` descending when queried
+
+**reprimands.csv**
+- Records employee reprimands and commendations (dogany/vidznaky)
+- Columns: record_id, employee_id, record_date, record_type, order_number, note, created_at
+- Auto-created with headers by `ensureCsvFile()` on first read
+- Hard delete (records fully removed, no soft delete)
+- Sorted by `record_date` descending when queried per employee
+- Cleaned up when employee is deleted (`removeReprimandsForEmployee`)
+- Record types: Догана, Сувора догана, Зауваження, Попередження, Подяка, Грамота, Премія, Нагорода
 
 ---
 
@@ -1360,6 +1371,7 @@ export function useEmployeeForm(allFieldsSchema, employeeFields, fieldLabels) {
 | `useTemplateUpload.js` | TemplatesView | DOCX file upload modal and file handling |
 | `useTableInlineEdit.js` | TableView | Inline cell editing (start, save, cancel) |
 | `useTableColumnFilters.js` | TableView | Column checkbox filters (toggle, clear, count) |
+| `useReprimands.js` | EmployeeCardsView | Reprimands/commendations CRUD popup (add, edit, delete records) |
 
 **Dependency Injection Pattern**:
 Composables receive external dependencies via function parameters rather than importing them internally. This keeps composables testable and decoupled. The parent view wires composables together:
@@ -2433,6 +2445,34 @@ All API endpoints are served under the `/api` prefix:
 - Returns: `{ history: [...] }` sorted by `changed_at` descending (newest first)
 - Each entry: history_id, employee_id, old_status, new_status, old_start_date, old_end_date, new_start_date, new_end_date, changed_at, changed_by
 - 404 if employee not found
+
+**GET /api/employees/:id/reprimands**
+- Get reprimands and commendations for employee
+- Returns: `{ reprimands: [...] }` sorted by `record_date` descending (newest first)
+- Each entry: record_id, employee_id, record_date, record_type, order_number, note, created_at
+- 404 if employee not found
+
+**POST /api/employees/:id/reprimands**
+- Create new reprimand or commendation record
+- Required fields: record_date, record_type
+- Optional fields: order_number, note
+- Creates audit log entry
+- Returns: `{ reprimand: {...} }` with assigned record_id and created_at
+- 400 if record_date or record_type missing; 404 if employee not found
+
+**PUT /api/employees/:id/reprimands/:recordId**
+- Update existing reprimand or commendation record
+- Required fields: record_date, record_type
+- Optional fields: order_number, note
+- Creates audit log entry
+- Returns: `{ reprimand: {...} }` with updated fields
+- 400 if validation fails; 404 if employee or record not found
+
+**DELETE /api/employees/:id/reprimands/:recordId**
+- Hard delete single reprimand or commendation record
+- Creates audit log entry
+- Returns: 204 No Content
+- 404 if employee or record not found
 
 **POST /api/employees/:id/open-folder**
 - Open employee folder in system file manager

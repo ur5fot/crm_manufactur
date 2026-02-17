@@ -106,8 +106,8 @@
 - [x] Run E2E tests: `npm run test:e2e`
 
 ### Task 6: [Final] Update documentation
-- [ ] Update CLAUDE.md: add reprimands CSV to Data Files Overview, add API endpoints, add composable description
-- [ ] Update README.md if needed (new feature description)
+- [x] Update CLAUDE.md: add reprimands CSV to Data Files Overview, add API endpoints, add composable description
+- [x] Update README.md if needed (new feature description)
 
 *Note: ralphex automatically moves completed plans to `docs/plans/completed/`*
 

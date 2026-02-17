@@ -11,6 +11,7 @@ A comprehensive CRM system for managing employee records, documents, and templat
 - Employee management (CRUD operations)
 - Employee photo upload and display in card view
 - Employment status history tracking with timeline popup
+- Reprimands and commendations tracking (догани та відзнаки) with popup history
 - Document templates with DOCX file upload
 - Automated document generation with placeholder replacement
 - Document history tracking
@@ -101,6 +102,17 @@ A clock icon button next to the employment status field opens a popup with the c
 - Dates formatted as DD.MM.YYYY, timestamps as DD.MM.YYYY HH:MM
 - Empty state message when no history exists
 - History recorded automatically on every employment status change
+
+### Reprimands and Commendations (Догани та Відзнаки)
+
+An icon button in the employee card opens a popup for managing employee disciplinary and commendation records:
+- Record types: Догана, Сувора догана, Зауваження, Попередження, Подяка, Грамота, Премія, Нагорода
+- Each record stores: date, type, order number (№ наказу), and note (reason/description)
+- Records sorted by date (newest first)
+- Add new records via inline form within the popup
+- Edit existing records (all fields editable)
+- Delete individual records with confirmation
+- Records automatically cleaned up when employee is deleted
 
 ## Dashboard Notifications
 
