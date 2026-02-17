@@ -69,16 +69,16 @@
 - [x] Run tests: `cd server && npm test` — must pass before next task
 
 ### Task 3: Add frontend API methods and composable
-- [ ] Add to `client/src/api.js`:
+- [x] Add to `client/src/api.js`:
   - `getEmployeeReprimands(id)` — GET
   - `addEmployeeReprimand(id, data)` — POST
   - `updateEmployeeReprimand(employeeId, recordId, data)` — PUT
   - `deleteEmployeeReprimand(employeeId, recordId)` — DELETE
-- [ ] Create `client/src/composables/useReprimands.js`:
+- [x] Create `client/src/composables/useReprimands.js`:
   - State: `showReprimandsPopup`, `reprimandsLoading`, `reprimands`, `showReprimandForm`, `editingReprimandId` (null = creating, string = editing), `reprimandForm` (reactive: record_date, record_type, order_number, note), `reprimandSaving`
   - Functions: `openReprimandsPopup(employeeId)`, `closeReprimandsPopup()`, `openAddForm()`, `openEditForm(record)`, `closeReprimandForm()`, `submitReprimand(employeeId)` (creates or updates based on editingReprimandId), `deleteReprimandEntry(employeeId, recordId)`, `formatReprimandDate(dateStr)`
   - `record_type` options: `['Догана', 'Сувора догана', 'Зауваження', 'Попередження', 'Подяка', 'Грамота', 'Премія', 'Нагорода']`
-- [ ] Run tests: `cd server && npm test` — must pass before next task
+- [x] Run tests: `cd server && npm test` — must pass before next task
 
 ### Task 4: Add UI to EmployeeCardsView
 - [ ] Add button «Догани та відзнаки» in EmployeeCardsView (near status section or as separate section) with clock-like icon

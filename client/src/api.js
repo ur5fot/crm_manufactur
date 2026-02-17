@@ -206,5 +206,29 @@ export const api = {
     if (filters.limit !== undefined) queryParams.set('limit', filters.limit);
     const params = queryParams.toString() ? `?${queryParams.toString()}` : '';
     return request(`/documents${params}`);
+  },
+
+  // Reprimands API
+  getEmployeeReprimands(id) {
+    return request(`/employees/${id}/reprimands`);
+  },
+  addEmployeeReprimand(id, data) {
+    return request(`/employees/${id}/reprimands`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data)
+    });
+  },
+  updateEmployeeReprimand(employeeId, recordId, data) {
+    return request(`/employees/${employeeId}/reprimands/${recordId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data)
+    });
+  },
+  deleteEmployeeReprimand(employeeId, recordId) {
+    return request(`/employees/${employeeId}/reprimands/${recordId}`, {
+      method: "DELETE"
+    });
   }
 };
