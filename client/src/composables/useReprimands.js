@@ -20,6 +20,7 @@ export function useReprimands() {
   const editingReprimandId = ref(null);
   const reprimandSaving = ref(false);
   const reprimandError = ref('');
+  const loadedForEmployeeId = ref(null);
 
   const reprimandForm = reactive({
     record_date: '',
@@ -34,7 +35,10 @@ export function useReprimands() {
     showReprimandForm.value = false;
     editingReprimandId.value = null;
     reprimandError.value = '';
-    await loadReprimands(employeeId);
+    // Skip reload if data is already loaded for this employee (pre-loaded by watch)
+    if (loadedForEmployeeId.value !== employeeId) {
+      await loadReprimands(employeeId);
+    }
   }
 
   function closeReprimandsPopup() {
@@ -50,8 +54,10 @@ export function useReprimands() {
     try {
       const data = await api.getEmployeeReprimands(employeeId);
       reprimands.value = data.reprimands || [];
+      loadedForEmployeeId.value = employeeId;
     } catch (error) {
       reprimands.value = [];
+      loadedForEmployeeId.value = null;
       console.error('Failed to load reprimands:', error);
     } finally {
       reprimandsLoading.value = false;

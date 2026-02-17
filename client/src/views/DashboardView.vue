@@ -154,10 +154,10 @@ async function loadFieldsSchema() {
 onMounted(async () => {
   loadDismissedEvents();
   await loadFieldsSchema();
+  await loadCounts();
   await loadEmployees();
   await loadDashboardEvents();
   await loadOverdueDocuments();
-  loadCounts();
   startDashboardRefresh();
 });
 
