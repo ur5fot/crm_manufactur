@@ -149,16 +149,16 @@
 - [x] Run E2E tests: `npm run test:e2e` - must pass before next task
 
 ### Task 10: Extract useTemplatesManagement and useTemplateUpload from TemplatesView
-- [ ] Create `client/src/composables/useTemplatesManagement.js` with:
+- [x] Create `client/src/composables/useTemplatesManagement.js` with:
   - State: `templates`, `loading`, `showTemplateDialog`, `templateDialogMode`, `templateForm` (reactive)
   - Functions: `loadTemplates()`, `openCreateTemplateDialog()`, `editTemplate(template)`, `saveTemplate()`, `closeTemplateDialog()`, `deleteTemplate(template)`, `openTemplateDocx(template)`, `reextractTemplatePlaceholders()`
-- [ ] Create `client/src/composables/useTemplateUpload.js` with:
+- [x] Create `client/src/composables/useTemplateUpload.js` with:
   - State: `showUploadTemplateModal`, `uploadTemplateId`, `uploadTemplateName`, `selectedTemplateFile`
   - Functions: `uploadTemplateFile(template)`, `closeUploadTemplateModal()`, `onTemplateFileSelected(event)`, `uploadTemplateDocx(loadTemplates)`
-- [ ] Update `TemplatesView.vue` to import and use both composables
-- [ ] Remove extracted code from TemplatesView script section
-- [ ] Verify template CRUD and DOCX upload work in browser
-- [ ] Run E2E tests: `npm run test:e2e` - must pass before next task
+- [x] Update `TemplatesView.vue` to import and use both composables
+- [x] Remove extracted code from TemplatesView script section
+- [x] Verify template CRUD and DOCX upload work in browser
+- [x] Run E2E tests: `npm run test:e2e` - must pass before next task
 
 ### Task 11: Extract useTableInlineEdit and useTableColumnFilters from TableView
 - [ ] Create `client/src/composables/useTableInlineEdit.js` with:
