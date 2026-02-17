@@ -81,19 +81,19 @@
 - [x] Run tests: `cd server && npm test` — must pass before next task
 
 ### Task 4: Add UI to EmployeeCardsView
-- [ ] Add button «Догани та відзнаки» in EmployeeCardsView (near status section or as separate section) with clock-like icon
-- [ ] Add popup modal in EmployeeCardsView template following status-history-modal pattern:
+- [x] Add button «Догани та відзнаки» in EmployeeCardsView (near status section or as separate section) with clock-like icon
+- [x] Add popup modal in EmployeeCardsView template following status-history-modal pattern:
   - Table with columns: Дата, Тип, № наказу, Примітка, Дії (редагувати/видалити)
   - «Додати запис» button opens inline form (date + type select + order_number input + note textarea)
   - Edit button per row — opens same form pre-filled with record data, submit updates record
   - Delete button per row with confirm()
   - Empty state: «Записи відсутні»
   - Loading state: «Завантаження...»
-- [ ] Import and wire `useReprimands` composable in EmployeeCardsView
-- [ ] Add Escape key handler for popup in handleGlobalKeydown
-- [ ] Verify in browser: open popup, add record, edit record, see it in table, delete record
-- [ ] Write E2E test `tests/e2e/reprimands.spec.js` — test add, edit, view, delete reprimand
-- [ ] Run tests: `npm run test:e2e` — must pass before next task
+- [x] Import and wire `useReprimands` composable in EmployeeCardsView
+- [x] Add Escape key handler for popup in handleGlobalKeydown
+- [x] Verify in browser: open popup, add record, edit record, see it in table, delete record
+- [x] Write E2E test `tests/e2e/reprimands.spec.js` — test add, edit, view, delete reprimand
+- [x] Run tests: `npm run test:e2e` — must pass before next task
 
 ### Task 5: Verify acceptance criteria
 - [ ] Verify: can add dogana with all fields (date, type, order number, note)

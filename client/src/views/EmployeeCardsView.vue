@@ -8,6 +8,7 @@ import { useEmployeePhoto } from "../composables/useEmployeePhoto";
 import { useEmployeeDocuments } from "../composables/useEmployeeDocuments";
 import { useStatusManagement } from "../composables/useStatusManagement";
 import { useDocumentGeneration } from "../composables/useDocumentGeneration";
+import { useReprimands } from "../composables/useReprimands";
 import { displayName } from "../utils/employee";
 
 const router = useRouter();
@@ -157,6 +158,27 @@ const {
   loadTemplates,
   generateDocumentForEmployee,
 } = useDocumentGeneration(form);
+
+// Reprimands composable
+const {
+  showReprimandsPopup,
+  reprimandsLoading,
+  reprimands,
+  showReprimandForm,
+  editingReprimandId,
+  reprimandSaving,
+  reprimandError,
+  reprimandForm,
+  REPRIMAND_TYPE_OPTIONS,
+  openReprimandsPopup,
+  closeReprimandsPopup,
+  openAddForm: openReprimandAddForm,
+  openEditForm: openReprimandEditForm,
+  closeReprimandForm,
+  submitReprimand,
+  deleteReprimandEntry,
+  formatReprimandDate,
+} = useReprimands();
 
 // Filtered employees for cards
 const filteredEmployeesForCards = computed(() => {
@@ -335,7 +357,16 @@ function handleGlobalKeydown(e) {
       closeStatusHistoryPopup();
     } else if (showStatusChangePopup.value) {
       closeStatusChangePopup();
+    } else if (showReprimandsPopup.value) {
+      closeReprimandsPopup();
     }
+  }
+}
+
+// Confirm and delete reprimand
+function confirmDeleteReprimand(employeeId, recordId) {
+  if (window.confirm('Видалити запис?')) {
+    deleteReprimandEntry(employeeId, recordId);
   }
 }
 
@@ -623,6 +654,15 @@ onUnmounted(() => {
                       <circle cx="12" cy="12" r="10"/>
                       <polyline points="12 6 12 12 16 14"/>
                     </svg>
+                  </button>
+                  <button
+                    v-if="!isNew"
+                    class="secondary small"
+                    type="button"
+                    title="Догани та відзнаки"
+                    @click="openReprimandsPopup(selectedId)"
+                  >
+                    📋 Догани та відзнаки
                   </button>
                 </div>
               </template>
@@ -985,6 +1025,92 @@ onUnmounted(() => {
         </div>
         <div class="button-group">
           <button class="secondary" @click="closeStatusHistoryPopup">Закрити</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Reprimands Popup -->
+    <div v-if="showReprimandsPopup" class="vacation-notification-overlay" @click="closeReprimandsPopup">
+      <div class="vacation-notification-modal status-history-modal" @click.stop>
+        <div class="card-header">
+          <h3>📋 Догани та відзнаки</h3>
+          <button class="close-btn" @click="closeReprimandsPopup">&times;</button>
+        </div>
+        <div class="card-content">
+          <div v-if="reprimandsLoading" class="status-history-loading">Завантаження...</div>
+          <template v-else>
+            <div v-if="reprimands.length === 0 && !showReprimandForm" class="status-history-empty">
+              Записи відсутні.
+            </div>
+            <div v-else-if="reprimands.length > 0 && !showReprimandForm" class="status-history-list">
+              <table class="status-history-table">
+                <thead>
+                  <tr>
+                    <th>Дата</th>
+                    <th>Тип</th>
+                    <th>№ наказу</th>
+                    <th>Примітка</th>
+                    <th>Дії</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="record in reprimands" :key="record.record_id">
+                    <td>{{ formatReprimandDate(record.record_date) }}</td>
+                    <td>{{ record.record_type || '—' }}</td>
+                    <td>{{ record.order_number || '—' }}</td>
+                    <td>{{ record.note || '—' }}</td>
+                    <td>
+                      <div class="document-actions">
+                        <button class="secondary small" type="button" @click="openReprimandEditForm(record)">Редагувати</button>
+                        <button
+                          class="danger small"
+                          type="button"
+                          @click="confirmDeleteReprimand(selectedId, record.record_id)"
+                        >Видалити</button>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Add/Edit Form -->
+            <div v-if="showReprimandForm" class="reprimand-form">
+              <h4>{{ editingReprimandId ? 'Редагування запису' : 'Новий запис' }}</h4>
+              <div v-if="reprimandError" class="alert">{{ reprimandError }}</div>
+              <div class="form-group">
+                <label>Дата *</label>
+                <input type="date" v-model="reprimandForm.record_date" required />
+              </div>
+              <div class="form-group">
+                <label>Тип *</label>
+                <select v-model="reprimandForm.record_type" required>
+                  <option value="">— Виберіть тип —</option>
+                  <option v-for="opt in REPRIMAND_TYPE_OPTIONS" :key="opt" :value="opt">{{ opt }}</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>№ наказу</label>
+                <input type="text" v-model="reprimandForm.order_number" placeholder="Наприклад: №123" />
+              </div>
+              <div class="form-group">
+                <label>Примітка</label>
+                <textarea v-model="reprimandForm.note" rows="3" placeholder="За що / підстава"></textarea>
+              </div>
+            </div>
+          </template>
+        </div>
+        <div class="button-group">
+          <template v-if="showReprimandForm">
+            <button class="primary" @click="submitReprimand(selectedId)" :disabled="reprimandSaving">
+              {{ reprimandSaving ? 'Збереження...' : (editingReprimandId ? 'Зберегти зміни' : 'Додати запис') }}
+            </button>
+            <button class="secondary" @click="closeReprimandForm">Скасувати</button>
+          </template>
+          <template v-else>
+            <button class="primary" @click="openReprimandAddForm">Додати запис</button>
+            <button class="secondary" @click="closeReprimandsPopup">Закрити</button>
+          </template>
         </div>
       </div>
     </div>
