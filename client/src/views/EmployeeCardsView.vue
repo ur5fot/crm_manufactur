@@ -214,6 +214,9 @@ const filteredFieldGroups = computed(() => {
   // Filter groups and fields based on label and value match
   return fieldGroups.value.map(group => {
     const filteredFields = group.fields.filter(field => {
+      // Always include employment_status so reprimands button remains accessible
+      if (field.key === 'employment_status') return true;
+
       // Match against field label
       if (field.label.toLowerCase().includes(query)) return true;
 

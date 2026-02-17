@@ -1972,7 +1972,7 @@ button.small {
 }
 
 .field-reprimands-btn {
-  justify-content: flex-end;
+  align-items: flex-end;
 }
 
 /* Status field row — readonly input + action buttons */
