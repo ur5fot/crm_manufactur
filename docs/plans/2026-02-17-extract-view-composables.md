@@ -114,17 +114,17 @@
 - [x] Run E2E tests: `npm run test:e2e` - must pass before next task
 
 ### Task 7: Extract useDashboardStats and useDashboardTimeline from DashboardView
-- [ ] Create `client/src/composables/useDashboardStats.js` with:
+- [x] Create `client/src/composables/useDashboardStats.js` with:
   - State: `expandedCard`
   - Computed: `dashboardStats(employees, employmentOptions)`, `expandedEmployees(employees)`
   - Functions: `toggleStatCard()`, `statusCardColor()`
-- [ ] Create `client/src/composables/useDashboardTimeline.js` with:
+- [x] Create `client/src/composables/useDashboardTimeline.js` with:
   - State: `dashboardEvents`, `dashboardOverdueEvents`
   - Functions: `loadDashboardEvents()`, `loadOverdueDocuments()`, `formatEventDate()`, `daysFromNowLabel()`, `timelineEventEmoji()`, `timelineEventDesc()`, `statusEmoji()`, `docExpiryEmoji()`
-- [ ] Update `DashboardView.vue` to import and use both composables
-- [ ] Remove extracted code from DashboardView script section
-- [ ] Verify dashboard stats cards and timeline display correctly in browser
-- [ ] Run E2E tests: `npm run test:e2e` - must pass before next task
+- [x] Update `DashboardView.vue` to import and use both composables
+- [x] Remove extracted code from DashboardView script section
+- [x] Verify dashboard stats cards and timeline display correctly in browser
+- [x] Run E2E tests: `npm run test:e2e` - must pass before next task
 
 ### Task 8: Extract useDashboardReport from DashboardView
 - [ ] Create `client/src/composables/useDashboardReport.js` with:
