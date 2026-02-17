@@ -6,6 +6,7 @@ import { useDismissedEvents } from "../composables/useDismissedEvents";
 import { useDashboardNotifications } from "../composables/useDashboardNotifications";
 import { useDashboardStats } from "../composables/useDashboardStats";
 import { useDashboardTimeline } from "../composables/useDashboardTimeline";
+import { useDashboardReport } from "../composables/useDashboardReport";
 
 const router = useRouter();
 
@@ -14,11 +15,6 @@ const loading = ref(false);
 const errorMessage = ref("");
 const lastUpdated = ref(null);
 const isRefreshing = ref(false);
-
-// Dashboard state
-const activeReport = ref(null);
-const reportData = ref([]);
-const reportLoading = ref(false);
 
 // Refresh interval
 const refreshIntervalId = ref(null);
@@ -78,24 +74,19 @@ const {
   timelineEventDesc,
 } = useDashboardTimeline(employmentOptions);
 
+const {
+  activeReport,
+  reportData,
+  reportLoading,
+  absentEmployeesCount,
+  statusChangesThisMonthCount,
+  toggleReport,
+} = useDashboardReport(errorMessage);
+
 const formattedLastUpdated = computed(() => {
   if (!lastUpdated.value) return '';
   const d = lastUpdated.value;
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-});
-
-const absentEmployeesCount = computed(() => {
-  if (activeReport.value === 'current') {
-    return reportData.value.length;
-  }
-  return 0;
-});
-
-const statusChangesThisMonthCount = computed(() => {
-  if (activeReport.value === 'month') {
-    return reportData.value.length;
-  }
-  return 0;
 });
 
 async function loadEmployees(silent = false) {
@@ -121,26 +112,6 @@ async function loadEmployees(silent = false) {
   } finally {
     isRefreshing.value = false;
     if (!silent) loading.value = false;
-  }
-}
-
-async function toggleReport(type) {
-  if (activeReport.value === type) {
-    activeReport.value = null;
-    reportData.value = [];
-    return;
-  }
-  activeReport.value = type;
-  reportLoading.value = true;
-  try {
-    const data = await api.getStatusReport(type);
-    reportData.value = data;
-    errorMessage.value = '';
-  } catch (e) {
-    reportData.value = [];
-    errorMessage.value = 'Помилка завантаження звіту';
-  } finally {
-    reportLoading.value = false;
   }
 }
 

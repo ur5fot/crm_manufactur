@@ -127,14 +127,14 @@
 - [x] Run E2E tests: `npm run test:e2e` - must pass before next task
 
 ### Task 8: Extract useDashboardReport from DashboardView
-- [ ] Create `client/src/composables/useDashboardReport.js` with:
+- [x] Create `client/src/composables/useDashboardReport.js` with:
   - State: `activeReport`, `reportData`, `reportLoading`
   - Computed: `absentEmployeesCount`, `statusChangesThisMonthCount`
   - Functions: `toggleReport(type)`
-- [ ] Update `DashboardView.vue` to import and use `useDashboardReport`
-- [ ] Remove extracted code from DashboardView script section
-- [ ] Verify report toggle (current/month) works in browser
-- [ ] Run E2E tests: `npm run test:e2e` - must pass before next task
+- [x] Update `DashboardView.vue` to import and use `useDashboardReport`
+- [x] Remove extracted code from DashboardView script section
+- [x] Verify report toggle (current/month) works in browser
+- [x] Run E2E tests: `npm run test:e2e` - must pass before next task
 
 ### Task 9: Extract useCustomReport from ReportsView
 - [ ] Create `client/src/composables/useCustomReport.js` with:
