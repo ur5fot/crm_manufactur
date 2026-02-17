@@ -11,7 +11,7 @@ export function useEmployeePhoto(form, savedFormSnapshot, selectedId) {
     const p = form.photo;
     if (!p) return '';
     const base = import.meta.env.VITE_API_URL || '';
-    return `${base}/${p}?v=${photoVersion.value}`;
+    return `${base ? base + '/' : ''}${p}?v=${photoVersion.value}`;
   });
 
   // Clear photo error when switching employees
@@ -21,7 +21,7 @@ export function useEmployeePhoto(form, savedFormSnapshot, selectedId) {
 
   function sidebarPhotoUrl(photoPath) {
     const base = import.meta.env.VITE_API_URL || '';
-    return `${base}/${photoPath}?v=${photoVersion.value}`;
+    return `${base ? base + '/' : ''}${photoPath}?v=${photoVersion.value}`;
   }
 
   function triggerPhotoUpload() {

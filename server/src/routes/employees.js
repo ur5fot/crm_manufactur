@@ -388,6 +388,18 @@ export function registerEmployeeRoutes(app) {
         return;
       }
 
+      // Verify ownership before writing
+      const allReprimands = await loadReprimands();
+      const existingRecord = allReprimands.find(r => r.record_id === req.params.recordId);
+      if (!existingRecord) {
+        res.status(404).json({ error: "Запис не знайдено" });
+        return;
+      }
+      if (existingRecord.employee_id !== req.params.id) {
+        res.status(403).json({ error: "Запис не належить цьому співробітнику" });
+        return;
+      }
+
       const updated = await updateReprimand(req.params.recordId, {
         record_date: String(record_date).trim(),
         record_type: String(record_type).trim(),
@@ -397,12 +409,6 @@ export function registerEmployeeRoutes(app) {
 
       if (!updated) {
         res.status(404).json({ error: "Запис не знайдено" });
-        return;
-      }
-
-      // Verify the record belongs to this employee
-      if (updated.employee_id !== req.params.id) {
-        res.status(403).json({ error: "Запис не належить цьому співробітнику" });
         return;
       }
 

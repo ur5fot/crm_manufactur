@@ -180,7 +180,8 @@ export function useEmployeeDocuments(form, employees, errorMessage) {
       console.error('Invalid file path (must start with "files/"):', filePath);
       return;
     }
-    const url = `${import.meta.env.VITE_API_URL || ""}/${filePath}`;
+    const base = import.meta.env.VITE_API_URL || "";
+    const url = `${base ? base + "/" : ""}${filePath}`;
     window.open(url, "_blank");
   }
 

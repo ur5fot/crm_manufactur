@@ -407,6 +407,15 @@ Search across employees, templates, and documents.
 |--------|----------|-------------|
 | GET | `/api/employees/:id/status-history` | Get status change history (newest first) |
 
+### Employee Reprimands and Commendations API
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/employees/:id/reprimands` | Get reprimands/commendations for employee (newest first) |
+| POST | `/api/employees/:id/reprimands` | Create new record (required: record_date, record_type) |
+| PUT | `/api/employees/:id/reprimands/:recordId` | Update existing record |
+| DELETE | `/api/employees/:id/reprimands/:recordId` | Hard-delete a record |
+
 ## Placeholder Syntax
 
 Templates use curly braces for placeholders: `{placeholder_name}`
