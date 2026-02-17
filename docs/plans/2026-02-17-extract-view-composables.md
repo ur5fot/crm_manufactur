@@ -102,16 +102,16 @@
 - [x] Run E2E tests: `npm run test:e2e` - must pass before next task
 
 ### Task 6: Extract useDashboardNotifications from DashboardView
-- [ ] Create `client/src/composables/useDashboardNotifications.js` with:
+- [x] Create `client/src/composables/useDashboardNotifications.js` with:
   - State: `statusReturning`, `statusStarting`, `showStatusNotification`, `docExpiryToday`, `docExpiryWeek`, `showDocExpiryNotification`, `birthdayToday`, `birthdayNext7Days`, `showBirthdayNotification`, `retirementToday`, `retirementThisMonth`, `showRetirementNotification`
   - Module-level deduplication state: `notifiedEmployeeIds`, `notifiedDate`, `docExpiryNotifiedDate`, `birthdayNotifiedDate`, `retirementNotifiedIds`, `retirementNotifiedDate`
   - Computed (all 8 filtered* properties using dismissedEvents from `useDismissedEvents`)
   - Functions: all close* and dismiss* functions, `checkStatusChanges()`, `checkDocumentExpiry()`, `checkBirthdayEvents()`, `checkRetirementEvents()`
   - Accept dependencies: `employees`, `employmentOptions`, `workingStatus`, dismissed events composable
-- [ ] Update `DashboardView.vue` to import and use `useDashboardNotifications`
-- [ ] Remove extracted code from DashboardView script section
-- [ ] Verify all 4 notification types work in browser (status, doc expiry, birthday, retirement)
-- [ ] Run E2E tests: `npm run test:e2e` - must pass before next task
+- [x] Update `DashboardView.vue` to import and use `useDashboardNotifications`
+- [x] Remove extracted code from DashboardView script section
+- [x] Verify all 4 notification types work in browser (status, doc expiry, birthday, retirement)
+- [x] Run E2E tests: `npm run test:e2e` - must pass before next task
 
 ### Task 7: Extract useDashboardStats and useDashboardTimeline from DashboardView
 - [ ] Create `client/src/composables/useDashboardStats.js` with:
