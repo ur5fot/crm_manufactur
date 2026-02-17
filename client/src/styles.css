@@ -1637,6 +1637,7 @@ button.small {
   border-top: 1px solid var(--line);
   display: flex;
   justify-content: flex-end;
+  gap: 10px;
 }
 
 /* Dashboard styles */

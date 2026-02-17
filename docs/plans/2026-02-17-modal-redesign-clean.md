@@ -44,11 +44,11 @@ Modals to fix (by line ~):
 - Reprimands popup (~1034) — uses `.card-header` + `.card-content`
 
 Steps:
-- [ ] In `EmployeeCardsView.vue`: replace all `class="card-header"` with `class="vacation-notification-header"` inside `.vacation-notification-modal`
-- [ ] In `EmployeeCardsView.vue`: replace all `class="card-content"` with `class="vacation-notification-body"` inside `.vacation-notification-modal`
-- [ ] Wrap button-group in modals with `<div class="vacation-notification-footer">` and remove bare `.button-group` from modal bottom
-- [ ] Add `.vacation-notification-footer` CSS in `styles.css` (padding, border-top, flex layout)
-- [ ] Verify all 7 modals: open each, confirm close button is top-right, title is in header
+- [x] In `EmployeeCardsView.vue`: replace all `class="card-header"` with `class="vacation-notification-header"` inside `.vacation-notification-modal`
+- [x] In `EmployeeCardsView.vue`: replace all `class="card-content"` with `class="vacation-notification-body"` inside `.vacation-notification-modal`
+- [x] Wrap button-group in modals with `<div class="vacation-notification-footer">` and remove bare `.button-group` from modal bottom
+- [x] Add `.vacation-notification-footer` CSS in `styles.css` (padding, border-top, flex layout)
+- [x] Verify all 7 modals: open each, confirm close button is top-right, title is in header
 
 ### Task 2: Fix ALL CAPS labels in modals
 
