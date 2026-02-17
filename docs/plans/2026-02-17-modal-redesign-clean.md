@@ -54,10 +54,10 @@ Steps:
 
 The global `label {}` rule forces uppercase on all labels. For modals this looks bad — labels should be normal case.
 
-- [ ] In `styles.css` at line 773: change `label` block — remove `text-transform: uppercase` and `letter-spacing: 0.08em`, keep `font-size: 12px` and `color: var(--muted)`
-- [ ] Add `text-transform: uppercase; letter-spacing: 0.08em` explicitly to table `th` selectors that need it (check: `.summary-table th`, `.status-history-table th` already have it — no change needed)
-- [ ] Check form labels in DashboardView, TemplatesView, ReportsView, ImportView — they should now look better (not ALL CAPS)
-- [ ] Verify no visual regressions: table headers should still be uppercase (they have their own explicit rules)
+- [x] In `styles.css` at line 773: change `label` block — remove `text-transform: uppercase` and `letter-spacing: 0.08em`, keep `font-size: 12px` and `color: var(--muted)`
+- [x] Add `text-transform: uppercase; letter-spacing: 0.08em` explicitly to table `th` selectors that need it (check: `.summary-table th`, `.status-history-table th` already have it — no change needed)
+- [x] Check form labels in DashboardView, TemplatesView, ReportsView, ImportView — they should now look better (not ALL CAPS)
+- [x] Verify no visual regressions: table headers should still be uppercase (they have their own explicit rules)
 
 ### Task 3: Polish modal CSS for a clean modern look
 
