@@ -74,15 +74,15 @@ Improve the visual design of the modal itself:
 
 ### Task 4: Verify acceptance criteria
 
-- [ ] Open status change modal — close button is top-right, labels are normal case, layout looks clean
-- [ ] Open reprimands modal — same checks, table with data looks right
-- [ ] Open document upload modal — header fixed
-- [ ] Open document edit dates modal — header fixed
-- [ ] Open status history modal — wide modal looks good
-- [ ] Open DashboardView notifications — still look correct (they were already using correct classes)
-- [ ] Open TemplatesView create/edit dialog — still looks correct
-- [ ] Dark mode: toggle theme, all modals look correct in dark mode
-- [ ] No ALL CAPS labels in any modal form
+- [x] Open status change modal — close button is top-right, labels are normal case, layout looks clean
+- [x] Open reprimands modal — same checks, table with data looks right
+- [x] Open document upload modal — header fixed
+- [x] Open document edit dates modal — header fixed
+- [x] Open status history modal — wide modal looks good
+- [x] Open DashboardView notifications — still look correct (they were already using correct classes)
+- [x] Open TemplatesView create/edit dialog — still looks correct
+- [x] Dark mode: toggle theme, all modals look correct in dark mode
+- [x] No ALL CAPS labels in any modal form
 
 ## Technical Details
 
