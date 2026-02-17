@@ -590,6 +590,12 @@ a {
   min-width: 0;
 }
 
+.employee-card-info .employee-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .employee-name {
   font-weight: 600;
 }
