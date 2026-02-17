@@ -1,112 +1,103 @@
-# Form Layout Fix and Dark Mode Date Input Visibility
+# Виправити макет блоку «Особисті дані»
 
 ## Overview
+Виправити три проблеми у блоці «Особисті дані» картки співробітника:
+1. Кнопки статусу / доган займають 2 рядки — потрібно, щоб у рядку 4 була «Змінити статус» в колонці 2 і «Догани та відзнаки» в колонці 3
+2. Чекбокси «не схиляється» займають окремі колонки гриду — вони мають бути всередині свого `.field`
+3. Загальне вирівнювання полів по колонках
 
-Two problems visible in the reprimand "Новий запис" form (and all other modal forms):
+## Цільовий макет (3-колонкова сітка)
 
-1. **Form layout is broken** — `.form-group` has no CSS, so browser defaults make labels and inputs render horizontally as inline elements. Fields have inconsistent widths, no consistent spacing. Fix: add proper vertical stack CSS for `.form-group` (label above input, full-width inputs).
-
-2. **Date input invisible in dark mode** — The browser's native date picker (`дд.мм.рррр` + calendar icon) doesn't adapt to dark backgrounds. The calendar icon and date text are nearly invisible on `#1f1f1f` background. Fix: add `color-scheme: dark` and invert the calendar picker indicator in dark mode.
-
-Applies to all 17 `.form-group` occurrences across `EmployeeCardsView.vue` and `TemplatesView.vue`.
+```
+Рядок 1: [ID співр.]       [Прізвище ↕ ☐ не схиляється]   [—]
+Рядок 2: [Ім'я ↕ ☐]       [—]                             [По батькові]
+Рядок 3: [Дата народж.]    [Статус роботи]                 [Додатковий статус]
+Рядок 4: [—]               [Змінити статус + clock]         [📋 Догани (N)]
+Рядок 5: [Стать]           [Група крові]                    ...
+```
 
 ## Context
-
-- **CSS file**: `client/src/styles.css`
-  - `label {}` at line 773 — has `font-size: 12px; color: var(--muted)` but no layout
-  - `.form-group` — **not defined at all** in styles.css (bug)
-  - `[data-theme="dark"]` block at line 22 — `--input-bg: #1f1f1f` but no date-specific overrides
-  - No `::-webkit-calendar-picker-indicator` rule anywhere
-- **Affected views**: `EmployeeCardsView.vue` (12 form-groups), `TemplatesView.vue` (5 form-groups)
-- **Related plan**: `2026-02-17-modal-redesign-clean.md` — fixes modal header/footer structure (independent)
+- Файл: `client/src/views/EmployeeCardsView.vue` (~рядки 620-721)
+- Грид: `.form-grid` — `grid-template-columns: repeat(auto-fit, minmax(220px, 1fr))`
+- Чекбокси наразі — окремі `<div class="field" v-if="field.key === 'last_name/first_name'">` в гриді
+- Кнопка «Догани та відзнаки» наразі всередині `status-field-row` → flex-wrap на 2 рядки
 
 ## Development Approach
-
-- **Testing approach**: Regular (CSS/visual changes — no unit tests, visual browser verification)
-- Changes are pure CSS additions in one file
-- Minimal risk: `.form-group` has no existing CSS so no breakage expected
-
-## Progress Tracking
-
-- Mark completed items with `[x]` immediately when done
+- **Testing approach**: Regular (спочатку код, потім тести)
+- Тільки шаблон і мінімальний CSS — без логіки
 
 ## Implementation Steps
 
-### Task 1: Add .form-group CSS for vertical stack layout
+### Task 1: Перенести чекбокси «не схиляється» всередину поля
 
-Add `.form-group` to `styles.css` so all modal forms get proper label-above-input layout with full-width fields.
-
-- [x] In `styles.css`, after the `label {}` block (after line ~778), add `.form-group` CSS:
+- [x] В `EmployeeCardsView.vue` знайти `<div v-if="field.key === 'last_name'" class="field" ...>` і `<div v-if="field.key === 'first_name'" class="field" ...>` — ці окремі grid-комірки видалити
+- [x] В блоці рендерингу поля `last_name` (після `<input ...>`) додати чекбокс всередину того ж `<div class="field">`:
+  ```html
+  <label v-if="field.key === 'last_name'" class="field-checkbox-hint">
+    <input type="checkbox" v-model="form.indeclinable_name" true-value="yes" false-value="" />
+    Прізвище не схиляється
+  </label>
+  ```
+- [x] Аналогічно для `first_name` — додати всередину field div після інпуту:
+  ```html
+  <label v-if="field.key === 'first_name'" class="field-checkbox-hint">
+    <input type="checkbox" v-model="form.indeclinable_first_name" true-value="yes" false-value="" />
+    Ім'я не схиляється
+  </label>
+  ```
+- [x] Додати стиль `.field-checkbox-hint` в `client/src/styles.css`:
   ```css
-  .form-group {
+  .field-checkbox-hint {
     display: flex;
-    flex-direction: column;
+    align-items: center;
     gap: 6px;
-    margin-bottom: 14px;
-  }
-
-  .form-group:last-child {
-    margin-bottom: 0;
-  }
-
-  .form-group label {
-    font-size: 12px;
-    font-weight: 500;
+    font-size: 0.85em;
     color: var(--muted);
-  }
-
-  .form-group input,
-  .form-group select,
-  .form-group textarea {
-    width: 100%;
-    box-sizing: border-box;
-  }
-  ```
-- [x] Verify in browser (light mode): open reprimand "Новий запис" form — label appears above input, all fields are full-width
-- [x] Verify: status change modal form looks good
-- [x] Verify: template create/edit dialog looks good
-- [x] Verify: document upload modal form looks good
-
-### Task 2: Fix date input visibility in dark mode
-
-The native browser date picker is light-themed by default. Add CSS to make it dark-aware.
-
-- [x] In `styles.css`, inside the `[data-theme="dark"]` block (near other dark overrides for inputs), add:
-  ```css
-  [data-theme="dark"] input[type="date"],
-  [data-theme="dark"] input[type="time"] {
-    color-scheme: dark;
-  }
-
-  [data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator {
-    filter: invert(0.8);
     cursor: pointer;
+    margin-top: 4px;
+    white-space: nowrap;
+  }
+  .field-checkbox-hint input[type="checkbox"] {
+    width: auto;
+    flex-shrink: 0;
   }
   ```
-- [x] Toggle to dark mode in browser, open reprimand form — verify date field text `дд.мм.рррр` is clearly visible
-- [x] Verify calendar icon (□) is now visible/white
-- [x] Check other views with date inputs in dark mode (status change modal, doc edit dates modal, employee card date fields) — all should look correct
+- [x] Перевірити: чекбокси більше не займають окрему колонку гриду
+
+### Task 2: Винести «Догани та відзнаки» в окрему grid-комірку
+
+- [x] В `status-field-row` видалити `<button ... @click="openReprimandsPopup(selectedId)">📋 Догани та відзнаки...`
+- [x] Після блоку `<template v-if="field.key === 'employment_status'">` (або як сусідня `v-if` комірка) додати нову grid-комірку:
+  ```html
+  <div v-if="field.key === 'employment_status' && !isNew" class="field field-reprimands-btn">
+    <label>&nbsp;</label>
+    <button class="secondary small" type="button" @click="openReprimandsPopup(selectedId)">
+      📋 Догани та відзнаки{{ reprimands.length > 0 ? ` (${reprimands.length})` : '' }}
+    </button>
+  </div>
+  ```
+- [x] CSS для вирівнювання кнопки по низу лейблу:
+  ```css
+  .field-reprimands-btn {
+    justify-content: flex-end;
+  }
+  ```
+- [x] Перевірити: «Догани та відзнаки» стоїть у колонці 3 поряд з «Змінити статус», не нижче
 
 ### Task 3: Verify acceptance criteria
 
-- [x] Light mode: all modal forms — label above input, inputs full width, proper spacing between fields
-- [x] Dark mode: date inputs are fully visible (text + calendar icon)
-- [x] No regressions in non-modal forms (employee card `.field` layout — separate class, not affected)
-- [x] `TemplatesView.vue` create template dialog still looks good
-- [x] Reprimand "Новий запис" form: all 4 fields (Дата, Тип, № наказу, Примітка) are properly stacked and full-width
+- [x] Рядок 4 виглядає: колонка 2 = [Змінити статус][clock], колонка 3 = [Догани та відзнаки (N)]
+- [x] Чекбокси «Прізвище не схиляється» і «Ім'я не схиляється» відображаються всередині свого поля, не в окремих колонках
+- [x] Грид залишається 3-колонковим, поля вирівнюються правильно
+- [x] Функціональність не зламана: чекбокси зберігаються, кнопки відкривають потрібні попапи
+- [x] Ручна перевірка в браузері (light + dark mode)
 
 ## Technical Details
-
-**Why `.form-group` affects only modal forms:**
-- Employee card main form uses `.field` class (separate, already has `flex-direction: column`)
-- Only modal forms use `.form-group` (17 occurrences across 2 files)
-- Adding `.form-group` CSS adds vertical layout with no risk to `.field` layout
-
-**Date input dark mode fix:**
-- `color-scheme: dark` tells the browser to render native form controls (date picker popup, spinners) in dark mode
-- `::-webkit-calendar-picker-indicator` with `filter: invert(0.8)` makes the icon white-ish without being harsh white
-- Works in Chromium-based browsers (project uses Chrome for E2E tests per playwright.config.js)
+- Чекбокси розміщуються **всередині** `.field` div після `<input>`, не як окремі grid-комірки
+- «Догани та відзнаки» — окрема `.field` grid-комірка, рендериться одразу після `employment_status`
+- `status-field-row` залишається: input + Змінити + Скинути + clock (4 елементи, не 5)
+- `<label>&nbsp;</label>` забезпечує вирівнювання по висоті з сусідніми полями
 
 ## Post-Completion
-
-- Visual test in Firefox if needed (`::-webkit-calendar-picker-indicator` is webkit-specific; Firefox date inputs may look different)
+- Ручне тестування в браузері після `./run.sh`
+- Перевірити на вузькому вікні (responsive)
