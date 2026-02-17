@@ -39,10 +39,10 @@
 
 ### Task 2: Оновити шаблон і ініціалізацію в DashboardView
 
-- [ ] В `DashboardView.vue` деструктурувати `loadCounts` з `useDashboardReport()`
-- [ ] В `onMounted` (або поруч з іншими init-викликами) додати `loadCounts()`
-- [ ] Кнопка «Хто відсутній зараз»: змінити `v-if="activeReport === 'current'"` → `v-if="absentEmployeesCount > 0"`
-- [ ] Кнопка «Зміни статусів»: змінити `v-if="activeReport === 'month'"` → `v-if="statusChangesThisMonthCount > 0"`
+- [x] В `DashboardView.vue` деструктурувати `loadCounts` з `useDashboardReport()`
+- [x] В `onMounted` (або поруч з іншими init-викликами) додати `loadCounts()`
+- [x] Кнопка «Хто відсутній зараз»: змінити `v-if="activeReport === 'current'"` → `v-if="absentEmployeesCount > 0"`
+- [x] Кнопка «Зміни статусів»: змінити `v-if="activeReport === 'month'"` → `v-if="statusChangesThisMonthCount > 0"`
 
 ### Task 3: Verify acceptance criteria
 
