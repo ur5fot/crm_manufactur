@@ -15,6 +15,7 @@ export const FILES_DIR = path.join(ROOT_DIR, "files");
 const EMPLOYEES_PATH = path.join(DATA_DIR, "employees.csv");
 const LOGS_PATH = path.join(DATA_DIR, "logs.csv");
 const FIELD_SCHEMA_PATH = path.join(DATA_DIR, "fields_schema.csv");
+const FIELD_SCHEMA_TEMPLATE_PATH = path.join(DATA_DIR, "fields_schema.template.csv");
 const CONFIG_PATH = path.join(DATA_DIR, "config.csv");
 const TEMPLATES_PATH = path.join(DATA_DIR, "templates.csv");
 const GENERATED_DOCUMENTS_PATH = path.join(DATA_DIR, "generated_documents.csv");
@@ -42,10 +43,66 @@ export async function ensureDataDirs() {
 }
 
 /**
+ * Синхронизация fields_schema.csv с шаблоном fields_schema.template.csv
+ * Добавляет отсутствующие поля из шаблона, сохраняя пользовательские настройки
+ */
+async function syncFieldsSchemaWithTemplate() {
+  try {
+    // Проверяем существование шаблона
+    try {
+      await fs.access(FIELD_SCHEMA_TEMPLATE_PATH);
+    } catch {
+      return; // Шаблон не найден, пропускаем
+    }
+
+    // Проверяем существование runtime-файла
+    let runtimeExists = true;
+    try {
+      await fs.access(FIELD_SCHEMA_PATH);
+    } catch {
+      runtimeExists = false;
+    }
+
+    if (!runtimeExists) {
+      // Если runtime-файл не существует, копируем из шаблона
+      const templateContent = await fs.readFile(FIELD_SCHEMA_TEMPLATE_PATH, "utf-8");
+      await fs.writeFile(FIELD_SCHEMA_PATH, templateContent, "utf-8");
+      console.log("✓ fields_schema.csv створено з шаблону");
+      return;
+    }
+
+    // Читаем оба файла
+    const templateSchema = await readCsv(FIELD_SCHEMA_TEMPLATE_PATH, FIELD_SCHEMA_COLUMNS);
+    const runtimeSchema = await readCsv(FIELD_SCHEMA_PATH, FIELD_SCHEMA_COLUMNS);
+
+    if (templateSchema.length === 0) return;
+
+    // Находим поля из шаблона, отсутствующие в runtime
+    const runtimeFieldNames = new Set(runtimeSchema.map(f => f.field_name));
+    const missingFields = templateSchema.filter(f => f.field_name && !runtimeFieldNames.has(f.field_name));
+
+    if (missingFields.length === 0) return;
+
+    // Добавляем отсутствующие поля
+    const updatedSchema = [...runtimeSchema, ...missingFields];
+    // Пересортировка по field_order
+    updatedSchema.sort((a, b) => parseInt(a.field_order || 0, 10) - parseInt(b.field_order || 0, 10));
+
+    await writeCsv(FIELD_SCHEMA_PATH, FIELD_SCHEMA_COLUMNS, updatedSchema);
+    console.log(`✓ fields_schema.csv: додано ${missingFields.length} полів з шаблону (${missingFields.map(f => f.field_name).join(', ')})`);
+  } catch (error) {
+    console.error("⚠️ Помилка синхронізації fields_schema:", error.message);
+  }
+}
+
+/**
  * Инициализирует колонки из fields_schema.csv при старте сервера
  * Должна быть вызвана один раз при запуске
  */
 export async function initializeEmployeeColumns() {
+  // Сначала синхронизируем fields_schema.csv с шаблоном
+  await syncFieldsSchemaWithTemplate();
+
   console.log("Инициализация колонок из fields_schema.csv...");
   const columns = await getEmployeeColumns();
   console.log(`Инициализировано ${columns.length} колонок для employees.csv`);

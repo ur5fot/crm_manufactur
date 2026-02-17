@@ -79,6 +79,12 @@ if [ ! -f "$root_dir/data/config.csv" ] && [ -f "$root_dir/data/config.template.
   cp "$root_dir/data/config.template.csv" "$root_dir/data/config.csv"
 fi
 
+# Initialize fields_schema.csv from template if not exists
+if [ ! -f "$root_dir/data/fields_schema.csv" ] && [ -f "$root_dir/data/fields_schema.template.csv" ]; then
+  echo "Ініціалізація fields_schema.csv з шаблону..."
+  cp "$root_dir/data/fields_schema.template.csv" "$root_dir/data/fields_schema.csv"
+fi
+
 # Sync CSV template before starting services
 echo "Синхронізація шаблону CSV..."
 (cd "$root_dir/server" && node src/sync-template.js) || {
