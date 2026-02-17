@@ -71,7 +71,7 @@ Add `.form-group` to `styles.css` so all modal forms get proper label-above-inpu
 
 The native browser date picker is light-themed by default. Add CSS to make it dark-aware.
 
-- [ ] In `styles.css`, inside the `[data-theme="dark"]` block (near other dark overrides for inputs), add:
+- [x] In `styles.css`, inside the `[data-theme="dark"]` block (near other dark overrides for inputs), add:
   ```css
   [data-theme="dark"] input[type="date"],
   [data-theme="dark"] input[type="time"] {
@@ -83,9 +83,9 @@ The native browser date picker is light-themed by default. Add CSS to make it da
     cursor: pointer;
   }
   ```
-- [ ] Toggle to dark mode in browser, open reprimand form — verify date field text `дд.мм.рррр` is clearly visible
-- [ ] Verify calendar icon (□) is now visible/white
-- [ ] Check other views with date inputs in dark mode (status change modal, doc edit dates modal, employee card date fields) — all should look correct
+- [x] Toggle to dark mode in browser, open reprimand form — verify date field text `дд.мм.рррр` is clearly visible
+- [x] Verify calendar icon (□) is now visible/white
+- [x] Check other views with date inputs in dark mode (status change modal, doc edit dates modal, employee card date fields) — all should look correct
 
 ### Task 3: Verify acceptance criteria
 
