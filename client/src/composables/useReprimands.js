@@ -150,6 +150,7 @@ export function useReprimands() {
     reprimandForm,
     openReprimandsPopup,
     closeReprimandsPopup,
+    loadReprimands,
     openAddForm,
     openEditForm,
     closeReprimandForm,

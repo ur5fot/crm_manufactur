@@ -171,6 +171,7 @@ const {
   reprimandForm,
   openReprimandsPopup,
   closeReprimandsPopup,
+  loadReprimands,
   openAddForm: openReprimandAddForm,
   openEditForm: openReprimandEditForm,
   closeReprimandForm,
@@ -178,6 +179,15 @@ const {
   deleteReprimandEntry,
   formatReprimandDate,
 } = useReprimands();
+
+// Load reprimands count when selected employee changes
+watch(selectedId, async (newId) => {
+  if (newId) {
+    await loadReprimands(newId);
+  } else {
+    reprimands.value = [];
+  }
+}, { immediate: true });
 
 // Filtered employees for cards
 const filteredEmployeesForCards = computed(() => {
@@ -661,7 +671,7 @@ onUnmounted(() => {
                     title="Догани та відзнаки"
                     @click="openReprimandsPopup(selectedId)"
                   >
-                    📋 Догани та відзнаки
+                    📋 Догани та відзнаки{{ reprimands.length > 0 ? ` (${reprimands.length})` : '' }}
                   </button>
                 </div>
               </template>
