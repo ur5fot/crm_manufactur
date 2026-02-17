@@ -664,15 +664,6 @@ onUnmounted(() => {
                       <polyline points="12 6 12 12 16 14"/>
                     </svg>
                   </button>
-                  <button
-                    v-if="!isNew"
-                    class="secondary small"
-                    type="button"
-                    title="Догани та відзнаки"
-                    @click="openReprimandsPopup(selectedId)"
-                  >
-                    📋 Догани та відзнаки{{ reprimands.length > 0 ? ` (${reprimands.length})` : '' }}
-                  </button>
                 </div>
               </template>
               <select
@@ -711,6 +702,12 @@ onUnmounted(() => {
                 <input type="checkbox" v-model="form.indeclinable_first_name" true-value="yes" false-value="" />
                 Ім'я не схиляється
               </label>
+            </div>
+            <div v-if="field.key === 'employment_status' && !isNew" class="field field-reprimands-btn">
+              <label>&nbsp;</label>
+              <button class="secondary small" type="button" @click="openReprimandsPopup(selectedId)">
+                📋 Догани та відзнаки{{ reprimands.length > 0 ? ` (${reprimands.length})` : '' }}
+              </button>
             </div>
             </template>
           </div>
