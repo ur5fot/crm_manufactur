@@ -35,12 +35,12 @@ Add small circular photo thumbnails to each employee card in the sidebar list of
 - [x] Run tests — must pass before next task
 
 ### Task 2: Verify acceptance criteria
-- [ ] Verify photos display correctly in sidebar for employees with photos
-- [ ] Verify placeholder shows for employees without photos
-- [ ] Verify sidebar card layout looks good (no overflow, proper alignment)
-- [ ] Verify dark theme
-- [ ] Run full test suite: `cd server && npm test`
-- [ ] Run E2E tests: `npm run test:e2e`
+- [x] Verify photos display correctly in sidebar for employees with photos
+- [x] Verify placeholder shows for employees without photos
+- [x] Verify sidebar card layout looks good (no overflow, proper alignment)
+- [x] Verify dark theme
+- [x] Run full test suite: `cd server && npm test`
+- [x] Run E2E tests: `npm run test:e2e`
 
 ### Task 3: [Final] Update documentation
 - [ ] Update `CLAUDE.md` if needed (sidebar photo pattern)
