@@ -1498,8 +1498,8 @@ The application uses custom modal overlays for dialogs and confirmations.
 
   <!-- Modal overlay -->
   <div v-if="showUploadTemplateModal" class="vacation-notification-overlay" @click="closeUploadTemplateModal">
-    <div class="vacation-notification-card" @click.stop>
-      <div class="card-header">
+    <div class="vacation-notification-modal" @click.stop>
+      <div class="vacation-notification-header">
         <h3>Upload Template File</h3>
         <button class="close-btn" @click="closeUploadTemplateModal">&times;</button>
       </div>
@@ -1542,7 +1542,7 @@ async function handleUploadTemplate(event) {
 
 **Modal Patterns**:
 - Overlay with click-to-close background (vacation-notification-overlay)
-- Card with click.stop to prevent close (vacation-notification-card)
+- Card with click.stop to prevent close (vacation-notification-modal)
 - Close button in header (&times; character)
 - Form submission with @submit.prevent
 - Cancel button to close without action
@@ -1987,7 +1987,7 @@ The application uses Bootstrap 5 utility classes and custom CSS for styling.
 
 **Custom CSS Extensions**:
 - `vacation-notification-overlay`: Full-screen modal overlay with semi-transparent background
-- `vacation-notification-card`: Centered modal card with white background and shadow
+- `vacation-notification-modal`: Centered modal card with white background and shadow
 - `form-grid`: Responsive grid layout for form fields (2-3 columns)
 - `button-group`: Horizontal button layout with spacing
 - `card-header`: Custom header styling with flex layout

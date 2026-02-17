@@ -182,10 +182,9 @@ const {
 
 // Load reprimands count when selected employee changes
 watch(selectedId, async (newId) => {
+  reprimands.value = [];
   if (newId) {
     await loadReprimands(newId);
-  } else {
-    reprimands.value = [];
   }
 }, { immediate: true });
 

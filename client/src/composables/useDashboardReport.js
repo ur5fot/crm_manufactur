@@ -25,7 +25,7 @@ export function useDashboardReport(errorMessage) {
       ]);
       currentData.value = cur;
       monthData.value = mon;
-    } catch (e) { /* silently ignore */ }
+    } catch (e) { console.error('Failed to load report counts:', e); }
   }
 
   async function toggleReport(type) {
