@@ -137,16 +137,16 @@
 - [x] Run E2E tests: `npm run test:e2e` - must pass before next task
 
 ### Task 9: Extract useCustomReport from ReportsView
-- [ ] Create `client/src/composables/useCustomReport.js` with:
+- [x] Create `client/src/composables/useCustomReport.js` with:
   - State: `customFilters`, `customReportResults`, `customReportLoading`, `selectedColumns`, `reportSortColumn`, `reportSortDirection`, `columnSearchTerm`, `errorMessage`
   - Computed: `filteredColumnsForSelector`
   - Functions: `addCustomFilter()`, `removeCustomFilter(index)`, `clearCustomFilters()`, `runCustomReport()`, `exportCustomReportCSV()`, `sortReportPreview(fieldKey)`, `filterConditionOptions(filter)`
   - Watch: deep watch on customFilters for condition reset
   - Accept dependencies: `allFieldsSchema`, `documentFields`, `getFieldType`, `appConfig`
-- [ ] Update `ReportsView.vue` to import and use `useCustomReport`
-- [ ] Remove extracted code from ReportsView script section
-- [ ] Verify filter builder, report execution, sorting, and CSV export work in browser
-- [ ] Run E2E tests: `npm run test:e2e` - must pass before next task
+- [x] Update `ReportsView.vue` to import and use `useCustomReport`
+- [x] Remove extracted code from ReportsView script section
+- [x] Verify filter builder, report execution, sorting, and CSV export work in browser
+- [x] Run E2E tests: `npm run test:e2e` - must pass before next task
 
 ### Task 10: Extract useTemplatesManagement and useTemplateUpload from TemplatesView
 - [ ] Create `client/src/composables/useTemplatesManagement.js` with:
