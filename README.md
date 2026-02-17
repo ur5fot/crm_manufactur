@@ -11,6 +11,7 @@ A comprehensive CRM system for managing employee records, documents, and templat
 - Employee management (CRUD operations)
 - Employee photo upload and display in card view
 - Employment status history tracking with timeline popup
+- Reprimands and commendations tracking (догани та відзнаки) with popup history
 - Document templates with DOCX file upload
 - Automated document generation with placeholder replacement
 - Document history tracking
@@ -101,6 +102,17 @@ A clock icon button next to the employment status field opens a popup with the c
 - Dates formatted as DD.MM.YYYY, timestamps as DD.MM.YYYY HH:MM
 - Empty state message when no history exists
 - History recorded automatically on every employment status change
+
+### Reprimands and Commendations (Догани та Відзнаки)
+
+An icon button in the employee card opens a popup for managing employee disciplinary and commendation records:
+- Record types: Догана, Сувора догана, Зауваження, Попередження, Подяка, Грамота, Премія, Нагорода
+- Each record stores: date, type, order number (№ наказу), and note (reason/description)
+- Records sorted by date (newest first)
+- Add new records via inline form within the popup
+- Edit existing records (all fields editable)
+- Delete individual records with confirmation
+- Records automatically cleaned up when employee is deleted
 
 ## Dashboard Notifications
 
@@ -395,6 +407,15 @@ Search across employees, templates, and documents.
 |--------|----------|-------------|
 | GET | `/api/employees/:id/status-history` | Get status change history (newest first) |
 
+### Employee Reprimands and Commendations API
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/employees/:id/reprimands` | Get reprimands/commendations for employee (newest first) |
+| POST | `/api/employees/:id/reprimands` | Create new record (required: record_date, record_type) |
+| PUT | `/api/employees/:id/reprimands/:recordId` | Update existing record |
+| DELETE | `/api/employees/:id/reprimands/:recordId` | Hard-delete a record |
+
 ## Placeholder Syntax
 
 Templates use curly braces for placeholders: `{placeholder_name}`
@@ -511,9 +532,24 @@ Tests run automatically via GitHub Actions on push to `master`/`feature/*` branc
 │   │   │   ├── ImportView.vue
 │   │   │   ├── PlaceholderReferenceView.vue
 │   │   │   └── LogsView.vue
-│   │   ├── composables/   # Reusable logic
+│   │   ├── composables/   # Reusable logic (17 composables)
 │   │   │   ├── useFieldsSchema.js
-│   │   │   └── useEmployeeForm.js
+│   │   │   ├── useEmployeeForm.js
+│   │   │   ├── useEmployeePhoto.js
+│   │   │   ├── useEmployeeDocuments.js
+│   │   │   ├── useStatusManagement.js
+│   │   │   ├── useDocumentGeneration.js
+│   │   │   ├── useDismissedEvents.js
+│   │   │   ├── useDashboardNotifications.js
+│   │   │   ├── useDashboardStats.js
+│   │   │   ├── useDashboardTimeline.js
+│   │   │   ├── useDashboardReport.js
+│   │   │   ├── useCustomReport.js
+│   │   │   ├── useTemplatesManagement.js
+│   │   │   ├── useTemplateUpload.js
+│   │   │   ├── useTableInlineEdit.js
+│   │   │   ├── useTableColumnFilters.js
+│   │   │   └── useReprimands.js
 │   │   ├── utils/         # Utility modules
 │   │   │   ├── constants.js
 │   │   │   └── employee.js

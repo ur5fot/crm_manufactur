@@ -55,6 +55,7 @@ jobs:
           node test/declension.test.js
           node test/retirement-events.test.js
           node test/utils.test.js
+          node test/reprimands-store.test.js
 
       - name: Start backend server
         working-directory: ./server
@@ -112,6 +113,7 @@ jobs:
           node test/search-api.test.js
           node test/photo-api.test.js
           node test/status-history.test.js
+          node test/reprimands-api.test.js
 
       - name: Run Playwright tests
         run: npm run test:e2e

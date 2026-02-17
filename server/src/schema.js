@@ -245,6 +245,16 @@ export const STATUS_HISTORY_COLUMNS = [
   "changed_by"
 ];
 
+export const REPRIMAND_COLUMNS = [
+  "record_id",
+  "employee_id",
+  "record_date",
+  "record_type",
+  "order_number",
+  "note",
+  "created_at"
+];
+
 export const FIELD_LABELS = {
   photo: "Фото",
   employee_id: "ID сотрудника",

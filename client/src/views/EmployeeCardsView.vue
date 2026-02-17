@@ -1,9 +1,14 @@
 <script setup>
-import { ref, computed, reactive, watch, onMounted, onUnmounted } from "vue";
+import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { api } from "../api";
 import { useFieldsSchema } from "../composables/useFieldsSchema";
 import { useEmployeeForm } from "../composables/useEmployeeForm";
+import { useEmployeePhoto } from "../composables/useEmployeePhoto";
+import { useEmployeeDocuments } from "../composables/useEmployeeDocuments";
+import { useStatusManagement } from "../composables/useStatusManagement";
+import { useDocumentGeneration } from "../composables/useDocumentGeneration";
+import { useReprimands, REPRIMAND_TYPE_OPTIONS } from "../composables/useReprimands";
 import { displayName } from "../utils/employee";
 
 const router = useRouter();
@@ -84,61 +89,95 @@ const employees = ref([]);
 const loading = ref(false);
 const cardSearchTerm = ref("");
 const cardFieldSearchTerm = ref("");
-const openingEmployeeFolder = ref(false);
 
-// Photo state
-const photoUploading = ref(false);
-const photoError = ref("");
-const photoInputRef = ref(null);
+// Photo composable
+const {
+  photoUploading,
+  photoError,
+  photoInputRef,
+  photoVersion,
+  photoUrl,
+  sidebarPhotoUrl,
+  triggerPhotoUpload,
+  handlePhotoUpload,
+  deletePhoto,
+} = useEmployeePhoto(form, savedFormSnapshot, selectedId);
 
-// Status history popup
-const showStatusHistoryPopup = ref(false);
-const statusHistoryLoading = ref(false);
-const statusHistory = ref([]);
+// Documents composable
+const {
+  showDocUploadPopup,
+  docUploadForm,
+  docUploadSaving,
+  showDocEditDatesPopup,
+  docEditDatesForm,
+  docEditDatesSaving,
+  showClearConfirmPopup,
+  openingEmployeeFolder,
+  fileUrl,
+  formatDocDate,
+  isDocExpiringSoon,
+  isDocExpired,
+  openDocUploadPopup,
+  closeDocUploadPopup,
+  onDocUploadFileChange,
+  submitDocUpload,
+  openDocEditDatesPopup,
+  closeDocEditDatesPopup,
+  submitDocEditDates,
+  openDocument,
+  deleteDocument,
+  openEmployeeFolder,
+  openClearConfirmPopup,
+  closeClearConfirmPopup,
+  confirmClearForm,
+} = useEmployeeDocuments(form, employees, errorMessage);
 
-// Templates for document generation
-const templates = ref([]);
+// Status management composable
+const {
+  employmentOptions,
+  workingStatus,
+  statusChangeOptions,
+  showStatusChangePopup,
+  statusChangeForm,
+  showStatusHistoryPopup,
+  statusHistoryLoading,
+  statusHistory,
+  openStatusChangePopup,
+  closeStatusChangePopup,
+  applyStatusChange,
+  resetStatus,
+  openStatusHistoryPopup,
+  closeStatusHistoryPopup,
+  formatHistoryTimestamp,
+  formatHistoryDate,
+} = useStatusManagement(allFieldsSchema, form, employees, saving, errorMessage);
 
-// Employment status options
-const employmentOptions = computed(() => {
-  const field = allFieldsSchema.value.find(f => f.key === 'employment_status');
-  return field?.options || [];
-});
+// Document generation composable
+const {
+  templates,
+  loadTemplates,
+  generateDocumentForEmployee,
+} = useDocumentGeneration(form);
 
-const workingStatus = computed(() => employmentOptions.value[0] || '');
-const statusChangeOptions = computed(() => employmentOptions.value.slice(1));
-
-// Status change popup
-const showStatusChangePopup = ref(false);
-const statusChangeForm = reactive({
-  status: '',
-  startDate: '',
-  endDate: ''
-});
-
-// Document upload popup
-const showDocUploadPopup = ref(false);
-const docUploadForm = reactive({
-  fieldKey: '',
-  fieldLabel: '',
-  file: null,
-  issueDate: '',
-  expiryDate: ''
-});
-const docUploadSaving = ref(false);
-
-// Document edit dates popup
-const showDocEditDatesPopup = ref(false);
-const docEditDatesForm = reactive({
-  fieldKey: '',
-  fieldLabel: '',
-  issueDate: '',
-  expiryDate: ''
-});
-const docEditDatesSaving = ref(false);
-
-// Clear confirm popup
-const showClearConfirmPopup = ref(false);
+// Reprimands composable
+const {
+  showReprimandsPopup,
+  reprimandsLoading,
+  reprimands,
+  showReprimandForm,
+  editingReprimandId,
+  reprimandSaving,
+  reprimandError,
+  reprimandForm,
+  openReprimandsPopup,
+  closeReprimandsPopup,
+  openAddForm: openReprimandAddForm,
+  openEditForm: openReprimandEditForm,
+  closeReprimandForm,
+  submitReprimand,
+  deleteReprimandEntry,
+  formatReprimandDate,
+} = useReprimands();
 
 // Filtered employees for cards
 const filteredEmployeesForCards = computed(() => {
@@ -183,11 +222,6 @@ const filteredFieldGroups = computed(() => {
   }).filter(group => group.fields.length > 0); // Only include groups with matching fields
 });
 
-// Clear photo error when switching employees
-watch(selectedId, () => {
-  photoError.value = "";
-});
-
 // Watch route params to handle employee selection
 watch(() => route.params.id, (newId) => {
   if (route.name === 'cards' && newId && newId !== selectedId.value) {
@@ -200,43 +234,6 @@ watch(() => route.params.id, (newId) => {
   }
 });
 
-// Helper functions
-function fileUrl(path) {
-  if (!path) return "";
-  if (path.startsWith("files/")) return `/${path}`;
-  return path;
-}
-
-function formatDocDate(dateStr) {
-  if (!dateStr) return '';
-  const d = new Date(dateStr + 'T00:00:00');
-  if (isNaN(d.getTime())) return dateStr;
-  const dd = String(d.getDate()).padStart(2, '0');
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  return `${dd}.${mm}.${d.getFullYear()}`;
-}
-
-function isDocExpiringSoon(doc) {
-  const expiryDateField = `${doc.key}_expiry_date`;
-  const expiryDate = form[expiryDateField];
-  if (!expiryDate) return false;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const expiry = new Date(expiryDate + 'T00:00:00');
-  const diffDays = Math.round((expiry - today) / 86400000);
-  return diffDays >= 0 && diffDays <= 7;
-}
-
-function isDocExpired(doc) {
-  const expiryDateField = `${doc.key}_expiry_date`;
-  const expiryDate = form[expiryDateField];
-  if (!expiryDate) return false;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const expiry = new Date(expiryDate + 'T00:00:00');
-  return expiry < today;
-}
-
 // Load employees
 async function loadEmployees(silent = false) {
   if (!silent) loading.value = true;
@@ -248,16 +245,6 @@ async function loadEmployees(silent = false) {
     if (!silent) errorMessage.value = error.message;
   } finally {
     if (!silent) loading.value = false;
-  }
-}
-
-// Load templates
-async function loadTemplates() {
-  try {
-    const data = await api.getTemplates();
-    templates.value = data.templates || [];
-  } catch (error) {
-    console.error('Failed to load templates:', error);
   }
 }
 
@@ -339,382 +326,6 @@ async function deleteEmployee() {
   }
 }
 
-// Status change functions
-function openStatusChangePopup() {
-  const currentStatus = form.employment_status || '';
-  statusChangeForm.status = currentStatus === workingStatus.value ? '' : currentStatus;
-  statusChangeForm.startDate = form.status_start_date || '';
-  statusChangeForm.endDate = form.status_end_date || '';
-  showStatusChangePopup.value = true;
-}
-
-function closeStatusChangePopup() {
-  showStatusChangePopup.value = false;
-}
-
-async function applyStatusChange() {
-  if (!statusChangeForm.status || !statusChangeForm.startDate) return;
-  if (!form.employee_id) return;
-  if (saving.value) return;
-  if (statusChangeForm.endDate && statusChangeForm.endDate < statusChangeForm.startDate) {
-    errorMessage.value = 'Дата завершення не може бути раніше дати початку';
-    return;
-  }
-
-  errorMessage.value = '';
-  saving.value = true;
-  try {
-    const currentEmployee = employees.value.find(e => e.employee_id === form.employee_id);
-    if (!currentEmployee) {
-      errorMessage.value = 'Співробітника не знайдено. Оновіть сторінку.';
-      saving.value = false;
-      return;
-    }
-    const payload = {
-      ...currentEmployee,
-      employment_status: statusChangeForm.status,
-      status_start_date: statusChangeForm.startDate,
-      status_end_date: statusChangeForm.endDate || ''
-    };
-    await api.updateEmployee(form.employee_id, payload);
-    await reloadEmployeePreservingDirty(form.employee_id);
-    closeStatusChangePopup();
-  } catch (error) {
-    errorMessage.value = error.message;
-  } finally {
-    saving.value = false;
-  }
-}
-
-async function resetStatus() {
-  if (!form.employee_id) return;
-  if (saving.value) return;
-
-  errorMessage.value = '';
-  saving.value = true;
-  try {
-    const currentEmployee = employees.value.find(e => e.employee_id === form.employee_id);
-    if (!currentEmployee) {
-      errorMessage.value = 'Співробітника не знайдено. Оновіть сторінку.';
-      saving.value = false;
-      return;
-    }
-    const payload = {
-      ...currentEmployee,
-      employment_status: workingStatus.value,
-      status_start_date: '',
-      status_end_date: ''
-    };
-    await api.updateEmployee(form.employee_id, payload);
-    await reloadEmployeePreservingDirty(form.employee_id);
-    closeStatusChangePopup();
-  } catch (error) {
-    errorMessage.value = error.message;
-  } finally {
-    saving.value = false;
-  }
-}
-
-// Document upload functions
-function openDocUploadPopup(doc) {
-  docUploadForm.fieldKey = doc.key;
-  docUploadForm.fieldLabel = doc.label;
-  docUploadForm.file = null;
-  const issueDateField = `${doc.key}_issue_date`;
-  const expiryDateField = `${doc.key}_expiry_date`;
-  docUploadForm.issueDate = form[issueDateField] || '';
-  docUploadForm.expiryDate = form[expiryDateField] || '';
-  showDocUploadPopup.value = true;
-}
-
-function closeDocUploadPopup() {
-  showDocUploadPopup.value = false;
-}
-
-function onDocUploadFileChange(event) {
-  docUploadForm.file = event.target.files?.[0] || null;
-}
-
-async function submitDocUpload() {
-  if (!form.employee_id || !docUploadForm.file || !docUploadForm.fieldKey) return;
-  if (docUploadSaving.value) return;
-  if (docUploadForm.issueDate && docUploadForm.expiryDate && docUploadForm.expiryDate < docUploadForm.issueDate) {
-    errorMessage.value = 'Дата закінчення не може бути раніше дати видачі';
-    return;
-  }
-
-  docUploadSaving.value = true;
-  errorMessage.value = '';
-  try {
-    const formData = new FormData();
-    formData.append('file', docUploadForm.file);
-    formData.append('file_field', docUploadForm.fieldKey);
-    if (docUploadForm.issueDate) {
-      formData.append('issue_date', docUploadForm.issueDate);
-    }
-    if (docUploadForm.expiryDate) {
-      formData.append('expiry_date', docUploadForm.expiryDate);
-    }
-    const response = await api.uploadEmployeeFile(form.employee_id, formData);
-    form[docUploadForm.fieldKey] = response?.path || '';
-    const issueDateField = `${docUploadForm.fieldKey}_issue_date`;
-    const expiryDateField = `${docUploadForm.fieldKey}_expiry_date`;
-    form[issueDateField] = docUploadForm.issueDate || '';
-    form[expiryDateField] = docUploadForm.expiryDate || '';
-    closeDocUploadPopup();
-    await reloadEmployeePreservingDirty(form.employee_id);
-  } catch (error) {
-    errorMessage.value = error.message;
-  } finally {
-    docUploadSaving.value = false;
-  }
-}
-
-// Document edit dates functions
-function openDocEditDatesPopup(doc) {
-  const issueDateField = `${doc.key}_issue_date`;
-  const expiryDateField = `${doc.key}_expiry_date`;
-  docEditDatesForm.fieldKey = doc.key;
-  docEditDatesForm.fieldLabel = doc.label;
-  docEditDatesForm.issueDate = form[issueDateField] || '';
-  docEditDatesForm.expiryDate = form[expiryDateField] || '';
-  showDocEditDatesPopup.value = true;
-}
-
-function closeDocEditDatesPopup() {
-  showDocEditDatesPopup.value = false;
-}
-
-async function submitDocEditDates() {
-  if (!form.employee_id || !docEditDatesForm.fieldKey) return;
-  if (docEditDatesSaving.value) return;
-  if (docEditDatesForm.issueDate && docEditDatesForm.expiryDate && docEditDatesForm.expiryDate < docEditDatesForm.issueDate) {
-    errorMessage.value = 'Дата закінчення не може бути раніше дати видачі';
-    return;
-  }
-
-  docEditDatesSaving.value = true;
-  errorMessage.value = '';
-  try {
-    const issueDateField = `${docEditDatesForm.fieldKey}_issue_date`;
-    const expiryDateField = `${docEditDatesForm.fieldKey}_expiry_date`;
-    const currentEmployee = employees.value.find(e => e.employee_id === form.employee_id);
-    if (!currentEmployee) {
-      errorMessage.value = 'Співробітника не знайдено. Оновіть сторінку.';
-      docEditDatesSaving.value = false;
-      return;
-    }
-    const payload = {
-      ...currentEmployee,
-      [issueDateField]: docEditDatesForm.issueDate || '',
-      [expiryDateField]: docEditDatesForm.expiryDate || ''
-    };
-    await api.updateEmployee(form.employee_id, payload);
-    await reloadEmployeePreservingDirty(form.employee_id);
-    closeDocEditDatesPopup();
-  } catch (error) {
-    errorMessage.value = error.message;
-  } finally {
-    docEditDatesSaving.value = false;
-  }
-}
-
-// Helper to reload employee preserving dirty state
-async function reloadEmployeePreservingDirty(employeeId) {
-  await loadEmployees();
-  await selectEmployee(employeeId);
-}
-
-// Document operations
-function openDocument(fieldKey) {
-  const filePath = form[fieldKey];
-  if (!filePath) return;
-  if (!filePath.startsWith('files/')) {
-    console.error('Invalid file path (must start with "files/"):', filePath);
-    return;
-  }
-  const url = `${import.meta.env.VITE_API_URL || ""}/${filePath}`;
-  window.open(url, "_blank");
-}
-
-async function deleteDocument(doc) {
-  if (!form.employee_id || !form[doc.key]) return;
-
-  const confirmed = window.confirm(`Видалити документ "${doc.label}"?`);
-  if (!confirmed) return;
-
-  errorMessage.value = "";
-  try {
-    await api.deleteEmployeeFile(form.employee_id, doc.key);
-    form[doc.key] = "";
-    form[`${doc.key}_issue_date`] = "";
-    form[`${doc.key}_expiry_date`] = "";
-    await loadEmployees();
-  } catch (error) {
-    errorMessage.value = error.message;
-  }
-}
-
-async function openEmployeeFolder() {
-  if (!form.employee_id) return;
-  openingEmployeeFolder.value = true;
-  errorMessage.value = "";
-  try {
-    await api.openEmployeeFolder(form.employee_id);
-  } catch (error) {
-    errorMessage.value = error.message;
-  } finally {
-    openingEmployeeFolder.value = false;
-  }
-}
-
-// Photo functions
-const photoVersion = ref(0);
-const photoUrl = computed(() => {
-  const p = form.photo;
-  if (!p) return '';
-  const base = import.meta.env.VITE_API_URL || '';
-  return `${base}/${p}?v=${photoVersion.value}`;
-});
-
-function sidebarPhotoUrl(photoPath) {
-  const base = import.meta.env.VITE_API_URL || '';
-  return `${base}/${photoPath}?v=${photoVersion.value}`;
-}
-
-function triggerPhotoUpload() {
-  photoInputRef.value?.click();
-}
-
-async function handlePhotoUpload(event) {
-  const file = event.target.files?.[0];
-  if (!file || !form.employee_id) return;
-
-  photoUploading.value = true;
-  photoError.value = "";
-  try {
-    const formData = new FormData();
-    formData.append('photo', file);
-    const result = await api.uploadEmployeePhoto(form.employee_id, formData);
-    form.photo = result?.path || '';
-    photoVersion.value++;
-    // Only update photo in snapshot to preserve dirty state for other fields
-    if (savedFormSnapshot.value) {
-      savedFormSnapshot.value.photo = form.photo;
-    }
-    await loadEmployees(true);
-  } catch (error) {
-    photoError.value = error.message;
-  } finally {
-    photoUploading.value = false;
-    // Reset input so same file can be re-selected
-    if (photoInputRef.value) photoInputRef.value.value = '';
-  }
-}
-
-async function deletePhoto() {
-  if (!form.employee_id || !form.photo) return;
-  const confirmed = window.confirm("Видалити фото співробітника?");
-  if (!confirmed) return;
-
-  photoUploading.value = true;
-  photoError.value = "";
-  try {
-    await api.deleteEmployeePhoto(form.employee_id);
-    form.photo = '';
-    photoVersion.value++;
-    // Only update photo in snapshot to preserve dirty state for other fields
-    if (savedFormSnapshot.value) {
-      savedFormSnapshot.value.photo = form.photo;
-    }
-    await loadEmployees(true);
-  } catch (error) {
-    photoError.value = error.message;
-  } finally {
-    photoUploading.value = false;
-  }
-}
-
-// Status history functions
-async function openStatusHistoryPopup() {
-  if (!form.employee_id) return;
-  showStatusHistoryPopup.value = true;
-  statusHistoryLoading.value = true;
-  try {
-    const data = await api.getEmployeeStatusHistory(form.employee_id);
-    statusHistory.value = data.history || [];
-  } catch (error) {
-    statusHistory.value = [];
-    console.error('Failed to load status history:', error);
-  } finally {
-    statusHistoryLoading.value = false;
-  }
-}
-
-function closeStatusHistoryPopup() {
-  showStatusHistoryPopup.value = false;
-}
-
-function formatHistoryTimestamp(isoStr) {
-  if (!isoStr) return '';
-  const d = new Date(isoStr);
-  if (isNaN(d.getTime())) return isoStr;
-  const dd = String(d.getDate()).padStart(2, '0');
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const hh = String(d.getHours()).padStart(2, '0');
-  const min = String(d.getMinutes()).padStart(2, '0');
-  return `${dd}.${mm}.${d.getFullYear()} ${hh}:${min}`;
-}
-
-function formatHistoryDate(dateStr) {
-  if (!dateStr) return '—';
-  const d = new Date(dateStr + 'T00:00:00');
-  if (isNaN(d.getTime())) return dateStr;
-  const dd = String(d.getDate()).padStart(2, '0');
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  return `${dd}.${mm}.${d.getFullYear()}`;
-}
-
-// Template generation
-async function generateDocumentForEmployee(template) {
-  try {
-    const employeeId = form.employee_id;
-
-    if (!employeeId) {
-      alert('Помилка: не знайдено ID співробітника. Спочатку збережіть співробітника.');
-      return;
-    }
-
-    if (!template.docx_filename) {
-      alert('Помилка: для цього шаблону не завантажено файл DOCX');
-      return;
-    }
-
-    const result = await api.generateDocument(template.template_id, employeeId, {});
-
-    const downloadUrl = api.downloadDocument(result.document_id);
-    window.open(downloadUrl, '_blank');
-
-    alert(`✓ Документ "${template.template_name}" успішно згенеровано та завантажено`);
-  } catch (error) {
-    alert('Помилка генерування документа: ' + error.message);
-  }
-}
-
-// Clear confirm popup
-function openClearConfirmPopup() {
-  showClearConfirmPopup.value = true;
-}
-
-function closeClearConfirmPopup() {
-  showClearConfirmPopup.value = false;
-}
-
-function confirmClearForm() {
-  closeClearConfirmPopup();
-  startNew();
-}
-
 // Open employee card
 function openEmployeeCard(employeeId) {
   isCreatingNew.value = false;
@@ -745,7 +356,16 @@ function handleGlobalKeydown(e) {
       closeStatusHistoryPopup();
     } else if (showStatusChangePopup.value) {
       closeStatusChangePopup();
+    } else if (showReprimandsPopup.value) {
+      closeReprimandsPopup();
     }
+  }
+}
+
+// Confirm and delete reprimand
+function confirmDeleteReprimand(employeeId, recordId) {
+  if (window.confirm('Видалити запис?')) {
+    deleteReprimandEntry(employeeId, recordId);
   }
 }
 
@@ -922,14 +542,14 @@ onUnmounted(() => {
               class="photo-delete-btn"
               type="button"
               title="Видалити фото"
-              @click.stop="deletePhoto"
+              @click.stop="deletePhoto(loadEmployees)"
             >&times;</button>
             <input
               ref="photoInputRef"
               type="file"
               accept="image/jpeg,image/png,image/gif,image/webp"
               style="display: none;"
-              @change="handlePhotoUpload"
+              @change="handlePhotoUpload($event, loadEmployees)"
             />
           </div>
           <div class="panel-title">
@@ -1018,7 +638,7 @@ onUnmounted(() => {
                     class="secondary small"
                     type="button"
                     :disabled="saving"
-                    @click="resetStatus"
+                    @click="resetStatus(loadEmployees, selectEmployee)"
                   >
                     Скинути статус
                   </button>
@@ -1033,6 +653,15 @@ onUnmounted(() => {
                       <circle cx="12" cy="12" r="10"/>
                       <polyline points="12 6 12 12 16 14"/>
                     </svg>
+                  </button>
+                  <button
+                    v-if="!isNew"
+                    class="secondary small"
+                    type="button"
+                    title="Догани та відзнаки"
+                    @click="openReprimandsPopup(selectedId)"
+                  >
+                    📋 Догани та відзнаки
                   </button>
                 </div>
               </template>
@@ -1155,7 +784,7 @@ onUnmounted(() => {
                       <button
                         class="danger small"
                         type="button"
-                        @click="deleteDocument(doc)"
+                        @click="deleteDocument(doc, loadEmployees)"
                         title="Видалити документ"
                       >
                         Видалити
@@ -1273,7 +902,7 @@ onUnmounted(() => {
           </div>
         </div>
         <div class="button-group">
-          <button class="primary" @click="applyStatusChange">Застосувати</button>
+          <button class="primary" @click="applyStatusChange(loadEmployees, selectEmployee)">Застосувати</button>
           <button class="secondary" @click="closeStatusChangePopup">Скасувати</button>
         </div>
       </div>
@@ -1301,7 +930,7 @@ onUnmounted(() => {
           </div>
         </div>
         <div class="button-group">
-          <button class="primary" @click="submitDocUpload" :disabled="docUploadSaving">
+          <button class="primary" @click="submitDocUpload(loadEmployees, selectEmployee)" :disabled="docUploadSaving">
             {{ docUploadSaving ? 'Завантаження...' : 'Завантажити' }}
           </button>
           <button class="secondary" @click="closeDocUploadPopup">Скасувати</button>
@@ -1327,7 +956,7 @@ onUnmounted(() => {
           </div>
         </div>
         <div class="button-group">
-          <button class="primary" @click="submitDocEditDates" :disabled="docEditDatesSaving">
+          <button class="primary" @click="submitDocEditDates(loadEmployees, selectEmployee)" :disabled="docEditDatesSaving">
             {{ docEditDatesSaving ? 'Збереження...' : 'Зберегти' }}
           </button>
           <button class="secondary" @click="closeDocEditDatesPopup">Скасувати</button>
@@ -1346,7 +975,7 @@ onUnmounted(() => {
           <p>Ви впевнені, що хочете очистити форму? Всі незбережені зміни будуть втрачені.</p>
         </div>
         <div class="button-group">
-          <button class="danger" @click="confirmClearForm">Так, очистити</button>
+          <button class="danger" @click="confirmClearForm(startNew)">Так, очистити</button>
           <button class="secondary" @click="closeClearConfirmPopup">Скасувати</button>
         </div>
       </div>
@@ -1395,6 +1024,93 @@ onUnmounted(() => {
         </div>
         <div class="button-group">
           <button class="secondary" @click="closeStatusHistoryPopup">Закрити</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Reprimands Popup -->
+    <div v-if="showReprimandsPopup" class="vacation-notification-overlay" @click="closeReprimandsPopup">
+      <div class="vacation-notification-modal status-history-modal" @click.stop>
+        <div class="card-header">
+          <h3>📋 Догани та відзнаки</h3>
+          <button class="close-btn" @click="closeReprimandsPopup">&times;</button>
+        </div>
+        <div class="card-content">
+          <div v-if="reprimandsLoading" class="status-history-loading">Завантаження...</div>
+          <template v-else>
+            <div v-if="reprimandError && !showReprimandForm" class="alert">{{ reprimandError }}</div>
+            <div v-if="reprimands.length === 0 && !showReprimandForm" class="status-history-empty">
+              Записи відсутні.
+            </div>
+            <div v-else-if="reprimands.length > 0 && !showReprimandForm" class="status-history-list">
+              <table class="status-history-table">
+                <thead>
+                  <tr>
+                    <th>Дата</th>
+                    <th>Тип</th>
+                    <th>№ наказу</th>
+                    <th>Примітка</th>
+                    <th>Дії</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="record in reprimands" :key="record.record_id">
+                    <td>{{ formatReprimandDate(record.record_date) }}</td>
+                    <td>{{ record.record_type || '—' }}</td>
+                    <td>{{ record.order_number || '—' }}</td>
+                    <td>{{ record.note || '—' }}</td>
+                    <td>
+                      <div class="document-actions">
+                        <button class="secondary small" type="button" @click="openReprimandEditForm(record)">Редагувати</button>
+                        <button
+                          class="danger small"
+                          type="button"
+                          @click="confirmDeleteReprimand(selectedId, record.record_id)"
+                        >Видалити</button>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Add/Edit Form -->
+            <div v-if="showReprimandForm" class="reprimand-form">
+              <h4>{{ editingReprimandId ? 'Редагування запису' : 'Новий запис' }}</h4>
+              <div v-if="reprimandError" class="alert">{{ reprimandError }}</div>
+              <div class="form-group">
+                <label>Дата *</label>
+                <input type="date" v-model="reprimandForm.record_date" required />
+              </div>
+              <div class="form-group">
+                <label>Тип *</label>
+                <select v-model="reprimandForm.record_type" required>
+                  <option value="">— Виберіть тип —</option>
+                  <option v-for="opt in REPRIMAND_TYPE_OPTIONS" :key="opt" :value="opt">{{ opt }}</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>№ наказу</label>
+                <input type="text" v-model="reprimandForm.order_number" placeholder="Наприклад: №123" />
+              </div>
+              <div class="form-group">
+                <label>Примітка</label>
+                <textarea v-model="reprimandForm.note" rows="3" placeholder="За що / підстава"></textarea>
+              </div>
+            </div>
+          </template>
+        </div>
+        <div class="button-group">
+          <template v-if="showReprimandForm">
+            <button class="primary" @click="submitReprimand(selectedId)" :disabled="reprimandSaving">
+              {{ reprimandSaving ? 'Збереження...' : (editingReprimandId ? 'Зберегти зміни' : 'Додати запис') }}
+            </button>
+            <button class="secondary" @click="closeReprimandForm">Скасувати</button>
+          </template>
+          <template v-else>
+            <button class="primary" @click="openReprimandAddForm">Додати запис</button>
+            <button class="secondary" @click="closeReprimandsPopup">Закрити</button>
+          </template>
         </div>
       </div>
     </div>
