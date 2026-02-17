@@ -24,8 +24,10 @@ export function useDismissedEvents() {
   }
 
   function dismissEvent(eventId) {
-    dismissedEvents.value.add(eventId);
-    const arr = Array.from(dismissedEvents.value);
+    const newSet = new Set(dismissedEvents.value);
+    newSet.add(eventId);
+    dismissedEvents.value = newSet;
+    const arr = Array.from(newSet);
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
     } catch (error) {

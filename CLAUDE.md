@@ -1366,7 +1366,7 @@ Composables receive external dependencies via function parameters rather than im
 ```javascript
 // View wires composables together
 const { allFieldsSchema, getFieldType } = useFieldsSchema();
-const { customFilters, runCustomReport } = useCustomReport(allFieldsSchema, documentFields, getFieldType, appConfig);
+const { customFilters, runCustomReport } = useCustomReport(allFieldsSchema, documentFields, getFieldType);
 ```
 
 **Composable Pattern Benefits**:
