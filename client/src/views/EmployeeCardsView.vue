@@ -703,17 +703,13 @@ onUnmounted(() => {
                 :readonly="field.readOnly"
                 :required="field.key === 'first_name' || field.key === 'last_name'"
               />
-            </div>
-            <div v-if="field.key === 'last_name'" class="field" style="display: flex; align-items: center; padding-top: 1.4em;">
-              <label style="display: flex; align-items: center; gap: 6px; margin: 0; cursor: pointer; white-space: nowrap;">
-                <input type="checkbox" v-model="form.indeclinable_name" true-value="yes" false-value="" style="width: auto;" />
-                Прізвище не склоняється
+              <label v-if="field.key === 'last_name'" class="field-checkbox-hint">
+                <input type="checkbox" v-model="form.indeclinable_name" true-value="yes" false-value="" />
+                Прізвище не схиляється
               </label>
-            </div>
-            <div v-if="field.key === 'first_name'" class="field" style="display: flex; align-items: center; padding-top: 1.4em;">
-              <label style="display: flex; align-items: center; gap: 6px; margin: 0; cursor: pointer; white-space: nowrap;">
-                <input type="checkbox" v-model="form.indeclinable_first_name" true-value="yes" false-value="" style="width: auto;" />
-                Ім'я не склоняється
+              <label v-if="field.key === 'first_name'" class="field-checkbox-hint">
+                <input type="checkbox" v-model="form.indeclinable_first_name" true-value="yes" false-value="" />
+                Ім'я не схиляється
               </label>
             </div>
             </template>

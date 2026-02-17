@@ -1954,6 +1954,22 @@ button.small {
   background: #1565C0;
 }
 
+/* Checkbox hint shown inside a field div (e.g. "Прізвище не схиляється") */
+.field-checkbox-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85em;
+  color: var(--muted);
+  cursor: pointer;
+  margin-top: 4px;
+  white-space: nowrap;
+}
+.field-checkbox-hint input[type="checkbox"] {
+  width: auto;
+  flex-shrink: 0;
+}
+
 /* Status field row — readonly input + action buttons */
 .status-field-row {
   display: flex;
