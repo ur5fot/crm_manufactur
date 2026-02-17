@@ -17,7 +17,7 @@ async function ensureTestEmployee(request) {
     data: { first_name: 'ReprimandTest', last_name: 'Employee', gender: 'Чоловіча' }
   });
   const createData = await createResp.json();
-  return createData.employee?.employee_id;
+  return createData.employee_id;
 }
 
 async function openReprimandsPopup(page) {
