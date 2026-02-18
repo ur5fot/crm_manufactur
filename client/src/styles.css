@@ -93,6 +93,17 @@
     var(--bg);
 }
 
+[data-theme="dark"] input[type="date"],
+[data-theme="dark"] input[type="time"] {
+  color-scheme: dark;
+}
+
+[data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator,
+[data-theme="dark"] input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.8);
+  cursor: pointer;
+}
+
 * {
   box-sizing: border-box;
   transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
@@ -772,9 +783,31 @@ a {
 
 label {
   font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
   color: var(--muted);
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.form-group:last-child {
+  margin-bottom: 0;
+}
+
+.form-group label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  box-sizing: border-box;
 }
 
 input,
@@ -1489,6 +1522,7 @@ button.small {
   max-width: 500px;
   width: 90%;
   animation: slideUp 0.3s ease;
+  overflow: hidden;
 }
 
 @keyframes slideUp {
@@ -1506,26 +1540,28 @@ button.small {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px 24px;
+  padding: 16px 24px;
   border-bottom: 1px solid var(--line);
+  background: var(--bg-accent);
 }
 
 .vacation-notification-header h3 {
   margin: 0;
-  font-size: 20px;
+  font-size: 16px;
+  font-weight: 600;
   color: var(--ink);
 }
 
 .close-btn {
   background: none;
   border: none;
-  font-size: 32px;
+  font-size: 24px;
   color: var(--muted);
   cursor: pointer;
   line-height: 1;
   padding: 0;
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1539,7 +1575,7 @@ button.small {
 }
 
 .vacation-notification-body {
-  padding: 24px;
+  padding: 20px 24px;
 }
 
 .notification-section {
@@ -1637,6 +1673,7 @@ button.small {
   border-top: 1px solid var(--line);
   display: flex;
   justify-content: flex-end;
+  gap: 10px;
 }
 
 /* Dashboard styles */
@@ -1916,6 +1953,26 @@ button.small {
 
 .export-btn:hover {
   background: #1565C0;
+}
+
+/* Checkbox hint shown inside a field div (e.g. "Прізвище не схиляється") */
+.field-checkbox-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85em;
+  color: var(--muted);
+  cursor: pointer;
+  margin-top: 4px;
+  white-space: nowrap;
+}
+.field-checkbox-hint input[type="checkbox"] {
+  width: auto;
+  flex-shrink: 0;
+}
+
+.field-reprimands-btn {
+  align-items: flex-end;
 }
 
 /* Status field row — readonly input + action buttons */
