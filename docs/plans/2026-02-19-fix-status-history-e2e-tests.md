@@ -48,11 +48,11 @@
 
 ### Task 2: Зробити status-history тести стабільнішими
 
-- [ ] Test line 37: додати `await page.locator('.status-history-btn').waitFor()` перед click
-- [ ] Test line 37: використовувати `await page.locator('.status-history-btn').click()` замість `await page.click('.status-history-btn')`
-- [ ] Test line 148: замінити `await page.click('.status-history-modal .button-group .secondary')` на `await modal.locator('.button-group .secondary').click()` (scoped, як у test 136)
-- [ ] Перевірити інші тести в файлі на аналогічні патерни і зробити однаковими
-- [ ] запустити `npm run test:e2e -- --grep "Status History"` — всі повинні пройти
+- [x] Test line 37: додати `await page.locator('.status-history-btn').waitFor()` перед click
+- [x] Test line 37: використовувати `await page.locator('.status-history-btn').click()` замість `await page.click('.status-history-btn')`
+- [x] Test line 148: замінити `await page.click('.status-history-modal .button-group .secondary')` на `await modal.locator('.button-group .secondary').click()` (scoped, як у test 136)
+- [x] Перевірити інші тести в файлі на аналогічні патерни і зробити однаковими
+- [x] запустити `npm run test:e2e -- --grep "Status History"` — всі повинні пройти
 
 ### Task 3: Фінальна верифікація
 
