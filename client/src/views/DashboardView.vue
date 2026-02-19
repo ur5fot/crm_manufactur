@@ -426,7 +426,7 @@ onUnmounted(() => {
           </div>
         </div>
         <div class="timeline-card">
-          <div class="timeline-title">Найближчі 7 днів</div>
+          <div class="timeline-title">Найближчі 30 днів</div>
           <div v-if="dashboardEvents.thisWeek.length === 0" class="timeline-empty">
             Немає запланованих подій
           </div>

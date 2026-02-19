@@ -45,7 +45,7 @@ export function useDashboardTimeline(employmentOptions) {
         ...todayBirthdayEvents
       ];
 
-      const weekBirthdayEvents = (birthdayData.next7Days || []).map(evt => mapBirthdayEvent(evt, false));
+      const weekBirthdayEvents = (birthdayData.next30Days || []).map(evt => mapBirthdayEvent(evt, false));
       const weekEvents = [
         ...(statusData.thisWeek || []),
         ...(docData.thisWeek || []).map(mapDocEvent),

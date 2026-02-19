@@ -50,9 +50,9 @@
 
 ### Task 2: Оновити фронтенд — лейбл і маппінг API
 
-- [ ] в `useDashboardTimeline.js`: змінити `birthdayData.next7Days` на `birthdayData.next30Days`
-- [ ] в `DashboardView.vue`: замінити текст `"Найближчі 7 днів"` на `"Найближчі 30 днів"`
-- [ ] запустити `cd server && npm test` — повинні пройти (немає окремих фронт-тестів)
+- [x] в `useDashboardTimeline.js`: змінити `birthdayData.next7Days` на `birthdayData.next30Days`
+- [x] в `DashboardView.vue`: замінити текст `"Найближчі 7 днів"` на `"Найближчі 30 днів"`
+- [x] запустити `cd server && npm test` — повинні пройти (немає окремих фронт-тестів)
 
 ### Task 3: Фінальна верифікація
 
