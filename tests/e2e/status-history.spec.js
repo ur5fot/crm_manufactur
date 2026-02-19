@@ -38,13 +38,15 @@ test.describe('Status History Popup', () => {
     await page.goto(`${BASE_URL}/cards/${testEmployeeId}`);
     await page.waitForSelector('.status-field-row');
 
-    await page.click('.status-history-btn');
+    const historyBtn = page.locator('.status-history-btn');
+    await historyBtn.waitFor();
+    await historyBtn.click();
 
     const modal = page.locator('.status-history-modal');
     await expect(modal).toBeVisible();
 
     // Check popup header
-    const header = modal.locator('.card-header h3');
+    const header = modal.locator('.vacation-notification-header h3');
     await expect(header).toHaveText('Історія змін статусу');
   });
 
@@ -67,7 +69,9 @@ test.describe('Status History Popup', () => {
       );
       await page.waitForSelector('.status-field-row');
 
-      await page.click('.status-history-btn');
+      const historyBtn = page.locator('.status-history-btn');
+      await historyBtn.waitFor();
+      await historyBtn.click();
 
       if (histData.history.length === 0) {
         // Fresh employee with no history — should show empty message
@@ -114,7 +118,9 @@ test.describe('Status History Popup', () => {
       );
       await page.waitForSelector('.status-field-row');
 
-      await page.click('.status-history-btn');
+      const historyBtn = page.locator('.status-history-btn');
+      await historyBtn.waitFor();
+      await historyBtn.click();
 
       const table = page.locator('.status-history-table');
       await expect(table).toBeVisible();
@@ -137,7 +143,9 @@ test.describe('Status History Popup', () => {
     await page.goto(`${BASE_URL}/cards/${testEmployeeId}`);
     await page.waitForSelector('.status-field-row');
 
-    await page.click('.status-history-btn');
+    const historyBtn = page.locator('.status-history-btn');
+    await historyBtn.waitFor();
+    await historyBtn.click();
     const modal = page.locator('.status-history-modal');
     await expect(modal).toBeVisible();
 
@@ -149,11 +157,13 @@ test.describe('Status History Popup', () => {
     await page.goto(`${BASE_URL}/cards/${testEmployeeId}`);
     await page.waitForSelector('.status-field-row');
 
-    await page.click('.status-history-btn');
+    const historyBtn = page.locator('.status-history-btn');
+    await historyBtn.waitFor();
+    await historyBtn.click();
     const modal = page.locator('.status-history-modal');
     await expect(modal).toBeVisible();
 
-    await page.click('.status-history-modal .button-group .secondary');
+    await modal.locator('.vacation-notification-footer .secondary').click();
     await expect(modal).not.toBeVisible();
   });
 
@@ -161,7 +171,9 @@ test.describe('Status History Popup', () => {
     await page.goto(`${BASE_URL}/cards/${testEmployeeId}`);
     await page.waitForSelector('.status-field-row');
 
-    await page.click('.status-history-btn');
+    const historyBtn = page.locator('.status-history-btn');
+    await historyBtn.waitFor();
+    await historyBtn.click();
     const modal = page.locator('.status-history-modal');
     await expect(modal).toBeVisible();
 
@@ -197,7 +209,9 @@ test.describe('Status History Popup', () => {
       );
       await page.waitForSelector('.status-field-row');
 
-      await page.click('.status-history-btn');
+      const historyBtn = page.locator('.status-history-btn');
+      await historyBtn.waitFor();
+      await historyBtn.click();
 
       const table = page.locator('.status-history-table');
       await expect(table).toBeVisible();

@@ -2011,8 +2011,9 @@ button.small {
   border-color: var(--accent);
 }
 
-/* Status history modal */
-.status-history-modal {
+/* Status history modal & Reprimands modal */
+.status-history-modal,
+.reprimands-modal {
   max-width: 700px;
 }
 

@@ -143,7 +143,8 @@ crm_manufactur/
 │   │   ├── photo-api.test.js
 │   │   ├── status-history.test.js
 │   │   ├── reprimands-api.test.js
-│   │   └── reprimands-store.test.js
+│   │   ├── reprimands-store.test.js
+│   │   └── dashboard-30days.test.js
 │   └── package.json            # Backend dependencies
 │
 ├── tests/
@@ -2120,6 +2121,7 @@ Unit and integration tests focus on backend business logic, API endpoints, and d
 - `status-history.test.js`: Status history recording and retrieval API validation
 - `reprimands-api.test.js`: Reprimands API endpoint validation (GET, POST, PUT, DELETE)
 - `reprimands-store.test.js`: Reprimands store functions unit test (loadReprimands, addReprimand, updateReprimand, deleteReprimand, removeReprimandsForEmployee)
+- `dashboard-30days.test.js`: Dashboard 30-day window logic for birthday, status, and document expiry events
 - `utils.test.js`: Shared utility function tests
 
 **Test Framework**: Node.js native test runner (no external dependencies)
@@ -2196,7 +2198,7 @@ node server/test/docx-generator.test.js
 ```
 
 **Unit vs. Integration Test Distinction**:
-- **Unit tests** (no server required): config.test.js, upload-limit.test.js, docx-generator.test.js, declension.test.js, retirement-events.test.js, utils.test.js, reprimands-store.test.js
+- **Unit tests** (no server required): config.test.js, upload-limit.test.js, docx-generator.test.js, declension.test.js, retirement-events.test.js, utils.test.js, reprimands-store.test.js, dashboard-30days.test.js
 - **Integration tests** (require running server on port 3000): templates-api.test.js, retirement-api.test.js, search-api.test.js, photo-api.test.js, status-history.test.js, reprimands-api.test.js
 - `npm test` runs only unit tests; `npm run test:integration` runs integration tests
 - CI runs unit tests before starting servers, and integration tests after servers are ready
@@ -2315,29 +2317,35 @@ All API endpoints are served under the `/api` prefix:
 - Used by dashboard view for real-time statistics
 
 **GET /api/dashboard/events**
-- Get all dashboard notification events (combined)
-- Returns: Array of events with types: birthday, retirement, status_change
-- Each event includes: type, employee data, date, days_until (for future events)
-- Used by dashboard notifications section
+- Get dashboard status-change events (today and next 30 days)
+- Returns: Object with:
+  - today: Array of status events happening today (status_start, status_end)
+  - thisWeek: Array of status events in next 30 days
+- Each event includes: employee_id, name, type (status_start/status_end), status_type, date
+- Used by dashboard timeline section
 
 **GET /api/birthday-events**
-- Get birthday notification events
-- Query parameters:
-  - type: 'current' (this month) or 'month' (specific month)
-  - month: Month number (1-12, required if type='month')
-- Returns: Array of employees with birthdays in specified period
-- Each employee includes: birth_date, full_name, days_until
+- Get birthday notification events (today and next 30 days)
+- No query parameters
+- Returns: Object with:
+  - today: Array of employees with birthdays today
+  - next30Days: Array of employees with birthdays in the next 30 days
+- Each event includes: employee_id, employee_name, birth_date, current_year_birthday, age
 
 **GET /api/retirement-events**
 - Get retirement notification events
-- Query parameters: Same as birthday-events
-- Returns: Array of employees approaching retirement age
-- Each employee includes: retirement_date, full_name, days_until
+- No query parameters
+- Returns: Object with:
+  - today: Array of employees reaching retirement today
+  - thisMonth: Array of employees reaching retirement this month
+- Each event includes: employee_id, employee_name, birth_date, retirement_date, age
 
 **GET /api/document-expiry**
-- Get document expiry notification events
-- Returns: Array of employees with documents expiring soon
-- Each employee includes: document field, expiry date, days_until
+- Get document expiry notification events (today and next 30 days)
+- Returns: Object with:
+  - today: Array of documents expiring today or recently expired (past 30 days)
+  - thisWeek: Array of documents expiring in next 30 days
+- Each event includes: employee_id, name, document_field, document_label, expiry_date, has_file, type (expiring_today/expiring_soon/recently_expired)
 
 **GET /api/document-overdue**
 - Get overdue document notification events
@@ -3333,9 +3341,8 @@ Each event object includes:
 
 **Birthday Events**:
 - Calculated from birth_date field
-- Shows employees with birthdays in current month
-- Supports filtering by specific month
-- Displays days until birthday (for current month view)
+- Shows employees with birthdays today and within the next 30 days (rolling window)
+- Displays days until birthday and age at birthday
 
 **Retirement Events**:
 - Calculated from birth_date + retirement_age_years configuration
@@ -3489,11 +3496,11 @@ const filteredBirthdayToday = computed(() => {
 - `status_starting:{employee_id}:{notified_date}` - Status change starting today
 - `status_returning:{employee_id}:{notified_date}` - Status ending/returning today
 - `birthday_today:{employee_id}:{birthday_date}` - Birthday today
-- `birthday_week:{employee_id}:{birthday_date}` - Birthday within next 7 days
+- `birthday_week:{employee_id}:{birthday_date}` - Birthday within next 30 days
 - `retirement_today:{employee_id}:{retirement_date}` - Retirement today
 - `retirement_month:{employee_id}:{retirement_date}` - Retirement this month
 - `doc_expiry_today:{employee_id}:{expiry_date}` - Document expiring today
-- `doc_expiry_week:{employee_id}:{expiry_date}` - Document expiring this week
+- `doc_expiry_week:{employee_id}:{expiry_date}` - Document expiring within next 30 days
 
 **User Flow**:
 1. User sees notification popup on dashboard load

@@ -36,7 +36,7 @@ const {
   filteredDocExpiryToday,
   filteredDocExpiryWeek,
   filteredBirthdayToday,
-  filteredBirthdayNext7Days,
+  filteredBirthdayNext30Days,
   filteredRetirementToday,
   filteredRetirementThisMonth,
   checkStatusChanges,
@@ -275,10 +275,10 @@ onUnmounted(() => {
               </li>
             </ul>
           </div>
-          <div v-if="filteredBirthdayNext7Days.length > 0" class="notification-section">
+          <div v-if="filteredBirthdayNext30Days.length > 0" class="notification-section">
             <p class="notification-message">🎉 Найближчі дні народження:</p>
             <ul class="vacation-employees-list">
-              <li v-for="(evt, idx) in filteredBirthdayNext7Days" :key="'bday-week-' + idx" class="vacation-employee returning">
+              <li v-for="(evt, idx) in filteredBirthdayNext30Days" :key="'bday-week-' + idx" class="vacation-employee returning">
                 <div class="employee-info">
                   <span class="employee-name">🎉 {{ evt.employee_name }}</span>
                 </div>
@@ -428,7 +428,7 @@ onUnmounted(() => {
           </div>
         </div>
         <div class="timeline-card">
-          <div class="timeline-title">Найближчі 7 днів</div>
+          <div class="timeline-title">Найближчі 30 днів</div>
           <div v-if="dashboardEvents.thisWeek.length === 0" class="timeline-empty">
             Немає запланованих подій
           </div>

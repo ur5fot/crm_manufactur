@@ -45,7 +45,7 @@ export function useDashboardTimeline(employmentOptions) {
         ...todayBirthdayEvents
       ];
 
-      const weekBirthdayEvents = (birthdayData.next7Days || []).map(evt => mapBirthdayEvent(evt, false));
+      const weekBirthdayEvents = (birthdayData.next30Days || []).map(evt => mapBirthdayEvent(evt, false));
       const weekEvents = [
         ...(statusData.thisWeek || []),
         ...(docData.thisWeek || []).map(mapDocEvent),
@@ -86,7 +86,11 @@ export function useDashboardTimeline(employmentOptions) {
     if (diff === 0) return 'сьогодні';
     if (diff < 0) return `${Math.abs(diff)} дн. тому`;
     if (diff === 1) return 'завтра';
-    if (diff >= 2 && diff <= 4) return `через ${diff} дні`;
+    const lastTwo = diff % 100;
+    const lastOne = diff % 10;
+    if (lastTwo >= 11 && lastTwo <= 19) return `через ${diff} днів`;
+    if (lastOne === 1) return `через ${diff} день`;
+    if (lastOne >= 2 && lastOne <= 4) return `через ${diff} дні`;
     return `через ${diff} днів`;
   }
 

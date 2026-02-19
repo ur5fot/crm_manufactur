@@ -46,7 +46,7 @@ test.describe('Reprimands (Dogany ta Vidznaky)', () => {
 
     await openReprimandsPopup(page);
 
-    const modal = page.locator('.status-history-modal');
+    const modal = page.locator('.reprimands-modal');
     await expect(modal).toBeVisible();
 
     const header = modal.locator('.vacation-notification-header h3');
@@ -69,7 +69,7 @@ test.describe('Reprimands (Dogany ta Vidznaky)', () => {
 
       await openReprimandsPopup(page);
 
-      const modal = page.locator('.status-history-modal');
+      const modal = page.locator('.reprimands-modal');
       await expect(modal).toBeVisible();
 
       const emptyMsg = modal.locator('.status-history-empty');
@@ -96,7 +96,7 @@ test.describe('Reprimands (Dogany ta Vidznaky)', () => {
 
       await openReprimandsPopup(page);
 
-      const modal = page.locator('.status-history-modal');
+      const modal = page.locator('.reprimands-modal');
       await expect(modal).toBeVisible();
 
       // Click "Додати запис"
@@ -147,7 +147,7 @@ test.describe('Reprimands (Dogany ta Vidznaky)', () => {
 
       await openReprimandsPopup(page);
 
-      const modal = page.locator('.status-history-modal');
+      const modal = page.locator('.reprimands-modal');
       await expect(modal).toBeVisible();
 
       await modal.locator('.vacation-notification-footer .primary').click();
@@ -197,7 +197,7 @@ test.describe('Reprimands (Dogany ta Vidznaky)', () => {
 
       await openReprimandsPopup(page);
 
-      const modal = page.locator('.status-history-modal');
+      const modal = page.locator('.reprimands-modal');
       await expect(modal).toBeVisible();
 
       const table = modal.locator('.status-history-table');
@@ -256,7 +256,7 @@ test.describe('Reprimands (Dogany ta Vidznaky)', () => {
 
       await openReprimandsPopup(page);
 
-      const modal = page.locator('.status-history-modal');
+      const modal = page.locator('.reprimands-modal');
       await expect(modal).toBeVisible();
 
       const table = modal.locator('.status-history-table');
@@ -282,7 +282,7 @@ test.describe('Reprimands (Dogany ta Vidznaky)', () => {
 
     await openReprimandsPopup(page);
 
-    const modal = page.locator('.status-history-modal');
+    const modal = page.locator('.reprimands-modal');
     await expect(modal).toBeVisible();
 
     await modal.locator('.close-btn').click();
@@ -295,7 +295,7 @@ test.describe('Reprimands (Dogany ta Vidznaky)', () => {
 
     await openReprimandsPopup(page);
 
-    const modal = page.locator('.status-history-modal');
+    const modal = page.locator('.reprimands-modal');
     await expect(modal).toBeVisible();
 
     await page.keyboard.press('Escape');
@@ -326,7 +326,7 @@ test.describe('Reprimands (Dogany ta Vidznaky)', () => {
 
       await openReprimandsPopup(page);
 
-      const modal = page.locator('.status-history-modal');
+      const modal = page.locator('.reprimands-modal');
       await expect(modal).toBeVisible();
 
       const table = modal.locator('.status-history-table');
