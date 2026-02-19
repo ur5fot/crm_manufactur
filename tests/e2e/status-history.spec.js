@@ -69,9 +69,9 @@ test.describe('Status History Popup', () => {
       );
       await page.waitForSelector('.status-field-row');
 
-      const historyBtn2 = page.locator('.status-history-btn');
-      await historyBtn2.waitFor();
-      await historyBtn2.click();
+      const historyBtn = page.locator('.status-history-btn');
+      await historyBtn.waitFor();
+      await historyBtn.click();
 
       if (histData.history.length === 0) {
         // Fresh employee with no history — should show empty message
@@ -118,9 +118,9 @@ test.describe('Status History Popup', () => {
       );
       await page.waitForSelector('.status-field-row');
 
-      const historyBtn3 = page.locator('.status-history-btn');
-      await historyBtn3.waitFor();
-      await historyBtn3.click();
+      const historyBtn = page.locator('.status-history-btn');
+      await historyBtn.waitFor();
+      await historyBtn.click();
 
       const table = page.locator('.status-history-table');
       await expect(table).toBeVisible();
@@ -143,9 +143,9 @@ test.describe('Status History Popup', () => {
     await page.goto(`${BASE_URL}/cards/${testEmployeeId}`);
     await page.waitForSelector('.status-field-row');
 
-    const historyBtn4 = page.locator('.status-history-btn');
-    await historyBtn4.waitFor();
-    await historyBtn4.click();
+    const historyBtn = page.locator('.status-history-btn');
+    await historyBtn.waitFor();
+    await historyBtn.click();
     const modal = page.locator('.status-history-modal');
     await expect(modal).toBeVisible();
 
@@ -157,9 +157,9 @@ test.describe('Status History Popup', () => {
     await page.goto(`${BASE_URL}/cards/${testEmployeeId}`);
     await page.waitForSelector('.status-field-row');
 
-    const historyBtn5 = page.locator('.status-history-btn');
-    await historyBtn5.waitFor();
-    await historyBtn5.click();
+    const historyBtn = page.locator('.status-history-btn');
+    await historyBtn.waitFor();
+    await historyBtn.click();
     const modal = page.locator('.status-history-modal');
     await expect(modal).toBeVisible();
 
@@ -171,9 +171,9 @@ test.describe('Status History Popup', () => {
     await page.goto(`${BASE_URL}/cards/${testEmployeeId}`);
     await page.waitForSelector('.status-field-row');
 
-    const historyBtn6 = page.locator('.status-history-btn');
-    await historyBtn6.waitFor();
-    await historyBtn6.click();
+    const historyBtn = page.locator('.status-history-btn');
+    await historyBtn.waitFor();
+    await historyBtn.click();
     const modal = page.locator('.status-history-modal');
     await expect(modal).toBeVisible();
 
@@ -209,9 +209,9 @@ test.describe('Status History Popup', () => {
       );
       await page.waitForSelector('.status-field-row');
 
-      const historyBtn7 = page.locator('.status-history-btn');
-      await historyBtn7.waitFor();
-      await historyBtn7.click();
+      const historyBtn = page.locator('.status-history-btn');
+      await historyBtn.waitFor();
+      await historyBtn.click();
 
       const table = page.locator('.status-history-table');
       await expect(table).toBeVisible();

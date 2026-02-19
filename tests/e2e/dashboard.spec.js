@@ -137,7 +137,7 @@ test.describe('Dashboard Tests', () => {
     // Verify timeline cards exist on dashboard
     await page.waitForSelector('.timeline-card', { timeout: 5000 });
     const timelineCards = await page.locator('.timeline-card').all();
-    expect(timelineCards.length).toBeGreaterThanOrEqual(2); // Should have "Сьогодні" and "Найближчі 7 днів"
+    expect(timelineCards.length).toBeGreaterThanOrEqual(2); // Should have "Сьогодні" and "Найближчі 30 днів"
 
     // Check if document expiry API endpoint works
     const expiryResponse = await page.request.get(`${API_URL}/api/document-expiry`);

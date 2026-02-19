@@ -2317,10 +2317,12 @@ All API endpoints are served under the `/api` prefix:
 - Used by dashboard view for real-time statistics
 
 **GET /api/dashboard/events**
-- Get all dashboard notification events (combined)
-- Returns: Array of events with types: birthday, retirement, status_change
-- Each event includes: type, employee data, date, days_until (for future events)
-- Used by dashboard notifications section
+- Get dashboard status-change events (today and next 30 days)
+- Returns: Object with:
+  - today: Array of status events happening today (status_start, status_end)
+  - thisWeek: Array of status events in next 30 days
+- Each event includes: employee_id, name, type (status_start/status_end), status_type, date
+- Used by dashboard timeline section
 
 **GET /api/birthday-events**
 - Get birthday notification events (today and next 30 days)
@@ -2328,7 +2330,7 @@ All API endpoints are served under the `/api` prefix:
 - Returns: Object with:
   - today: Array of employees with birthdays today
   - next30Days: Array of employees with birthdays in the next 30 days
-- Each event includes: employee_id, name, birth_date, current_year_birthday, age, days_until
+- Each event includes: employee_id, employee_name, birth_date, current_year_birthday, age
 
 **GET /api/retirement-events**
 - Get retirement notification events
@@ -2337,9 +2339,11 @@ All API endpoints are served under the `/api` prefix:
 - Each employee includes: retirement_date, full_name, days_until
 
 **GET /api/document-expiry**
-- Get document expiry notification events
-- Returns: Array of employees with documents expiring soon
-- Each employee includes: document field, expiry date, days_until
+- Get document expiry notification events (today and next 30 days)
+- Returns: Object with:
+  - today: Array of documents expiring today or recently expired (past 30 days)
+  - thisWeek: Array of documents expiring in next 30 days
+- Each event includes: employee_id, name, document_field, document_label, expiry_date, has_file, type (expiring_today/expiring_soon/recently_expired)
 
 **GET /api/document-overdue**
 - Get overdue document notification events
