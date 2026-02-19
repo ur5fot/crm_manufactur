@@ -40,7 +40,7 @@ test.describe('Reprimands (Dogany ta Vidznaky)', () => {
 
     await page.click('.status-field-row button[title="Догани та відзнаки"]');
 
-    const modal = page.locator('.status-history-modal');
+    const modal = page.locator('.reprimands-modal');
     await expect(modal).toBeVisible();
 
     const header = modal.locator('.card-header h3');
@@ -63,7 +63,7 @@ test.describe('Reprimands (Dogany ta Vidznaky)', () => {
 
       await page.click('.status-field-row button[title="Догани та відзнаки"]');
 
-      const modal = page.locator('.status-history-modal');
+      const modal = page.locator('.reprimands-modal');
       await expect(modal).toBeVisible();
 
       const emptyMsg = modal.locator('.status-history-empty');
@@ -90,7 +90,7 @@ test.describe('Reprimands (Dogany ta Vidznaky)', () => {
 
       await page.click('.status-field-row button[title="Догани та відзнаки"]');
 
-      const modal = page.locator('.status-history-modal');
+      const modal = page.locator('.reprimands-modal');
       await expect(modal).toBeVisible();
 
       // Click "Додати запис"
@@ -141,7 +141,7 @@ test.describe('Reprimands (Dogany ta Vidznaky)', () => {
 
       await page.click('.status-field-row button[title="Догани та відзнаки"]');
 
-      const modal = page.locator('.status-history-modal');
+      const modal = page.locator('.reprimands-modal');
       await expect(modal).toBeVisible();
 
       await modal.locator('.button-group .primary').click();
@@ -191,7 +191,7 @@ test.describe('Reprimands (Dogany ta Vidznaky)', () => {
 
       await page.click('.status-field-row button[title="Догани та відзнаки"]');
 
-      const modal = page.locator('.status-history-modal');
+      const modal = page.locator('.reprimands-modal');
       await expect(modal).toBeVisible();
 
       const table = modal.locator('.status-history-table');
@@ -250,7 +250,7 @@ test.describe('Reprimands (Dogany ta Vidznaky)', () => {
 
       await page.click('.status-field-row button[title="Догани та відзнаки"]');
 
-      const modal = page.locator('.status-history-modal');
+      const modal = page.locator('.reprimands-modal');
       await expect(modal).toBeVisible();
 
       const table = modal.locator('.status-history-table');
@@ -276,7 +276,7 @@ test.describe('Reprimands (Dogany ta Vidznaky)', () => {
 
     await page.click('.status-field-row button[title="Догани та відзнаки"]');
 
-    const modal = page.locator('.status-history-modal');
+    const modal = page.locator('.reprimands-modal');
     await expect(modal).toBeVisible();
 
     await modal.locator('.close-btn').click();
@@ -289,7 +289,7 @@ test.describe('Reprimands (Dogany ta Vidznaky)', () => {
 
     await page.click('.status-field-row button[title="Догани та відзнаки"]');
 
-    const modal = page.locator('.status-history-modal');
+    const modal = page.locator('.reprimands-modal');
     await expect(modal).toBeVisible();
 
     await page.keyboard.press('Escape');
@@ -320,7 +320,7 @@ test.describe('Reprimands (Dogany ta Vidznaky)', () => {
 
       await page.click('.status-field-row button[title="Догани та відзнаки"]');
 
-      const modal = page.locator('.status-history-modal');
+      const modal = page.locator('.reprimands-modal');
       await expect(modal).toBeVisible();
 
       const table = modal.locator('.status-history-table');

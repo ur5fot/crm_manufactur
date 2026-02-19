@@ -1959,6 +1959,11 @@ button.small {
   max-width: 700px;
 }
 
+/* Reprimands modal */
+.reprimands-modal {
+  max-width: 700px;
+}
+
 .status-history-loading,
 .status-history-empty {
   padding: 16px 0;
