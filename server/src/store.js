@@ -753,8 +753,8 @@ export async function loadConfig() {
 
 
 /**
- * Получить события дней рождения (сегодня и следующие 7 дней)
- * @returns {Promise<{today: Array, next7Days: Array}>}
+ * Получить события дней рождения (сегодня и следующие 30 дней)
+ * @returns {Promise<{today: Array, next30Days: Array}>}
  */
 export async function getBirthdayEvents() {
   const employees = await loadEmployees();
