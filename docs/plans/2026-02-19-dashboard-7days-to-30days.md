@@ -40,13 +40,13 @@
 
 ### Task 1: Оновити бекенд — збільшити вікно з 7 до 30 днів
 
-- [ ] в `getDashboardEvents()` (store.js): замінити `in7days = today + 7` на `in30days = today + 30`; оновити всі посилання на цю змінну (`in7daysStr` → `in30daysStr`)
-- [ ] в `getDocumentExpiryEvents()` (store.js): те саме — замінити 7 на 30
-- [ ] в `getBirthdayEvents()` (store.js): замінити `in7days = today + 7` на `in30days = today + 30`; перейменувати `next7DaysEvents` → `next30DaysEvents`; повертати `next30Days` замість `next7Days`
-- [ ] написати unit test: `getDashboardEvents` повертає події через 25 днів (перевіряє нове вікно)
-- [ ] написати unit test: `getDocumentExpiryEvents` повертає документ що закінчується через 25 днів
-- [ ] написати unit test: `getBirthdayEvents` повертає день народження через 25 днів у `next30Days`
-- [ ] запустити тести: `cd server && npm test` — повинні пройти
+- [x] в `getDashboardEvents()` (store.js): замінити `in7days = today + 7` на `in30days = today + 30`; оновити всі посилання на цю змінну (`in7daysStr` → `in30daysStr`)
+- [x] в `getDocumentExpiryEvents()` (store.js): те саме — замінити 7 на 30
+- [x] в `getBirthdayEvents()` (store.js): замінити `in7days = today + 7` на `in30days = today + 30`; перейменувати `next7DaysEvents` → `next30DaysEvents`; повертати `next30Days` замість `next7Days`
+- [x] написати unit test: `getDashboardEvents` повертає події через 25 днів (перевіряє нове вікно)
+- [x] написати unit test: `getDocumentExpiryEvents` повертає документ що закінчується через 25 днів
+- [x] написати unit test: `getBirthdayEvents` повертає день народження через 25 днів у `next30Days`
+- [x] запустити тести: `cd server && npm test` — повинні пройти
 
 ### Task 2: Оновити фронтенд — лейбл і маппінг API
 
