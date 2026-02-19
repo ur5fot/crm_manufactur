@@ -2335,8 +2335,10 @@ All API endpoints are served under the `/api` prefix:
 **GET /api/retirement-events**
 - Get retirement notification events
 - No query parameters
-- Returns: Array of employees approaching retirement age
-- Each employee includes: retirement_date, full_name, days_until
+- Returns: Object with:
+  - today: Array of employees reaching retirement today
+  - thisMonth: Array of employees reaching retirement this month
+- Each event includes: employee_id, employee_name, birth_date, retirement_date, age
 
 **GET /api/document-expiry**
 - Get document expiry notification events (today and next 30 days)
