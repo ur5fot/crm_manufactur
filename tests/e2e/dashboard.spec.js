@@ -162,11 +162,11 @@ test.describe('Dashboard Tests', () => {
     expect(birthdayResponse.ok()).toBeTruthy();
     const birthdayData = await birthdayResponse.json();
 
-    // API should return proper structure (birthday API uses 'next7Days' not 'thisWeek')
+    // API should return proper structure (birthday API uses 'next30Days' not 'thisWeek')
     expect(birthdayData).toHaveProperty('today');
-    expect(birthdayData).toHaveProperty('next7Days');
+    expect(birthdayData).toHaveProperty('next30Days');
     expect(Array.isArray(birthdayData.today)).toBeTruthy();
-    expect(Array.isArray(birthdayData.next7Days)).toBeTruthy();
+    expect(Array.isArray(birthdayData.next30Days)).toBeTruthy();
   });
 
   test('Auto-refresh dashboard', async ({ page }) => {

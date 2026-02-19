@@ -8,7 +8,6 @@
 
 import path from "path";
 import fs from "fs/promises";
-import { fileURLToPath } from "url";
 import {
   getDashboardEvents,
   getDocumentExpiryEvents,
@@ -16,9 +15,6 @@ import {
   DATA_DIR
 } from "../src/store.js";
 import { writeCsv } from "../src/csv.js";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 const EMPLOYEES_PATH = path.join(DATA_DIR, "employees.csv");
 const EMPLOYEES_BACKUP = path.join(DATA_DIR, "employees.csv.dashboard30days.bak");

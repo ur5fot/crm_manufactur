@@ -201,7 +201,7 @@ export function useDashboardNotifications(employees, employmentOptions, workingS
     try {
       const data = await api.getBirthdayEvents();
       const todayItems = data.today || [];
-      const next7DaysItems = data.next7Days || [];
+      const next7DaysItems = data.next30Days || [];
 
       birthdayNotifiedDate = today;
       birthdayToday.value = todayItems;
