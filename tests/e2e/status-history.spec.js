@@ -46,7 +46,7 @@ test.describe('Status History Popup', () => {
     await expect(modal).toBeVisible();
 
     // Check popup header
-    const header = modal.locator('.card-header h3');
+    const header = modal.locator('.vacation-notification-header h3');
     await expect(header).toHaveText('Історія змін статусу');
   });
 
@@ -163,7 +163,7 @@ test.describe('Status History Popup', () => {
     const modal = page.locator('.status-history-modal');
     await expect(modal).toBeVisible();
 
-    await modal.locator('.button-group .secondary').click();
+    await modal.locator('.vacation-notification-footer .secondary').click();
     await expect(modal).not.toBeVisible();
   });
 
