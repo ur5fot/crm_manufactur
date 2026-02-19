@@ -171,6 +171,7 @@ const {
   reprimandForm,
   openReprimandsPopup,
   closeReprimandsPopup,
+  loadReprimands,
   openAddForm: openReprimandAddForm,
   openEditForm: openReprimandEditForm,
   closeReprimandForm,
@@ -178,6 +179,14 @@ const {
   deleteReprimandEntry,
   formatReprimandDate,
 } = useReprimands();
+
+// Load reprimands count when selected employee changes
+watch(selectedId, async (newId) => {
+  reprimands.value = [];
+  if (newId) {
+    await loadReprimands(newId);
+  }
+}, { immediate: true });
 
 // Filtered employees for cards
 const filteredEmployeesForCards = computed(() => {
@@ -205,6 +214,9 @@ const filteredFieldGroups = computed(() => {
   // Filter groups and fields based on label and value match
   return fieldGroups.value.map(group => {
     const filteredFields = group.fields.filter(field => {
+      // Always include employment_status so reprimands button remains accessible
+      if (field.key === 'employment_status') return true;
+
       // Match against field label
       if (field.label.toLowerCase().includes(query)) return true;
 
@@ -654,15 +666,6 @@ onUnmounted(() => {
                       <polyline points="12 6 12 12 16 14"/>
                     </svg>
                   </button>
-                  <button
-                    v-if="!isNew"
-                    class="secondary small"
-                    type="button"
-                    title="Догани та відзнаки"
-                    @click="openReprimandsPopup(selectedId)"
-                  >
-                    📋 Догани та відзнаки
-                  </button>
                 </div>
               </template>
               <select
@@ -693,18 +696,20 @@ onUnmounted(() => {
                 :readonly="field.readOnly"
                 :required="field.key === 'first_name' || field.key === 'last_name'"
               />
-            </div>
-            <div v-if="field.key === 'last_name'" class="field" style="display: flex; align-items: center; padding-top: 1.4em;">
-              <label style="display: flex; align-items: center; gap: 6px; margin: 0; cursor: pointer; white-space: nowrap;">
-                <input type="checkbox" v-model="form.indeclinable_name" true-value="yes" false-value="" style="width: auto;" />
-                Прізвище не склоняється
+              <label v-if="field.key === 'last_name'" class="field-checkbox-hint">
+                <input type="checkbox" v-model="form.indeclinable_name" true-value="yes" false-value="" />
+                Прізвище не схиляється
+              </label>
+              <label v-if="field.key === 'first_name'" class="field-checkbox-hint">
+                <input type="checkbox" v-model="form.indeclinable_first_name" true-value="yes" false-value="" />
+                Ім'я не схиляється
               </label>
             </div>
-            <div v-if="field.key === 'first_name'" class="field" style="display: flex; align-items: center; padding-top: 1.4em;">
-              <label style="display: flex; align-items: center; gap: 6px; margin: 0; cursor: pointer; white-space: nowrap;">
-                <input type="checkbox" v-model="form.indeclinable_first_name" true-value="yes" false-value="" style="width: auto;" />
-                Ім'я не склоняється
-              </label>
+            <div v-if="field.key === 'employment_status' && !isNew" class="field field-reprimands-btn">
+              <label>&nbsp;</label>
+              <button class="secondary small" type="button" @click="openReprimandsPopup(selectedId)">
+                📋 Догани та відзнаки{{ reprimands.length > 0 ? ` (${reprimands.length})` : '' }}
+              </button>
             </div>
             </template>
           </div>
@@ -856,11 +861,11 @@ onUnmounted(() => {
     <!-- Unsaved Changes Popup -->
     <div v-if="showUnsavedChangesPopup" class="vacation-notification-overlay" @click="cancelNavigation">
       <div class="vacation-notification-modal" @click.stop>
-        <div class="card-header">
+        <div class="vacation-notification-header">
           <h3>⚠️ Незбережені зміни</h3>
           <button class="close-btn" @click="cancelNavigation">&times;</button>
         </div>
-        <div class="card-content">
+        <div class="vacation-notification-body">
           <p>У вас є незбережені зміни у формі. Що бажаєте зробити?</p>
           <div v-if="changedFields.length > 0" class="changed-fields-list">
             <div class="changed-fields-label">Змінені поля:</div>
@@ -869,7 +874,7 @@ onUnmounted(() => {
             </ul>
           </div>
         </div>
-        <div class="button-group">
+        <div class="vacation-notification-footer">
           <button class="primary" @click="saveAndContinue">Зберегти та продовжити</button>
           <button class="secondary" @click="continueWithoutSaving">Продовжити без збереження</button>
           <button class="secondary" @click="cancelNavigation">Скасувати</button>
@@ -880,11 +885,11 @@ onUnmounted(() => {
     <!-- Status Change Popup -->
     <div v-if="showStatusChangePopup" class="vacation-notification-overlay" @click="closeStatusChangePopup">
       <div class="vacation-notification-modal" @click.stop>
-        <div class="card-header">
+        <div class="vacation-notification-header">
           <h3>Зміна статусу працевлаштування</h3>
           <button class="close-btn" @click="closeStatusChangePopup">&times;</button>
         </div>
-        <div class="card-content">
+        <div class="vacation-notification-body">
           <div class="form-group">
             <label>Новий статус:</label>
             <select v-model="statusChangeForm.status" required>
@@ -901,7 +906,7 @@ onUnmounted(() => {
             <input type="date" v-model="statusChangeForm.endDate" />
           </div>
         </div>
-        <div class="button-group">
+        <div class="vacation-notification-footer">
           <button class="primary" @click="applyStatusChange(loadEmployees, selectEmployee)">Застосувати</button>
           <button class="secondary" @click="closeStatusChangePopup">Скасувати</button>
         </div>
@@ -911,11 +916,11 @@ onUnmounted(() => {
     <!-- Doc Upload Popup -->
     <div v-if="showDocUploadPopup" class="vacation-notification-overlay" @click="closeDocUploadPopup">
       <div class="vacation-notification-modal" @click.stop>
-        <div class="card-header">
+        <div class="vacation-notification-header">
           <h3>Завантаження документа: {{ docUploadForm.fieldLabel }}</h3>
           <button class="close-btn" @click="closeDocUploadPopup">&times;</button>
         </div>
-        <div class="card-content">
+        <div class="vacation-notification-body">
           <div class="form-group">
             <label>Файл:</label>
             <input type="file" @change="onDocUploadFileChange" required />
@@ -929,7 +934,7 @@ onUnmounted(() => {
             <input type="date" v-model="docUploadForm.expiryDate" />
           </div>
         </div>
-        <div class="button-group">
+        <div class="vacation-notification-footer">
           <button class="primary" @click="submitDocUpload(loadEmployees, selectEmployee)" :disabled="docUploadSaving">
             {{ docUploadSaving ? 'Завантаження...' : 'Завантажити' }}
           </button>
@@ -941,11 +946,11 @@ onUnmounted(() => {
     <!-- Doc Edit Dates Popup -->
     <div v-if="showDocEditDatesPopup" class="vacation-notification-overlay" @click="closeDocEditDatesPopup">
       <div class="vacation-notification-modal" @click.stop>
-        <div class="card-header">
+        <div class="vacation-notification-header">
           <h3>Редагування дат: {{ docEditDatesForm.fieldLabel }}</h3>
           <button class="close-btn" @click="closeDocEditDatesPopup">&times;</button>
         </div>
-        <div class="card-content">
+        <div class="vacation-notification-body">
           <div class="form-group">
             <label>Дата видачі:</label>
             <input type="date" v-model="docEditDatesForm.issueDate" />
@@ -955,7 +960,7 @@ onUnmounted(() => {
             <input type="date" v-model="docEditDatesForm.expiryDate" />
           </div>
         </div>
-        <div class="button-group">
+        <div class="vacation-notification-footer">
           <button class="primary" @click="submitDocEditDates(loadEmployees, selectEmployee)" :disabled="docEditDatesSaving">
             {{ docEditDatesSaving ? 'Збереження...' : 'Зберегти' }}
           </button>
@@ -967,14 +972,14 @@ onUnmounted(() => {
     <!-- Clear Confirm Popup -->
     <div v-if="showClearConfirmPopup" class="vacation-notification-overlay" @click="closeClearConfirmPopup">
       <div class="vacation-notification-modal" @click.stop>
-        <div class="card-header">
+        <div class="vacation-notification-header">
           <h3>⚠️ Підтвердження</h3>
           <button class="close-btn" @click="closeClearConfirmPopup">&times;</button>
         </div>
-        <div class="card-content">
+        <div class="vacation-notification-body">
           <p>Ви впевнені, що хочете очистити форму? Всі незбережені зміни будуть втрачені.</p>
         </div>
-        <div class="button-group">
+        <div class="vacation-notification-footer">
           <button class="danger" @click="confirmClearForm(startNew)">Так, очистити</button>
           <button class="secondary" @click="closeClearConfirmPopup">Скасувати</button>
         </div>
@@ -984,11 +989,11 @@ onUnmounted(() => {
     <!-- Status History Popup -->
     <div v-if="showStatusHistoryPopup" class="vacation-notification-overlay" @click="closeStatusHistoryPopup">
       <div class="vacation-notification-modal status-history-modal" @click.stop>
-        <div class="card-header">
+        <div class="vacation-notification-header">
           <h3>Історія змін статусу</h3>
           <button class="close-btn" @click="closeStatusHistoryPopup">&times;</button>
         </div>
-        <div class="card-content">
+        <div class="vacation-notification-body">
           <div v-if="statusHistoryLoading" class="status-history-loading">Завантаження...</div>
           <div v-else-if="statusHistory.length === 0" class="status-history-empty">
             Історія змін статусу відсутня.
@@ -1022,7 +1027,7 @@ onUnmounted(() => {
             </table>
           </div>
         </div>
-        <div class="button-group">
+        <div class="vacation-notification-footer">
           <button class="secondary" @click="closeStatusHistoryPopup">Закрити</button>
         </div>
       </div>
@@ -1035,7 +1040,7 @@ onUnmounted(() => {
           <h3>📋 Догани та відзнаки</h3>
           <button class="close-btn" @click="closeReprimandsPopup">&times;</button>
         </div>
-        <div class="card-content">
+        <div class="vacation-notification-body">
           <div v-if="reprimandsLoading" class="status-history-loading">Завантаження...</div>
           <template v-else>
             <div v-if="reprimandError && !showReprimandForm" class="alert">{{ reprimandError }}</div>
@@ -1100,7 +1105,7 @@ onUnmounted(() => {
             </div>
           </template>
         </div>
-        <div class="button-group">
+        <div class="vacation-notification-footer">
           <template v-if="showReprimandForm">
             <button class="primary" @click="submitReprimand(selectedId)" :disabled="reprimandSaving">
               {{ reprimandSaving ? 'Збереження...' : (editingReprimandId ? 'Зберегти зміни' : 'Додати запис') }}

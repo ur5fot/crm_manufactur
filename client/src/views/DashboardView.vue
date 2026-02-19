@@ -81,6 +81,7 @@ const {
   absentEmployeesCount,
   statusChangesThisMonthCount,
   toggleReport,
+  loadCounts,
 } = useDashboardReport(errorMessage);
 
 const formattedLastUpdated = computed(() => {
@@ -153,6 +154,7 @@ async function loadFieldsSchema() {
 onMounted(async () => {
   loadDismissedEvents();
   await loadFieldsSchema();
+  await loadCounts();
   await loadEmployees();
   await loadDashboardEvents();
   await loadOverdueDocuments();
@@ -453,10 +455,10 @@ onUnmounted(() => {
       <div class="report-section">
         <div class="report-buttons">
           <button class="report-btn" :class="{ active: activeReport === 'current' }" @click="toggleReport('current')">
-            Хто відсутній зараз<span v-if="activeReport === 'current'"> ({{ absentEmployeesCount }})</span>
+            Хто відсутній зараз<span v-if="absentEmployeesCount > 0"> ({{ absentEmployeesCount }})</span>
           </button>
           <button class="report-btn" :class="{ active: activeReport === 'month' }" @click="toggleReport('month')">
-            Зміни статусів цього місяця<span v-if="activeReport === 'month'"> ({{ statusChangesThisMonthCount }})</span>
+            Зміни статусів цього місяця<span v-if="statusChangesThisMonthCount > 0"> ({{ statusChangesThisMonthCount }})</span>
           </button>
         </div>
         <div v-if="activeReport && !reportLoading" class="report-result">

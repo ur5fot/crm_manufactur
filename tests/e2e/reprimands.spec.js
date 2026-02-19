@@ -20,30 +20,36 @@ async function ensureTestEmployee(request) {
   return createData.employee_id;
 }
 
+async function openReprimandsPopup(page) {
+  const btn = page.locator('.field-reprimands-btn button');
+  await expect(btn).toBeVisible();
+  await btn.click();
+}
+
 test.describe('Reprimands (Dogany ta Vidznaky)', () => {
   test.beforeAll(async ({ request }) => {
     testEmployeeId = await ensureTestEmployee(request);
   });
 
-  test('Dogany ta vidznaky button is visible next to employment status', async ({ page }) => {
+  test('Dogany ta vidznaky button is visible in employment status section', async ({ page }) => {
     await page.goto(`${BASE_URL}/cards/${testEmployeeId}`);
-    await page.waitForSelector('.status-field-row');
+    await page.waitForSelector('.field-reprimands-btn');
 
-    const btn = page.locator('.status-field-row button[title="Догани та відзнаки"]');
+    const btn = page.locator('.field-reprimands-btn button');
     await expect(btn).toBeVisible();
     await expect(btn).toHaveText(/Догани та відзнаки/);
   });
 
   test('clicking the button opens reprimands popup', async ({ page }) => {
     await page.goto(`${BASE_URL}/cards/${testEmployeeId}`);
-    await page.waitForSelector('.status-field-row');
+    await page.waitForSelector('.field-reprimands-btn');
 
-    await page.click('.status-field-row button[title="Догани та відзнаки"]');
+    await openReprimandsPopup(page);
 
     const modal = page.locator('.reprimands-modal');
     await expect(modal).toBeVisible();
 
-    const header = modal.locator('.card-header h3');
+    const header = modal.locator('.vacation-notification-header h3');
     await expect(header).toHaveText('📋 Догани та відзнаки');
   });
 
@@ -59,9 +65,9 @@ test.describe('Reprimands (Dogany ta Vidznaky)', () => {
         (id) => document.querySelector('#employee_id')?.value === id,
         employee_id
       );
-      await page.waitForSelector('.status-field-row');
+      await page.waitForSelector('.field-reprimands-btn');
 
-      await page.click('.status-field-row button[title="Догани та відзнаки"]');
+      await openReprimandsPopup(page);
 
       const modal = page.locator('.reprimands-modal');
       await expect(modal).toBeVisible();
@@ -86,15 +92,15 @@ test.describe('Reprimands (Dogany ta Vidznaky)', () => {
         (id) => document.querySelector('#employee_id')?.value === id,
         employee_id
       );
-      await page.waitForSelector('.status-field-row');
+      await page.waitForSelector('.field-reprimands-btn');
 
-      await page.click('.status-field-row button[title="Догани та відзнаки"]');
+      await openReprimandsPopup(page);
 
       const modal = page.locator('.reprimands-modal');
       await expect(modal).toBeVisible();
 
       // Click "Додати запис"
-      await modal.locator('.button-group .primary').click();
+      await modal.locator('.vacation-notification-footer .primary').click();
 
       // Fill in the form
       const form = modal.locator('.reprimand-form');
@@ -106,7 +112,7 @@ test.describe('Reprimands (Dogany ta Vidznaky)', () => {
       await form.locator('textarea').fill('Порушення трудової дисципліни');
 
       // Submit
-      await modal.locator('.button-group .primary').click();
+      await modal.locator('.vacation-notification-footer .primary').click();
 
       // After submit, the table should now appear with the record
       const table = modal.locator('.status-history-table');
@@ -137,14 +143,14 @@ test.describe('Reprimands (Dogany ta Vidznaky)', () => {
         (id) => document.querySelector('#employee_id')?.value === id,
         employee_id
       );
-      await page.waitForSelector('.status-field-row');
+      await page.waitForSelector('.field-reprimands-btn');
 
-      await page.click('.status-field-row button[title="Догани та відзнаки"]');
+      await openReprimandsPopup(page);
 
       const modal = page.locator('.reprimands-modal');
       await expect(modal).toBeVisible();
 
-      await modal.locator('.button-group .primary').click();
+      await modal.locator('.vacation-notification-footer .primary').click();
 
       const form = modal.locator('.reprimand-form');
       await form.locator('input[type="date"]').fill('2026-02-10');
@@ -152,7 +158,7 @@ test.describe('Reprimands (Dogany ta Vidznaky)', () => {
       await form.locator('input[type="text"]').fill('№45');
       await form.locator('textarea').fill('За успішне виконання проєкту');
 
-      await modal.locator('.button-group .primary').click();
+      await modal.locator('.vacation-notification-footer .primary').click();
 
       const table = modal.locator('.status-history-table');
       await expect(table).toBeVisible();
@@ -187,9 +193,9 @@ test.describe('Reprimands (Dogany ta Vidznaky)', () => {
         (id) => document.querySelector('#employee_id')?.value === id,
         employee_id
       );
-      await page.waitForSelector('.status-field-row');
+      await page.waitForSelector('.field-reprimands-btn');
 
-      await page.click('.status-field-row button[title="Догани та відзнаки"]');
+      await openReprimandsPopup(page);
 
       const modal = page.locator('.reprimands-modal');
       await expect(modal).toBeVisible();
@@ -212,7 +218,7 @@ test.describe('Reprimands (Dogany ta Vidznaky)', () => {
       await form.locator('textarea').fill('Оновлена нотатка');
 
       // Submit the edit
-      await modal.locator('.button-group .primary').click();
+      await modal.locator('.vacation-notification-footer .primary').click();
 
       // Record should now show updated type
       const updatedTable = modal.locator('.status-history-table');
@@ -246,9 +252,9 @@ test.describe('Reprimands (Dogany ta Vidznaky)', () => {
         (id) => document.querySelector('#employee_id')?.value === id,
         employee_id
       );
-      await page.waitForSelector('.status-field-row');
+      await page.waitForSelector('.field-reprimands-btn');
 
-      await page.click('.status-field-row button[title="Догани та відзнаки"]');
+      await openReprimandsPopup(page);
 
       const modal = page.locator('.reprimands-modal');
       await expect(modal).toBeVisible();
@@ -272,9 +278,9 @@ test.describe('Reprimands (Dogany ta Vidznaky)', () => {
 
   test('popup can be closed with close button', async ({ page }) => {
     await page.goto(`${BASE_URL}/cards/${testEmployeeId}`);
-    await page.waitForSelector('.status-field-row');
+    await page.waitForSelector('.field-reprimands-btn');
 
-    await page.click('.status-field-row button[title="Догани та відзнаки"]');
+    await openReprimandsPopup(page);
 
     const modal = page.locator('.reprimands-modal');
     await expect(modal).toBeVisible();
@@ -285,9 +291,9 @@ test.describe('Reprimands (Dogany ta Vidznaky)', () => {
 
   test('popup can be closed with Escape key', async ({ page }) => {
     await page.goto(`${BASE_URL}/cards/${testEmployeeId}`);
-    await page.waitForSelector('.status-field-row');
+    await page.waitForSelector('.field-reprimands-btn');
 
-    await page.click('.status-field-row button[title="Догани та відзнаки"]');
+    await openReprimandsPopup(page);
 
     const modal = page.locator('.reprimands-modal');
     await expect(modal).toBeVisible();
@@ -316,9 +322,9 @@ test.describe('Reprimands (Dogany ta Vidznaky)', () => {
         (id) => document.querySelector('#employee_id')?.value === id,
         employee_id
       );
-      await page.waitForSelector('.status-field-row');
+      await page.waitForSelector('.field-reprimands-btn');
 
-      await page.click('.status-field-row button[title="Догани та відзнаки"]');
+      await openReprimandsPopup(page);
 
       const modal = page.locator('.reprimands-modal');
       await expect(modal).toBeVisible();
