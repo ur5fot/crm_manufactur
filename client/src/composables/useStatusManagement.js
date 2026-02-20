@@ -159,7 +159,7 @@ export function useStatusManagement(allFieldsSchema, form, employees, saving, er
       await selectEmployee(form.employee_id);
       closeStatusChangePopup();
     } catch (error) {
-      errorMessage.value = error.message;
+      errorMessage.value = parseEventError(error);
     } finally {
       saving.value = false;
     }

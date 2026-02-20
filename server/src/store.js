@@ -1630,8 +1630,8 @@ export async function syncStatusEventsForEmployee(employeeId, { forceReset = fal
         changed = true;
       }
     } else {
-      // No active event — reset to working status if currently different
-      if (emp.employment_status !== workingStatus) {
+      // No active event — reset to working status if currently different, or clear stale date fields
+      if (emp.employment_status !== workingStatus || emp.status_start_date || emp.status_end_date) {
         oldStatus = emp.employment_status || '';
         oldStartDate = emp.status_start_date || '';
         oldEndDate = emp.status_end_date || '';
@@ -1673,7 +1673,12 @@ export async function syncAllStatusEvents() {
   const activeEmployees = employees.filter(e => e.active !== 'no');
 
   // Sync sequentially to avoid write lock contention
+  // Errors for individual employees are caught to prevent one bad record from breaking all syncs
   for (const emp of activeEmployees) {
-    await syncStatusEventsForEmployee(emp.employee_id);
+    try {
+      await syncStatusEventsForEmployee(emp.employee_id);
+    } catch (err) {
+      console.error(`syncAllStatusEvents: failed to sync employee ${emp.employee_id}:`, err);
+    }
   }
 }
