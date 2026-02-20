@@ -1,5 +1,13 @@
 const { test, expect } = require('@playwright/test');
 
+async function dismissNotificationOverlay(page) {
+  const overlay = page.locator('.vacation-notification-overlay').first();
+  if (await overlay.isVisible()) {
+    await overlay.click({ position: { x: 5, y: 5 } });
+    await overlay.waitFor({ state: 'hidden', timeout: 3000 }).catch(() => {});
+  }
+}
+
 test.describe('Theme Toggle', () => {
   test.afterEach(async ({ page }) => {
     // Reset theme to light to prevent leaking into subsequent tests
@@ -12,6 +20,9 @@ test.describe('Theme Toggle', () => {
 
     // Wait for page to load
     await page.waitForSelector('.topbar');
+
+    // Dismiss any notification overlay that may block the theme button
+    await dismissNotificationOverlay(page);
 
     // Verify theme toggle button exists
     const themeButton = page.locator('.theme-toggle-btn');
@@ -41,6 +52,7 @@ test.describe('Theme Toggle', () => {
     // Reload page
     await page.reload();
     await page.waitForSelector('.topbar');
+    await dismissNotificationOverlay(page);
 
     // Verify theme persisted after reload
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
@@ -57,6 +69,9 @@ test.describe('Theme Toggle', () => {
   test('should apply correct CSS styles in dark theme', async ({ page }) => {
     await page.goto('/');
     await page.waitForSelector('.topbar');
+
+    // Dismiss any notification overlay that may block the theme button
+    await dismissNotificationOverlay(page);
 
     // Get background color in light theme
     const lightBg = await page.evaluate(() => {
