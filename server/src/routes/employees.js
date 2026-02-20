@@ -20,6 +20,7 @@ import {
   getStatusEventsForEmployee,
   loadStatusEvents,
   addStatusEvent,
+  updateStatusEvent,
   deleteStatusEvent,
   removeStatusEventsForEmployee,
   syncStatusEventsForEmployee,
@@ -412,6 +413,91 @@ export function registerEmployeeRoutes(app) {
       await addLog("CREATE", req.params.id, employeeName, "status_event", "", event.event_id, `Додано подію статусу: ${event.status} з ${event.start_date}`);
 
       res.status(201).json({ event, employee: updatedEmployee });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // PUT update status event for employee
+  app.put("/api/employees/:id/status-events/:eventId", async (req, res) => {
+    try {
+      const employees = await loadEmployees();
+      const employee = findById(employees, 'employee_id', req.params.id);
+      if (!employee) {
+        res.status(404).json({ error: "Співробітник не знайдено" });
+        return;
+      }
+
+      const { status, start_date, end_date } = req.body || {};
+
+      if (!status || !String(status).trim()) {
+        res.status(400).json({ error: "Статус обов'язковий" });
+        return;
+      }
+      if (!start_date || !String(start_date).trim()) {
+        res.status(400).json({ error: "Дата початку обов'язкова" });
+        return;
+      }
+      const startDateError = validateDateField(String(start_date).trim(), 'start_date');
+      if (startDateError) {
+        res.status(400).json({ error: startDateError });
+        return;
+      }
+      if (end_date && String(end_date).trim()) {
+        const endDateError = validateDateField(String(end_date).trim(), 'end_date');
+        if (endDateError) {
+          res.status(400).json({ error: endDateError });
+          return;
+        }
+        if (String(end_date).trim() < String(start_date).trim()) {
+          res.status(400).json({ error: "Дата закінчення не може бути раніше дати початку" });
+          return;
+        }
+      }
+
+      // Verify the event exists and belongs to this employee
+      const allEvents = await loadStatusEvents();
+      const event = allEvents.find(e => e.event_id === req.params.eventId);
+      if (!event) {
+        res.status(404).json({ error: "Подію не знайдено" });
+        return;
+      }
+      if (event.employee_id !== req.params.id) {
+        res.status(403).json({ error: "Подія не належить цьому співробітнику" });
+        return;
+      }
+
+      let updatedEvent;
+      try {
+        updatedEvent = await updateStatusEvent(req.params.eventId, {
+          status: String(status).trim(),
+          start_date: String(start_date).trim(),
+          end_date: end_date ? String(end_date).trim() : ''
+        });
+      } catch (updateErr) {
+        if (updateErr.code === 'OVERLAP') {
+          res.status(409).json({ error: updateErr.message });
+          return;
+        }
+        if (updateErr.message === 'Event not found') {
+          res.status(404).json({ error: "Подію не знайдено" });
+          return;
+        }
+        throw updateErr;
+      }
+
+      // Sync to apply any status changes
+      await syncStatusEventsForEmployee(req.params.id);
+
+      // Return updated employee
+      const updatedEmployees = await loadEmployees();
+      const updatedEmployee = findById(updatedEmployees, 'employee_id', req.params.id);
+
+      const employeeName = buildFullName(employee);
+      await addLog("UPDATE", req.params.id, employeeName, "status_event", req.params.eventId, req.params.eventId, `Оновлено подію статусу: ${updatedEvent.status} з ${updatedEvent.start_date}`);
+
+      res.json({ event: updatedEvent, employee: updatedEmployee });
     } catch (err) {
       console.error(err);
       res.status(500).json({ error: err.message });

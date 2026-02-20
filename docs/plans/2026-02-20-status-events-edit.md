@@ -47,16 +47,16 @@ This plan adds **inline row editing** to the status events table:
 
 ### Task 2: Backend API — add PUT endpoint
 
-- [ ] In `server/src/routes/employees.js`, add `app.put('/api/employees/:id/status-events/:eventId', ...)` after the DELETE handler
-- [ ] Validate `status` and `start_date` present (400 if missing)
-- [ ] Check employee exists (404 if not)
-- [ ] Call `updateStatusEvent(eventId, { status, start_date, end_date, employee_id })` — catch overlap error → 409 Conflict
-- [ ] After update, call `syncStatusEventsForEmployee(employeeId)` and re-save employee if changed
-- [ ] Add audit log entry: `action: 'UPDATE', entity_type: 'status_event'`
-- [ ] Return `{ event: updatedEvent, employee: currentEmployee }`
-- [ ] Write integration tests in `server/test/status-events-api.test.js` for the PUT endpoint:
+- [x] In `server/src/routes/employees.js`, add `app.put('/api/employees/:id/status-events/:eventId', ...)` after the DELETE handler
+- [x] Validate `status` and `start_date` present (400 if missing)
+- [x] Check employee exists (404 if not)
+- [x] Call `updateStatusEvent(eventId, { status, start_date, end_date, employee_id })` — catch overlap error → 409 Conflict
+- [x] After update, call `syncStatusEventsForEmployee(employeeId)` and re-save employee if changed
+- [x] Add audit log entry: `action: 'UPDATE', entity_type: 'status_event'`
+- [x] Return `{ event: updatedEvent, employee: currentEmployee }`
+- [x] Write integration tests in `server/test/status-events-api.test.js` for the PUT endpoint:
   - success (200), event not found (404), employee not found (404), overlap (409), missing fields (400)
-- [ ] Run `node server/test/status-events-api.test.js` — must pass before task 3
+- [x] Run `node server/test/status-events-api.test.js` — must pass before task 3
 
 ### Task 3: Frontend — API client + composable
 

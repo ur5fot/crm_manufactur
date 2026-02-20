@@ -361,6 +361,134 @@ async function runAllTests() {
       if (res.status !== 400) throw new Error(`Expected 400, got ${res.status}`);
     });
 
+    // -----------------------------------------------------------------------
+    // PUT /api/employees/:id/status-events/:eventId tests
+    // -----------------------------------------------------------------------
+
+    // Setup: create a fresh event for PUT tests
+    let putEventId = null;
+    let putEmpId = null;
+
+    await runTest("PUT setup: create employee and event for update tests", async () => {
+      const empRes = await fetch(`${BASE_URL}/employees`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ first_name: 'Put', last_name: 'TestEmployee', middle_name: '' })
+      });
+      if (!empRes.ok) throw new Error(`Expected 201, got ${empRes.status}`);
+      putEmpId = (await empRes.json()).employee_id;
+
+      const evtRes = await fetch(`${BASE_URL}/employees/${putEmpId}/status-events`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'Лікарняний', start_date: dateOffset(5), end_date: dateOffset(10) })
+      });
+      if (evtRes.status !== 201) throw new Error(`Expected 201, got ${evtRes.status}`);
+      putEventId = (await evtRes.json()).event.event_id;
+    });
+
+    // PUT success: update status and dates
+    await runTest("PUT /api/employees/:id/status-events/:eventId updates event successfully (200)", async () => {
+      const res = await fetch(`${BASE_URL}/employees/${putEmpId}/status-events/${putEventId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'Відпустка', start_date: dateOffset(6), end_date: dateOffset(12) })
+      });
+      if (res.status !== 200) throw new Error(`Expected 200, got ${res.status}`);
+      const data = await res.json();
+      if (!data.event) throw new Error("Expected event in response");
+      if (data.event.event_id !== putEventId) throw new Error("event_id mismatch");
+      if (data.event.status !== 'Відпустка') throw new Error(`status mismatch: ${data.event.status}`);
+      if (data.event.start_date !== dateOffset(6)) throw new Error(`start_date mismatch: ${data.event.start_date}`);
+      if (!data.employee) throw new Error("Expected employee in response");
+    });
+
+    // PUT missing status returns 400
+    await runTest("PUT /api/employees/:id/status-events/:eventId returns 400 when status missing", async () => {
+      const res = await fetch(`${BASE_URL}/employees/${putEmpId}/status-events/${putEventId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ start_date: dateOffset(6) })
+      });
+      if (res.status !== 400) throw new Error(`Expected 400, got ${res.status}`);
+    });
+
+    // PUT missing start_date returns 400
+    await runTest("PUT /api/employees/:id/status-events/:eventId returns 400 when start_date missing", async () => {
+      const res = await fetch(`${BASE_URL}/employees/${putEmpId}/status-events/${putEventId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'Відпустка' })
+      });
+      if (res.status !== 400) throw new Error(`Expected 400, got ${res.status}`);
+    });
+
+    // PUT event not found returns 404
+    await runTest("PUT /api/employees/:id/status-events/:eventId returns 404 for unknown event", async () => {
+      const res = await fetch(`${BASE_URL}/employees/${putEmpId}/status-events/999999`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'Відпустка', start_date: dateOffset(5) })
+      });
+      if (res.status !== 404) throw new Error(`Expected 404, got ${res.status}`);
+    });
+
+    // PUT employee not found returns 404
+    await runTest("PUT /api/employees/:id/status-events/:eventId returns 404 for unknown employee", async () => {
+      const res = await fetch(`${BASE_URL}/employees/999999/status-events/1`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'Відпустка', start_date: dateOffset(5) })
+      });
+      if (res.status !== 404) throw new Error(`Expected 404, got ${res.status}`);
+    });
+
+    // PUT overlap returns 409
+    await runTest("PUT /api/employees/:id/status-events/:eventId returns 409 on overlap", async () => {
+      // Create a second event at +20 to +25 that the first event would overlap when updated
+      const secondEvtRes = await fetch(`${BASE_URL}/employees/${putEmpId}/status-events`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'Лікарняний', start_date: dateOffset(20), end_date: dateOffset(25) })
+      });
+      if (secondEvtRes.status !== 201) throw new Error(`Expected 201 creating second event, got ${secondEvtRes.status}`);
+
+      // Try to update putEventId to overlap with the second event
+      const res = await fetch(`${BASE_URL}/employees/${putEmpId}/status-events/${putEventId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'Відпустка', start_date: dateOffset(6), end_date: dateOffset(22) })
+      });
+      if (res.status !== 409) throw new Error(`Expected 409 (overlap), got ${res.status}`);
+      const data = await res.json();
+      if (!data.error || !data.error.includes('перетинається')) throw new Error(`Expected overlap error message, got: ${data.error}`);
+    });
+
+    // PUT self-overlap: updating an event's own range should succeed (no 409 with itself)
+    await runTest("PUT /api/employees/:id/status-events/:eventId allows updating event's own range (no self-overlap)", async () => {
+      // Update putEventId with the same date range it currently has — should succeed
+      const getRes = await fetch(`${BASE_URL}/employees/${putEmpId}/status-events`);
+      const { events } = await getRes.json();
+      const putEvent = events.find(e => e.event_id === putEventId);
+      if (!putEvent) throw new Error("Could not find putEvent in events list");
+
+      const res = await fetch(`${BASE_URL}/employees/${putEmpId}/status-events/${putEventId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: putEvent.status,
+          start_date: putEvent.start_date,
+          end_date: putEvent.end_date
+        })
+      });
+      if (res.status !== 200) throw new Error(`Expected 200 (self-update), got ${res.status}`);
+    });
+
+    // Cleanup PUT test employee
+    if (putEmpId) {
+      await fetch(`${BASE_URL}/employees/${putEmpId}`, { method: 'DELETE' });
+    }
+
   } finally {
     // Clean up test employee
     if (createdEmployeeId) {
