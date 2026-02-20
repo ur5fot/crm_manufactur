@@ -213,6 +213,7 @@ To prevent race conditions when multiple requests modify the same CSV file, the 
 - **generatedDocumentsWriteLock**: Serializes all writes to generated_documents.csv
 - **logWriteLock**: Serializes all writes to logs.csv
 - **statusHistoryWriteLock**: Serializes all writes to status_history.csv
+- **statusEventWriteLock**: Serializes all writes to status_events.csv
 - **reprimandWriteLock**: Serializes all writes to reprimands.csv
 
 These locks ensure that only one write operation occurs at a time per file, preventing data corruption from concurrent modifications.
@@ -269,6 +270,15 @@ These locks ensure that only one write operation occurs at a time per file, prev
 - Auto-created with headers by `ensureCsvFile()` on first read
 - Entries created automatically when `employment_status` field changes via PUT
 - Sorted by `changed_at` descending when queried
+
+**status_events.csv**
+- Scheduled status events (source of truth for event-based status management)
+- Columns: event_id, employee_id, status, start_date, end_date, created_at, active
+- Hard delete (no soft delete) — events removed directly when deleted by user
+- Active events auto-activate employee status on sync; expired events auto-reset to "Працює"
+- Overlap prevention: two events cannot share overlapping date ranges for same employee
+- Synced on `GET /api/employees/:id` (per-employee) and `GET /api/dashboard/events` (all employees)
+- Gitignored — auto-created with headers on first read
 
 **reprimands.csv**
 - Records employee reprimands and commendations (dogany/vidznaky)
@@ -2453,6 +2463,29 @@ All API endpoints are served under the `/api` prefix:
 - Returns: `{ history: [...] }` sorted by `changed_at` descending (newest first)
 - Each entry: history_id, employee_id, old_status, new_status, old_start_date, old_end_date, new_start_date, new_end_date, changed_at, changed_by
 - 404 if employee not found
+
+**GET /api/employees/:id/status-events**
+- Get scheduled status events for employee
+- Returns: `{ events: [...] }` sorted by `start_date` ascending
+- Each entry: event_id, employee_id, status, start_date, end_date, created_at, active
+- 404 if employee not found
+
+**POST /api/employees/:id/status-events**
+- Create a new scheduled status event for employee
+- Required fields: status, start_date
+- Optional fields: end_date (empty = indefinite)
+- Validates no overlap with existing events (409 Conflict if overlap detected)
+- If the new event is currently active (today within start_date–end_date range), immediately updates employee status
+- Creates audit log entry
+- Returns: `{ event: {...}, employee: {...} }` — employee reflects synced status
+- 400 if status or start_date missing; 404 if employee not found; 409 if overlap
+
+**DELETE /api/employees/:id/status-events/:eventId**
+- Hard delete a status event
+- Syncs employee status after deletion (with forceReset: true — resets to Працює if no remaining events)
+- Creates audit log entry
+- Returns: 204 No Content
+- 404 if employee or event not found
 
 **GET /api/employees/:id/reprimands**
 - Get reprimands and commendations for employee

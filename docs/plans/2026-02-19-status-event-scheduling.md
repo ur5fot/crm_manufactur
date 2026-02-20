@@ -153,14 +153,14 @@ Replace the current simple status change (direct field update) with an **event-b
 
 ### Task 7: Final validation and documentation
 
-- [ ] Verify all requirements:
+- [x] Verify all requirements:
   - [x] Start date required, defaults to today ← implemented in Task 4-5
   - [x] After save, active event auto-selects (updates employee status) ← Task 3
   - [x] No overlapping events ← Tasks 1, 3 validation + 409 response
   - [x] Future events auto-activate ← Task 2 sync
   - [x] Events auto-expire and reset to Працює ← Task 2 sync
   - [x] No end date = never expires ← Task 1 getActiveEventForEmployee logic
-- [ ] Update `CLAUDE.md` — add `status_events.csv` to Data Files Overview and API docs
+- [x] Update `CLAUDE.md` — add `status_events.csv` to Data Files Overview and API docs
 
 ## Technical Details
 
