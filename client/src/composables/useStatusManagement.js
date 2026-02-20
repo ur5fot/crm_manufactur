@@ -24,6 +24,51 @@ export function useStatusManagement(allFieldsSchema, form, employees, saving, er
     endDate: ''
   });
 
+  // Inline event editing state
+  const editingEventId = ref(null);
+  const editForm = reactive({
+    status: '',
+    startDate: '',
+    endDate: ''
+  });
+
+  function startEditEvent(event) {
+    editingEventId.value = event.event_id;
+    editForm.status = event.status;
+    editForm.startDate = event.start_date;
+    editForm.endDate = event.end_date || '';
+    statusEventError.value = '';
+  }
+
+  function cancelEditEvent() {
+    editingEventId.value = null;
+    editForm.status = '';
+    editForm.startDate = '';
+    editForm.endDate = '';
+    statusEventError.value = '';
+  }
+
+  async function saveEditEvent(employeeId) {
+    if (!editForm.status || !editForm.startDate) return;
+    if (!editingEventId.value) return;
+    statusEventError.value = '';
+    try {
+      const result = await api.updateStatusEvent(employeeId, editingEventId.value, {
+        status: editForm.status,
+        start_date: editForm.startDate,
+        end_date: editForm.endDate || ''
+      });
+      // Update the event in the list
+      const idx = statusEvents.value.findIndex(e => e.event_id === editingEventId.value);
+      if (idx !== -1) {
+        statusEvents.value[idx] = result.event;
+      }
+      cancelEditEvent();
+    } catch (error) {
+      statusEventError.value = parseEventError(error);
+    }
+  }
+
   // Status history popup
   const showStatusHistoryPopup = ref(false);
   const statusHistoryLoading = ref(false);
@@ -214,6 +259,8 @@ export function useStatusManagement(allFieldsSchema, form, employees, saving, er
     statusEventError,
     showStatusChangePopup,
     statusChangeForm,
+    editingEventId,
+    editForm,
     showStatusHistoryPopup,
     statusHistoryLoading,
     statusHistory,
@@ -221,6 +268,9 @@ export function useStatusManagement(allFieldsSchema, form, employees, saving, er
     closeStatusChangePopup,
     applyStatusChange,
     deleteStatusEvent,
+    startEditEvent,
+    cancelEditEvent,
+    saveEditEvent,
     resetStatus,
     openStatusHistoryPopup,
     closeStatusHistoryPopup,

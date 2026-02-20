@@ -60,12 +60,12 @@ This plan adds **inline row editing** to the status events table:
 
 ### Task 3: Frontend — API client + composable
 
-- [ ] In `client/src/api.js`, add `updateStatusEvent(employeeId, eventId, payload)` → `PUT /employees/:id/status-events/:eventId`
-- [ ] In `client/src/composables/useStatusManagement.js`, add state: `editingEventId = ref(null)`, `editForm = ref({ status: '', startDate: '', endDate: '' })`
-- [ ] Add `startEditEvent(event)` — sets `editingEventId` and populates `editForm` from event
-- [ ] Add `cancelEditEvent()` — clears `editingEventId` and `editForm`
-- [ ] Add `saveEditEvent(employeeId)` — calls `api.updateStatusEvent()`, on success updates `statusEvents` list and clears edit state, handles 409 overlap error into `statusEventError`
-- [ ] Export the new state and functions from the composable
+- [x] In `client/src/api.js`, add `updateStatusEvent(employeeId, eventId, payload)` → `PUT /employees/:id/status-events/:eventId`
+- [x] In `client/src/composables/useStatusManagement.js`, add state: `editingEventId = ref(null)`, `editForm = ref({ status: '', startDate: '', endDate: '' })`
+- [x] Add `startEditEvent(event)` — sets `editingEventId` and populates `editForm` from event
+- [x] Add `cancelEditEvent()` — clears `editingEventId` and `editForm`
+- [x] Add `saveEditEvent(employeeId)` — calls `api.updateStatusEvent()`, on success updates `statusEvents` list and clears edit state, handles 409 overlap error into `statusEventError`
+- [x] Export the new state and functions from the composable
 
 ### Task 4: Frontend UI — inline row editing
 

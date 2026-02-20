@@ -224,6 +224,13 @@ export const api = {
       method: "DELETE"
     });
   },
+  updateStatusEvent(employeeId, eventId, payload) {
+    return request(`/employees/${employeeId}/status-events/${eventId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+  },
 
   // Reprimands API
   getEmployeeReprimands(id) {
