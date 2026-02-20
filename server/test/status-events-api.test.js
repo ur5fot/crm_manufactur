@@ -109,7 +109,7 @@ async function runAllTests() {
       const res = await fetch(`${BASE_URL}/employees/${createdEmployeeId}/status-events`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'На лікарняному' })
+        body: JSON.stringify({ status: 'Лікарняний' })
       });
       if (res.status !== 400) throw new Error(`Expected 400, got ${res.status}`);
     });
@@ -120,7 +120,7 @@ async function runAllTests() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          status: 'На лікарняному',
+          status: 'Лікарняний',
           start_date: today(),
           end_date: dateOffset(-1)
         })
@@ -134,7 +134,7 @@ async function runAllTests() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          status: 'На лікарняному',
+          status: 'Лікарняний',
           start_date: today(),
           end_date: dateOffset(10)  // Give end date so future events don't overlap
         })
@@ -143,12 +143,12 @@ async function runAllTests() {
       const data = await res.json();
       if (!data.event) throw new Error("Expected event in response");
       if (!data.event.event_id) throw new Error("Expected event_id");
-      if (data.event.status !== 'На лікарняному') throw new Error(`status mismatch: ${data.event.status}`);
+      if (data.event.status !== 'Лікарняний') throw new Error(`status mismatch: ${data.event.status}`);
       if (data.event.start_date !== today()) throw new Error(`start_date mismatch: ${data.event.start_date}`);
       if (data.event.employee_id !== createdEmployeeId) throw new Error("employee_id mismatch");
       if (!data.employee) throw new Error("Expected employee in response");
       // Employee status should be updated to the new event's status
-      if (data.employee.employment_status !== 'На лікарняному') throw new Error(`Employee status not updated: ${data.employee.employment_status}`);
+      if (data.employee.employment_status !== 'Лікарняний') throw new Error(`Employee status not updated: ${data.employee.employment_status}`);
       createdEventId = data.event.event_id;
     });
 
@@ -171,7 +171,7 @@ async function runAllTests() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          status: 'У відпустці',
+          status: 'Відпустка',
           start_date: futureStart,
           end_date: futureEnd
         })
@@ -180,8 +180,8 @@ async function runAllTests() {
       const data = await res.json();
       if (!data.event) throw new Error("Expected event in response");
       if (data.event.start_date !== futureStart) throw new Error("start_date mismatch");
-      // Employee status should remain 'На лікарняному' (active event is still today's)
-      if (data.employee.employment_status !== 'На лікарняному') throw new Error(`Employee status changed unexpectedly: ${data.employee.employment_status}`);
+      // Employee status should remain 'Лікарняний' (active event is still today's)
+      if (data.employee.employment_status !== 'Лікарняний') throw new Error(`Employee status changed unexpectedly: ${data.employee.employment_status}`);
     });
 
     // POST with overlapping event returns 409
@@ -191,7 +191,7 @@ async function runAllTests() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          status: 'На лікарняному',
+          status: 'Лікарняний',
           start_date: dateOffset(5),  // overlaps with today-to-+10 event
           end_date: dateOffset(20)
         })
@@ -259,7 +259,7 @@ async function runAllTests() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            status: 'У відпустці',
+            status: 'Відпустка',
             start_date: today()
           })
         });
@@ -269,8 +269,8 @@ async function runAllTests() {
         const getRes = await fetch(`${BASE_URL}/employees/${secondId}`);
         if (!getRes.ok) throw new Error(`Expected 200, got ${getRes.status}`);
         const getData = await getRes.json();
-        if (getData.employee.employment_status !== 'У відпустці') {
-          throw new Error(`Expected 'У відпустці', got: ${getData.employee.employment_status}`);
+        if (getData.employee.employment_status !== 'Відпустка') {
+          throw new Error(`Expected 'Відпустка', got: ${getData.employee.employment_status}`);
         }
       } finally {
         await fetch(`${BASE_URL}/employees/${secondId}`, { method: 'DELETE' });

@@ -22,7 +22,8 @@ import {
   addStatusEvent,
   deleteStatusEvent,
   removeStatusEventsForEmployee,
-  syncStatusEventsForEmployee
+  syncStatusEventsForEmployee,
+  loadFieldsSchema
 } from "../store.js";
 import { mergeRow } from "../csv.js";
 import {
@@ -352,6 +353,16 @@ export function registerEmployeeRoutes(app) {
       if (!status || !String(status).trim()) {
         res.status(400).json({ error: "Статус обов'язковий" });
         return;
+      }
+      // Validate status is one of the allowed options from the schema
+      const fieldsSchema = await loadFieldsSchema();
+      const statusFieldDef = fieldsSchema.find(f => f.field_name === 'employment_status');
+      if (statusFieldDef && statusFieldDef.field_options) {
+        const allowedOptions = statusFieldDef.field_options.split('|').map(s => s.trim()).filter(Boolean);
+        if (!allowedOptions.includes(String(status).trim())) {
+          res.status(400).json({ error: `Недійсний статус. Допустимі значення: ${allowedOptions.join(', ')}` });
+          return;
+        }
       }
       if (!start_date || !String(start_date).trim()) {
         res.status(400).json({ error: "Дата початку обов'язкова" });
