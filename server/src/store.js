@@ -261,12 +261,13 @@ export async function saveEmployees(rows) {
 
 /**
  * Executes a read-modify-write transaction on employees.csv under the write lock.
- * The callback receives the current employees array and must return the modified array.
+ * The callback receives the current employees array and must return the modified array,
+ * or null to signal no change (skips the write entirely).
  * This prevents lost-update race conditions where concurrent requests could overwrite
  * each other's changes.
  *
- * @param {function(Array): Promise<Array>} fn - Callback that receives employees and returns modified array
- * @returns {Promise<Array>} The saved employees array
+ * @param {function(Array): Promise<Array|null>} fn - Callback that receives employees and returns modified array, or null to skip write
+ * @returns {Promise<Array>} The employees array (saved or unchanged)
  */
 export async function withEmployeeLock(fn) {
   const previousLock = employeeWriteLock;
@@ -279,8 +280,11 @@ export async function withEmployeeLock(fn) {
     const columns = await getEmployeeColumns();
     const employees = await readCsv(EMPLOYEES_PATH, columns);
     const result = await fn(employees);
-    await writeCsv(EMPLOYEES_PATH, columns, result);
-    return result;
+    if (result !== null) {
+      await writeCsv(EMPLOYEES_PATH, columns, result);
+      return result;
+    }
+    return employees;
   } finally {
     releaseLock();
   }
@@ -1608,7 +1612,7 @@ export async function syncStatusEventsForEmployee(employeeId, { forceReset = fal
 
   await withEmployeeLock(async (employees) => {
     const idx = employees.findIndex(e => e.employee_id === empIdStr && e.active !== 'no');
-    if (idx === -1) return employees; // Employee not found or soft-deleted
+    if (idx === -1) return null; // Employee not found — skip write
 
     const emp = employees[idx];
 
@@ -1641,6 +1645,7 @@ export async function syncStatusEventsForEmployee(employeeId, { forceReset = fal
       }
     }
 
+    if (!changed) return null; // No change — skip write
     return employees;
   });
 
