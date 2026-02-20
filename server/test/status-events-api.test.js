@@ -423,6 +423,26 @@ async function runAllTests() {
       if (res.status !== 400) throw new Error(`Expected 400, got ${res.status}`);
     });
 
+    // PUT with invalid start_date format returns 400
+    await runTest("PUT /api/employees/:id/status-events/:eventId returns 400 for invalid start_date format", async () => {
+      const res = await fetch(`${BASE_URL}/employees/${putEmpId}/status-events/${putEventId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'Відпустка', start_date: 'not-a-date' })
+      });
+      if (res.status !== 400) throw new Error(`Expected 400, got ${res.status}`);
+    });
+
+    // PUT with invalid status value returns 400
+    await runTest("PUT /api/employees/:id/status-events/:eventId returns 400 for invalid status value", async () => {
+      const res = await fetch(`${BASE_URL}/employees/${putEmpId}/status-events/${putEventId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'InvalidStatus', start_date: dateOffset(6) })
+      });
+      if (res.status !== 400) throw new Error(`Expected 400, got ${res.status}`);
+    });
+
     // PUT event not found returns 404
     await runTest("PUT /api/employees/:id/status-events/:eventId returns 404 for unknown event", async () => {
       const res = await fetch(`${BASE_URL}/employees/${putEmpId}/status-events/999999`, {
