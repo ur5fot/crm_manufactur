@@ -69,14 +69,14 @@ This plan adds **inline row editing** to the status events table:
 
 ### Task 4: Frontend UI — inline row editing
 
-- [ ] In `client/src/views/EmployeeCardsView.vue`, destructure the new composable exports: `editingEventId`, `editForm`, `startEditEvent`, `cancelEditEvent`, `saveEditEvent`
-- [ ] In the status events table, change each row to conditionally render:
+- [x] In `client/src/views/EmployeeCardsView.vue`, destructure the new composable exports: `editingEventId`, `editForm`, `startEditEvent`, `cancelEditEvent`, `saveEditEvent`
+- [x] In the status events table, change each row to conditionally render:
   - **View mode** (when `editingEventId !== event.event_id`): status text, formatted dates, ✏️ edit button + 🗑 delete button
   - **Edit mode** (when `editingEventId === event.event_id`): status `<select>`, start date `<input type="date">`, end date `<input type="date">`, 💾 save button + ✕ cancel button
-- [ ] Bind edit inputs to `editForm.status`, `editForm.startDate`, `editForm.endDate`
-- [ ] Edit button calls `startEditEvent(event)`, save calls `saveEditEvent(selectedId)`, cancel calls `cancelEditEvent()`
-- [ ] Show `statusEventError` below the table when in edit mode (same as existing error display)
-- [ ] Disable save button when `editForm.status` or `editForm.startDate` is empty
+- [x] Bind edit inputs to `editForm.status`, `editForm.startDate`, `editForm.endDate`
+- [x] Edit button calls `startEditEvent(event)`, save calls `saveEditEvent(selectedId)`, cancel calls `cancelEditEvent()`
+- [x] Show `statusEventError` below the table when in edit mode (same as existing error display)
+- [x] Disable save button when `editForm.status` or `editForm.startDate` is empty
 
 ### Task 5: Verify and cleanup
 

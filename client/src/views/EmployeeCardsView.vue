@@ -142,6 +142,8 @@ const {
   statusEventError,
   showStatusChangePopup,
   statusChangeForm,
+  editingEventId,
+  editForm,
   showStatusHistoryPopup,
   statusHistoryLoading,
   statusHistory,
@@ -149,6 +151,9 @@ const {
   closeStatusChangePopup,
   applyStatusChange,
   deleteStatusEvent,
+  startEditEvent,
+  cancelEditEvent,
+  saveEditEvent,
   resetStatus,
   openStatusHistoryPopup,
   closeStatusHistoryPopup,
@@ -912,20 +917,43 @@ onUnmounted(() => {
                     <th>Статус</th>
                     <th>Початок</th>
                     <th>Кінець</th>
-                    <th style="width: 36px;"></th>
+                    <th style="width: 68px;"></th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="event in statusEvents" :key="event.event_id" :class="{ 'active-status-event': isEventActive(event) }">
+                  <tr v-for="event in statusEvents" :key="event.event_id" :class="{ 'active-status-event': isEventActive(event) && editingEventId !== event.event_id }">
                     <td>
-                      <span v-if="isEventActive(event)" class="active-event-dot" title="Активна подія">●</span>
+                      <span v-if="isEventActive(event) && editingEventId !== event.event_id" class="active-event-dot" title="Активна подія">●</span>
                     </td>
-                    <td :style="isEventActive(event) ? 'font-weight: 600;' : ''">{{ event.status }}</td>
-                    <td>{{ formatHistoryDate(event.start_date) }}</td>
-                    <td>{{ event.end_date ? formatHistoryDate(event.end_date) : 'без кінця' }}</td>
-                    <td>
-                      <button class="status-event-delete-btn" @click="deleteStatusEvent(event.event_id, loadEmployees, selectEmployee)" title="Видалити подію">🗑️</button>
-                    </td>
+                    <!-- View mode -->
+                    <template v-if="editingEventId !== event.event_id">
+                      <td :style="isEventActive(event) ? 'font-weight: 600;' : ''">{{ event.status }}</td>
+                      <td>{{ formatHistoryDate(event.start_date) }}</td>
+                      <td>{{ event.end_date ? formatHistoryDate(event.end_date) : 'без кінця' }}</td>
+                      <td>
+                        <button class="status-event-action-btn" @click="startEditEvent(event)" title="Редагувати подію">✏️</button>
+                        <button class="status-event-delete-btn" @click="deleteStatusEvent(event.event_id, loadEmployees, selectEmployee)" title="Видалити подію">🗑️</button>
+                      </td>
+                    </template>
+                    <!-- Edit mode -->
+                    <template v-else>
+                      <td>
+                        <select v-model="editForm.status" class="status-event-edit-select">
+                          <option value="">— Виберіть —</option>
+                          <option v-for="opt in statusChangeOptions" :key="opt" :value="opt">{{ opt }}</option>
+                        </select>
+                      </td>
+                      <td>
+                        <input type="date" v-model="editForm.startDate" class="status-event-edit-input" />
+                      </td>
+                      <td>
+                        <input type="date" v-model="editForm.endDate" class="status-event-edit-input" />
+                      </td>
+                      <td>
+                        <button class="status-event-action-btn" @click="saveEditEvent(selectedId)" :disabled="!editForm.status || !editForm.startDate" title="Зберегти зміни">💾</button>
+                        <button class="status-event-action-btn" @click="cancelEditEvent()" title="Скасувати">✕</button>
+                      </td>
+                    </template>
                   </tr>
                 </tbody>
               </table>

@@ -2137,6 +2137,50 @@ button.small {
   background: #fee2e2;
 }
 
+.status-event-action-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-size: 14px;
+  opacity: 0.55;
+  transition: opacity 0.15s ease, background 0.15s ease;
+  line-height: 1;
+}
+
+.status-event-action-btn:hover:not(:disabled) {
+  opacity: 1;
+  background: rgba(15, 118, 110, 0.1);
+}
+
+.status-event-action-btn:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
+.status-event-edit-select {
+  font-size: 12px;
+  padding: 2px 4px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--text);
+  width: 100%;
+  max-width: 140px;
+}
+
+.status-event-edit-input {
+  font-size: 12px;
+  padding: 2px 4px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--text);
+  width: 100%;
+  max-width: 110px;
+}
+
 /* Clickable employee names in reports (Story 3.3 enhancement) */
 .report-name-link {
   cursor: pointer;
