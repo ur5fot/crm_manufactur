@@ -364,9 +364,9 @@ export async function getDashboardEvents() {
   tomorrow.setDate(now.getDate() + 1);
   const tomorrowStr = localDateStr(tomorrow);
 
-  const in7days = new Date(now);
-  in7days.setDate(now.getDate() + 7);
-  const in7daysStr = localDateStr(in7days);
+  const in30days = new Date(now);
+  in30days.setDate(now.getDate() + 30);
+  const in30daysStr = localDateStr(in30days);
 
   const todayEvents = [];
   const weekEvents = [];
@@ -397,7 +397,7 @@ export async function getDashboardEvents() {
       });
     }
 
-    if (startDate && startDate >= tomorrowStr && startDate <= in7daysStr) {
+    if (startDate && startDate >= tomorrowStr && startDate <= in30daysStr) {
       weekEvents.push({
         employee_id: emp.employee_id,
         name,
@@ -407,7 +407,7 @@ export async function getDashboardEvents() {
         end_date: endDate || ''
       });
     }
-    if (endDate && endDate >= tomorrowStr && endDate <= in7daysStr) {
+    if (endDate && endDate >= tomorrowStr && endDate <= in30daysStr) {
       weekEvents.push({
         employee_id: emp.employee_id,
         name,
@@ -429,9 +429,9 @@ export async function getDocumentExpiryEvents() {
   const now = new Date();
   const today = localDateStr(now);
 
-  const in7days = new Date(now);
-  in7days.setDate(now.getDate() + 7);
-  const in7daysStr = localDateStr(in7days);
+  const in30days = new Date(now);
+  in30days.setDate(now.getDate() + 30);
+  const in30daysStr = localDateStr(in30days);
 
   const past30days = new Date(now);
   past30days.setDate(now.getDate() - 30);
@@ -463,7 +463,7 @@ export async function getDocumentExpiryEvents() {
 
       if (expiryDate === today) {
         todayEvents.push({ ...event, type: 'expiring_today' });
-      } else if (expiryDate > today && expiryDate <= in7daysStr) {
+      } else if (expiryDate > today && expiryDate <= in30daysStr) {
         weekEvents.push({ ...event, type: 'expiring_soon' });
       } else if (expiryDate < today && expiryDate >= past30daysStr) {
         todayEvents.push({ ...event, type: 'recently_expired' });
@@ -761,8 +761,8 @@ export async function loadConfig() {
 
 
 /**
- * Получить события дней рождения (сегодня и следующие 7 дней)
- * @returns {Promise<{today: Array, next7Days: Array}>}
+ * Получить события дней рождения (сегодня и следующие 30 дней)
+ * @returns {Promise<{today: Array, next30Days: Array}>}
  */
 export async function getBirthdayEvents() {
   const employees = await loadEmployees();
@@ -773,11 +773,11 @@ export async function getBirthdayEvents() {
   // Normalize now to midnight for date-only comparison
   const nowDateOnly = new Date(currentYear, now.getMonth(), now.getDate());
 
-  const in7days = new Date(now);
-  in7days.setDate(now.getDate() + 7);
+  const in30days = new Date(now);
+  in30days.setDate(now.getDate() + 30);
 
   const todayEvents = [];
-  const next7DaysEvents = [];
+  const next30DaysEvents = [];
 
   employees.forEach(emp => {
     const birthDate = emp.birth_date;
@@ -806,7 +806,7 @@ export async function getBirthdayEvents() {
     const name = [emp.last_name, emp.first_name, emp.middle_name].filter(Boolean).join(' ');
 
     // Проверяем день рождения в текущем году
-    if (thisYearBirthday >= nowDateOnly && thisYearBirthday <= in7days) {
+    if (thisYearBirthday >= nowDateOnly && thisYearBirthday <= in30days) {
       const birthdayStr = localDateStr(thisYearBirthday);
       const age = currentYear - birthYear;
 
@@ -821,11 +821,11 @@ export async function getBirthdayEvents() {
       if (birthdayStr === today) {
         todayEvents.push(event);
       } else {
-        next7DaysEvents.push(event);
+        next30DaysEvents.push(event);
       }
     }
     // Проверяем день рождения в следующем году (для случаев типа 29 декабря -> 2 января)
-    else if (nextYearBirthday >= nowDateOnly && nextYearBirthday <= in7days) {
+    else if (nextYearBirthday >= nowDateOnly && nextYearBirthday <= in30days) {
       const birthdayStr = localDateStr(nextYearBirthday);
       const age = (currentYear + 1) - birthYear;
 
@@ -840,17 +840,17 @@ export async function getBirthdayEvents() {
       if (birthdayStr === today) {
         todayEvents.push(event);
       } else {
-        next7DaysEvents.push(event);
+        next30DaysEvents.push(event);
       }
     }
   });
 
-  // Сортируем события следующих 7 дней по дате
-  next7DaysEvents.sort((a, b) => {
+  // Сортируем события следующих 30 дней по дате
+  next30DaysEvents.sort((a, b) => {
     return a.current_year_birthday.localeCompare(b.current_year_birthday);
   });
 
-  return { today: todayEvents, next7Days: next7DaysEvents };
+  return { today: todayEvents, next30Days: next30DaysEvents };
 }
 
 /**

@@ -1105,7 +1105,7 @@ onUnmounted(() => {
 
     <!-- Reprimands Popup -->
     <div v-if="showReprimandsPopup" class="vacation-notification-overlay" @click="closeReprimandsPopup">
-      <div class="vacation-notification-modal status-history-modal" @click.stop>
+      <div class="vacation-notification-modal reprimands-modal" @click.stop>
         <div class="vacation-notification-header">
           <h3>📋 Догани та відзнаки</h3>
           <button class="close-btn" @click="closeReprimandsPopup">&times;</button>

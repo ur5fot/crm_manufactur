@@ -21,7 +21,7 @@ export function useDashboardNotifications(employees, employmentOptions, workingS
   const docExpiryWeek = ref([]);
   const showDocExpiryNotification = ref(false);
   const birthdayToday = ref([]);
-  const birthdayNext7Days = ref([]);
+  const birthdayNext30Days = ref([]);
   const showBirthdayNotification = ref(false);
   const retirementToday = ref([]);
   const retirementThisMonth = ref([]);
@@ -63,8 +63,8 @@ export function useDashboardNotifications(employees, employmentOptions, workingS
     });
   });
 
-  const filteredBirthdayNext7Days = computed(() => {
-    return birthdayNext7Days.value.filter(evt => {
+  const filteredBirthdayNext30Days = computed(() => {
+    return birthdayNext30Days.value.filter(evt => {
       const eventId = generateEventId('birthday_week', evt.employee_id, evt.current_year_birthday);
       return !dismissedEvents.value.has(eventId);
     });
@@ -201,13 +201,13 @@ export function useDashboardNotifications(employees, employmentOptions, workingS
     try {
       const data = await api.getBirthdayEvents();
       const todayItems = data.today || [];
-      const next7DaysItems = data.next7Days || [];
+      const next30DaysItems = data.next30Days || [];
 
       birthdayNotifiedDate = today;
       birthdayToday.value = todayItems;
-      birthdayNext7Days.value = next7DaysItems;
+      birthdayNext30Days.value = next30DaysItems;
 
-      if (filteredBirthdayToday.value.length > 0 || filteredBirthdayNext7Days.value.length > 0) {
+      if (filteredBirthdayToday.value.length > 0 || filteredBirthdayNext30Days.value.length > 0) {
         showBirthdayNotification.value = true;
       }
     } catch (error) {
@@ -321,7 +321,7 @@ export function useDashboardNotifications(employees, employmentOptions, workingS
       const eventId = generateEventId('birthday_today', evt.employee_id, evt.current_year_birthday);
       dismissEvent(eventId);
     });
-    filteredBirthdayNext7Days.value.forEach(evt => {
+    filteredBirthdayNext30Days.value.forEach(evt => {
       const eventId = generateEventId('birthday_week', evt.employee_id, evt.current_year_birthday);
       dismissEvent(eventId);
     });
@@ -352,7 +352,7 @@ export function useDashboardNotifications(employees, employmentOptions, workingS
     filteredDocExpiryToday,
     filteredDocExpiryWeek,
     filteredBirthdayToday,
-    filteredBirthdayNext7Days,
+    filteredBirthdayNext30Days,
     filteredRetirementToday,
     filteredRetirementThisMonth,
     // Check functions
