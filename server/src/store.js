@@ -1578,13 +1578,15 @@ export async function validateNoOverlap(employeeId, start_date, end_date, exclud
  * - If active event found and employee status differs: updates employee + writes history
  * - If no active event and employee status != workingStatus: resets to workingStatus + writes history
  * @param {string} employeeId
+ * @param {{ forceReset?: boolean }} options - forceReset: skip the "no events = no-op" guard (used after deleting last event)
  */
-export async function syncStatusEventsForEmployee(employeeId) {
+export async function syncStatusEventsForEmployee(employeeId, { forceReset = false } = {}) {
   const empIdStr = String(employeeId);
 
   // 1. Check if employee has any events; if none, leave status alone (legacy data)
+  //    Exception: forceReset=true bypasses this guard (used after deleting the last event)
   const events = await getStatusEventsForEmployee(empIdStr);
-  if (events.length === 0) return;
+  if (events.length === 0 && !forceReset) return;
 
   // 2. Get today's date
   const today = localDateStr(new Date());

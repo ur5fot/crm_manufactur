@@ -139,17 +139,17 @@ Replace the current simple status change (direct field update) with an **event-b
 
 ### Task 6: E2E tests and final validation
 
-- [ ] Create `tests/e2e/status-events.spec.js`:
+- [x] Create `tests/e2e/status-events.spec.js`:
   - Open status change modal: start date defaults to today
   - Add immediate event: employee status updates in card
   - Add future event: event appears in list, employee status unchanged
   - Add overlapping event: show error message
   - Delete event from list
   - Status reverts to "Працює" after deleting active event
-- [ ] Run E2E tests: `npm run test:e2e -- --grep "status-events"` — must pass
-- [ ] Run all unit tests: `cd server && npm test` — must pass
-- [ ] Run all integration tests: `cd server && npm run test:integration` — must pass
-- [ ] Run full E2E suite: `npm run test:e2e` — must pass
+- [x] Run E2E tests: `npm run test:e2e -- --grep "status-events"` — must pass
+- [x] Run all unit tests: `cd server && npm test` — must pass
+- [x] Run all integration tests: `cd server && npm run test:integration` — must pass
+- [x] Run full E2E suite: `npm run test:e2e` — must pass
 
 ### Task 7: Final validation and documentation
 

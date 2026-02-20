@@ -413,8 +413,9 @@ export function registerEmployeeRoutes(app) {
 
       await deleteStatusEvent(req.params.eventId);
 
-      // Sync to update employee status after deletion
-      await syncStatusEventsForEmployee(req.params.id);
+      // Sync to update employee status after deletion.
+      // forceReset: true ensures reset to "Працює" even when the last event was deleted
+      await syncStatusEventsForEmployee(req.params.id, { forceReset: true });
 
       const employeeName = buildFullName(employee);
       await addLog("DELETE", req.params.id, employeeName, "status_event", req.params.eventId, "", `Видалено подію статусу: ${event.status} з ${event.start_date}`);
