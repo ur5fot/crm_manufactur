@@ -515,15 +515,13 @@ async function runAllTests() {
       if (res.status !== 403) throw new Error(`Expected 403, got ${res.status}`);
     });
 
-    // Cleanup PUT test employee
-    if (putEmpId) {
-      await fetch(`${BASE_URL}/employees/${putEmpId}`, { method: 'DELETE' });
-    }
-
   } finally {
-    // Clean up test employee
+    // Clean up test employees
     if (createdEmployeeId) {
       await deleteTestEmployee(createdEmployeeId);
+    }
+    if (putEmpId) {
+      await fetch(`${BASE_URL}/employees/${putEmpId}`, { method: 'DELETE' });
     }
   }
 

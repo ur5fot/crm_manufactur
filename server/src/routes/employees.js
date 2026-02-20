@@ -67,6 +67,42 @@ function validateDateField(dateValue, dateField) {
 }
 
 /**
+ * Validate status event input fields (status, start_date, end_date).
+ * Returns an error string if validation fails, or null if input is valid.
+ * Used by both POST and PUT status event routes.
+ */
+async function validateStatusEventInput(status, start_date, end_date) {
+  if (!status || !String(status).trim()) {
+    return "Статус обов'язковий";
+  }
+  const fieldsSchema = await loadFieldsSchema();
+  const statusFieldDef = fieldsSchema.find(f => f.field_name === 'employment_status');
+  if (statusFieldDef && statusFieldDef.field_options) {
+    const allowedOptions = statusFieldDef.field_options.split('|').map(s => s.trim()).filter(Boolean);
+    if (!allowedOptions.includes(String(status).trim())) {
+      return `Недійсний статус. Допустимі значення: ${allowedOptions.join(', ')}`;
+    }
+  }
+  if (!start_date || !String(start_date).trim()) {
+    return "Дата початку обов'язкова";
+  }
+  const startDateError = validateDateField(String(start_date).trim(), 'start_date');
+  if (startDateError) {
+    return startDateError;
+  }
+  if (end_date && String(end_date).trim()) {
+    const endDateError = validateDateField(String(end_date).trim(), 'end_date');
+    if (endDateError) {
+      return endDateError;
+    }
+    if (String(end_date).trim() < String(start_date).trim()) {
+      return "Дата закінчення не може бути раніше дати початку";
+    }
+  }
+  return null;
+}
+
+/**
  * Detect which fields changed between current and next employee objects
  */
 function detectChangedFields(current, next) {
@@ -351,38 +387,9 @@ export function registerEmployeeRoutes(app) {
 
       const { status, start_date, end_date } = req.body || {};
 
-      if (!status || !String(status).trim()) {
-        res.status(400).json({ error: "Статус обов'язковий" });
-        return;
-      }
-      // Validate status is one of the allowed options from the schema
-      const fieldsSchema = await loadFieldsSchema();
-      const statusFieldDef = fieldsSchema.find(f => f.field_name === 'employment_status');
-      if (statusFieldDef && statusFieldDef.field_options) {
-        const allowedOptions = statusFieldDef.field_options.split('|').map(s => s.trim()).filter(Boolean);
-        if (!allowedOptions.includes(String(status).trim())) {
-          res.status(400).json({ error: `Недійсний статус. Допустимі значення: ${allowedOptions.join(', ')}` });
-          return;
-        }
-      }
-      if (!start_date || !String(start_date).trim()) {
-        res.status(400).json({ error: "Дата початку обов'язкова" });
-        return;
-      }
-      const startDateError = validateDateField(String(start_date).trim(), 'start_date');
-      if (startDateError) {
-        res.status(400).json({ error: startDateError });
-        return;
-      }
-      if (end_date && String(end_date).trim()) {
-        const endDateError = validateDateField(String(end_date).trim(), 'end_date');
-        if (endDateError) {
-          res.status(400).json({ error: endDateError });
-          return;
-        }
-      }
-      if (end_date && String(end_date).trim() && String(end_date).trim() < String(start_date).trim()) {
-        res.status(400).json({ error: "Дата закінчення не може бути раніше дати початку" });
+      const inputError = await validateStatusEventInput(status, start_date, end_date);
+      if (inputError) {
+        res.status(400).json({ error: inputError });
         return;
       }
 
@@ -431,39 +438,10 @@ export function registerEmployeeRoutes(app) {
 
       const { status, start_date, end_date } = req.body || {};
 
-      if (!status || !String(status).trim()) {
-        res.status(400).json({ error: "Статус обов'язковий" });
+      const putInputError = await validateStatusEventInput(status, start_date, end_date);
+      if (putInputError) {
+        res.status(400).json({ error: putInputError });
         return;
-      }
-      // Validate status is one of the allowed options from the schema
-      const fieldsSchemaForPut = await loadFieldsSchema();
-      const statusFieldDefForPut = fieldsSchemaForPut.find(f => f.field_name === 'employment_status');
-      if (statusFieldDefForPut && statusFieldDefForPut.field_options) {
-        const allowedOptions = statusFieldDefForPut.field_options.split('|').map(s => s.trim()).filter(Boolean);
-        if (!allowedOptions.includes(String(status).trim())) {
-          res.status(400).json({ error: `Недійсний статус. Допустимі значення: ${allowedOptions.join(', ')}` });
-          return;
-        }
-      }
-      if (!start_date || !String(start_date).trim()) {
-        res.status(400).json({ error: "Дата початку обов'язкова" });
-        return;
-      }
-      const startDateError = validateDateField(String(start_date).trim(), 'start_date');
-      if (startDateError) {
-        res.status(400).json({ error: startDateError });
-        return;
-      }
-      if (end_date && String(end_date).trim()) {
-        const endDateError = validateDateField(String(end_date).trim(), 'end_date');
-        if (endDateError) {
-          res.status(400).json({ error: endDateError });
-          return;
-        }
-        if (String(end_date).trim() < String(start_date).trim()) {
-          res.status(400).json({ error: "Дата закінчення не може бути раніше дати початку" });
-          return;
-        }
       }
 
       // Verify the event exists and belongs to this employee
