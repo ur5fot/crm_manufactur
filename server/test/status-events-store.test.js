@@ -127,7 +127,7 @@ async function runAllTests() {
     await runTest("addStatusEvent creates event with auto-increment event_id", async () => {
       const evt = await addStatusEvent({
         employee_id: "1",
-        status: "На лікарняному",
+        status: "Лікарняний",
         start_date: "2026-01-10",
         end_date: "2026-01-20"
       });
@@ -135,7 +135,7 @@ async function runAllTests() {
       if (!evt.event_id) throw new Error("event_id should be set");
       if (evt.event_id !== "1") throw new Error(`Expected event_id '1', got '${evt.event_id}'`);
       if (evt.employee_id !== "1") throw new Error("employee_id mismatch");
-      if (evt.status !== "На лікарняному") throw new Error("status mismatch");
+      if (evt.status !== "Лікарняний") throw new Error("status mismatch");
       if (evt.start_date !== "2026-01-10") throw new Error("start_date mismatch");
       if (evt.end_date !== "2026-01-20") throw new Error("end_date mismatch");
       if (!evt.created_at) throw new Error("created_at should be set");
@@ -145,7 +145,7 @@ async function runAllTests() {
     await runTest("addStatusEvent auto-increments event_id for second event", async () => {
       const evt = await addStatusEvent({
         employee_id: "1",
-        status: "У відпустці",
+        status: "Відпустка",
         start_date: "2026-02-01",
         end_date: "2026-02-10"
       });
@@ -269,14 +269,14 @@ async function runAllTests() {
 
     // ======== updateStatusEvent ========
     await runTest("updateStatusEvent updates status, start_date, end_date on existing event", async () => {
-      // event_id 1: emp 1, 2026-01-10 to 2026-01-20, status "На лікарняному"
+      // event_id 1: emp 1, 2026-01-10 to 2026-01-20, status "Лікарняний"
       const updated = await updateStatusEvent("1", {
-        status: "У відпустці",
+        status: "Відпустка",
         start_date: "2026-01-10",
         end_date: "2026-01-20"
       });
       if (updated.event_id !== "1") throw new Error("event_id should remain '1'");
-      if (updated.status !== "У відпустці") throw new Error(`Expected 'У відпустці', got '${updated.status}'`);
+      if (updated.status !== "Відпустка") throw new Error(`Expected 'Відпустка', got '${updated.status}'`);
       if (updated.start_date !== "2026-01-10") throw new Error("start_date mismatch");
       if (updated.end_date !== "2026-01-20") throw new Error("end_date mismatch");
       if (updated.employee_id !== "1") throw new Error("employee_id should not change");
@@ -285,11 +285,11 @@ async function runAllTests() {
     await runTest("updateStatusEvent self-overlap exclusion: updating to same dates does not throw OVERLAP", async () => {
       // Updating event_id 1 to exactly the same date range should not conflict with itself
       const updated = await updateStatusEvent("1", {
-        status: "На лікарняному",
+        status: "Лікарняний",
         start_date: "2026-01-10",
         end_date: "2026-01-20"
       });
-      if (updated.status !== "На лікарняному") throw new Error("Status should update without OVERLAP error");
+      if (updated.status !== "Лікарняний") throw new Error("Status should update without OVERLAP error");
     });
 
     await runTest("updateStatusEvent throws OVERLAP when updated dates conflict with another event", async () => {
@@ -298,7 +298,7 @@ async function runAllTests() {
       let threw = false;
       try {
         await updateStatusEvent("1", {
-          status: "На лікарняному",
+          status: "Лікарняний",
           start_date: "2026-01-10",
           end_date: "2026-02-05"
         });
@@ -316,7 +316,7 @@ async function runAllTests() {
       let threw = false;
       try {
         await updateStatusEvent("9999", {
-          status: "На лікарняному",
+          status: "Лікарняний",
           start_date: "2026-01-01",
           end_date: "2026-01-31"
         });
@@ -334,12 +334,12 @@ async function runAllTests() {
       // Add a new isolated event for employee 777 — the only event, so clearing end_date won't overlap
       const isoEvt = await addStatusEvent({
         employee_id: "777",
-        status: "На лікарняному",
+        status: "Лікарняний",
         start_date: "2026-01-01",
         end_date: "2026-01-31"
       });
       const updated = await updateStatusEvent(isoEvt.event_id, {
-        status: "На лікарняному",
+        status: "Лікарняний",
         start_date: "2026-01-01",
         end_date: ""
       });
@@ -420,7 +420,7 @@ async function runAllTests() {
         await clearEvents();
 
         // Set employee to a non-working status
-        await setEmployeeStatus(syncEmpId, 'На лікарняному', '2026-01-01', '');
+        await setEmployeeStatus(syncEmpId, 'Лікарняний', '2026-01-01', '');
 
         // Sync — should do nothing since no events
         await syncStatusEventsForEmployee(syncEmpId);
@@ -428,8 +428,8 @@ async function runAllTests() {
         const updated = await loadEmployees();
         const emp = updated.find(e => e.employee_id === syncEmpId);
         if (!emp) throw new Error("Employee not found after sync");
-        if (emp.employment_status !== 'На лікарняному') {
-          throw new Error(`Expected 'На лікарняному' (no-op), got '${emp.employment_status}'`);
+        if (emp.employment_status !== 'Лікарняний') {
+          throw new Error(`Expected 'Лікарняний' (no-op), got '${emp.employment_status}'`);
         }
       });
 
@@ -438,7 +438,7 @@ async function runAllTests() {
         await clearEvents();
 
         // Set employee to non-working status
-        await setEmployeeStatus(syncEmpId, 'На лікарняному', '2026-01-01', '');
+        await setEmployeeStatus(syncEmpId, 'Лікарняний', '2026-01-01', '');
 
         // Sync with forceReset — should reset even without events
         await syncStatusEventsForEmployee(syncEmpId, { forceReset: true });
@@ -459,7 +459,7 @@ async function runAllTests() {
         // Add event starting today with no end date
         await addStatusEvent({
           employee_id: syncEmpId,
-          status: 'На лікарняному',
+          status: 'Лікарняний',
           start_date: today(),
           end_date: ''
         });
@@ -469,8 +469,8 @@ async function runAllTests() {
         const updated = await loadEmployees();
         const emp = updated.find(e => e.employee_id === syncEmpId);
         if (!emp) throw new Error("Employee not found after sync");
-        if (emp.employment_status !== 'На лікарняному') {
-          throw new Error(`Expected 'На лікарняному' after activation, got '${emp.employment_status}'`);
+        if (emp.employment_status !== 'Лікарняний') {
+          throw new Error(`Expected 'Лікарняний' after activation, got '${emp.employment_status}'`);
         }
         if (emp.status_start_date !== today()) {
           throw new Error(`Expected status_start_date ${today()}, got '${emp.status_start_date}'`);
@@ -487,7 +487,7 @@ async function runAllTests() {
 
         await addStatusEvent({
           employee_id: syncEmpId,
-          status: 'У відпустці',
+          status: 'Відпустка',
           start_date: today(),
           end_date: tomorrow()
         });
@@ -503,8 +503,8 @@ async function runAllTests() {
         if (latest.changed_by !== 'system') {
           throw new Error(`Expected changed_by 'system', got '${latest.changed_by}'`);
         }
-        if (latest.new_status !== 'У відпустці') {
-          throw new Error(`Expected new_status 'У відпустці', got '${latest.new_status}'`);
+        if (latest.new_status !== 'Відпустка') {
+          throw new Error(`Expected new_status 'Відпустка', got '${latest.new_status}'`);
         }
         if (latest.employee_id !== String(syncEmpId)) {
           throw new Error(`Expected employee_id ${syncEmpId}, got ${latest.employee_id}`);
@@ -516,12 +516,12 @@ async function runAllTests() {
         await clearEvents();
 
         // Set employee to non-working status
-        await setEmployeeStatus(syncEmpId, 'На лікарняному', yesterday(), yesterday());
+        await setEmployeeStatus(syncEmpId, 'Лікарняний', yesterday(), yesterday());
 
         // Add event that ended yesterday (expired)
         await addStatusEvent({
           employee_id: syncEmpId,
-          status: 'На лікарняному',
+          status: 'Лікарняний',
           start_date: yesterday(),
           end_date: yesterday()
         });
@@ -555,7 +555,7 @@ async function runAllTests() {
         // Add expired event
         await addStatusEvent({
           employee_id: syncEmpId,
-          status: 'На лікарняному',
+          status: 'Лікарняний',
           start_date: yesterday(),
           end_date: yesterday()
         });
@@ -586,7 +586,7 @@ async function runAllTests() {
         // Add event starting tomorrow
         await addStatusEvent({
           employee_id: syncEmpId,
-          status: 'На лікарняному',
+          status: 'Лікарняний',
           start_date: tomorrow(),
           end_date: ''
         });

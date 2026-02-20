@@ -280,6 +280,7 @@ These locks ensure that only one write operation occurs at a time per file, prev
 - Active events auto-activate employee status on sync; expired events auto-reset to "Працює"
 - Overlap prevention: two events cannot share overlapping date ranges for same employee
 - Synced on `GET /api/employees/:id` (per-employee) and `GET /api/dashboard/events` (all employees)
+- Cleaned up when employee is deleted (`removeStatusEventsForEmployee`)
 - Gitignored — auto-created with headers on first read
 
 **reprimands.csv**
@@ -1375,7 +1376,7 @@ export function useEmployeeForm(allFieldsSchema, employeeFields, fieldLabels) {
 |------------|---------------|---------|
 | `useEmployeePhoto.js` | EmployeeCardsView | Photo upload, display with cache-busting, delete |
 | `useEmployeeDocuments.js` | EmployeeCardsView | Document upload/delete, date editing, expiry checking |
-| `useStatusManagement.js` | EmployeeCardsView | Status change popup, status reset, status history |
+| `useStatusManagement.js` | EmployeeCardsView | Status event scheduling (add/edit/delete events), inline row editing state, status history popup |
 | `useDocumentGeneration.js` | EmployeeCardsView | Template list loading, document generation trigger |
 | `useDismissedEvents.js` | DashboardView | localStorage-based notification dismissal |
 | `useDashboardNotifications.js` | DashboardView | All 4 notification types (status, birthday, retirement, doc expiry) |
@@ -2055,6 +2056,7 @@ End-to-end tests validate complete user workflows across the full stack (databas
 - `employee-photo.spec.js`: Employee photo upload, display, and delete
 - `status-history.spec.js`: Status history popup open, display, and close
 - `reprimands.spec.js`: Reprimands and commendations popup UI interactions, CRUD operations
+- `status-events.spec.js`: Status event scheduling: add immediate/future events, overlap error, delete event, status revert
 
 **Configuration** (`playwright.config.js`):
 - Test directory: `./tests/e2e`
@@ -2499,7 +2501,7 @@ All API endpoints are served under the `/api` prefix:
 - Syncs employee status after deletion (with forceReset: true — resets to Працює if no remaining events)
 - Creates audit log entry
 - Returns: 204 No Content
-- 404 if employee or event not found
+- 404 if employee or event not found; 403 if event belongs to a different employee
 
 **GET /api/employees/:id/reprimands**
 - Get reprimands and commendations for employee
@@ -3277,73 +3279,56 @@ app.get("/api/documents", async (req, res) => {
 
 ### Employment Status Change System
 
-The application supports tracking temporary and permanent employment status changes with optional automatic expiration.
+The application manages employment status changes via an **event-based scheduling system**. Status events are the source of truth; the `employment_status`, `status_start_date`, and `status_end_date` fields on the employee record are a cached mirror of the currently active event.
+
+**Data model**:
+- `status_events.csv` — source of truth; each row is a scheduled status event with `start_date` (required) and optional `end_date`
+- `employees.csv` fields `employment_status`, `status_start_date`, `status_end_date` — mirror of the active event, updated by the sync function
+- `status_history.csv` — audit log of every status change (manual and automatic)
 
 **Status Change Fields** (from fields_schema.csv):
-- `employment_status` - Current status (select field with values like Працює, На лікарняному, У відпустці, etc.)
+- `employment_status` - Current status (select field: Працює, Звільнений, Відпустка, Лікарняний, Відкомандирований)
 - `status_start_date` - When the current status began (date field)
 - `status_end_date` - When the status will end (optional, date field)
 
-**Status Change Workflow**:
-1. User updates employment_status field in employee card
-2. Optionally sets status_start_date (defaults to today)
-3. Optionally sets status_end_date for temporary statuses
-4. Backend validates and saves changes
-5. Audit log created with status change details
+**Status Event Workflow**:
+1. User opens the status change popup in the employee card
+2. Adds a new event: selects status, sets start_date (required, defaults to today), optional end_date
+3. Backend validates no overlap with existing events; returns 409 if overlap detected
+4. If the new event is currently active (today is within its date range), employee status is immediately updated via `syncStatusEventsForEmployee`
+5. Future events activate automatically when their start_date arrives (sync runs on `GET /api/employees/:id` and `GET /api/dashboard/events`)
+6. When an event's end_date passes, employee status resets to "Працює" automatically
+7. Events with no end_date remain active indefinitely
 
-**Automatic Status Reset**:
-- System checks for expired statuses on dashboard load
-- If status_end_date < current_date, status automatically resets
-- Reset status value configured in config.csv or defaults to "Працює"
-- Audit log created for automatic reset
-- User notified of automatic status changes
-
-**Status Reset Implementation** (from store.js):
+**Sync Implementation** (from store.js):
 ```javascript
-export async function checkAndResetExpiredStatuses() {
-  const employees = await loadEmployees();
-  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+export async function syncStatusEventsForEmployee(employeeId, { forceReset = false } = {}) {
+  // 1. If employee has no events AND forceReset=false: return (leave legacy status alone)
+  const events = await getStatusEventsForEmployee(empIdStr);
+  if (events.length === 0 && !forceReset) return;
 
-  const changes = [];
-  for (const emp of employees) {
-    if (emp.status_end_date && emp.status_end_date < today) {
-      const oldStatus = emp.employment_status;
-      emp.employment_status = 'Працює'; // Default reset value
-      emp.status_start_date = today;
-      emp.status_end_date = '';
+  // 2. Find active event for today
+  const activeEvent = events.find(e => {
+    if (e.start_date > today) return false;
+    if (e.end_date && e.end_date < today) return false;
+    return true;
+  }) || null;
 
-      changes.push({
-        employee_id: emp.employee_id,
-        full_name: emp.full_name,
-        old_status: oldStatus,
-        new_status: emp.employment_status
-      });
-    }
-  }
+  // 3. Update employee status under write lock
+  // - If active event found and status differs: update employee + write history
+  // - If no active event and status != workingStatus: reset to workingStatus + write history
+}
 
-  if (changes.length > 0) {
-    await saveEmployees(employees);
-
-    // Create audit log entries
-    for (const change of changes) {
-      await addLog({
-        user: 'system',
-        action: 'UPDATE',
-        entity_type: 'employee',
-        entity_id: change.employee_id,
-        details: `Automatic status reset: ${change.old_status} → ${change.new_status}`
-      });
-    }
-  }
-
-  return changes;
+export async function syncAllStatusEvents() {
+  // Called at GET /api/dashboard/events — syncs all active employees sequentially
 }
 ```
 
+**forceReset option**: Used after deleting the last status event for an employee. Bypasses the "no events = no-op" guard to ensure the employee's status is reset to "Працює" even when no events remain.
+
 **Status Change Notifications**:
-- Dashboard shows recent status changes
-- Includes manual changes and automatic resets
-- Shows: employee name, old status, new status, change date
+- Dashboard shows recent status changes (from status_history.csv)
+- Includes manual changes and automatic resets (changed_by field: 'user' vs 'system')
 - Sorted by change date (most recent first)
 
 ### Dashboard Notifications

@@ -160,7 +160,9 @@ export function useStatusManagement(allFieldsSchema, form, employees, saving, er
 
   async function deleteStatusEvent(eventId, loadEmployees, selectEmployee) {
     if (!form.employee_id) return;
+    if (saving.value) return;
     statusEventError.value = '';
+    saving.value = true;
     try {
       await api.deleteStatusEvent(form.employee_id, eventId);
       // Reload events list
@@ -170,6 +172,8 @@ export function useStatusManagement(allFieldsSchema, form, employees, saving, er
       if (selectEmployee) await selectEmployee(form.employee_id);
     } catch (error) {
       statusEventError.value = parseEventError(error);
+    } finally {
+      saving.value = false;
     }
   }
 
