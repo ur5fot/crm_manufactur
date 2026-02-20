@@ -935,7 +935,7 @@ onUnmounted(() => {
                       <td>
                         <select v-model="editForm.status" class="status-event-edit-select">
                           <option value="">— Виберіть —</option>
-                          <option v-for="opt in statusChangeOptions" :key="opt" :value="opt">{{ opt }}</option>
+                          <option v-for="opt in employmentOptions" :key="opt" :value="opt">{{ opt }}</option>
                         </select>
                       </td>
                       <td>

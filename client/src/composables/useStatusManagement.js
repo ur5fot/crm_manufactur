@@ -58,13 +58,9 @@ export function useStatusManagement(allFieldsSchema, form, employees, saving, er
         start_date: editForm.startDate,
         end_date: editForm.endDate || ''
       });
-      // Update the event in the list
-      const idx = statusEvents.value.findIndex(e => e.event_id === editingEventId.value);
-      if (idx !== -1) {
-        statusEvents.value[idx] = result.event;
-      }
       cancelEditEvent();
-      // Reload employee data to reflect any status sync changes
+      // Reload events list and employee data to reflect any status sync changes
+      await loadStatusEventsList();
       if (loadEmployees) await loadEmployees();
       if (selectEmployee) await selectEmployee(employeeId);
     } catch (error) {
@@ -125,6 +121,7 @@ export function useStatusManagement(allFieldsSchema, form, employees, saving, er
   }
 
   function closeStatusChangePopup() {
+    cancelEditEvent();
     showStatusChangePopup.value = false;
   }
 
