@@ -80,11 +80,11 @@ This plan adds **inline row editing** to the status events table:
 
 ### Task 5: Verify and cleanup
 
-- [ ] Run all backend tests: `cd server && npm test`
-- [ ] Manual test: open employee card → status popup → edit an event → verify saved correctly
-- [ ] Manual test: edit event to overlap with another → verify 409 error shown in UI
-- [ ] Manual test: cancel edit → original values restored
-- [ ] Verify the add-new-event form still works (not broken by edit mode)
+- [x] Run all backend tests: `cd server && npm test`
+- [x] Manual test: open employee card → status popup → edit an event → verify saved correctly
+- [x] Manual test: edit event to overlap with another → verify 409 error shown in UI
+- [x] Manual test: cancel edit → original values restored
+- [x] Verify the add-new-event form still works (not broken by edit mode)
 
 ## Technical Details
 
