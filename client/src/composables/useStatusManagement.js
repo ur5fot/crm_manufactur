@@ -11,6 +11,11 @@ export function useStatusManagement(allFieldsSchema, form, employees, saving, er
   const workingStatus = computed(() => employmentOptions.value[0] || '');
   const statusChangeOptions = computed(() => employmentOptions.value.slice(1));
 
+  // Status events list
+  const statusEvents = ref([]);
+  const statusEventsLoading = ref(false);
+  const statusEventError = ref('');
+
   // Status change popup
   const showStatusChangePopup = ref(false);
   const statusChangeForm = reactive({
@@ -24,12 +29,46 @@ export function useStatusManagement(allFieldsSchema, form, employees, saving, er
   const statusHistoryLoading = ref(false);
   const statusHistory = ref([]);
 
-  function openStatusChangePopup() {
-    const currentStatus = form.employment_status || '';
-    statusChangeForm.status = currentStatus === workingStatus.value ? '' : currentStatus;
-    statusChangeForm.startDate = form.status_start_date || '';
-    statusChangeForm.endDate = form.status_end_date || '';
+  function getTodayString() {
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  function parseEventError(error) {
+    let errMsg = error.message;
+    try {
+      const parsed = JSON.parse(errMsg);
+      if (parsed.error) errMsg = parsed.error;
+    } catch {
+      // not JSON, use as-is
+    }
+    return errMsg;
+  }
+
+  async function loadStatusEventsList() {
+    if (!form.employee_id) return;
+    statusEventsLoading.value = true;
+    try {
+      const data = await api.getStatusEvents(form.employee_id);
+      statusEvents.value = data.events || [];
+    } catch (err) {
+      console.error('Failed to load status events:', err);
+      statusEvents.value = [];
+    } finally {
+      statusEventsLoading.value = false;
+    }
+  }
+
+  async function openStatusChangePopup() {
+    statusChangeForm.status = '';
+    statusChangeForm.startDate = getTodayString();
+    statusChangeForm.endDate = '';
+    statusEventError.value = '';
     showStatusChangePopup.value = true;
+    await loadStatusEventsList();
   }
 
   function closeStatusChangePopup() {
@@ -41,33 +80,46 @@ export function useStatusManagement(allFieldsSchema, form, employees, saving, er
     if (!form.employee_id) return;
     if (saving.value) return;
     if (statusChangeForm.endDate && statusChangeForm.endDate < statusChangeForm.startDate) {
-      errorMessage.value = 'Дата завершення не може бути раніше дати початку';
+      statusEventError.value = 'Дата завершення не може бути раніше дати початку';
       return;
     }
 
-    errorMessage.value = '';
+    statusEventError.value = '';
     saving.value = true;
     try {
-      const currentEmployee = employees.value.find(e => e.employee_id === form.employee_id);
-      if (!currentEmployee) {
-        errorMessage.value = 'Співробітника не знайдено. Оновіть сторінку.';
-        saving.value = false;
-        return;
-      }
-      const payload = {
-        ...currentEmployee,
-        employment_status: statusChangeForm.status,
-        status_start_date: statusChangeForm.startDate,
-        status_end_date: statusChangeForm.endDate || ''
-      };
-      await api.updateEmployee(form.employee_id, payload);
+      await api.addStatusEvent(form.employee_id, {
+        status: statusChangeForm.status,
+        start_date: statusChangeForm.startDate,
+        end_date: statusChangeForm.endDate || ''
+      });
+      // Reload events list
+      await loadStatusEventsList();
+      // Reload employee
       await loadEmployees();
       await selectEmployee(form.employee_id);
-      closeStatusChangePopup();
+      // Reset form fields but keep popup open to show updated list
+      statusChangeForm.status = '';
+      statusChangeForm.startDate = getTodayString();
+      statusChangeForm.endDate = '';
     } catch (error) {
-      errorMessage.value = error.message;
+      statusEventError.value = parseEventError(error);
     } finally {
       saving.value = false;
+    }
+  }
+
+  async function deleteStatusEvent(eventId, loadEmployees, selectEmployee) {
+    if (!form.employee_id) return;
+    statusEventError.value = '';
+    try {
+      await api.deleteStatusEvent(form.employee_id, eventId);
+      // Reload events list
+      await loadStatusEventsList();
+      // Reload employee
+      if (loadEmployees) await loadEmployees();
+      if (selectEmployee) await selectEmployee(form.employee_id);
+    } catch (error) {
+      statusEventError.value = parseEventError(error);
     }
   }
 
@@ -75,22 +127,34 @@ export function useStatusManagement(allFieldsSchema, form, employees, saving, er
     if (!form.employee_id) return;
     if (saving.value) return;
 
-    errorMessage.value = '';
+    statusEventError.value = '';
     saving.value = true;
     try {
-      const currentEmployee = employees.value.find(e => e.employee_id === form.employee_id);
-      if (!currentEmployee) {
-        errorMessage.value = 'Співробітника не знайдено. Оновіть сторінку.';
-        saving.value = false;
-        return;
+      // Find the currently active event and delete it, or fall back to direct update
+      const data = await api.getStatusEvents(form.employee_id);
+      const events = data.events || [];
+      const today = getTodayString();
+      const activeEvent = events.find(e => {
+        return e.start_date <= today && (!e.end_date || e.end_date >= today);
+      });
+
+      if (activeEvent) {
+        await api.deleteStatusEvent(form.employee_id, activeEvent.event_id);
+      } else {
+        // Fall back: update employee directly
+        const currentEmployee = employees.value.find(e => e.employee_id === form.employee_id);
+        if (currentEmployee) {
+          const payload = {
+            ...currentEmployee,
+            employment_status: workingStatus.value,
+            status_start_date: '',
+            status_end_date: ''
+          };
+          await api.updateEmployee(form.employee_id, payload);
+        }
       }
-      const payload = {
-        ...currentEmployee,
-        employment_status: workingStatus.value,
-        status_start_date: '',
-        status_end_date: ''
-      };
-      await api.updateEmployee(form.employee_id, payload);
+
+      statusEvents.value = [];
       await loadEmployees();
       await selectEmployee(form.employee_id);
       closeStatusChangePopup();
@@ -145,6 +209,9 @@ export function useStatusManagement(allFieldsSchema, form, employees, saving, er
     employmentOptions,
     workingStatus,
     statusChangeOptions,
+    statusEvents,
+    statusEventsLoading,
+    statusEventError,
     showStatusChangePopup,
     statusChangeForm,
     showStatusHistoryPopup,
@@ -153,6 +220,7 @@ export function useStatusManagement(allFieldsSchema, form, employees, saving, er
     openStatusChangePopup,
     closeStatusChangePopup,
     applyStatusChange,
+    deleteStatusEvent,
     resetStatus,
     openStatusHistoryPopup,
     closeStatusHistoryPopup,

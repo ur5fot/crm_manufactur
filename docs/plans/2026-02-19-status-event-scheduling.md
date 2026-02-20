@@ -105,13 +105,13 @@ Replace the current simple status change (direct field update) with an **event-b
 
 ### Task 4: Frontend — API client and composable
 
-- [ ] Add to `client/src/api.js`:
+- [x] Add to `client/src/api.js`:
   ```js
   getStatusEvents(employeeId) → GET /employees/:id/status-events
   addStatusEvent(employeeId, payload) → POST /employees/:id/status-events
   deleteStatusEvent(employeeId, eventId) → DELETE /employees/:id/status-events/:eventId
   ```
-- [ ] Rewrite `client/src/composables/useStatusManagement.js`:
+- [x] Rewrite `client/src/composables/useStatusManagement.js`:
   - Add `statusEvents = ref([])` and `statusEventsLoading = ref(false)`
   - Add `statusEventError = ref('')`
   - `openStatusChangePopup()`: load events via `api.getStatusEvents()`, set `statusChangeForm.startDate` to **today** (format YYYY-MM-DD) if empty; clear status selection
