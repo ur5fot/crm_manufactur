@@ -51,9 +51,11 @@ export function useStatusManagement(allFieldsSchema, form, employees, saving, er
   async function saveEditEvent(employeeId, loadEmployees, selectEmployee) {
     if (!editForm.status || !editForm.startDate) return;
     if (!editingEventId.value) return;
+    if (saving.value) return;
     statusEventError.value = '';
+    saving.value = true;
     try {
-      const result = await api.updateStatusEvent(employeeId, editingEventId.value, {
+      await api.updateStatusEvent(employeeId, editingEventId.value, {
         status: editForm.status,
         start_date: editForm.startDate,
         end_date: editForm.endDate || ''
@@ -65,6 +67,8 @@ export function useStatusManagement(allFieldsSchema, form, employees, saving, er
       if (selectEmployee) await selectEmployee(employeeId);
     } catch (error) {
       statusEventError.value = parseEventError(error);
+    } finally {
+      saving.value = false;
     }
   }
 
