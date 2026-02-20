@@ -41,18 +41,18 @@ Replace the current simple status change (direct field update) with an **event-b
 
 ### Task 1: Backend — schema and store functions
 
-- [ ] Add `STATUS_EVENT_COLUMNS` to `server/src/schema.js`:
+- [x] Add `STATUS_EVENT_COLUMNS` to `server/src/schema.js`:
   `event_id, employee_id, status, start_date, end_date, created_at, active`
-- [ ] Add `STATUS_EVENTS_PATH` constant and `statusEventWriteLock` to `server/src/store.js`
-- [ ] Implement `loadStatusEvents()` and `saveStatusEvents(rows)` using existing CSV pattern
-- [ ] Implement `getStatusEventsForEmployee(employeeId)` — returns events sorted by start_date asc, filtered active='yes'
-- [ ] Implement `addStatusEvent({ employee_id, status, start_date, end_date })` — auto-assigns event_id, created_at, active='yes'; returns new event
-- [ ] Implement `deleteStatusEvent(eventId)` — hard delete (remove row from CSV)
-- [ ] Implement `removeStatusEventsForEmployee(employeeId)` — hard delete all events for employee (called on employee delete)
-- [ ] Implement `getActiveEventForEmployee(employeeId, dateStr)` — returns event where `start_date <= dateStr` AND (`end_date` is empty OR `end_date >= dateStr`); returns null if none
-- [ ] Implement `validateNoOverlap(employeeId, start_date, end_date, excludeEventId?)` — returns `true` if no overlap exists; overlap logic: two events overlap if `A.start_date <= B.end_date_or_infinity AND A.end_date_or_infinity >= B.start_date`
-- [ ] Write `server/test/status-events-store.test.js`: test addStatusEvent, deleteStatusEvent, getActiveEventForEmployee (active, future, expired, no-end), validateNoOverlap (no overlap, overlap, adjacent dates OK, open-end events)
-- [ ] Run unit tests: `node server/test/status-events-store.test.js` — must pass
+- [x] Add `STATUS_EVENTS_PATH` constant and `statusEventWriteLock` to `server/src/store.js`
+- [x] Implement `loadStatusEvents()` and `saveStatusEvents(rows)` using existing CSV pattern
+- [x] Implement `getStatusEventsForEmployee(employeeId)` — returns events sorted by start_date asc, filtered active='yes'
+- [x] Implement `addStatusEvent({ employee_id, status, start_date, end_date })` — auto-assigns event_id, created_at, active='yes'; returns new event
+- [x] Implement `deleteStatusEvent(eventId)` — hard delete (remove row from CSV)
+- [x] Implement `removeStatusEventsForEmployee(employeeId)` — hard delete all events for employee (called on employee delete)
+- [x] Implement `getActiveEventForEmployee(employeeId, dateStr)` — returns event where `start_date <= dateStr` AND (`end_date` is empty OR `end_date >= dateStr`); returns null if none
+- [x] Implement `validateNoOverlap(employeeId, start_date, end_date, excludeEventId?)` — returns `true` if no overlap exists; overlap logic: two events overlap if `A.start_date <= B.end_date_or_infinity AND A.end_date_or_infinity >= B.start_date`
+- [x] Write `server/test/status-events-store.test.js`: test addStatusEvent, deleteStatusEvent, getActiveEventForEmployee (active, future, expired, no-end), validateNoOverlap (no overlap, overlap, adjacent dates OK, open-end events)
+- [x] Run unit tests: `node server/test/status-events-store.test.js` — must pass
 
 ### Task 2: Backend — auto-sync function
 

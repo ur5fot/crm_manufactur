@@ -2,7 +2,7 @@ import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
 import { readCsv, writeCsv } from "./csv.js";
-import { EMPLOYEE_COLUMNS, LOG_COLUMNS, FIELD_SCHEMA_COLUMNS, STATUS_HISTORY_COLUMNS, REPRIMAND_COLUMNS, loadEmployeeColumns, getCachedEmployeeColumns, loadDocumentFields, getCachedDocumentFields } from "./schema.js";
+import { EMPLOYEE_COLUMNS, LOG_COLUMNS, FIELD_SCHEMA_COLUMNS, STATUS_HISTORY_COLUMNS, REPRIMAND_COLUMNS, STATUS_EVENT_COLUMNS, loadEmployeeColumns, getCachedEmployeeColumns, loadDocumentFields, getCachedDocumentFields } from "./schema.js";
 import { getNextId } from "./utils.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -21,6 +21,7 @@ const TEMPLATES_PATH = path.join(DATA_DIR, "templates.csv");
 const GENERATED_DOCUMENTS_PATH = path.join(DATA_DIR, "generated_documents.csv");
 const STATUS_HISTORY_PATH = path.join(DATA_DIR, "status_history.csv");
 const REPRIMANDS_PATH = path.join(DATA_DIR, "reprimands.csv");
+const STATUS_EVENTS_PATH = path.join(DATA_DIR, "status_events.csv");
 
 // Simple in-memory lock for log writes to prevent race conditions
 let logWriteLock = Promise.resolve();
@@ -40,6 +41,9 @@ let statusHistoryWriteLock = Promise.resolve();
 
 // Simple in-memory lock for reprimands writes to prevent race conditions
 let reprimandWriteLock = Promise.resolve();
+
+// Simple in-memory lock for status_events writes to prevent race conditions
+let statusEventWriteLock = Promise.resolve();
 
 export async function ensureDataDirs() {
   await fs.mkdir(DATA_DIR, { recursive: true });
@@ -1405,4 +1409,165 @@ export async function removeReprimandsForEmployee(employeeId) {
   } finally {
     releaseLock();
   }
+}
+
+// ===========================
+// Status Events store functions
+// ===========================
+
+/**
+ * Load all status events from status_events.csv
+ * @returns {Promise<Array>} Array of status event records
+ */
+export async function loadStatusEvents() {
+  return readCsv(STATUS_EVENTS_PATH, STATUS_EVENT_COLUMNS);
+}
+
+/**
+ * Save status events to status_events.csv with write lock
+ * @param {Array} rows - Status event records to save
+ * @returns {Promise<void>}
+ */
+async function saveStatusEvents(rows) {
+  const previousLock = statusEventWriteLock;
+  let releaseLock;
+  statusEventWriteLock = new Promise(resolve => { releaseLock = resolve; });
+
+  try {
+    await previousLock;
+    await writeCsv(STATUS_EVENTS_PATH, STATUS_EVENT_COLUMNS, rows);
+  } finally {
+    releaseLock();
+  }
+}
+
+/**
+ * Get all active status events for an employee, sorted by start_date ascending
+ * @param {string} employeeId
+ * @returns {Promise<Array>}
+ */
+export async function getStatusEventsForEmployee(employeeId) {
+  const events = await loadStatusEvents();
+  return events
+    .filter(e => e.employee_id === String(employeeId) && e.active !== 'no')
+    .sort((a, b) => a.start_date.localeCompare(b.start_date));
+}
+
+/**
+ * Add a new status event
+ * @param {Object} data - { employee_id, status, start_date, end_date? }
+ * @returns {Promise<Object>} The new event record
+ */
+export async function addStatusEvent(data) {
+  const previousLock = statusEventWriteLock;
+  let releaseLock;
+  statusEventWriteLock = new Promise(resolve => { releaseLock = resolve; });
+
+  try {
+    await previousLock;
+    const events = await loadStatusEvents();
+    const newId = getNextId(events, "event_id");
+
+    const newEvent = {
+      event_id: newId,
+      employee_id: String(data.employee_id || ""),
+      status: data.status || "",
+      start_date: data.start_date || "",
+      end_date: data.end_date || "",
+      created_at: new Date().toISOString(),
+      active: "yes"
+    };
+
+    events.push(newEvent);
+    await writeCsv(STATUS_EVENTS_PATH, STATUS_EVENT_COLUMNS, events);
+
+    return newEvent;
+  } finally {
+    releaseLock();
+  }
+}
+
+/**
+ * Hard-delete a single status event by event_id
+ * @param {string} eventId
+ * @returns {Promise<boolean>} true if deleted, false if not found
+ */
+export async function deleteStatusEvent(eventId) {
+  const previousLock = statusEventWriteLock;
+  let releaseLock;
+  statusEventWriteLock = new Promise(resolve => { releaseLock = resolve; });
+
+  try {
+    await previousLock;
+    const events = await loadStatusEvents();
+    const filtered = events.filter(e => e.event_id !== String(eventId));
+    if (filtered.length === events.length) return false;
+    await writeCsv(STATUS_EVENTS_PATH, STATUS_EVENT_COLUMNS, filtered);
+    return true;
+  } finally {
+    releaseLock();
+  }
+}
+
+/**
+ * Hard-delete all status events for an employee (called on employee delete)
+ * @param {string} employeeId
+ */
+export async function removeStatusEventsForEmployee(employeeId) {
+  const previousLock = statusEventWriteLock;
+  let releaseLock;
+  statusEventWriteLock = new Promise(resolve => { releaseLock = resolve; });
+
+  try {
+    await previousLock;
+    const events = await loadStatusEvents();
+    const filtered = events.filter(e => e.employee_id !== String(employeeId));
+    if (filtered.length !== events.length) {
+      await writeCsv(STATUS_EVENTS_PATH, STATUS_EVENT_COLUMNS, filtered);
+    }
+  } finally {
+    releaseLock();
+  }
+}
+
+/**
+ * Find the currently active status event for an employee on a given date.
+ * An event is active if: start_date <= dateStr AND (end_date is empty OR end_date >= dateStr)
+ * @param {string} employeeId
+ * @param {string} dateStr - YYYY-MM-DD
+ * @returns {Promise<Object|null>} The active event or null
+ */
+export async function getActiveEventForEmployee(employeeId, dateStr) {
+  const events = await getStatusEventsForEmployee(employeeId);
+  const active = events.find(e => {
+    if (e.start_date > dateStr) return false;
+    if (e.end_date && e.end_date < dateStr) return false;
+    return true;
+  });
+  return active || null;
+}
+
+/**
+ * Validate that a new event does not overlap with existing events for an employee.
+ * Overlap algorithm: A overlaps B if A.start_date <= B.end_or_inf AND A.end_or_inf >= B.start_date
+ * @param {string} employeeId
+ * @param {string} start_date - YYYY-MM-DD
+ * @param {string} end_date - YYYY-MM-DD or empty (= no end)
+ * @param {string} [excludeEventId] - event_id to exclude (for update scenarios)
+ * @returns {Promise<boolean>} true if no overlap, false if overlap found
+ */
+export async function validateNoOverlap(employeeId, start_date, end_date, excludeEventId) {
+  const events = await getStatusEventsForEmployee(employeeId);
+  const FAR_FUTURE = "9999-12-31";
+  const newEnd = end_date || FAR_FUTURE;
+
+  for (const e of events) {
+    if (excludeEventId && e.event_id === String(excludeEventId)) continue;
+    const existingEnd = e.end_date || FAR_FUTURE;
+    // Overlap: new.start <= existing.end AND new.end >= existing.start
+    if (start_date <= existingEnd && newEnd >= e.start_date) {
+      return false;
+    }
+  }
+  return true;
 }
