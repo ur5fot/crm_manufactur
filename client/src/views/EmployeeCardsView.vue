@@ -154,6 +154,7 @@ const {
   startEditEvent,
   cancelEditEvent,
   saveEditEvent,
+  isEventActive,
   resetStatus,
   openStatusHistoryPopup,
   closeStatusHistoryPopup,
@@ -388,12 +389,6 @@ function confirmDeleteReprimand(employeeId, recordId) {
   if (window.confirm('Видалити запис?')) {
     deleteReprimandEntry(employeeId, recordId);
   }
-}
-
-// Check if a status event is currently active (today is within its range)
-function isEventActive(event) {
-  const today = new Date().toISOString().slice(0, 10);
-  return event.start_date <= today && (!event.end_date || event.end_date >= today);
 }
 
 // Setup navigation guard
@@ -950,7 +945,7 @@ onUnmounted(() => {
                         <input type="date" v-model="editForm.endDate" class="status-event-edit-input" />
                       </td>
                       <td>
-                        <button class="status-event-action-btn" @click="saveEditEvent(selectedId)" :disabled="!editForm.status || !editForm.startDate" title="Зберегти зміни">💾</button>
+                        <button class="status-event-action-btn" @click="saveEditEvent(selectedId, loadEmployees, selectEmployee)" :disabled="!editForm.status || !editForm.startDate" title="Зберегти зміни">💾</button>
                         <button class="status-event-action-btn" @click="cancelEditEvent()" title="Скасувати">✕</button>
                       </td>
                     </template>

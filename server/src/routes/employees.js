@@ -435,6 +435,16 @@ export function registerEmployeeRoutes(app) {
         res.status(400).json({ error: "Статус обов'язковий" });
         return;
       }
+      // Validate status is one of the allowed options from the schema
+      const fieldsSchemaForPut = await loadFieldsSchema();
+      const statusFieldDefForPut = fieldsSchemaForPut.find(f => f.field_name === 'employment_status');
+      if (statusFieldDefForPut && statusFieldDefForPut.field_options) {
+        const allowedOptions = statusFieldDefForPut.field_options.split('|').map(s => s.trim()).filter(Boolean);
+        if (!allowedOptions.includes(String(status).trim())) {
+          res.status(400).json({ error: `Недійсний статус. Допустимі значення: ${allowedOptions.join(', ')}` });
+          return;
+        }
+      }
       if (!start_date || !String(start_date).trim()) {
         res.status(400).json({ error: "Дата початку обов'язкова" });
         return;

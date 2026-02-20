@@ -484,6 +484,17 @@ async function runAllTests() {
       if (res.status !== 200) throw new Error(`Expected 200 (self-update), got ${res.status}`);
     });
 
+    // PUT 403: event belongs to different employee
+    await runTest("PUT /api/employees/:id/status-events/:eventId returns 403 when event belongs to different employee", async () => {
+      // createdEmployeeId is a different employee; try to update putEmpId's event using createdEmployeeId's path
+      const res = await fetch(`${BASE_URL}/employees/${createdEmployeeId}/status-events/${putEventId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'Лікарняний', start_date: dateOffset(5) })
+      });
+      if (res.status !== 403) throw new Error(`Expected 403, got ${res.status}`);
+    });
+
     // Cleanup PUT test employee
     if (putEmpId) {
       await fetch(`${BASE_URL}/employees/${putEmpId}`, { method: 'DELETE' });

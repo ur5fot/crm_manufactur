@@ -48,7 +48,7 @@ export function useStatusManagement(allFieldsSchema, form, employees, saving, er
     statusEventError.value = '';
   }
 
-  async function saveEditEvent(employeeId) {
+  async function saveEditEvent(employeeId, loadEmployees, selectEmployee) {
     if (!editForm.status || !editForm.startDate) return;
     if (!editingEventId.value) return;
     statusEventError.value = '';
@@ -64,6 +64,9 @@ export function useStatusManagement(allFieldsSchema, form, employees, saving, er
         statusEvents.value[idx] = result.event;
       }
       cancelEditEvent();
+      // Reload employee data to reflect any status sync changes
+      if (loadEmployees) await loadEmployees();
+      if (selectEmployee) await selectEmployee(employeeId);
     } catch (error) {
       statusEventError.value = parseEventError(error);
     }
@@ -80,6 +83,11 @@ export function useStatusManagement(allFieldsSchema, form, employees, saving, er
     const mm = String(now.getMonth() + 1).padStart(2, '0');
     const dd = String(now.getDate()).padStart(2, '0');
     return `${yyyy}-${mm}-${dd}`;
+  }
+
+  function isEventActive(event) {
+    const today = getTodayString();
+    return event.start_date <= today && (!event.end_date || event.end_date >= today);
   }
 
   function parseEventError(error) {
@@ -271,6 +279,7 @@ export function useStatusManagement(allFieldsSchema, form, employees, saving, er
     startEditEvent,
     cancelEditEvent,
     saveEditEvent,
+    isEventActive,
     resetStatus,
     openStatusHistoryPopup,
     closeStatusHistoryPopup,

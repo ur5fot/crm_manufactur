@@ -2132,8 +2132,8 @@ Unit and integration tests focus on backend business logic, API endpoints, and d
 - `status-history.test.js`: Status history recording and retrieval API validation
 - `reprimands-api.test.js`: Reprimands API endpoint validation (GET, POST, PUT, DELETE)
 - `reprimands-store.test.js`: Reprimands store functions unit test (loadReprimands, addReprimand, updateReprimand, deleteReprimand, removeReprimandsForEmployee)
-- `status-events-store.test.js`: Status events store functions unit test (addStatusEvent, deleteStatusEvent, getActiveEventForEmployee, validateNoOverlap, syncStatusEventsForEmployee)
-- `status-events-api.test.js`: Status event API endpoint validation (GET, POST with overlap/400/409, DELETE, auto-sync behavior)
+- `status-events-store.test.js`: Status events store functions unit test (addStatusEvent, updateStatusEvent, deleteStatusEvent, getActiveEventForEmployee, validateNoOverlap, syncStatusEventsForEmployee)
+- `status-events-api.test.js`: Status event API endpoint validation (GET, POST with overlap/400/409, DELETE, auto-sync behavior, PUT with 200/400/403/404/409 and self-overlap exclusion)
 - `utils.test.js`: Shared utility function tests
 
 **Test Framework**: Node.js native test runner (no external dependencies)
@@ -2483,6 +2483,16 @@ All API endpoints are served under the `/api` prefix:
 - Creates audit log entry
 - Returns: `{ event: {...}, employee: {...} }` — employee reflects synced status
 - 400 if status or start_date missing; 404 if employee not found; 409 if overlap
+
+**PUT /api/employees/:id/status-events/:eventId**
+- Update an existing scheduled status event for employee
+- Required fields: status, start_date
+- Optional fields: end_date (empty = indefinite)
+- Validates no overlap with existing events, excluding the event being edited (409 Conflict if overlap detected)
+- After update, syncs employee status via syncStatusEventsForEmployee
+- Creates audit log entry
+- Returns: `{ event: {...}, employee: {...} }` — employee reflects synced status
+- 400 if status or start_date missing or invalid; 403 if event belongs to different employee; 404 if employee or event not found; 409 if overlap
 
 **DELETE /api/employees/:id/status-events/:eventId**
 - Hard delete a status event
