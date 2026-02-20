@@ -2,7 +2,7 @@ import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
 import { readCsv, writeCsv } from "./csv.js";
-import { EMPLOYEE_COLUMNS, LOG_COLUMNS, FIELD_SCHEMA_COLUMNS, STATUS_HISTORY_COLUMNS, REPRIMAND_COLUMNS, loadEmployeeColumns, getCachedEmployeeColumns, loadDocumentFields, getCachedDocumentFields } from "./schema.js";
+import { EMPLOYEE_COLUMNS, LOG_COLUMNS, FIELD_SCHEMA_COLUMNS, STATUS_HISTORY_COLUMNS, REPRIMAND_COLUMNS, STATUS_EVENT_COLUMNS, loadEmployeeColumns, getCachedEmployeeColumns, loadDocumentFields, getCachedDocumentFields } from "./schema.js";
 import { getNextId } from "./utils.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -21,6 +21,7 @@ const TEMPLATES_PATH = path.join(DATA_DIR, "templates.csv");
 const GENERATED_DOCUMENTS_PATH = path.join(DATA_DIR, "generated_documents.csv");
 const STATUS_HISTORY_PATH = path.join(DATA_DIR, "status_history.csv");
 const REPRIMANDS_PATH = path.join(DATA_DIR, "reprimands.csv");
+const STATUS_EVENTS_PATH = path.join(DATA_DIR, "status_events.csv");
 
 // Simple in-memory lock for log writes to prevent race conditions
 let logWriteLock = Promise.resolve();
@@ -40,6 +41,9 @@ let statusHistoryWriteLock = Promise.resolve();
 
 // Simple in-memory lock for reprimands writes to prevent race conditions
 let reprimandWriteLock = Promise.resolve();
+
+// Simple in-memory lock for status_events writes to prevent race conditions
+let statusEventWriteLock = Promise.resolve();
 
 export async function ensureDataDirs() {
   await fs.mkdir(DATA_DIR, { recursive: true });
@@ -257,12 +261,13 @@ export async function saveEmployees(rows) {
 
 /**
  * Executes a read-modify-write transaction on employees.csv under the write lock.
- * The callback receives the current employees array and must return the modified array.
+ * The callback receives the current employees array and must return the modified array,
+ * or null to signal no change (skips the write entirely).
  * This prevents lost-update race conditions where concurrent requests could overwrite
  * each other's changes.
  *
- * @param {function(Array): Promise<Array>} fn - Callback that receives employees and returns modified array
- * @returns {Promise<Array>} The saved employees array
+ * @param {function(Array): Promise<Array|null>} fn - Callback that receives employees and returns modified array, or null to skip write
+ * @returns {Promise<Array>} The employees array (saved or unchanged)
  */
 export async function withEmployeeLock(fn) {
   const previousLock = employeeWriteLock;
@@ -275,8 +280,11 @@ export async function withEmployeeLock(fn) {
     const columns = await getEmployeeColumns();
     const employees = await readCsv(EMPLOYEES_PATH, columns);
     const result = await fn(employees);
-    await writeCsv(EMPLOYEES_PATH, columns, result);
-    return result;
+    if (result !== null) {
+      await writeCsv(EMPLOYEES_PATH, columns, result);
+      return result;
+    }
+    return employees;
   } finally {
     releaseLock();
   }
@@ -1404,5 +1412,333 @@ export async function removeReprimandsForEmployee(employeeId) {
     }
   } finally {
     releaseLock();
+  }
+}
+
+// ===========================
+// Status Events store functions
+// ===========================
+
+/**
+ * Load all status events from status_events.csv
+ * @returns {Promise<Array>} Array of status event records
+ */
+export async function loadStatusEvents() {
+  return readCsv(STATUS_EVENTS_PATH, STATUS_EVENT_COLUMNS);
+}
+
+/**
+ * Get all active status events for an employee, sorted by start_date ascending
+ * @param {string} employeeId
+ * @returns {Promise<Array>}
+ */
+export async function getStatusEventsForEmployee(employeeId) {
+  const events = await loadStatusEvents();
+  return events
+    .filter(e => e.employee_id === String(employeeId) && e.active !== 'no')
+    .sort((a, b) => a.start_date.localeCompare(b.start_date));
+}
+
+/**
+ * Add a new status event. Validates no overlap under the write lock (atomic check-then-write).
+ * @param {Object} data - { employee_id, status, start_date, end_date? }
+ * @returns {Promise<Object>} The new event record
+ * @throws {Error} with code 'OVERLAP' if the new event overlaps an existing event
+ */
+export async function addStatusEvent(data) {
+  const previousLock = statusEventWriteLock;
+  let releaseLock;
+  statusEventWriteLock = new Promise(resolve => { releaseLock = resolve; });
+
+  try {
+    await previousLock;
+    const events = await loadStatusEvents();
+
+    // Validate no overlap atomically under the write lock
+    const FAR_FUTURE = "9999-12-31";
+    const newStart = data.start_date || "";
+    const newEnd = data.end_date || FAR_FUTURE;
+    const empEvents = events.filter(e => e.employee_id === String(data.employee_id) && e.active !== 'no');
+    for (const e of empEvents) {
+      const existingEnd = e.end_date || FAR_FUTURE;
+      if (newStart <= existingEnd && newEnd >= e.start_date) {
+        const err = new Error("Подія перетинається з існуючою подією");
+        err.code = 'OVERLAP';
+        throw err;
+      }
+    }
+
+    const newId = getNextId(events, "event_id");
+
+    const newEvent = {
+      event_id: newId,
+      employee_id: String(data.employee_id || ""),
+      status: data.status || "",
+      start_date: data.start_date || "",
+      end_date: data.end_date || "",
+      created_at: new Date().toISOString(),
+      active: "yes"
+    };
+
+    events.push(newEvent);
+    await writeCsv(STATUS_EVENTS_PATH, STATUS_EVENT_COLUMNS, events);
+
+    return newEvent;
+  } finally {
+    releaseLock();
+  }
+}
+
+/**
+ * Update an existing status event's fields (status, start_date, end_date).
+ * Validates no overlap with other events for the same employee, excluding the
+ * event being updated so it doesn't conflict with itself.
+ * @param {string} eventId - The event_id to update
+ * @param {Object} data - { employee_id?, status, start_date, end_date? }
+ * @returns {Promise<Object>} The updated event record
+ * @throws {Error} with message 'Event not found' if event does not exist
+ * @throws {Error} with code 'OVERLAP' if the updated dates conflict with another event
+ */
+export async function updateStatusEvent(eventId, data) {
+  const previousLock = statusEventWriteLock;
+  let releaseLock;
+  statusEventWriteLock = new Promise(resolve => { releaseLock = resolve; });
+
+  try {
+    await previousLock;
+    const events = await loadStatusEvents();
+    const idx = events.findIndex(e => e.event_id === String(eventId));
+    if (idx === -1) {
+      throw new Error("Event not found");
+    }
+
+    const existingEvent = events[idx];
+    const employeeId = existingEvent.employee_id;
+
+    // Validate no overlap with other events (excluding the current event by its ID)
+    const FAR_FUTURE = "9999-12-31";
+    const newStart = data.start_date || "";
+    const newEnd = data.end_date || FAR_FUTURE;
+    const otherEmpEvents = events.filter(
+      e => e.employee_id === employeeId && e.active !== 'no' && e.event_id !== String(eventId)
+    );
+    for (const e of otherEmpEvents) {
+      const existingEnd = e.end_date || FAR_FUTURE;
+      if (newStart <= existingEnd && newEnd >= e.start_date) {
+        const err = new Error("Подія перетинається з існуючою подією");
+        err.code = 'OVERLAP';
+        throw err;
+      }
+    }
+
+    // Apply updates
+    events[idx] = {
+      ...existingEvent,
+      status: data.status,
+      start_date: data.start_date,
+      end_date: data.end_date || ""
+    };
+
+    await writeCsv(STATUS_EVENTS_PATH, STATUS_EVENT_COLUMNS, events);
+    return events[idx];
+  } finally {
+    releaseLock();
+  }
+}
+
+/**
+ * Hard-delete a single status event by event_id
+ * @param {string} eventId
+ * @returns {Promise<boolean>} true if deleted, false if not found
+ */
+export async function deleteStatusEvent(eventId) {
+  const previousLock = statusEventWriteLock;
+  let releaseLock;
+  statusEventWriteLock = new Promise(resolve => { releaseLock = resolve; });
+
+  try {
+    await previousLock;
+    const events = await loadStatusEvents();
+    const filtered = events.filter(e => e.event_id !== String(eventId));
+    if (filtered.length === events.length) return false;
+    await writeCsv(STATUS_EVENTS_PATH, STATUS_EVENT_COLUMNS, filtered);
+    return true;
+  } finally {
+    releaseLock();
+  }
+}
+
+/**
+ * Hard-delete all status events for an employee (called on employee delete)
+ * @param {string} employeeId
+ */
+export async function removeStatusEventsForEmployee(employeeId) {
+  const previousLock = statusEventWriteLock;
+  let releaseLock;
+  statusEventWriteLock = new Promise(resolve => { releaseLock = resolve; });
+
+  try {
+    await previousLock;
+    const events = await loadStatusEvents();
+    const filtered = events.filter(e => e.employee_id !== String(employeeId));
+    if (filtered.length !== events.length) {
+      await writeCsv(STATUS_EVENTS_PATH, STATUS_EVENT_COLUMNS, filtered);
+    }
+  } finally {
+    releaseLock();
+  }
+}
+
+/**
+ * Find the currently active status event for an employee on a given date.
+ * An event is active if: start_date <= dateStr AND (end_date is empty OR end_date >= dateStr)
+ * @param {string} employeeId
+ * @param {string} dateStr - YYYY-MM-DD
+ * @returns {Promise<Object|null>} The active event or null
+ */
+export async function getActiveEventForEmployee(employeeId, dateStr) {
+  const events = await getStatusEventsForEmployee(employeeId);
+  const active = events.find(e => {
+    if (e.start_date > dateStr) return false;
+    if (e.end_date && e.end_date < dateStr) return false;
+    return true;
+  });
+  return active || null;
+}
+
+/**
+ * Validate that a new event does not overlap with existing events for an employee.
+ * Overlap algorithm: A overlaps B if A.start_date <= B.end_or_inf AND A.end_or_inf >= B.start_date
+ * @param {string} employeeId
+ * @param {string} start_date - YYYY-MM-DD
+ * @param {string} end_date - YYYY-MM-DD or empty (= no end)
+ * @param {string} [excludeEventId] - event_id to exclude (for update scenarios)
+ * @returns {Promise<boolean>} true if no overlap, false if overlap found
+ */
+export async function validateNoOverlap(employeeId, start_date, end_date, excludeEventId) {
+  const events = await getStatusEventsForEmployee(employeeId);
+  const FAR_FUTURE = "9999-12-31";
+  const newEnd = end_date || FAR_FUTURE;
+
+  for (const e of events) {
+    if (excludeEventId && e.event_id === String(excludeEventId)) continue;
+    const existingEnd = e.end_date || FAR_FUTURE;
+    // Overlap: new.start <= existing.end AND new.end >= existing.start
+    if (start_date <= existingEnd && newEnd >= e.start_date) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * Sync a single employee's status with their active status event.
+ * - If employee has no status events: returns without changes (preserves legacy status)
+ * - If active event found and employee status differs: updates employee + writes history
+ * - If no active event and employee status != workingStatus: resets to workingStatus + writes history
+ * @param {string} employeeId
+ * @param {{ forceReset?: boolean }} options - forceReset: skip the "no events = no-op" guard (used after deleting last event)
+ */
+export async function syncStatusEventsForEmployee(employeeId, { forceReset = false } = {}) {
+  const empIdStr = String(employeeId);
+
+  // 1. Check if employee has any events; if none, leave status alone (legacy data)
+  //    Exception: forceReset=true bypasses this guard (used after deleting the last event)
+  const events = await getStatusEventsForEmployee(empIdStr);
+  if (events.length === 0 && !forceReset) return;
+
+  // 2. Get today's date
+  const today = localDateStr(new Date());
+
+  // 3. Find active event for today (inline using already-loaded events)
+  const activeEvent = events.find(e => {
+    if (e.start_date > today) return false;
+    if (e.end_date && e.end_date < today) return false;
+    return true;
+  }) || null;
+
+  // 4. Load schema to determine the working status (first option = Працює)
+  const schema = await loadFieldsSchema();
+  const statusField = schema.find(f => f.field_name === 'employment_status');
+  const options = statusField?.field_options?.split('|') || [];
+  const workingStatus = options[0] || 'Працює';
+
+  // 5. Atomically read-check-update employee under write lock
+  let oldStatus, oldStartDate, oldEndDate, newStatus, newStartDate, newEndDate;
+  let changed = false;
+
+  await withEmployeeLock(async (employees) => {
+    const idx = employees.findIndex(e => e.employee_id === empIdStr && e.active !== 'no');
+    if (idx === -1) return null; // Employee not found — skip write
+
+    const emp = employees[idx];
+
+    if (activeEvent) {
+      if (emp.employment_status !== activeEvent.status) {
+        oldStatus = emp.employment_status || '';
+        oldStartDate = emp.status_start_date || '';
+        oldEndDate = emp.status_end_date || '';
+        newStatus = activeEvent.status;
+        newStartDate = activeEvent.start_date;
+        newEndDate = activeEvent.end_date || '';
+        employees[idx].employment_status = newStatus;
+        employees[idx].status_start_date = newStartDate;
+        employees[idx].status_end_date = newEndDate;
+        changed = true;
+      }
+    } else {
+      // No active event — reset to working status if currently different, or clear stale date fields
+      if (emp.employment_status !== workingStatus || emp.status_start_date || emp.status_end_date) {
+        oldStatus = emp.employment_status || '';
+        oldStartDate = emp.status_start_date || '';
+        oldEndDate = emp.status_end_date || '';
+        newStatus = workingStatus;
+        newStartDate = '';
+        newEndDate = '';
+        employees[idx].employment_status = newStatus;
+        employees[idx].status_start_date = newStartDate;
+        employees[idx].status_end_date = newEndDate;
+        changed = true;
+      }
+    }
+
+    if (!changed) return null; // No change — skip write
+    return employees;
+  });
+
+  if (!changed) return;
+
+  // 6. Write status history entry only when status actually changed
+  // (not when just clearing stale date fields while status stays the same)
+  if (oldStatus !== newStatus) {
+    await addStatusHistoryEntry({
+      employee_id: empIdStr,
+      old_status: oldStatus,
+      new_status: newStatus,
+      old_start_date: oldStartDate,
+      old_end_date: oldEndDate,
+      new_start_date: newStartDate,
+      new_end_date: newEndDate,
+      changed_by: 'system'
+    });
+  }
+}
+
+/**
+ * Sync all active employees with their status events.
+ * Called at dashboard load to auto-activate/expire status events.
+ */
+export async function syncAllStatusEvents() {
+  const employees = await loadEmployees();
+  const activeEmployees = employees.filter(e => e.active !== 'no');
+
+  // Sync sequentially to avoid write lock contention
+  // Errors for individual employees are caught to prevent one bad record from breaking all syncs
+  for (const emp of activeEmployees) {
+    try {
+      await syncStatusEventsForEmployee(emp.employee_id);
+    } catch (err) {
+      console.error(`syncAllStatusEvents: failed to sync employee ${emp.employee_id}:`, err);
+    }
   }
 }

@@ -84,7 +84,7 @@ test.describe('Status Changes and Retirement', () => {
     await page.locator('.vacation-notification-modal input[type="date"]').nth(1).fill(endDate);
 
     // Apply status change
-    await page.click('.vacation-notification-modal button:has-text("Застосувати")');
+    await page.click('.vacation-notification-modal button:has-text("Зберегти подію")');
     await page.waitForTimeout(1500);
 
     // Verify status updated via API
@@ -98,53 +98,39 @@ test.describe('Status Changes and Retirement', () => {
   });
 
   test('Автовосстановление статуса после end_date', async ({ page }) => {
-    // Create employee with expired vacation status via API
+    // Create employee without a status (status will be set via status event)
     const yesterday = getDate(-1);
     const weekAgo = getDate(-7);
 
-    const employeeData = {
-      last_name: 'Автостатус',
-      first_name: 'Тест',
-      employment_status: 'Відпустка',
-      status_start_date: weekAgo,
-      status_end_date: yesterday
-    };
-
-    // Debug: log what we're sending
-    console.log('Creating employee with data:', JSON.stringify(employeeData, null, 2));
-
     const createResponse = await page.request.post(`${API_URL}/api/employees`, {
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      data: employeeData
+      headers: { 'Content-Type': 'application/json' },
+      data: { last_name: 'Автостатус', first_name: 'Тест' }
     });
     const createData = await createResponse.json();
     const employeeId = createData.employee_id;
 
-    // Debug: verify employee was created with correct data
-    const verifyResponse = await page.request.get(`${API_URL}/api/employees/${employeeId}`);
-    const verifyData = await verifyResponse.json();
-    console.log('Employee created with:', JSON.stringify(verifyData.employee, null, 2));
+    // Create a status event with an expired end_date (weekAgo to yesterday)
+    // This simulates a vacation that already ended
+    await page.request.post(`${API_URL}/api/employees/${employeeId}/status-events`, {
+      headers: { 'Content-Type': 'application/json' },
+      data: { status: 'Відпустка', start_date: weekAgo, end_date: yesterday }
+    });
 
-    // Reload page to trigger checkStatusChanges
+    // Reload page to trigger syncAllStatusEvents (via GET /api/dashboard/events)
     await page.goto('/');
     await page.waitForSelector('.stat-card', { timeout: 10000 });
 
-    // Wait for all network requests to complete (schema load, employee load, status checks)
-    // This is more reliable than a fixed timeout
+    // Wait for all network requests to complete
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(2000); // Additional buffer for async operations
+    await page.waitForTimeout(1000);
 
-    // Check employee status via API - should be restored to "Працює"
+    // Check employee status via API - should be restored to "Працює" by sync
     const response = await page.request.get(`${API_URL}/api/employees/${employeeId}`);
     const responseData = await response.json();
     const employee = responseData.employee;
 
-    // Debug: log actual status if test fails
     if (employee.employment_status !== 'Працює') {
       console.log('Expected status: Працює, Got:', employee.employment_status);
-      console.log('Full employee:', JSON.stringify(employee, null, 2));
     }
 
     expect(employee.employment_status).toBe('Працює');

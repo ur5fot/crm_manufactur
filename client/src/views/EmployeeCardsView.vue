@@ -137,14 +137,24 @@ const {
   employmentOptions,
   workingStatus,
   statusChangeOptions,
+  statusEvents,
+  statusEventsLoading,
+  statusEventError,
   showStatusChangePopup,
   statusChangeForm,
+  editingEventId,
+  editForm,
   showStatusHistoryPopup,
   statusHistoryLoading,
   statusHistory,
   openStatusChangePopup,
   closeStatusChangePopup,
   applyStatusChange,
+  deleteStatusEvent,
+  startEditEvent,
+  cancelEditEvent,
+  saveEditEvent,
+  isEventActive,
   resetStatus,
   openStatusHistoryPopup,
   closeStatusHistoryPopup,
@@ -884,30 +894,90 @@ onUnmounted(() => {
 
     <!-- Status Change Popup -->
     <div v-if="showStatusChangePopup" class="vacation-notification-overlay" @click="closeStatusChangePopup">
-      <div class="vacation-notification-modal" @click.stop>
+      <div class="vacation-notification-modal status-history-modal" @click.stop>
         <div class="vacation-notification-header">
           <h3>Зміна статусу працевлаштування</h3>
           <button class="close-btn" @click="closeStatusChangePopup">&times;</button>
         </div>
         <div class="vacation-notification-body">
-          <div class="form-group">
-            <label>Новий статус:</label>
-            <select v-model="statusChangeForm.status" required>
-              <option value="">— Виберіть статус —</option>
-              <option v-for="opt in statusChangeOptions" :key="opt" :value="opt">{{ opt }}</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Дата початку:</label>
-            <input type="date" v-model="statusChangeForm.startDate" required />
-          </div>
-          <div class="form-group">
-            <label>Дата закінчення (опціонально):</label>
-            <input type="date" v-model="statusChangeForm.endDate" />
-          </div>
+          <!-- Existing events list -->
+          <div v-if="statusEventsLoading" class="status-history-loading">Завантаження...</div>
+          <template v-else>
+            <div v-if="statusEvents.length === 0" class="status-history-empty">Немає запланованих подій</div>
+            <div v-else class="status-history-list status-events-list">
+              <table class="status-history-table">
+                <thead>
+                  <tr>
+                    <th style="width: 24px;"></th>
+                    <th>Статус</th>
+                    <th>Початок</th>
+                    <th>Кінець</th>
+                    <th style="width: 68px;"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="event in statusEvents" :key="event.event_id" :class="{ 'active-status-event': isEventActive(event) && editingEventId !== event.event_id }">
+                    <td>
+                      <span v-if="isEventActive(event) && editingEventId !== event.event_id" class="active-event-dot" title="Активна подія">●</span>
+                    </td>
+                    <!-- View mode -->
+                    <template v-if="editingEventId !== event.event_id">
+                      <td :style="isEventActive(event) ? 'font-weight: 600;' : ''">{{ event.status }}</td>
+                      <td>{{ formatHistoryDate(event.start_date) }}</td>
+                      <td>{{ event.end_date ? formatHistoryDate(event.end_date) : 'без кінця' }}</td>
+                      <td>
+                        <button class="status-event-action-btn" @click="startEditEvent(event)" title="Редагувати подію">✏️</button>
+                        <button class="status-event-delete-btn" @click="deleteStatusEvent(event.event_id, loadEmployees, selectEmployee)" title="Видалити подію">🗑️</button>
+                      </td>
+                    </template>
+                    <!-- Edit mode -->
+                    <template v-else>
+                      <td>
+                        <select v-model="editForm.status" class="status-event-edit-select">
+                          <option value="">— Виберіть —</option>
+                          <option v-for="opt in statusChangeOptions" :key="opt" :value="opt">{{ opt }}</option>
+                        </select>
+                      </td>
+                      <td>
+                        <input type="date" v-model="editForm.startDate" class="status-event-edit-input" />
+                      </td>
+                      <td>
+                        <input type="date" v-model="editForm.endDate" class="status-event-edit-input" />
+                      </td>
+                      <td>
+                        <button class="status-event-action-btn" @click="saveEditEvent(selectedId, loadEmployees, selectEmployee)" :disabled="!editForm.status || !editForm.startDate" title="Зберегти зміни">💾</button>
+                        <button class="status-event-action-btn" @click="cancelEditEvent()" title="Скасувати">✕</button>
+                      </td>
+                    </template>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <!-- Divider -->
+            <div class="status-events-divider">
+              <span>Додати нову подію</span>
+            </div>
+            <!-- Add new event form -->
+            <div class="form-group">
+              <label>Статус:</label>
+              <select v-model="statusChangeForm.status" required>
+                <option value="">— Виберіть статус —</option>
+                <option v-for="opt in statusChangeOptions" :key="opt" :value="opt">{{ opt }}</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Дата початку:</label>
+              <input type="date" v-model="statusChangeForm.startDate" required />
+            </div>
+            <div class="form-group">
+              <label>Дата закінчення (опціонально):</label>
+              <input type="date" v-model="statusChangeForm.endDate" />
+            </div>
+            <div v-if="statusEventError" class="status-event-error">{{ statusEventError }}</div>
+          </template>
         </div>
         <div class="vacation-notification-footer">
-          <button class="primary" @click="applyStatusChange(loadEmployees, selectEmployee)">Застосувати</button>
+          <button class="primary" @click="applyStatusChange(loadEmployees, selectEmployee)" :disabled="!statusChangeForm.status || !statusChangeForm.startDate || saving">Зберегти подію</button>
           <button class="secondary" @click="closeStatusChangePopup">Скасувати</button>
         </div>
       </div>

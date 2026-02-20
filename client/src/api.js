@@ -208,6 +208,30 @@ export const api = {
     return request(`/documents${params}`);
   },
 
+  // Status Events API
+  getStatusEvents(employeeId) {
+    return request(`/employees/${employeeId}/status-events`);
+  },
+  addStatusEvent(employeeId, payload) {
+    return request(`/employees/${employeeId}/status-events`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+  },
+  deleteStatusEvent(employeeId, eventId) {
+    return request(`/employees/${employeeId}/status-events/${eventId}`, {
+      method: "DELETE"
+    });
+  },
+  updateStatusEvent(employeeId, eventId, payload) {
+    return request(`/employees/${employeeId}/status-events/${eventId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+  },
+
   // Reprimands API
   getEmployeeReprimands(id) {
     return request(`/employees/${id}/reprimands`);

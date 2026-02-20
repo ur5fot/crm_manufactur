@@ -7,6 +7,12 @@ test.describe('Theme Toggle', () => {
   });
 
   test('should toggle theme and persist on reload', async ({ page }) => {
+    // Auto-dismiss dashboard notification overlays whenever they appear
+    await page.addLocatorHandler(
+      page.locator('.vacation-notification-overlay'),
+      async (overlay) => { await overlay.evaluate(el => el.click()); }
+    );
+
     // Navigate to the application
     await page.goto('/');
 
@@ -55,6 +61,12 @@ test.describe('Theme Toggle', () => {
   });
 
   test('should apply correct CSS styles in dark theme', async ({ page }) => {
+    // Auto-dismiss dashboard notification overlays whenever they appear
+    await page.addLocatorHandler(
+      page.locator('.vacation-notification-overlay'),
+      async (overlay) => { await overlay.evaluate(el => el.click()); }
+    );
+
     await page.goto('/');
     await page.waitForSelector('.topbar');
 

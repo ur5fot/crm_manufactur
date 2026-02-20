@@ -5,7 +5,8 @@ import {
   getDocumentOverdueEvents,
   getBirthdayEvents,
   getRetirementEvents,
-  loadConfig
+  loadConfig,
+  syncAllStatusEvents
 } from "../store.js";
 
 /**
@@ -29,6 +30,8 @@ export function registerDashboardRoutes(app) {
 
   app.get("/api/dashboard/events", async (_req, res) => {
     try {
+      // Auto-activate/expire status events for all employees before returning dashboard data
+      await syncAllStatusEvents();
       const events = await getDashboardEvents();
       res.json(events);
     } catch (err) {

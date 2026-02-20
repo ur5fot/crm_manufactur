@@ -255,6 +255,16 @@ export const REPRIMAND_COLUMNS = [
   "created_at"
 ];
 
+export const STATUS_EVENT_COLUMNS = [
+  "event_id",
+  "employee_id",
+  "status",
+  "start_date",
+  "end_date",
+  "created_at",
+  "active"
+];
+
 export const FIELD_LABELS = {
   photo: "Фото",
   employee_id: "ID сотрудника",

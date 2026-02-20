@@ -15,6 +15,7 @@ data/templates.csv
 data/generated_documents.csv
 data/status_history.csv
 data/reprimands.csv
+data/status_events.csv
 
 # Claude Code та Ralphex (особисті налаштування та output)
 .claude/

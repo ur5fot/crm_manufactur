@@ -16,7 +16,15 @@ import {
   addReprimand,
   updateReprimand,
   deleteReprimand,
-  removeReprimandsForEmployee
+  removeReprimandsForEmployee,
+  getStatusEventsForEmployee,
+  loadStatusEvents,
+  addStatusEvent,
+  updateStatusEvent,
+  deleteStatusEvent,
+  removeStatusEventsForEmployee,
+  syncStatusEventsForEmployee,
+  loadFieldsSchema
 } from "../store.js";
 import { mergeRow } from "../csv.js";
 import {
@@ -59,6 +67,42 @@ function validateDateField(dateValue, dateField) {
 }
 
 /**
+ * Validate status event input fields (status, start_date, end_date).
+ * Returns an error string if validation fails, or null if input is valid.
+ * Used by both POST and PUT status event routes.
+ */
+async function validateStatusEventInput(status, start_date, end_date) {
+  if (!status || !String(status).trim()) {
+    return "Статус обов'язковий";
+  }
+  const fieldsSchema = await loadFieldsSchema();
+  const statusFieldDef = fieldsSchema.find(f => f.field_name === 'employment_status');
+  if (statusFieldDef && statusFieldDef.field_options) {
+    const allowedOptions = statusFieldDef.field_options.split('|').map(s => s.trim()).filter(Boolean);
+    if (!allowedOptions.includes(String(status).trim())) {
+      return `Недійсний статус. Допустимі значення: ${allowedOptions.join(', ')}`;
+    }
+  }
+  if (!start_date || !String(start_date).trim()) {
+    return "Дата початку обов'язкова";
+  }
+  const startDateError = validateDateField(String(start_date).trim(), 'start_date');
+  if (startDateError) {
+    return startDateError;
+  }
+  if (end_date && String(end_date).trim()) {
+    const endDateError = validateDateField(String(end_date).trim(), 'end_date');
+    if (endDateError) {
+      return endDateError;
+    }
+    if (String(end_date).trim() < String(start_date).trim()) {
+      return "Дата закінчення не може бути раніше дати початку";
+    }
+  }
+  return null;
+}
+
+/**
  * Detect which fields changed between current and next employee objects
  */
 function detectChangedFields(current, next) {
@@ -95,7 +139,14 @@ export function registerEmployeeRoutes(app) {
         res.status(404).json({ error: "Співробітник не знайдено" });
         return;
       }
-      res.json({ employee });
+
+      // Sync status events after verifying employee exists (auto-activate/expire)
+      await syncStatusEventsForEmployee(req.params.id);
+
+      // Re-load employee to pick up any sync changes
+      const updatedEmployees = await loadEmployees();
+      const updatedEmployee = findById(updatedEmployees, 'employee_id', req.params.id);
+      res.json({ employee: updatedEmployee || employee });
     } catch (err) {
       console.error(err);
       res.status(500).json({ error: err.message });
@@ -306,6 +357,179 @@ export function registerEmployeeRoutes(app) {
     }
   });
 
+  // GET status events for employee
+  app.get("/api/employees/:id/status-events", async (req, res) => {
+    try {
+      const employees = await loadEmployees();
+      const employee = findById(employees, 'employee_id', req.params.id);
+      if (!employee) {
+        res.status(404).json({ error: "Співробітник не знайдено" });
+        return;
+      }
+
+      const events = await getStatusEventsForEmployee(req.params.id);
+      res.json({ events });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // POST create status event for employee
+  app.post("/api/employees/:id/status-events", async (req, res) => {
+    try {
+      const employees = await loadEmployees();
+      const employee = findById(employees, 'employee_id', req.params.id);
+      if (!employee) {
+        res.status(404).json({ error: "Співробітник не знайдено" });
+        return;
+      }
+
+      const { status, start_date, end_date } = req.body || {};
+
+      const inputError = await validateStatusEventInput(status, start_date, end_date);
+      if (inputError) {
+        res.status(400).json({ error: inputError });
+        return;
+      }
+
+      let event;
+      try {
+        event = await addStatusEvent({
+          employee_id: req.params.id,
+          status: String(status).trim(),
+          start_date: String(start_date).trim(),
+          end_date: end_date ? String(end_date).trim() : ''
+        });
+      } catch (addErr) {
+        if (addErr.code === 'OVERLAP') {
+          res.status(409).json({ error: addErr.message });
+          return;
+        }
+        throw addErr;
+      }
+
+      // Sync to apply if currently active
+      await syncStatusEventsForEmployee(req.params.id);
+
+      // Return updated employee
+      const updatedEmployees = await loadEmployees();
+      const updatedEmployee = findById(updatedEmployees, 'employee_id', req.params.id);
+
+      const employeeName = buildFullName(employee);
+      await addLog("CREATE", req.params.id, employeeName, "status_event", "", event.event_id, `Додано подію статусу: ${event.status} з ${event.start_date}`);
+
+      res.status(201).json({ event, employee: updatedEmployee });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // PUT update status event for employee
+  app.put("/api/employees/:id/status-events/:eventId", async (req, res) => {
+    try {
+      const employees = await loadEmployees();
+      const employee = findById(employees, 'employee_id', req.params.id);
+      if (!employee) {
+        res.status(404).json({ error: "Співробітник не знайдено" });
+        return;
+      }
+
+      const { status, start_date, end_date } = req.body || {};
+
+      const putInputError = await validateStatusEventInput(status, start_date, end_date);
+      if (putInputError) {
+        res.status(400).json({ error: putInputError });
+        return;
+      }
+
+      // Verify the event exists and belongs to this employee
+      const allEvents = await loadStatusEvents();
+      const event = allEvents.find(e => e.event_id === req.params.eventId);
+      if (!event) {
+        res.status(404).json({ error: "Подію не знайдено" });
+        return;
+      }
+      if (event.employee_id !== req.params.id) {
+        res.status(403).json({ error: "Подія не належить цьому співробітнику" });
+        return;
+      }
+
+      let updatedEvent;
+      try {
+        updatedEvent = await updateStatusEvent(req.params.eventId, {
+          status: String(status).trim(),
+          start_date: String(start_date).trim(),
+          end_date: end_date ? String(end_date).trim() : ''
+        });
+      } catch (updateErr) {
+        if (updateErr.code === 'OVERLAP') {
+          res.status(409).json({ error: updateErr.message });
+          return;
+        }
+        if (updateErr.message === 'Event not found') {
+          res.status(404).json({ error: "Подію не знайдено" });
+          return;
+        }
+        throw updateErr;
+      }
+
+      // Sync to apply any status changes
+      await syncStatusEventsForEmployee(req.params.id);
+
+      // Return updated employee
+      const updatedEmployees = await loadEmployees();
+      const updatedEmployee = findById(updatedEmployees, 'employee_id', req.params.id);
+
+      const employeeName = buildFullName(employee);
+      await addLog("UPDATE", req.params.id, employeeName, "status_event", req.params.eventId, req.params.eventId, `Оновлено подію статусу: ${updatedEvent.status} з ${updatedEvent.start_date}`);
+
+      res.json({ event: updatedEvent, employee: updatedEmployee });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // DELETE status event for employee
+  app.delete("/api/employees/:id/status-events/:eventId", async (req, res) => {
+    try {
+      const employees = await loadEmployees();
+      const employee = findById(employees, 'employee_id', req.params.id);
+      if (!employee) {
+        res.status(404).json({ error: "Співробітник не знайдено" });
+        return;
+      }
+
+      // Load all events to verify ownership (similar to reprimands pattern)
+      const allEvents = await loadStatusEvents();
+      const event = allEvents.find(e => e.event_id === req.params.eventId);
+      if (!event) {
+        res.status(404).json({ error: "Подію не знайдено" });
+        return;
+      }
+      if (event.employee_id !== req.params.id) {
+        res.status(403).json({ error: "Подія не належить цьому співробітнику" });
+        return;
+      }
+
+      await deleteStatusEvent(req.params.eventId);
+
+      // Sync to update employee status after deletion.
+      // forceReset: true ensures reset to "Працює" even when the last event was deleted
+      await syncStatusEventsForEmployee(req.params.id, { forceReset: true });
+
+      const employeeName = buildFullName(employee);
+      await addLog("DELETE", req.params.id, employeeName, "status_event", req.params.eventId, "", `Видалено подію статусу: ${event.status} з ${event.start_date}`);
+
+      res.status(204).end();
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // GET reprimands for employee
   app.get("/api/employees/:id/reprimands", async (req, res) => {
     try {
@@ -496,6 +720,11 @@ export function registerEmployeeRoutes(app) {
       // Clean up reprimand records for deleted employee
       await removeReprimandsForEmployee(req.params.id).catch(err => {
         console.error('Failed to clean up reprimands:', err);
+      });
+
+      // Clean up status events for deleted employee
+      await removeStatusEventsForEmployee(req.params.id).catch(err => {
+        console.error('Failed to clean up status events:', err);
       });
 
       res.status(204).end();
