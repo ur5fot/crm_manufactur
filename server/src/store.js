@@ -1708,17 +1708,20 @@ export async function syncStatusEventsForEmployee(employeeId, { forceReset = fal
 
   if (!changed) return;
 
-  // 6. Write status history entry for the change
-  await addStatusHistoryEntry({
-    employee_id: empIdStr,
-    old_status: oldStatus,
-    new_status: newStatus,
-    old_start_date: oldStartDate,
-    old_end_date: oldEndDate,
-    new_start_date: newStartDate,
-    new_end_date: newEndDate,
-    changed_by: 'system'
-  });
+  // 6. Write status history entry only when status actually changed
+  // (not when just clearing stale date fields while status stays the same)
+  if (oldStatus !== newStatus) {
+    await addStatusHistoryEntry({
+      employee_id: empIdStr,
+      old_status: oldStatus,
+      new_status: newStatus,
+      old_start_date: oldStartDate,
+      old_end_date: oldEndDate,
+      new_start_date: newStartDate,
+      new_end_date: newEndDate,
+      changed_by: 'system'
+    });
+  }
 }
 
 /**

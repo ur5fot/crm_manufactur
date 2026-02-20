@@ -203,17 +203,13 @@ export function useStatusManagement(allFieldsSchema, form, employees, saving, er
       if (activeEvent) {
         await api.deleteStatusEvent(form.employee_id, activeEvent.event_id);
       } else {
-        // Fall back: update employee directly
-        const currentEmployee = employees.value.find(e => e.employee_id === form.employee_id);
-        if (currentEmployee) {
-          const payload = {
-            ...currentEmployee,
-            employment_status: workingStatus.value,
-            status_start_date: '',
-            status_end_date: ''
-          };
-          await api.updateEmployee(form.employee_id, payload);
-        }
+        // Fall back: update employee directly with only status fields
+        // (avoid spreading full employee object to prevent overwriting concurrent edits)
+        await api.updateEmployee(form.employee_id, {
+          employment_status: workingStatus.value,
+          status_start_date: '',
+          status_end_date: ''
+        });
       }
 
       await loadStatusEventsList();
@@ -221,7 +217,7 @@ export function useStatusManagement(allFieldsSchema, form, employees, saving, er
       await selectEmployee(form.employee_id);
       closeStatusChangePopup();
     } catch (error) {
-      errorMessage.value = parseEventError(error);
+      statusEventError.value = parseEventError(error);
     } finally {
       saving.value = false;
     }

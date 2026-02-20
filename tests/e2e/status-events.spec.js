@@ -308,6 +308,63 @@ test.describe('Status Events', () => {
     }
   });
 
+  test('inline edit changes event status and dates', async ({ page, request }) => {
+    const employeeId = await createTestEmployee(request);
+    try {
+      // Create a future event via API
+      const futureStart = getFutureDate(10);
+      const futureEnd = getFutureDate(20);
+      await request.post(`${API_URL}/api/employees/${employeeId}/status-events`, {
+        data: {
+          status: 'Відпустка',
+          start_date: futureStart,
+          end_date: futureEnd
+        }
+      });
+
+      await page.goto(`${BASE_URL}/cards/${employeeId}`);
+      await page.waitForSelector('.status-field-row');
+
+      await openStatusChangeModal(page);
+      await page.waitForFunction(() => !document.querySelector('.status-history-loading'));
+
+      // Wait for event to appear in table
+      await page.waitForFunction(() => {
+        const table = document.querySelector('.status-events-list .status-history-table');
+        return table && table.querySelectorAll('tbody tr').length > 0;
+      });
+
+      // Click the edit button (pencil icon)
+      await page.click('.status-event-action-btn[title="Редагувати подію"]');
+
+      // Edit form should appear: verify the edit select is visible
+      await expect(page.locator('.status-event-edit-select')).toBeVisible();
+
+      // Change status to Лікарняний
+      await page.selectOption('.status-event-edit-select', { label: 'Лікарняний' });
+
+      // Change start date to one day further in the future (to avoid overlap with original)
+      const newStart = getFutureDate(12);
+      const dateInputs = page.locator('.status-event-edit-input');
+      await dateInputs.nth(0).fill(newStart);
+
+      // Click save button (disk icon)
+      await page.click('.status-event-action-btn[title="Зберегти зміни"]');
+
+      // Edit form should disappear after save
+      await expect(page.locator('.status-event-edit-select')).not.toBeVisible();
+
+      // Verify the event was updated via API
+      const eventsResp = await request.get(`${API_URL}/api/employees/${employeeId}/status-events`);
+      const eventsData = await eventsResp.json();
+      expect(eventsData.events).toHaveLength(1);
+      expect(eventsData.events[0].status).toBe('Лікарняний');
+      expect(eventsData.events[0].start_date).toBe(newStart);
+    } finally {
+      await deleteEmployee(request, employeeId);
+    }
+  });
+
   test('active event is visually indicated with dot', async ({ page, request }) => {
     const employeeId = await createTestEmployee(request);
     try {
