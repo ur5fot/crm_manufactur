@@ -69,10 +69,10 @@ Replace the current simple status change (direct field update) with an **event-b
 
 ### Task 3: Backend — status event API routes
 
-- [ ] Add `GET /api/employees/:id/status-events` to `server/src/routes/employees.js`:
+- [x] Add `GET /api/employees/:id/status-events` to `server/src/routes/employees.js`:
   - Returns `{ events: [...] }` sorted by start_date asc
   - 404 if employee not found
-- [ ] Add `POST /api/employees/:id/status-events`:
+- [x] Add `POST /api/employees/:id/status-events`:
   - Required: `status`, `start_date`; Optional: `end_date`
   - 400 if `status` or `start_date` missing
   - 400 if `end_date` is set and `end_date < start_date`
@@ -82,17 +82,17 @@ Replace the current simple status change (direct field update) with an **event-b
   - Create audit log entry (action: 'CREATE', entity_type: 'status_event')
   - Return `{ event: {...}, employee: updatedEmployee }`
   - 404 if employee not found
-- [ ] Add `DELETE /api/employees/:id/status-events/:eventId`:
+- [x] Add `DELETE /api/employees/:id/status-events/:eventId`:
   - 404 if employee or event not found
   - 403 if event belongs to different employee
   - Call `deleteStatusEvent(eventId)`
   - Call `syncStatusEventsForEmployee(id)` to update employee status after deletion
   - Create audit log entry (action: 'DELETE', entity_type: 'status_event')
   - Return 204 No Content
-- [ ] Call `syncAllStatusEvents()` inside `GET /api/dashboard/events` route (before returning events)
-- [ ] Call `syncStatusEventsForEmployee(id)` inside `GET /api/employees/:id` route (after loading, before returning)
-- [ ] Call `removeStatusEventsForEmployee(id)` inside `DELETE /api/employees/:id` route
-- [ ] Write `server/test/status-events-api.test.js` (integration tests, requires running server):
+- [x] Call `syncAllStatusEvents()` inside `GET /api/dashboard/events` route (before returning events)
+- [x] Call `syncStatusEventsForEmployee(id)` inside `GET /api/employees/:id` route (after loading, before returning)
+- [x] Call `removeStatusEventsForEmployee(id)` inside `DELETE /api/employees/:id` route
+- [x] Write `server/test/status-events-api.test.js` (integration tests, requires running server):
   - GET events returns empty array for new employee
   - POST creates event, returns employee with updated status (if immediately active)
   - POST with future start_date: event created but employee status unchanged
@@ -101,7 +101,7 @@ Replace the current simple status change (direct field update) with an **event-b
   - DELETE event returns 204
   - DELETE non-existent event returns 404
   - Auto-sync: employee status updates after event activates (mock date or use past start_date)
-- [ ] Run integration tests: `node server/test/status-events-api.test.js` — must pass
+- [x] Run integration tests: `node server/test/status-events-api.test.js` — must pass
 
 ### Task 4: Frontend — API client and composable
 

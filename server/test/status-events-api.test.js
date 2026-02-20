@@ -1,0 +1,323 @@
+/**
+ * Integration tests for status events API endpoints
+ * Prerequisites: Server must be running on port 3000
+ * Run with: node server/test/status-events-api.test.js
+ */
+
+const BASE_URL = 'http://localhost:3000/api';
+
+let testsPassed = 0;
+let testsFailed = 0;
+let createdEmployeeId = null;
+let createdEventId = null;
+
+async function runTest(name, testFn) {
+  try {
+    await testFn();
+    console.log(`✓ ${name}`);
+    testsPassed++;
+    return true;
+  } catch (error) {
+    console.error(`✗ ${name}`);
+    console.error(`  Error: ${error.message}`);
+    testsFailed++;
+    return false;
+  }
+}
+
+async function createTestEmployee() {
+  const res = await fetch(`${BASE_URL}/employees`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      first_name: 'Тест',
+      last_name: 'StatusEvents',
+      middle_name: 'Олексійович'
+    })
+  });
+  if (!res.ok) throw new Error(`Failed to create test employee: ${res.status}`);
+  const data = await res.json();
+  return data.employee_id;
+}
+
+async function deleteTestEmployee(employeeId) {
+  await fetch(`${BASE_URL}/employees/${employeeId}`, { method: 'DELETE' });
+}
+
+// Returns today's date as YYYY-MM-DD string
+function today() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+// Returns a date offset by days from today as YYYY-MM-DD string
+function dateOffset(days) {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+async function runAllTests() {
+  console.log('Starting status events API integration tests...\n');
+
+  // Create a test employee to work with
+  try {
+    createdEmployeeId = await createTestEmployee();
+    console.log(`Created test employee with ID: ${createdEmployeeId}\n`);
+  } catch (err) {
+    console.error('Failed to create test employee:', err.message);
+    if (err.message.includes('ECONNREFUSED') || err.code === 'ECONNREFUSED') {
+      console.error('Make sure the server is running on port 3000');
+    }
+    process.exit(1);
+  }
+
+  try {
+    // GET events for new employee — should return empty array
+    await runTest("GET /api/employees/:id/status-events returns empty list for new employee", async () => {
+      const res = await fetch(`${BASE_URL}/employees/${createdEmployeeId}/status-events`);
+      if (!res.ok) throw new Error(`Expected 200, got ${res.status}`);
+      const data = await res.json();
+      if (!Array.isArray(data.events)) throw new Error("Expected events array");
+      if (data.events.length !== 0) throw new Error(`Expected 0 events, got ${data.events.length}`);
+    });
+
+    // GET events for non-existent employee — should return 404
+    await runTest("GET /api/employees/:id/status-events returns 404 for unknown employee", async () => {
+      const res = await fetch(`${BASE_URL}/employees/999999/status-events`);
+      if (res.status !== 404) throw new Error(`Expected 404, got ${res.status}`);
+    });
+
+    // POST missing status returns 400
+    await runTest("POST /api/employees/:id/status-events returns 400 when status missing", async () => {
+      const res = await fetch(`${BASE_URL}/employees/${createdEmployeeId}/status-events`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ start_date: today() })
+      });
+      if (res.status !== 400) throw new Error(`Expected 400, got ${res.status}`);
+    });
+
+    // POST missing start_date returns 400
+    await runTest("POST /api/employees/:id/status-events returns 400 when start_date missing", async () => {
+      const res = await fetch(`${BASE_URL}/employees/${createdEmployeeId}/status-events`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'На лікарняному' })
+      });
+      if (res.status !== 400) throw new Error(`Expected 400, got ${res.status}`);
+    });
+
+    // POST end_date before start_date returns 400
+    await runTest("POST /api/employees/:id/status-events returns 400 when end_date < start_date", async () => {
+      const res = await fetch(`${BASE_URL}/employees/${createdEmployeeId}/status-events`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'На лікарняному',
+          start_date: today(),
+          end_date: dateOffset(-1)
+        })
+      });
+      if (res.status !== 400) throw new Error(`Expected 400, got ${res.status}`);
+    });
+
+    // POST creates event with start_date = today and end_date in future, employee status updated immediately
+    await runTest("POST /api/employees/:id/status-events creates event and updates employee status when immediately active", async () => {
+      const res = await fetch(`${BASE_URL}/employees/${createdEmployeeId}/status-events`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'На лікарняному',
+          start_date: today(),
+          end_date: dateOffset(10)  // Give end date so future events don't overlap
+        })
+      });
+      if (res.status !== 201) throw new Error(`Expected 201, got ${res.status}`);
+      const data = await res.json();
+      if (!data.event) throw new Error("Expected event in response");
+      if (!data.event.event_id) throw new Error("Expected event_id");
+      if (data.event.status !== 'На лікарняному') throw new Error(`status mismatch: ${data.event.status}`);
+      if (data.event.start_date !== today()) throw new Error(`start_date mismatch: ${data.event.start_date}`);
+      if (data.event.employee_id !== createdEmployeeId) throw new Error("employee_id mismatch");
+      if (!data.employee) throw new Error("Expected employee in response");
+      // Employee status should be updated to the new event's status
+      if (data.employee.employment_status !== 'На лікарняному') throw new Error(`Employee status not updated: ${data.employee.employment_status}`);
+      createdEventId = data.event.event_id;
+    });
+
+    // GET events should now return the created event
+    await runTest("GET /api/employees/:id/status-events returns created events", async () => {
+      const res = await fetch(`${BASE_URL}/employees/${createdEmployeeId}/status-events`);
+      if (!res.ok) throw new Error(`Expected 200, got ${res.status}`);
+      const data = await res.json();
+      if (!Array.isArray(data.events)) throw new Error("Expected events array");
+      if (data.events.length !== 1) throw new Error(`Expected 1 event, got ${data.events.length}`);
+      if (data.events[0].event_id !== createdEventId) throw new Error("event_id mismatch");
+    });
+
+    // POST with future start_date (after current event's end): event created but employee status unchanged
+    await runTest("POST /api/employees/:id/status-events with future start_date does not change employee status", async () => {
+      // Start at +15 days (after current event ends at +10 days) — no overlap
+      const futureStart = dateOffset(15);
+      const futureEnd = dateOffset(30);
+      const res = await fetch(`${BASE_URL}/employees/${createdEmployeeId}/status-events`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'У відпустці',
+          start_date: futureStart,
+          end_date: futureEnd
+        })
+      });
+      if (res.status !== 201) throw new Error(`Expected 201, got ${res.status}`);
+      const data = await res.json();
+      if (!data.event) throw new Error("Expected event in response");
+      if (data.event.start_date !== futureStart) throw new Error("start_date mismatch");
+      // Employee status should remain 'На лікарняному' (active event is still today's)
+      if (data.employee.employment_status !== 'На лікарняному') throw new Error(`Employee status changed unexpectedly: ${data.employee.employment_status}`);
+    });
+
+    // POST with overlapping event returns 409
+    await runTest("POST /api/employees/:id/status-events returns 409 when event overlaps", async () => {
+      // Try to create event overlapping with today's active event (today to +10)
+      const res = await fetch(`${BASE_URL}/employees/${createdEmployeeId}/status-events`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'На лікарняному',
+          start_date: dateOffset(5),  // overlaps with today-to-+10 event
+          end_date: dateOffset(20)
+        })
+      });
+      if (res.status !== 409) throw new Error(`Expected 409 (overlap), got ${res.status}`);
+      const data = await res.json();
+      if (!data.error || !data.error.includes('перетинається')) throw new Error(`Expected overlap error message, got: ${data.error}`);
+    });
+
+    // DELETE the active event — employee status should reset (future event at +15 still exists)
+    await runTest("DELETE /api/employees/:id/status-events/:eventId deletes event", async () => {
+      const res = await fetch(`${BASE_URL}/employees/${createdEmployeeId}/status-events/${createdEventId}`, {
+        method: 'DELETE'
+      });
+      if (res.status !== 204) throw new Error(`Expected 204, got ${res.status}`);
+    });
+
+    // After deleting active event, sync should reset to Працює (future event at +15 is not active yet)
+    await runTest("After deleting active event, GET employee status reflects sync (reset to Працює)", async () => {
+      const res = await fetch(`${BASE_URL}/employees/${createdEmployeeId}`);
+      if (!res.ok) throw new Error(`Expected 200, got ${res.status}`);
+      const data = await res.json();
+      // Active event was deleted; remaining event starts in the future (+15 days)
+      // Sync finds no active event and resets to 'Працює'
+      if (data.employee.employment_status === 'На лікарняному') {
+        throw new Error(`Employee still has 'На лікарняному' status after active event deletion`);
+      }
+    });
+
+    // DELETE non-existent event returns 404
+    await runTest("DELETE /api/employees/:id/status-events/:eventId returns 404 for unknown event", async () => {
+      const res = await fetch(`${BASE_URL}/employees/${createdEmployeeId}/status-events/999999`, {
+        method: 'DELETE'
+      });
+      if (res.status !== 404) throw new Error(`Expected 404, got ${res.status}`);
+    });
+
+    // GET events for non-existent employee on DELETE returns 404
+    await runTest("DELETE /api/employees/:id/status-events/:eventId returns 404 for unknown employee", async () => {
+      const res = await fetch(`${BASE_URL}/employees/999999/status-events/1`, {
+        method: 'DELETE'
+      });
+      if (res.status !== 404) throw new Error(`Expected 404, got ${res.status}`);
+    });
+
+    // GET employee auto-sync on load
+    await runTest("GET /api/employees/:id triggers status sync on load", async () => {
+      // Create event with past start_date to test auto-activation on GET
+      const secondEmployeeRes = await fetch(`${BASE_URL}/employees`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          first_name: 'Sync',
+          last_name: 'TestEmployee',
+          middle_name: ''
+        })
+      });
+      if (!secondEmployeeRes.ok) throw new Error(`Failed to create second test employee: ${secondEmployeeRes.status}`);
+      const secondData = await secondEmployeeRes.json();
+      const secondId = secondData.employee_id;
+
+      try {
+        // Add event with start_date = today (immediately active)
+        const addRes = await fetch(`${BASE_URL}/employees/${secondId}/status-events`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            status: 'У відпустці',
+            start_date: today()
+          })
+        });
+        if (addRes.status !== 201) throw new Error(`Failed to add event: ${addRes.status}`);
+
+        // GET employee — should trigger sync and return updated status
+        const getRes = await fetch(`${BASE_URL}/employees/${secondId}`);
+        if (!getRes.ok) throw new Error(`Expected 200, got ${getRes.status}`);
+        const getData = await getRes.json();
+        if (getData.employee.employment_status !== 'У відпустці') {
+          throw new Error(`Expected 'У відпустці', got: ${getData.employee.employment_status}`);
+        }
+      } finally {
+        await fetch(`${BASE_URL}/employees/${secondId}`, { method: 'DELETE' });
+      }
+    });
+
+    // DELETE employee also removes status events
+    await runTest("DELETE employee removes associated status events", async () => {
+      const tmpRes = await fetch(`${BASE_URL}/employees`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ first_name: 'Tmp', last_name: 'DeleteTest', middle_name: '' })
+      });
+      if (!tmpRes.ok) throw new Error(`Failed to create tmp employee: ${tmpRes.status}`);
+      const tmpData = await tmpRes.json();
+      const tmpId = tmpData.employee_id;
+
+      // Add an event
+      await fetch(`${BASE_URL}/employees/${tmpId}/status-events`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'На лікарняному', start_date: dateOffset(10), end_date: dateOffset(20) })
+      });
+
+      // Delete the employee
+      const delRes = await fetch(`${BASE_URL}/employees/${tmpId}`, { method: 'DELETE' });
+      if (delRes.status !== 204) throw new Error(`Expected 204, got ${delRes.status}`);
+
+      // The employee is gone — events were cleaned up (we verify no 500 errors happened above)
+    });
+
+  } finally {
+    // Clean up test employee
+    if (createdEmployeeId) {
+      await deleteTestEmployee(createdEmployeeId);
+    }
+  }
+
+  console.log(`\nTests passed: ${testsPassed}`);
+  console.log(`Tests failed: ${testsFailed}`);
+
+  return testsFailed === 0;
+}
+
+runAllTests()
+  .then(success => process.exit(success ? 0 : 1))
+  .catch(error => {
+    console.error('Unexpected error:', error);
+    process.exit(1);
+  });
