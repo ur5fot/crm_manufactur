@@ -95,16 +95,20 @@ export function registerEmployeeRoutes(app) {
   // GET single employee by ID
   app.get("/api/employees/:id", async (req, res) => {
     try {
-      // Sync status events before returning (auto-activate/expire)
-      await syncStatusEventsForEmployee(req.params.id);
-
       const employees = await loadEmployees();
       const employee = findById(employees, 'employee_id', req.params.id);
       if (!employee) {
         res.status(404).json({ error: "Співробітник не знайдено" });
         return;
       }
-      res.json({ employee });
+
+      // Sync status events after verifying employee exists (auto-activate/expire)
+      await syncStatusEventsForEmployee(req.params.id);
+
+      // Re-load employee to pick up any sync changes
+      const updatedEmployees = await loadEmployees();
+      const updatedEmployee = findById(updatedEmployees, 'employee_id', req.params.id);
+      res.json({ employee: updatedEmployee || employee });
     } catch (err) {
       console.error(err);
       res.status(500).json({ error: err.message });
@@ -365,7 +369,7 @@ export function registerEmployeeRoutes(app) {
           return;
         }
       }
-      if (end_date && String(end_date).trim() && end_date < start_date) {
+      if (end_date && String(end_date).trim() && String(end_date).trim() < String(start_date).trim()) {
         res.status(400).json({ error: "Дата закінчення не може бути раніше дати початку" });
         return;
       }
