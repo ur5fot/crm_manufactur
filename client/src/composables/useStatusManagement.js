@@ -52,6 +52,10 @@ export function useStatusManagement(allFieldsSchema, form, employees, saving, er
     if (!editForm.status || !editForm.startDate) return;
     if (!editingEventId.value) return;
     if (saving.value) return;
+    if (editForm.endDate && editForm.endDate < editForm.startDate) {
+      statusEventError.value = 'Дата завершення не може бути раніше дати початку';
+      return;
+    }
     statusEventError.value = '';
     saving.value = true;
     try {
