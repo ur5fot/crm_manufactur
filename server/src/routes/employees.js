@@ -22,7 +22,6 @@ import {
   addStatusEvent,
   deleteStatusEvent,
   removeStatusEventsForEmployee,
-  validateNoOverlap,
   syncStatusEventsForEmployee
 } from "../store.js";
 import { mergeRow } from "../csv.js";
@@ -354,23 +353,38 @@ export function registerEmployeeRoutes(app) {
         res.status(400).json({ error: "Дата початку обов'язкова" });
         return;
       }
+      const startDateError = validateDateField(String(start_date).trim(), 'start_date');
+      if (startDateError) {
+        res.status(400).json({ error: startDateError });
+        return;
+      }
+      if (end_date && String(end_date).trim()) {
+        const endDateError = validateDateField(String(end_date).trim(), 'end_date');
+        if (endDateError) {
+          res.status(400).json({ error: endDateError });
+          return;
+        }
+      }
       if (end_date && String(end_date).trim() && end_date < start_date) {
         res.status(400).json({ error: "Дата закінчення не може бути раніше дати початку" });
         return;
       }
 
-      const noOverlap = await validateNoOverlap(req.params.id, String(start_date).trim(), end_date ? String(end_date).trim() : '');
-      if (!noOverlap) {
-        res.status(409).json({ error: "Подія перетинається з існуючою подією" });
-        return;
+      let event;
+      try {
+        event = await addStatusEvent({
+          employee_id: req.params.id,
+          status: String(status).trim(),
+          start_date: String(start_date).trim(),
+          end_date: end_date ? String(end_date).trim() : ''
+        });
+      } catch (addErr) {
+        if (addErr.code === 'OVERLAP') {
+          res.status(409).json({ error: addErr.message });
+          return;
+        }
+        throw addErr;
       }
-
-      const event = await addStatusEvent({
-        employee_id: req.params.id,
-        status: String(status).trim(),
-        start_date: String(start_date).trim(),
-        end_date: end_date ? String(end_date).trim() : ''
-      });
 
       // Sync to apply if currently active
       await syncStatusEventsForEmployee(req.params.id);

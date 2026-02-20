@@ -1424,24 +1424,6 @@ export async function loadStatusEvents() {
 }
 
 /**
- * Save status events to status_events.csv with write lock
- * @param {Array} rows - Status event records to save
- * @returns {Promise<void>}
- */
-async function saveStatusEvents(rows) {
-  const previousLock = statusEventWriteLock;
-  let releaseLock;
-  statusEventWriteLock = new Promise(resolve => { releaseLock = resolve; });
-
-  try {
-    await previousLock;
-    await writeCsv(STATUS_EVENTS_PATH, STATUS_EVENT_COLUMNS, rows);
-  } finally {
-    releaseLock();
-  }
-}
-
-/**
  * Get all active status events for an employee, sorted by start_date ascending
  * @param {string} employeeId
  * @returns {Promise<Array>}
@@ -1454,9 +1436,10 @@ export async function getStatusEventsForEmployee(employeeId) {
 }
 
 /**
- * Add a new status event
+ * Add a new status event. Validates no overlap under the write lock (atomic check-then-write).
  * @param {Object} data - { employee_id, status, start_date, end_date? }
  * @returns {Promise<Object>} The new event record
+ * @throws {Error} with code 'OVERLAP' if the new event overlaps an existing event
  */
 export async function addStatusEvent(data) {
   const previousLock = statusEventWriteLock;
@@ -1466,6 +1449,21 @@ export async function addStatusEvent(data) {
   try {
     await previousLock;
     const events = await loadStatusEvents();
+
+    // Validate no overlap atomically under the write lock
+    const FAR_FUTURE = "9999-12-31";
+    const newStart = data.start_date || "";
+    const newEnd = data.end_date || FAR_FUTURE;
+    const empEvents = events.filter(e => e.employee_id === String(data.employee_id) && e.active !== 'no');
+    for (const e of empEvents) {
+      const existingEnd = e.end_date || FAR_FUTURE;
+      if (newStart <= existingEnd && newEnd >= e.start_date) {
+        const err = new Error("Подія перетинається з існуючою подією");
+        err.code = 'OVERLAP';
+        throw err;
+      }
+    }
+
     const newId = getNextId(events, "event_id");
 
     const newEvent = {

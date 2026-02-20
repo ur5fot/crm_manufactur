@@ -154,7 +154,7 @@ export function useStatusManagement(allFieldsSchema, form, employees, saving, er
         }
       }
 
-      statusEvents.value = [];
+      await loadStatusEventsList();
       await loadEmployees();
       await selectEmployee(form.employee_id);
       closeStatusChangePopup();

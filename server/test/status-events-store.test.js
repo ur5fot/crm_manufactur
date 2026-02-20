@@ -254,6 +254,18 @@ async function runAllTests() {
       if (!noOverlap) throw new Error("Excluding the same event should allow same dates");
     });
 
+    await runTest("validateNoOverlap returns false when new event starts exactly on existing event's end date (touching = overlap)", async () => {
+      // emp 1, event 1: 2026-01-10 to 2026-01-20 — new event starting 2026-01-20 touches end, should be overlap
+      const noOverlap = await validateNoOverlap("1", "2026-01-20", "2026-01-25");
+      if (noOverlap) throw new Error("Expected false (start on existing end_date is an overlap)");
+    });
+
+    await runTest("validateNoOverlap returns false when both new and existing events have no end date (both open-end)", async () => {
+      // emp 2 already has open-end event starting 2026-01-15; adding another open-end event should overlap
+      const noOverlap = await validateNoOverlap("2", "2026-06-01", "");
+      if (noOverlap) throw new Error("Expected false (two open-end events always overlap)");
+    });
+
     // ======== deleteStatusEvent ========
     await runTest("deleteStatusEvent removes event by ID", async () => {
       const deleted = await deleteStatusEvent("2");
@@ -283,219 +295,239 @@ async function runAllTests() {
     });
 
     // ======== syncStatusEventsForEmployee ========
-    // These tests need employees.csv and status_history.csv; back them up first.
+    // Create a dedicated test employee so sync tests always run regardless of production data state.
     let syncEmpId = null;
-    let syncOrigStatus = null;
-    let syncOrigStartDate = null;
-    let syncOrigEndDate = null;
 
-    // Find first active employee for sync tests
-    const allEmps = await loadEmployees();
-    const syncEmp = allEmps.find(e => e.active !== 'no');
+    // Backup employees.csv and status_history.csv before sync tests
+    try { await fs.copyFile(EMPLOYEES_PATH, EMPLOYEES_BACKUP_PATH); } catch { /* may not exist */ }
+    try { await fs.copyFile(STATUS_HISTORY_PATH, STATUS_HISTORY_BACKUP_PATH); } catch { /* may not exist */ }
 
-    if (!syncEmp) {
-      console.log("⚠️  No active employees found — skipping sync tests");
-    } else {
-      syncEmpId = syncEmp.employee_id;
-      syncOrigStatus = syncEmp.employment_status || '';
-      syncOrigStartDate = syncEmp.status_start_date || '';
-      syncOrigEndDate = syncEmp.status_end_date || '';
+    try {
+      // Insert a minimal test employee under the write lock
+      await withEmployeeLock(async (employees) => {
+        const allIds = employees.map(e => parseInt(e.employee_id, 10)).filter(id => !isNaN(id));
+        const maxId = allIds.length > 0 ? allIds.reduce((a, b) => Math.max(a, b), 0) : 0;
+        syncEmpId = String(maxId + 1);
+        employees.push({
+          employee_id: syncEmpId,
+          first_name: 'SyncTest',
+          last_name: 'Employee',
+          middle_name: '',
+          employment_status: 'Працює',
+          status_start_date: '',
+          status_end_date: '',
+          active: 'yes'
+        });
+        return employees;
+      });
 
-      // Backup employees.csv and status_history.csv before sync tests
-      try { await fs.copyFile(EMPLOYEES_PATH, EMPLOYEES_BACKUP_PATH); } catch { /* may not exist */ }
-      try { await fs.copyFile(STATUS_HISTORY_PATH, STATUS_HISTORY_BACKUP_PATH); } catch { /* may not exist */ }
+      // Sync test helper: reset employee to a given status directly
+      async function setEmployeeStatus(empId, status, startDate, endDate) {
+        await withEmployeeLock(async (employees) => {
+          const idx = employees.findIndex(e => e.employee_id === String(empId));
+          if (idx === -1) return employees;
+          employees[idx].employment_status = status;
+          employees[idx].status_start_date = startDate || '';
+          employees[idx].status_end_date = endDate || '';
+          return employees;
+        });
+      }
 
-      try {
-        // Sync test helper: reset employee to a given status directly
-        async function setEmployeeStatus(empId, status, startDate, endDate) {
-          await withEmployeeLock(async (employees) => {
-            const idx = employees.findIndex(e => e.employee_id === String(empId));
-            if (idx === -1) return employees;
-            employees[idx].employment_status = status;
-            employees[idx].status_start_date = startDate || '';
-            employees[idx].status_end_date = endDate || '';
-            return employees;
-          });
+      // Test: no-op when no events exist for employee
+      await runTest("syncStatusEventsForEmployee: no-op when employee has no events", async () => {
+        await clearEvents();
+
+        // Set employee to a non-working status
+        await setEmployeeStatus(syncEmpId, 'На лікарняному', '2026-01-01', '');
+
+        // Sync — should do nothing since no events
+        await syncStatusEventsForEmployee(syncEmpId);
+
+        const updated = await loadEmployees();
+        const emp = updated.find(e => e.employee_id === syncEmpId);
+        if (!emp) throw new Error("Employee not found after sync");
+        if (emp.employment_status !== 'На лікарняному') {
+          throw new Error(`Expected 'На лікарняному' (no-op), got '${emp.employment_status}'`);
+        }
+      });
+
+      // Test: forceReset=true resets to working status even when no events exist
+      await runTest("syncStatusEventsForEmployee: forceReset=true resets to working status with no events", async () => {
+        await clearEvents();
+
+        // Set employee to non-working status
+        await setEmployeeStatus(syncEmpId, 'На лікарняному', '2026-01-01', '');
+
+        // Sync with forceReset — should reset even without events
+        await syncStatusEventsForEmployee(syncEmpId, { forceReset: true });
+
+        const updated = await loadEmployees();
+        const emp = updated.find(e => e.employee_id === syncEmpId);
+        if (!emp) throw new Error("Employee not found after sync");
+        if (emp.employment_status !== 'Працює') {
+          throw new Error(`Expected 'Працює' (forceReset), got '${emp.employment_status}'`);
+        }
+      });
+
+      // Test: auto-activate event starting today
+      await runTest("syncStatusEventsForEmployee: auto-activates event starting today", async () => {
+        await clearEvents();
+        await setEmployeeStatus(syncEmpId, 'Працює', '', '');
+
+        // Add event starting today with no end date
+        await addStatusEvent({
+          employee_id: syncEmpId,
+          status: 'На лікарняному',
+          start_date: today(),
+          end_date: ''
+        });
+
+        await syncStatusEventsForEmployee(syncEmpId);
+
+        const updated = await loadEmployees();
+        const emp = updated.find(e => e.employee_id === syncEmpId);
+        if (!emp) throw new Error("Employee not found after sync");
+        if (emp.employment_status !== 'На лікарняному') {
+          throw new Error(`Expected 'На лікарняному' after activation, got '${emp.employment_status}'`);
+        }
+        if (emp.status_start_date !== today()) {
+          throw new Error(`Expected status_start_date ${today()}, got '${emp.status_start_date}'`);
+        }
+      });
+
+      // Test: auto-activate writes status history entry
+      await runTest("syncStatusEventsForEmployee: writes status history on activation", async () => {
+        const histBefore = await loadStatusHistory();
+        const countBefore = histBefore.length;
+
+        await clearEvents();
+        await setEmployeeStatus(syncEmpId, 'Працює', '', '');
+
+        await addStatusEvent({
+          employee_id: syncEmpId,
+          status: 'У відпустці',
+          start_date: today(),
+          end_date: tomorrow()
+        });
+
+        await syncStatusEventsForEmployee(syncEmpId);
+
+        const histAfter = await loadStatusHistory();
+        if (histAfter.length <= countBefore) {
+          throw new Error("Expected new history entry after sync activation");
         }
 
-        // Test: no-op when no events exist for employee
-        await runTest("syncStatusEventsForEmployee: no-op when employee has no events", async () => {
-          await clearEvents();
+        const latest = histAfter[histAfter.length - 1];
+        if (latest.changed_by !== 'system') {
+          throw new Error(`Expected changed_by 'system', got '${latest.changed_by}'`);
+        }
+        if (latest.new_status !== 'У відпустці') {
+          throw new Error(`Expected new_status 'У відпустці', got '${latest.new_status}'`);
+        }
+        if (latest.employee_id !== String(syncEmpId)) {
+          throw new Error(`Expected employee_id ${syncEmpId}, got ${latest.employee_id}`);
+        }
+      });
 
-          // Set employee to a non-working status
-          await setEmployeeStatus(syncEmpId, 'На лікарняному', '2026-01-01', '');
+      // Test: auto-expire and reset to Працює
+      await runTest("syncStatusEventsForEmployee: auto-expires event and resets to working status", async () => {
+        await clearEvents();
 
-          // Sync — should do nothing since no events
-          await syncStatusEventsForEmployee(syncEmpId);
+        // Set employee to non-working status
+        await setEmployeeStatus(syncEmpId, 'На лікарняному', yesterday(), yesterday());
 
-          const updated = await loadEmployees();
-          const emp = updated.find(e => e.employee_id === syncEmpId);
-          if (!emp) throw new Error("Employee not found after sync");
-          if (emp.employment_status !== 'На лікарняному') {
-            throw new Error(`Expected 'На лікарняному' (no-op), got '${emp.employment_status}'`);
-          }
+        // Add event that ended yesterday (expired)
+        await addStatusEvent({
+          employee_id: syncEmpId,
+          status: 'На лікарняному',
+          start_date: yesterday(),
+          end_date: yesterday()
         });
 
-        // Test: auto-activate event starting today
-        await runTest("syncStatusEventsForEmployee: auto-activates event starting today", async () => {
-          await clearEvents();
-          await setEmployeeStatus(syncEmpId, 'Працює', '', '');
+        await syncStatusEventsForEmployee(syncEmpId);
 
-          // Add event starting today with no end date
-          await addStatusEvent({
-            employee_id: syncEmpId,
-            status: 'На лікарняному',
-            start_date: today(),
-            end_date: ''
-          });
+        const updated = await loadEmployees();
+        const emp = updated.find(e => e.employee_id === syncEmpId);
+        if (!emp) throw new Error("Employee not found after sync");
+        // After expiry, status should reset to working status (Працює)
+        const schema = await (async () => {
+          const { loadFieldsSchema } = await import('../src/store.js');
+          return loadFieldsSchema();
+        })();
+        const statusField = schema.find(f => f.field_name === 'employment_status');
+        const workingStatus = statusField?.field_options?.split('|')[0] || 'Працює';
 
-          await syncStatusEventsForEmployee(syncEmpId);
+        if (emp.employment_status !== workingStatus) {
+          throw new Error(`Expected working status '${workingStatus}' after expiry, got '${emp.employment_status}'`);
+        }
+        if (emp.status_start_date !== '') {
+          throw new Error(`Expected empty status_start_date after reset, got '${emp.status_start_date}'`);
+        }
+      });
 
-          const updated = await loadEmployees();
-          const emp = updated.find(e => e.employee_id === syncEmpId);
-          if (!emp) throw new Error("Employee not found after sync");
-          if (emp.employment_status !== 'На лікарняному') {
-            throw new Error(`Expected 'На лікарняному' after activation, got '${emp.employment_status}'`);
-          }
-          if (emp.status_start_date !== today()) {
-            throw new Error(`Expected status_start_date ${today()}, got '${emp.status_start_date}'`);
-          }
+      // Test: no-op when already working and no active event
+      await runTest("syncStatusEventsForEmployee: no-op when already working and no active event", async () => {
+        await clearEvents();
+        await setEmployeeStatus(syncEmpId, 'Працює', '', '');
+
+        // Add expired event
+        await addStatusEvent({
+          employee_id: syncEmpId,
+          status: 'На лікарняному',
+          start_date: yesterday(),
+          end_date: yesterday()
         });
 
-        // Test: auto-activate writes status history entry
-        await runTest("syncStatusEventsForEmployee: writes status history on activation", async () => {
-          const histBefore = await loadStatusHistory();
-          const countBefore = histBefore.length;
+        const histBefore = await loadStatusHistory();
+        const countBefore = histBefore.length;
 
-          await clearEvents();
-          await setEmployeeStatus(syncEmpId, 'Працює', '', '');
+        await syncStatusEventsForEmployee(syncEmpId);
 
-          await addStatusEvent({
-            employee_id: syncEmpId,
-            status: 'У відпустці',
-            start_date: today(),
-            end_date: tomorrow()
-          });
+        // Employee is already Працює, so no change expected
+        const updated = await loadEmployees();
+        const emp = updated.find(e => e.employee_id === syncEmpId);
+        if (emp.employment_status !== 'Працює') {
+          throw new Error(`Expected 'Працює' (no-op), got '${emp.employment_status}'`);
+        }
 
-          await syncStatusEventsForEmployee(syncEmpId);
+        const histAfter = await loadStatusHistory();
+        if (histAfter.length !== countBefore) {
+          throw new Error("Expected no new history entry when status unchanged");
+        }
+      });
 
-          const histAfter = await loadStatusHistory();
-          if (histAfter.length <= countBefore) {
-            throw new Error("Expected new history entry after sync activation");
-          }
+      // Test: future event does not activate yet
+      await runTest("syncStatusEventsForEmployee: future event does not activate before start_date", async () => {
+        await clearEvents();
+        await setEmployeeStatus(syncEmpId, 'Працює', '', '');
 
-          const latest = histAfter[histAfter.length - 1];
-          if (latest.changed_by !== 'system') {
-            throw new Error(`Expected changed_by 'system', got '${latest.changed_by}'`);
-          }
-          if (latest.new_status !== 'У відпустці') {
-            throw new Error(`Expected new_status 'У відпустці', got '${latest.new_status}'`);
-          }
-          if (latest.employee_id !== String(syncEmpId)) {
-            throw new Error(`Expected employee_id ${syncEmpId}, got ${latest.employee_id}`);
-          }
+        // Add event starting tomorrow
+        await addStatusEvent({
+          employee_id: syncEmpId,
+          status: 'На лікарняному',
+          start_date: tomorrow(),
+          end_date: ''
         });
 
-        // Test: auto-expire and reset to Працює
-        await runTest("syncStatusEventsForEmployee: auto-expires event and resets to working status", async () => {
-          await clearEvents();
+        await syncStatusEventsForEmployee(syncEmpId);
 
-          // Set employee to non-working status
-          await setEmployeeStatus(syncEmpId, 'На лікарняному', yesterday(), yesterday());
+        const updated = await loadEmployees();
+        const emp = updated.find(e => e.employee_id === syncEmpId);
+        if (emp.employment_status !== 'Працює') {
+          throw new Error(`Expected 'Працює' (future event not yet active), got '${emp.employment_status}'`);
+        }
+      });
 
-          // Add event that ended yesterday (expired)
-          await addStatusEvent({
-            employee_id: syncEmpId,
-            status: 'На лікарняному',
-            start_date: yesterday(),
-            end_date: yesterday()
-          });
-
-          await syncStatusEventsForEmployee(syncEmpId);
-
-          const updated = await loadEmployees();
-          const emp = updated.find(e => e.employee_id === syncEmpId);
-          if (!emp) throw new Error("Employee not found after sync");
-          // After expiry, status should reset to working status (Працює)
-          const schema = await (async () => {
-            const { loadFieldsSchema } = await import('../src/store.js');
-            return loadFieldsSchema();
-          })();
-          const statusField = schema.find(f => f.field_name === 'employment_status');
-          const workingStatus = statusField?.field_options?.split('|')[0] || 'Працює';
-
-          if (emp.employment_status !== workingStatus) {
-            throw new Error(`Expected working status '${workingStatus}' after expiry, got '${emp.employment_status}'`);
-          }
-          if (emp.status_start_date !== '') {
-            throw new Error(`Expected empty status_start_date after reset, got '${emp.status_start_date}'`);
-          }
-        });
-
-        // Test: no-op when already working and no active event
-        await runTest("syncStatusEventsForEmployee: no-op when already working and no active event", async () => {
-          await clearEvents();
-          await setEmployeeStatus(syncEmpId, 'Працює', '', '');
-
-          // Add expired event
-          await addStatusEvent({
-            employee_id: syncEmpId,
-            status: 'На лікарняному',
-            start_date: yesterday(),
-            end_date: yesterday()
-          });
-
-          const histBefore = await loadStatusHistory();
-          const countBefore = histBefore.length;
-
-          await syncStatusEventsForEmployee(syncEmpId);
-
-          // Employee is already Працює, so no change expected
-          const updated = await loadEmployees();
-          const emp = updated.find(e => e.employee_id === syncEmpId);
-          if (emp.employment_status !== 'Працює') {
-            throw new Error(`Expected 'Працює' (no-op), got '${emp.employment_status}'`);
-          }
-
-          const histAfter = await loadStatusHistory();
-          if (histAfter.length !== countBefore) {
-            throw new Error("Expected no new history entry when status unchanged");
-          }
-        });
-
-        // Test: future event does not activate yet
-        await runTest("syncStatusEventsForEmployee: future event does not activate before start_date", async () => {
-          await clearEvents();
-          await setEmployeeStatus(syncEmpId, 'Працює', '', '');
-
-          // Add event starting tomorrow
-          await addStatusEvent({
-            employee_id: syncEmpId,
-            status: 'На лікарняному',
-            start_date: tomorrow(),
-            end_date: ''
-          });
-
-          await syncStatusEventsForEmployee(syncEmpId);
-
-          const updated = await loadEmployees();
-          const emp = updated.find(e => e.employee_id === syncEmpId);
-          if (emp.employment_status !== 'Працює') {
-            throw new Error(`Expected 'Працює' (future event not yet active), got '${emp.employment_status}'`);
-          }
-        });
-
-      } finally {
-        // Restore employees.csv and status_history.csv after sync tests
-        try {
-          await fs.copyFile(EMPLOYEES_BACKUP_PATH, EMPLOYEES_PATH);
-          await fs.unlink(EMPLOYEES_BACKUP_PATH);
-        } catch { /* OK */ }
-        try {
-          await fs.copyFile(STATUS_HISTORY_BACKUP_PATH, STATUS_HISTORY_PATH);
-          await fs.unlink(STATUS_HISTORY_BACKUP_PATH);
-        } catch { /* OK */ }
-      }
+    } finally {
+      // Restore employees.csv and status_history.csv after sync tests
+      try {
+        await fs.copyFile(EMPLOYEES_BACKUP_PATH, EMPLOYEES_PATH);
+        await fs.unlink(EMPLOYEES_BACKUP_PATH);
+      } catch { /* OK */ }
+      try {
+        await fs.copyFile(STATUS_HISTORY_BACKUP_PATH, STATUS_HISTORY_PATH);
+        await fs.unlink(STATUS_HISTORY_BACKUP_PATH);
+      } catch { /* OK */ }
     }
 
     console.log(`\nTests passed: ${testsPassed}`);

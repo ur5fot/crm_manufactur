@@ -143,7 +143,9 @@ crm_manufactur/
 │   │   ├── photo-api.test.js
 │   │   ├── status-history.test.js
 │   │   ├── reprimands-api.test.js
-│   │   └── reprimands-store.test.js
+│   │   ├── reprimands-store.test.js
+│   │   ├── status-events-store.test.js
+│   │   └── status-events-api.test.js
 │   └── package.json            # Backend dependencies
 │
 ├── tests/
@@ -2130,6 +2132,8 @@ Unit and integration tests focus on backend business logic, API endpoints, and d
 - `status-history.test.js`: Status history recording and retrieval API validation
 - `reprimands-api.test.js`: Reprimands API endpoint validation (GET, POST, PUT, DELETE)
 - `reprimands-store.test.js`: Reprimands store functions unit test (loadReprimands, addReprimand, updateReprimand, deleteReprimand, removeReprimandsForEmployee)
+- `status-events-store.test.js`: Status events store functions unit test (addStatusEvent, deleteStatusEvent, getActiveEventForEmployee, validateNoOverlap, syncStatusEventsForEmployee)
+- `status-events-api.test.js`: Status event API endpoint validation (GET, POST with overlap/400/409, DELETE, auto-sync behavior)
 - `utils.test.js`: Shared utility function tests
 
 **Test Framework**: Node.js native test runner (no external dependencies)
@@ -2206,8 +2210,8 @@ node server/test/docx-generator.test.js
 ```
 
 **Unit vs. Integration Test Distinction**:
-- **Unit tests** (no server required): config.test.js, upload-limit.test.js, docx-generator.test.js, declension.test.js, retirement-events.test.js, utils.test.js, reprimands-store.test.js
-- **Integration tests** (require running server on port 3000): templates-api.test.js, retirement-api.test.js, search-api.test.js, photo-api.test.js, status-history.test.js, reprimands-api.test.js
+- **Unit tests** (no server required): config.test.js, upload-limit.test.js, docx-generator.test.js, declension.test.js, retirement-events.test.js, utils.test.js, reprimands-store.test.js, status-events-store.test.js
+- **Integration tests** (require running server on port 3000): templates-api.test.js, retirement-api.test.js, search-api.test.js, photo-api.test.js, status-history.test.js, reprimands-api.test.js, status-events-api.test.js
 - `npm test` runs only unit tests; `npm run test:integration` runs integration tests
 - CI runs unit tests before starting servers, and integration tests after servers are ready
 

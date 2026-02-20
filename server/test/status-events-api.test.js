@@ -216,8 +216,8 @@ async function runAllTests() {
       const data = await res.json();
       // Active event was deleted; remaining event starts in the future (+15 days)
       // Sync finds no active event and resets to 'Працює'
-      if (data.employee.employment_status === 'На лікарняному') {
-        throw new Error(`Employee still has 'На лікарняному' status after active event deletion`);
+      if (data.employee.employment_status !== 'Працює') {
+        throw new Error(`Expected 'Працює' after active event deletion, got '${data.employee.employment_status}'`);
       }
     });
 
@@ -288,18 +288,77 @@ async function runAllTests() {
       const tmpData = await tmpRes.json();
       const tmpId = tmpData.employee_id;
 
-      // Add an event
-      await fetch(`${BASE_URL}/employees/${tmpId}/status-events`, {
+      // Add an event and confirm it exists before deletion
+      const addRes = await fetch(`${BASE_URL}/employees/${tmpId}/status-events`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'На лікарняному', start_date: dateOffset(10), end_date: dateOffset(20) })
+        body: JSON.stringify({ status: 'Лікарняний', start_date: dateOffset(10), end_date: dateOffset(20) })
       });
+      if (addRes.status !== 201) throw new Error(`Expected 201 creating event, got ${addRes.status}`);
+      const beforeData = await (await fetch(`${BASE_URL}/employees/${tmpId}/status-events`)).json();
+      if (beforeData.events.length !== 1) throw new Error(`Expected 1 event before deletion, got ${beforeData.events.length}`);
 
-      // Delete the employee
+      // Hard-delete the employee (removes employee row and cleans up associated events)
       const delRes = await fetch(`${BASE_URL}/employees/${tmpId}`, { method: 'DELETE' });
       if (delRes.status !== 204) throw new Error(`Expected 204, got ${delRes.status}`);
 
-      // The employee is gone — events were cleaned up (we verify no 500 errors happened above)
+      // Employee is hard-deleted: GET events returns 404, not 500 (a 500 would indicate orphaned events caused a server error)
+      const eventsRes = await fetch(`${BASE_URL}/employees/${tmpId}/status-events`);
+      if (eventsRes.status !== 404) {
+        throw new Error(`Expected 404 (employee hard-deleted) from events endpoint, got ${eventsRes.status}`);
+      }
+    });
+
+    // DELETE event belonging to different employee returns 403
+    await runTest("DELETE /api/employees/:id/status-events/:eventId returns 403 for event owned by different employee", async () => {
+      const empARes = await fetch(`${BASE_URL}/employees`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ first_name: 'EmpA', last_name: 'OwnerTest', middle_name: '' })
+      });
+      if (!empARes.ok) throw new Error(`Failed to create empA: ${empARes.status}`);
+      const empAId = (await empARes.json()).employee_id;
+
+      const empBRes = await fetch(`${BASE_URL}/employees`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ first_name: 'EmpB', last_name: 'OwnerTest', middle_name: '' })
+      });
+      if (!empBRes.ok) throw new Error(`Failed to create empB: ${empBRes.status}`);
+      const empBId = (await empBRes.json()).employee_id;
+
+      try {
+        // Add an event to empA
+        const evtRes = await fetch(`${BASE_URL}/employees/${empAId}/status-events`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'Лікарняний', start_date: dateOffset(5), end_date: dateOffset(10) })
+        });
+        if (evtRes.status !== 201) throw new Error(`Expected 201 creating event for empA, got ${evtRes.status}`);
+        const evtData = await evtRes.json();
+        const empAEventId = evtData.event.event_id;
+
+        // Attempt to delete empA's event via empB's URL — should return 403
+        const delRes = await fetch(`${BASE_URL}/employees/${empBId}/status-events/${empAEventId}`, {
+          method: 'DELETE'
+        });
+        if (delRes.status !== 403) throw new Error(`Expected 403 (forbidden), got ${delRes.status}`);
+        const errData = await delRes.json();
+        if (!errData.error) throw new Error("Expected error message in response");
+      } finally {
+        await fetch(`${BASE_URL}/employees/${empAId}`, { method: 'DELETE' });
+        await fetch(`${BASE_URL}/employees/${empBId}`, { method: 'DELETE' });
+      }
+    });
+
+    // POST with invalid date format returns 400
+    await runTest("POST /api/employees/:id/status-events returns 400 for invalid start_date format", async () => {
+      const res = await fetch(`${BASE_URL}/employees/${createdEmployeeId}/status-events`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'Лікарняний', start_date: 'not-a-date' })
+      });
+      if (res.status !== 400) throw new Error(`Expected 400, got ${res.status}`);
     });
 
   } finally {
