@@ -124,7 +124,7 @@ Replace the current simple status change (direct field update) with an **event-b
 
 ### Task 5: Frontend — status change modal UI redesign
 
-- [ ] Update status change popup in `client/src/views/EmployeeCardsView.vue`:
+- [x] Update status change popup in `client/src/views/EmployeeCardsView.vue`:
   - Add events list table above the form showing existing events: status, start_date (formatted DD.MM.YYYY), end_date (formatted or "без кінця"), delete button (🗑️)
   - Show "loading..." while `statusEventsLoading` is true
   - Show "Немає запланованих подій" if events list is empty
@@ -135,7 +135,7 @@ Replace the current simple status change (direct field update) with an **event-b
   - "Зберегти подію" button (replaces "Застосувати") — disabled if `!statusChangeForm.status || !statusChangeForm.startDate`
   - Keep "Скасувати" button
   - Wire delete buttons to `deleteStatusEvent(event.event_id)`
-- [ ] Verify the popup works end-to-end: add event, see it in list, delete event, status resets
+- [x] Verify the popup works end-to-end: add event, see it in list, delete event, status resets
 
 ### Task 6: E2E tests and final validation
 
