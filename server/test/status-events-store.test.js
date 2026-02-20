@@ -17,6 +17,7 @@ import {
   withEmployeeLock,
   getStatusEventsForEmployee,
   addStatusEvent,
+  updateStatusEvent,
   deleteStatusEvent,
   removeStatusEventsForEmployee,
   getActiveEventForEmployee,
@@ -264,6 +265,87 @@ async function runAllTests() {
       // emp 2 already has open-end event starting 2026-01-15; adding another open-end event should overlap
       const noOverlap = await validateNoOverlap("2", "2026-06-01", "");
       if (noOverlap) throw new Error("Expected false (two open-end events always overlap)");
+    });
+
+    // ======== updateStatusEvent ========
+    await runTest("updateStatusEvent updates status, start_date, end_date on existing event", async () => {
+      // event_id 1: emp 1, 2026-01-10 to 2026-01-20, status "На лікарняному"
+      const updated = await updateStatusEvent("1", {
+        status: "У відпустці",
+        start_date: "2026-01-10",
+        end_date: "2026-01-20"
+      });
+      if (updated.event_id !== "1") throw new Error("event_id should remain '1'");
+      if (updated.status !== "У відпустці") throw new Error(`Expected 'У відпустці', got '${updated.status}'`);
+      if (updated.start_date !== "2026-01-10") throw new Error("start_date mismatch");
+      if (updated.end_date !== "2026-01-20") throw new Error("end_date mismatch");
+      if (updated.employee_id !== "1") throw new Error("employee_id should not change");
+    });
+
+    await runTest("updateStatusEvent self-overlap exclusion: updating to same dates does not throw OVERLAP", async () => {
+      // Updating event_id 1 to exactly the same date range should not conflict with itself
+      const updated = await updateStatusEvent("1", {
+        status: "На лікарняному",
+        start_date: "2026-01-10",
+        end_date: "2026-01-20"
+      });
+      if (updated.status !== "На лікарняному") throw new Error("Status should update without OVERLAP error");
+    });
+
+    await runTest("updateStatusEvent throws OVERLAP when updated dates conflict with another event", async () => {
+      // event_id 2: emp 1, 2026-02-01 to 2026-02-10
+      // Trying to update event_id 1 to overlap into event_id 2 should throw OVERLAP
+      let threw = false;
+      try {
+        await updateStatusEvent("1", {
+          status: "На лікарняному",
+          start_date: "2026-01-10",
+          end_date: "2026-02-05"
+        });
+      } catch (err) {
+        if (err.code === 'OVERLAP') {
+          threw = true;
+        } else {
+          throw new Error(`Expected OVERLAP error, got: ${err.message}`);
+        }
+      }
+      if (!threw) throw new Error("Expected OVERLAP error to be thrown");
+    });
+
+    await runTest("updateStatusEvent throws 'Event not found' for non-existent event_id", async () => {
+      let threw = false;
+      try {
+        await updateStatusEvent("9999", {
+          status: "На лікарняному",
+          start_date: "2026-01-01",
+          end_date: "2026-01-31"
+        });
+      } catch (err) {
+        if (err.message === "Event not found") {
+          threw = true;
+        } else {
+          throw new Error(`Expected 'Event not found', got: ${err.message}`);
+        }
+      }
+      if (!threw) throw new Error("Expected 'Event not found' error to be thrown");
+    });
+
+    await runTest("updateStatusEvent can clear end_date (make event open-ended) when no other events conflict", async () => {
+      // Add a new isolated event for employee 777 — the only event, so clearing end_date won't overlap
+      const isoEvt = await addStatusEvent({
+        employee_id: "777",
+        status: "На лікарняному",
+        start_date: "2026-01-01",
+        end_date: "2026-01-31"
+      });
+      const updated = await updateStatusEvent(isoEvt.event_id, {
+        status: "На лікарняному",
+        start_date: "2026-01-01",
+        end_date: ""
+      });
+      if (updated.end_date !== "") throw new Error(`Expected empty end_date, got '${updated.end_date}'`);
+      // Clean up
+      await deleteStatusEvent(isoEvt.event_id);
     });
 
     // ======== deleteStatusEvent ========

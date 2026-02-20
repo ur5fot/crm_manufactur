@@ -1490,6 +1490,63 @@ export async function addStatusEvent(data) {
 }
 
 /**
+ * Update an existing status event's fields (status, start_date, end_date).
+ * Validates no overlap with other events for the same employee, excluding the
+ * event being updated so it doesn't conflict with itself.
+ * @param {string} eventId - The event_id to update
+ * @param {Object} data - { employee_id?, status, start_date, end_date? }
+ * @returns {Promise<Object>} The updated event record
+ * @throws {Error} with message 'Event not found' if event does not exist
+ * @throws {Error} with code 'OVERLAP' if the updated dates conflict with another event
+ */
+export async function updateStatusEvent(eventId, data) {
+  const previousLock = statusEventWriteLock;
+  let releaseLock;
+  statusEventWriteLock = new Promise(resolve => { releaseLock = resolve; });
+
+  try {
+    await previousLock;
+    const events = await loadStatusEvents();
+    const idx = events.findIndex(e => e.event_id === String(eventId));
+    if (idx === -1) {
+      throw new Error("Event not found");
+    }
+
+    const existingEvent = events[idx];
+    const employeeId = existingEvent.employee_id;
+
+    // Validate no overlap with other events (excluding the current event by its ID)
+    const FAR_FUTURE = "9999-12-31";
+    const newStart = data.start_date || "";
+    const newEnd = data.end_date || FAR_FUTURE;
+    const otherEmpEvents = events.filter(
+      e => e.employee_id === employeeId && e.active !== 'no' && e.event_id !== String(eventId)
+    );
+    for (const e of otherEmpEvents) {
+      const existingEnd = e.end_date || FAR_FUTURE;
+      if (newStart <= existingEnd && newEnd >= e.start_date) {
+        const err = new Error("Подія перетинається з існуючою подією");
+        err.code = 'OVERLAP';
+        throw err;
+      }
+    }
+
+    // Apply updates
+    events[idx] = {
+      ...existingEvent,
+      status: data.status,
+      start_date: data.start_date,
+      end_date: data.end_date || ""
+    };
+
+    await writeCsv(STATUS_EVENTS_PATH, STATUS_EVENT_COLUMNS, events);
+    return events[idx];
+  } finally {
+    releaseLock();
+  }
+}
+
+/**
  * Hard-delete a single status event by event_id
  * @param {string} eventId
  * @returns {Promise<boolean>} true if deleted, false if not found
