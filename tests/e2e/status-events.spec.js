@@ -102,11 +102,10 @@ test.describe('Status Events', () => {
       await page.click('.vacation-notification-footer button.secondary');
       await expect(page.locator('.vacation-notification-modal')).not.toBeVisible();
 
-      // Verify employee status was updated in the form
+      // Verify employee status was updated in the form (index 1 = first statusChangeOption = 'Звільнений')
       const statusSelect = page.locator('#employment_status');
       const selectedStatus = await statusSelect.inputValue();
-      expect(selectedStatus).not.toBe('');
-      expect(selectedStatus).not.toBe('Працює');
+      expect(selectedStatus).toBe('Звільнений');
     } finally {
       await deleteEmployee(request, employeeId);
     }
