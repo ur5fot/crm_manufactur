@@ -1571,3 +1571,104 @@ export async function validateNoOverlap(employeeId, start_date, end_date, exclud
   }
   return true;
 }
+
+/**
+ * Sync a single employee's status with their active status event.
+ * - If employee has no status events: returns without changes (preserves legacy status)
+ * - If active event found and employee status differs: updates employee + writes history
+ * - If no active event and employee status != workingStatus: resets to workingStatus + writes history
+ * @param {string} employeeId
+ */
+export async function syncStatusEventsForEmployee(employeeId) {
+  const empIdStr = String(employeeId);
+
+  // 1. Check if employee has any events; if none, leave status alone (legacy data)
+  const events = await getStatusEventsForEmployee(empIdStr);
+  if (events.length === 0) return;
+
+  // 2. Get today's date
+  const today = localDateStr(new Date());
+
+  // 3. Find active event for today (inline using already-loaded events)
+  const activeEvent = events.find(e => {
+    if (e.start_date > today) return false;
+    if (e.end_date && e.end_date < today) return false;
+    return true;
+  }) || null;
+
+  // 4. Load schema to determine the working status (first option = Працює)
+  const schema = await loadFieldsSchema();
+  const statusField = schema.find(f => f.field_name === 'employment_status');
+  const options = statusField?.field_options?.split('|') || [];
+  const workingStatus = options[0] || 'Працює';
+
+  // 5. Atomically read-check-update employee under write lock
+  let oldStatus, oldStartDate, oldEndDate, newStatus, newStartDate, newEndDate;
+  let changed = false;
+
+  await withEmployeeLock(async (employees) => {
+    const idx = employees.findIndex(e => e.employee_id === empIdStr && e.active !== 'no');
+    if (idx === -1) return employees; // Employee not found or soft-deleted
+
+    const emp = employees[idx];
+
+    if (activeEvent) {
+      if (emp.employment_status !== activeEvent.status) {
+        oldStatus = emp.employment_status || '';
+        oldStartDate = emp.status_start_date || '';
+        oldEndDate = emp.status_end_date || '';
+        newStatus = activeEvent.status;
+        newStartDate = activeEvent.start_date;
+        newEndDate = activeEvent.end_date || '';
+        employees[idx].employment_status = newStatus;
+        employees[idx].status_start_date = newStartDate;
+        employees[idx].status_end_date = newEndDate;
+        changed = true;
+      }
+    } else {
+      // No active event — reset to working status if currently different
+      if (emp.employment_status !== workingStatus) {
+        oldStatus = emp.employment_status || '';
+        oldStartDate = emp.status_start_date || '';
+        oldEndDate = emp.status_end_date || '';
+        newStatus = workingStatus;
+        newStartDate = '';
+        newEndDate = '';
+        employees[idx].employment_status = newStatus;
+        employees[idx].status_start_date = newStartDate;
+        employees[idx].status_end_date = newEndDate;
+        changed = true;
+      }
+    }
+
+    return employees;
+  });
+
+  if (!changed) return;
+
+  // 6. Write status history entry for the change
+  await addStatusHistoryEntry({
+    employee_id: empIdStr,
+    old_status: oldStatus,
+    new_status: newStatus,
+    old_start_date: oldStartDate,
+    old_end_date: oldEndDate,
+    new_start_date: newStartDate,
+    new_end_date: newEndDate,
+    changed_by: 'system'
+  });
+}
+
+/**
+ * Sync all active employees with their status events.
+ * Called at dashboard load to auto-activate/expire status events.
+ */
+export async function syncAllStatusEvents() {
+  const employees = await loadEmployees();
+  const activeEmployees = employees.filter(e => e.active !== 'no');
+
+  // Sync sequentially to avoid write lock contention
+  for (const emp of activeEmployees) {
+    await syncStatusEventsForEmployee(emp.employee_id);
+  }
+}

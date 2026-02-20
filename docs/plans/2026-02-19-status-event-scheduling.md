@@ -56,16 +56,16 @@ Replace the current simple status change (direct field update) with an **event-b
 
 ### Task 2: Backend — auto-sync function
 
-- [ ] Implement `syncStatusEventsForEmployee(employeeId)` in `server/src/store.js`:
+- [x] Implement `syncStatusEventsForEmployee(employeeId)` in `server/src/store.js`:
   1. Load employee; if not found or no events in status_events for this employee → return (do nothing to preserve existing status for old data)
   2. Get today's date string
   3. Find active event via `getActiveEventForEmployee(employeeId, today)`
   4. If active event found and employee status differs → update employee `employment_status`, `status_start_date`, `status_end_date` + write status_history entry (changed_by='system')
   5. If no active event found AND employee has events in table AND employee status != workingStatus → reset to "Працює", clear dates + write status_history entry (changed_by='system')
   6. (The "has events in table" guard prevents resetting old employees who predate the event system)
-- [ ] Export `syncStatusEventsForEmployee` and `syncAllStatusEvents` (calls sync for all active employees — used at dashboard load)
-- [ ] Write unit tests for sync logic in `server/test/status-events-store.test.js`: test auto-activate future event, test auto-expire with reset, test no-op when no events exist for employee
-- [ ] Run unit tests — must pass
+- [x] Export `syncStatusEventsForEmployee` and `syncAllStatusEvents` (calls sync for all active employees — used at dashboard load)
+- [x] Write unit tests for sync logic in `server/test/status-events-store.test.js`: test auto-activate future event, test auto-expire with reset, test no-op when no events exist for employee
+- [x] Run unit tests — must pass
 
 ### Task 3: Backend — status event API routes
 
