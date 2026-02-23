@@ -136,11 +136,11 @@
 
 ### Task 5: [Final] Update documentation
 
-- [ ] Update CLAUDE.md: add `employees_remote.csv`, `status_history_remote.csv`, `reprimands_remote.csv`, `status_events_remote.csv` descriptions to Data Files Overview section
-- [ ] Update CLAUDE.md: add `remote/` directory description to File Organization section
-- [ ] Update CLAUDE.md: update "DELETE employee" description in API Structure to mention archive instead of hard delete
-- [ ] Update CLAUDE.md: add `REMOTE_DIR` to store.js exports section and archive functions to store functions
-- [ ] Update CLAUDE.md: update Concurrency Control section to mention archive functions use existing locks
+- [x] Update CLAUDE.md: add `employees_remote.csv`, `status_history_remote.csv`, `reprimands_remote.csv`, `status_events_remote.csv` descriptions to Data Files Overview section
+- [x] Update CLAUDE.md: add `remote/` directory description to File Organization section
+- [x] Update CLAUDE.md: update "DELETE employee" description in API Structure to mention archive instead of hard delete
+- [x] Update CLAUDE.md: add `REMOTE_DIR` to store.js exports section and archive functions to store functions
+- [x] Update CLAUDE.md: update Concurrency Control section to mention archive functions use existing locks
 
 ## Technical Details
 

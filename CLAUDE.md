@@ -163,12 +163,19 @@ crm_manufactur/
 │   ├── generated_documents.csv # Generated document records (gitignored, auto-created)
 │   ├── logs.csv                # Audit log entries
 │   ├── config.csv              # Application configuration (gitignored, from template)
-│   └── fields_schema.csv       # Dynamic field schema (gitignored, from template)
+│   ├── fields_schema.csv       # Dynamic field schema (gitignored, from template)
+│   ├── employees_remote.csv    # Archived employee records (gitignored)
+│   ├── status_history_remote.csv # Archived status history (gitignored)
+│   ├── reprimands_remote.csv   # Archived reprimands (gitignored)
+│   └── status_events_remote.csv # Archived status events (gitignored)
 │
 ├── files/                      # Uploaded and generated files
 │   ├── templates/              # Template DOCX files (template_{id}_{timestamp}.docx)
 │   ├── documents/              # Generated DOCX files (TemplateName_LastName_empXXX_{timestamp}.docx)
 │   └── employee_*/             # Employee-specific document folders
+│
+├── remote/                      # Archived employee file directories
+│   └── employee_*/             # Moved from files/ on employee delete
 │
 ├── docs/                       # Documentation and planning
 │   ├── plans/                  # Active development plans
@@ -219,7 +226,7 @@ To prevent race conditions when multiple requests modify the same CSV file, the 
 - **statusEventWriteLock**: Serializes all writes to status_events.csv
 - **reprimandWriteLock**: Serializes all writes to reprimands.csv
 
-These locks ensure that only one write operation occurs at a time per file, preventing data corruption from concurrent modifications.
+These locks ensure that only one write operation occurs at a time per file, preventing data corruption from concurrent modifications. Archive functions (`archiveEmployee`, `archiveStatusHistoryForEmployee`, `archiveReprimandsForEmployee`, `archiveStatusEventsForEmployee`) reuse the same locks as their source files — e.g., `archiveEmployee` uses `employeeWriteLock` — so archive writes serialize with regular writes.
 
 ### Data Files Overview
 
@@ -281,7 +288,7 @@ These locks ensure that only one write operation occurs at a time per file, prev
 - Active events auto-activate employee status on sync; expired events auto-reset to "Працює"
 - Overlap prevention: two events cannot share overlapping date ranges for same employee
 - Synced on `GET /api/employees/:id` (per-employee) and `GET /api/dashboard/events` (all employees)
-- Cleaned up when employee is deleted (`removeStatusEventsForEmployee`)
+- Archived to `status_events_remote.csv` when employee is deleted
 - Gitignored — auto-created with headers on first read
 
 **reprimands.csv**
@@ -290,8 +297,32 @@ These locks ensure that only one write operation occurs at a time per file, prev
 - Gitignored — auto-created with headers by `ensureCsvFile()` on first read
 - Hard delete (records fully removed, no soft delete)
 - Sorted by `record_date` descending when queried per employee
-- Cleaned up when employee is deleted (`removeReprimandsForEmployee`)
+- Archived to `reprimands_remote.csv` when employee is deleted
 - Record types: Догана, Сувора догана, Зауваження, Попередження, Подяка, Грамота, Премія, Нагорода
+
+**employees_remote.csv**
+- Archive of deleted employee records
+- Same dynamic columns as employees.csv (from fields_schema.csv)
+- Records appended when employees are deleted via DELETE endpoint
+- Gitignored — auto-created with headers by `ensureCsvFile()` on first write
+
+**status_history_remote.csv**
+- Archive of status history entries for deleted employees
+- Same columns as status_history.csv
+- Entries moved from status_history.csv on employee delete
+- Gitignored — auto-created with headers by `ensureCsvFile()` on first write
+
+**reprimands_remote.csv**
+- Archive of reprimand/commendation records for deleted employees
+- Same columns as reprimands.csv
+- Entries moved from reprimands.csv on employee delete
+- Gitignored — auto-created with headers by `ensureCsvFile()` on first write
+
+**status_events_remote.csv**
+- Archive of status event records for deleted employees
+- Same columns as status_events.csv
+- Entries moved from status_events.csv on employee delete
+- Gitignored — auto-created with headers by `ensureCsvFile()` on first write
 
 ---
 
@@ -321,6 +352,15 @@ Per-employee folders for uploaded documents:
 - Used for storing employee-specific files (contracts, certificates, etc.)
 - Created on-demand when first document is uploaded for employee
 - Employee photo stored as `photo.{ext}` (e.g., `photo.jpg`, `photo.png`) — old photo file deleted on re-upload
+
+### Archived Employee Files (remote/employee_*/)
+
+When an employee is deleted, their file directory is moved from `files/` to `remote/`:
+- Source: `files/employee_{employee_id}/`
+- Destination: `remote/employee_{employee_id}/`
+- Uses `fs.rename()` for atomic move on same filesystem
+- Graceful handling if source directory doesn't exist (ENOENT)
+- Preserves all employee files (photos, uploaded documents) for archival
 
 ---
 
@@ -378,6 +418,12 @@ The application uses soft deletes instead of hard deletes for all entities (empl
 - Easy recovery from accidental deletions
 - Historical data preserved for document generation snapshots
 - Maintains referential integrity (no broken foreign keys)
+
+**Employee Delete with Remote Archive**:
+- Employee DELETE additionally archives all related data to `*_remote.csv` files
+- Related records (status history, reprimands, status events) moved to remote CSV files
+- Employee file directory moved from `files/` to `remote/`
+- Preserves complete employee data for compliance while removing from active system
 
 **Considerations**:
 - File space grows over time (old records never truly deleted)
@@ -665,6 +711,14 @@ export async function saveEmployees(rows) {
   }
 }
 ```
+
+**Archive Pattern** (Move to Remote CSV):
+Archive functions read the source CSV, split records by employee ID, append matching records to the remote CSV, and write remaining records back to the source. They reuse existing write locks.
+- `archiveEmployee(employee)` — appends employee to `employees_remote.csv` using `employeeWriteLock`
+- `archiveStatusHistoryForEmployee(id)` — moves matching entries to `status_history_remote.csv`
+- `archiveReprimandsForEmployee(id)` — moves matching entries to `reprimands_remote.csv`
+- `archiveStatusEventsForEmployee(id)` — moves matching entries to `status_events_remote.csv`
+- `REMOTE_DIR` — exported constant pointing to `remote/` directory for archived employee files
 
 **Key Points**:
 - All reads use readCsv() from csv.js (handles BOM, delimiter, parsing)
@@ -2435,9 +2489,12 @@ All API endpoints are served under the `/api` prefix:
 - 404 if not found
 
 **DELETE /api/employees/:id**
-- Soft delete employee (set active='no')
+- Soft delete employee (set active='no') and archive all related data
+- Archives employee record to `data/employees_remote.csv`
+- Archives status history, reprimands, and status events to respective `*_remote.csv` files
+- Moves employee file directory from `files/employee_{id}/` to `remote/employee_{id}/`
 - Response: 204 No Content
-- Creates audit log entry
+- Creates audit log entry with "перенесено в архів" message
 - 404 if not found
 
 ### Employee File Management Endpoints
@@ -3695,7 +3752,7 @@ The application follows consistent naming patterns across different layers and f
 
 **Constants** (UPPER_SNAKE_CASE):
 - Constants and configuration values use UPPER_SNAKE_CASE
-- Examples: `DATA_DIR`, `FILES_DIR`, `EMPLOYEES_PATH`, `TEMPLATE_COLUMNS`
+- Examples: `DATA_DIR`, `FILES_DIR`, `EMPLOYEES_PATH`, `REMOTE_DIR`, `TEMPLATE_COLUMNS`
 - Defined in schema.js and store.js
 
 ### File Naming Patterns
