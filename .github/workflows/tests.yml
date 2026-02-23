@@ -116,6 +116,7 @@ jobs:
           node test/photo-api.test.js
           node test/status-history.test.js
           node test/reprimands-api.test.js
+          node test/remote-archive-api.test.js
 
       - name: Run Playwright tests
         run: npm run test:e2e

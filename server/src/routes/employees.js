@@ -2,6 +2,7 @@ import path from "path";
 import fsPromises from "fs/promises";
 import {
   FILES_DIR,
+  REMOTE_DIR,
   loadEmployees,
   withEmployeeLock,
   addLog,
@@ -24,7 +25,11 @@ import {
   deleteStatusEvent,
   removeStatusEventsForEmployee,
   syncStatusEventsForEmployee,
-  loadFieldsSchema
+  loadFieldsSchema,
+  archiveEmployee,
+  archiveStatusHistoryForEmployee,
+  archiveReprimandsForEmployee,
+  archiveStatusEventsForEmployee
 } from "../store.js";
 import { mergeRow } from "../csv.js";
 import {
@@ -684,7 +689,7 @@ export function registerEmployeeRoutes(app) {
     }
   });
 
-  // DELETE employee (hard delete + physical file cleanup)
+  // DELETE employee (archive to remote + physical file move)
   app.delete("/api/employees/:id", async (req, res) => {
     try {
       // Use withEmployeeLock for atomic read-modify-write to prevent lost updates
@@ -700,32 +705,43 @@ export function registerEmployeeRoutes(app) {
         return nextEmployees;
       });
 
+      // Archive employee record to employees_remote.csv
+      if (deletedEmployee) {
+        await archiveEmployee(deletedEmployee);
+      }
+
+      // Move employee files directory to remote/employee_{id}/
+      const employeeDir = path.join(FILES_DIR, `employee_${req.params.id}`);
+      if (validatePath(employeeDir, FILES_DIR)) {
+        const remoteEmployeeDir = path.join(REMOTE_DIR, `employee_${req.params.id}`);
+        await fsPromises.mkdir(REMOTE_DIR, { recursive: true });
+        await fsPromises.rename(employeeDir, remoteEmployeeDir).catch((err) => {
+          if (err.code !== 'ENOENT') {
+            console.error('Failed to move employee files to remote:', err);
+          }
+        });
+      }
+
+      // Archive status history entries for deleted employee
+      await archiveStatusHistoryForEmployee(req.params.id).catch(err => {
+        console.error('Failed to archive status history:', err);
+      });
+
+      // Archive reprimand records for deleted employee
+      await archiveReprimandsForEmployee(req.params.id).catch(err => {
+        console.error('Failed to archive reprimands:', err);
+      });
+
+      // Archive status events for deleted employee
+      await archiveStatusEventsForEmployee(req.params.id).catch(err => {
+        console.error('Failed to archive status events:', err);
+      });
+
       // Логирование удаления
       if (deletedEmployee) {
         const employeeName = buildFullName(deletedEmployee);
-        await addLog("DELETE", req.params.id, employeeName, "", "", "", "Співробітник видалено");
+        await addLog("DELETE", req.params.id, employeeName, "", "", "", "Співробітник видалено (перенесено в архів)");
       }
-
-      // Удаляем директорию с файлами сотрудника с защитой от path traversal
-      const employeeDir = path.join(FILES_DIR, `employee_${req.params.id}`);
-      if (validatePath(employeeDir, FILES_DIR)) {
-        await fsPromises.rm(employeeDir, { recursive: true, force: true }).catch(() => {});
-      }
-
-      // Clean up status history entries for deleted employee
-      await removeStatusHistoryForEmployee(req.params.id).catch(err => {
-        console.error('Failed to clean up status history:', err);
-      });
-
-      // Clean up reprimand records for deleted employee
-      await removeReprimandsForEmployee(req.params.id).catch(err => {
-        console.error('Failed to clean up reprimands:', err);
-      });
-
-      // Clean up status events for deleted employee
-      await removeStatusEventsForEmployee(req.params.id).catch(err => {
-        console.error('Failed to clean up status events:', err);
-      });
 
       res.status(204).end();
     } catch (err) {

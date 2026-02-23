@@ -103,23 +103,23 @@
 
 ### Task 3: Update DELETE endpoint to archive instead of hard-delete
 
-- [ ] Add imports to `server/src/routes/employees.js`: `REMOTE_DIR`, `archiveEmployee`, `archiveStatusHistoryForEmployee`, `archiveReprimandsForEmployee`, `archiveStatusEventsForEmployee` from `../store.js`
-- [ ] Replace file deletion logic in DELETE endpoint (lines ~709-713) with move logic: `fsPromises.rename(employeeDir, remoteEmployeeDir)` with `REMOTE_DIR` target, creating remote dir first with `mkdir -p`, handling ENOENT gracefully
-- [ ] Replace `removeStatusHistoryForEmployee` call with `archiveStatusHistoryForEmployee`
-- [ ] Replace `removeReprimandsForEmployee` call with `archiveReprimandsForEmployee`
-- [ ] Replace `removeStatusEventsForEmployee` call with `archiveStatusEventsForEmployee`
-- [ ] Add `await archiveEmployee(deletedEmployee)` after `withEmployeeLock` and before log entry. Update log message to "Співробітник видалено (перенесено в архів)"
-- [ ] Create `server/test/remote-archive-api.test.js` — integration test (requires running server):
+- [x] Add imports to `server/src/routes/employees.js`: `REMOTE_DIR`, `archiveEmployee`, `archiveStatusHistoryForEmployee`, `archiveReprimandsForEmployee`, `archiveStatusEventsForEmployee` from `../store.js`
+- [x] Replace file deletion logic in DELETE endpoint (lines ~709-713) with move logic: `fsPromises.rename(employeeDir, remoteEmployeeDir)` with `REMOTE_DIR` target, creating remote dir first with `mkdir -p`, handling ENOENT gracefully
+- [x] Replace `removeStatusHistoryForEmployee` call with `archiveStatusHistoryForEmployee`
+- [x] Replace `removeReprimandsForEmployee` call with `archiveReprimandsForEmployee`
+- [x] Replace `removeStatusEventsForEmployee` call with `archiveStatusEventsForEmployee`
+- [x] Add `await archiveEmployee(deletedEmployee)` after `withEmployeeLock` and before log entry. Update log message to "Співробітник видалено (перенесено в архів)"
+- [x] Create `server/test/remote-archive-api.test.js` — integration test (requires running server):
   - test DELETE archives employee record to employees_remote.csv
   - test DELETE archives related data (status_events, reprimands) to *_remote.csv
   - test DELETE moves employee files directory to remote/employee_{id}/
   - test DELETE returns 204 (unchanged behavior)
   - test deleted employee no longer appears in GET /api/employees
   - test 404 for non-existent employee (unchanged behavior)
-- [ ] Add `node test/remote-archive-api.test.js` to `server/package.json` `test:integration` script
-- [ ] Add `node test/remote-archive-api.test.js` to `.github/workflows/tests.yml` integration tests step
-- [ ] Run `cd server && npm test` — unit tests pass
-- [ ] Run `cd server && npm run test:integration` — integration tests pass (requires running server)
+- [x] Add `node test/remote-archive-api.test.js` to `server/package.json` `test:integration` script
+- [x] Add `node test/remote-archive-api.test.js` to `.github/workflows/tests.yml` integration tests step
+- [x] Run `cd server && npm test` — unit tests pass
+- [x] Run `cd server && npm run test:integration` — integration tests pass (requires running server)
 
 ### Task 4: Verify acceptance criteria
 
