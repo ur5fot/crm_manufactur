@@ -34,3 +34,4 @@ ralphex*.log
 # Playwright test artifacts
 playwright-report/
 test-results/
+data/field_mapping.csv
