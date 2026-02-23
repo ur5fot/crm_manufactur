@@ -345,16 +345,16 @@ Add a UI page in SystemSettings for editing fields_schema — renaming fields, c
 
 ### Task 11: Verify acceptance criteria
 
-- [ ] Verify: renaming a field_name in fields_schema.csv auto-renames CSV columns on server restart
-- [ ] Verify: renaming a field_name via UI triggers migration and updates all CSVs
-- [ ] Verify: all business logic uses role-based lookups (no hardcoded field_name in store/routes/declension)
-- [ ] Verify: DOCX generation works with both {f_field_name} and {field_name} placeholders
-- [ ] Verify: existing production data survives migration without data loss
-- [ ] Verify: frontend displays correct data after field_name rename
-- [ ] Verify: placeholder reference page shows field_id format as primary
-- [ ] Verify: UI preview correctly shows rename impact (employees, templates, logs affected)
-- [ ] Run full test suite (unit + integration + E2E)
-- [ ] Run linter — all issues must be fixed
+- [x] Verify: renaming a field_name in fields_schema.csv auto-renames CSV columns on server restart
+- [x] Verify: renaming a field_name via UI triggers migration and updates all CSVs
+- [x] Verify: all business logic uses role-based lookups (no hardcoded field_name in store/routes/declension)
+- [x] Verify: DOCX generation works with both {f_field_name} and {field_name} placeholders
+- [x] Verify: existing production data survives migration without data loss
+- [x] Verify: frontend displays correct data after field_name rename
+- [x] Verify: placeholder reference page shows field_id format as primary
+- [x] Verify: UI preview correctly shows rename impact (employees, templates, logs affected)
+- [x] Run full test suite (unit + integration + E2E)
+- [x] Run linter — all issues must be fixed (no linter configured in project)
 
 ### Task 12: [Final] Update documentation
 
