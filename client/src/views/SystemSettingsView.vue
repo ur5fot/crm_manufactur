@@ -19,12 +19,19 @@
         >
           Логи
         </button>
+        <button
+          :class="['subtab-btn', { active: activeTab === 'field-schema' }]"
+          @click="activeTab = 'field-schema'"
+        >
+          Схема полів
+        </button>
       </div>
 
       <!-- Tab content -->
       <div class="subtab-content">
         <ImportView v-if="activeTab === 'import'" />
         <LogsView v-if="activeTab === 'logs'" />
+        <FieldSchemaEditorView v-if="activeTab === 'field-schema'" />
       </div>
     </div>
   </div>
@@ -34,6 +41,7 @@
 import { ref } from "vue";
 import ImportView from "./ImportView.vue";
 import LogsView from "./LogsView.vue";
+import FieldSchemaEditorView from "./FieldSchemaEditorView.vue";
 
 const activeTab = ref("import");
 </script>

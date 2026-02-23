@@ -254,5 +254,21 @@ export const api = {
     return request(`/employees/${employeeId}/reprimands/${recordId}`, {
       method: "DELETE"
     });
+  },
+
+  // Field Schema Editor API
+  getFieldsSchemaDetails() {
+    return request("/fields-schema/details");
+  },
+  getFieldsSchemaRenamePreview(fieldId, newFieldName) {
+    const params = new URLSearchParams({ field_id: fieldId, new_field_name: newFieldName });
+    return request(`/fields-schema/rename-preview?${params}`);
+  },
+  updateFieldsSchema(fields) {
+    return request("/fields-schema", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fields })
+    });
   }
 };

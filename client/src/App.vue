@@ -14,6 +14,7 @@ import TemplatesView from "./views/TemplatesView.vue";
 import ReportsView from "./views/ReportsView.vue";
 import DocumentsView from "./views/DocumentsView.vue";
 import SystemSettingsView from "./views/SystemSettingsView.vue";
+import FieldSchemaEditorView from "./views/FieldSchemaEditorView.vue";
 
 const router = useRouter();
 const route = useRoute();
@@ -318,6 +319,9 @@ function handleClickOutside(event) {
 
       <!-- System Settings View -->
       <SystemSettingsView v-else-if="currentView === 'system-settings'" />
+
+      <!-- Field Schema Editor (direct access) -->
+      <FieldSchemaEditorView v-else-if="currentView === 'field-schema'" />
 
     </div>
   </div>

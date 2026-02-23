@@ -299,27 +299,27 @@ Replace all hardcoded `field_name === 'employment_status'` / `emp.birth_date` / 
 
 Add a UI page in SystemSettings for editing fields_schema — renaming fields, changing labels, reordering, with preview of impact and confirmation.
 
-- [ ] Create new API endpoint `GET /api/fields-schema/details`:
+- [x] Create new API endpoint `GET /api/fields-schema/details`:
   - Returns full schema with field_id, role, field_name, field_label, field_type, field_options, field_group, field_order
   - Includes impact stats per field: count of employees with non-empty values, count of templates using this placeholder, count of log entries referencing this field
-- [ ] Create new API endpoint `PUT /api/fields-schema`:
+- [x] Create new API endpoint `PUT /api/fields-schema`:
   - Accepts updated schema array (field_id is immutable, field_name/field_label/field_order/field_options can change)
   - Validates: no duplicate field_name, no empty field_name, no reserved characters in field_name
   - Validates: role fields cannot be deleted (only renamed)
   - Triggers auto-rename migration immediately (not on next restart)
   - Returns: migration summary (list of renames performed, rows affected per CSV file)
   - Creates audit log entry
-- [ ] Create new API endpoint `GET /api/fields-schema/rename-preview`:
+- [x] Create new API endpoint `GET /api/fields-schema/rename-preview`:
   - Query param: `field_id` and `new_field_name`
   - Returns impact preview: number of employees.csv rows, templates affected, log entries, DOCX placeholder warnings
   - Does NOT apply changes — read-only preview
-- [ ] Create `client/src/composables/useFieldSchemaEditor.js`:
+- [x] Create `client/src/composables/useFieldSchemaEditor.js`:
   - Load full schema with impact stats
   - Track edits (dirty state per field)
   - Rename preview request before apply
   - Apply changes with confirmation modal
   - Reset/cancel functionality
-- [ ] Create `client/src/views/FieldSchemaEditorView.vue`:
+- [x] Create `client/src/views/FieldSchemaEditorView.vue`:
   - Table showing all fields: field_id (read-only), field_name (editable), field_label (editable), field_type (read-only), field_group (editable), field_order (drag or number)
   - Color-coded role badge for fields with roles (non-removable)
   - Inline editing for field_name and field_label
@@ -330,18 +330,18 @@ Add a UI page in SystemSettings for editing fields_schema — renaming fields, c
   - "Apply changes" button → confirmation dialog → calls PUT endpoint
   - "Cancel" button → reverts all edits
   - Add new field button (generates field_id = `f_<field_name>`, no role)
-- [ ] Add FieldSchemaEditorView as a tab in `SystemSettingsView.vue`:
+- [x] Add FieldSchemaEditorView as a tab in `SystemSettingsView.vue`:
   - New tab: "Схема полів" (Field Schema)
   - Tab order: Імпорт | Логи | Схема полів
-- [ ] Add route for direct access: `/field-schema` → FieldSchemaEditorView
-- [ ] Write E2E tests in `tests/e2e/field-schema-editor.spec.js`:
+- [x] Add route for direct access: `/field-schema` → FieldSchemaEditorView
+- [x] Write E2E tests in `tests/e2e/field-schema-editor.spec.js`:
   - Test: load schema editor, verify fields displayed
   - Test: rename field_label, preview, apply, verify label changed
   - Test: rename field_name, preview shows impact, apply, verify CSV columns renamed
   - Test: cancel reverts changes
   - Test: cannot delete role fields
   - Test: cannot set duplicate field_name
-- [ ] Run `npm run test:e2e` — must pass before next task
+- [x] Run `npm run test:e2e` — must pass before next task
 
 ### Task 11: Verify acceptance criteria
 

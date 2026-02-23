@@ -18,6 +18,7 @@ import { registerTemplateRoutes } from "./routes/templates.js";
 import { registerDocumentRoutes } from "./routes/documents.js";
 import { registerLogRoutes } from "./routes/logs.js";
 import { registerMiscRoutes } from "./routes/misc.js";
+import { registerFieldSchemaRoutes } from "./routes/field-schema.js";
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -76,6 +77,9 @@ registerLogRoutes(app);
 
 // Register miscellaneous routes (schema, search, placeholder preview, open folder)
 registerMiscRoutes(app);
+
+// Register field schema management routes
+registerFieldSchemaRoutes(app);
 
 app.listen(port, () => {
   console.log(`CRM server running on http://localhost:${port}`);
