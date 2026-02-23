@@ -130,25 +130,25 @@ Fields without a role (e.g., department, education, salary_amount) are regular d
 
 Replace all hardcoded `field_name === 'employment_status'` / `emp.birth_date` / `emp.last_name` patterns with role-based lookups.
 
-- [ ] Add schema loading at module level or pass schema to functions that need role lookups
-- [ ] Replace `employment_status` hardcoded lookups (~4 places):
+- [x] Add schema loading at module level or pass schema to functions that need role lookups
+- [x] Replace `employment_status` hardcoded lookups (~4 places):
   - `getDashboardStats()` line ~343: `schema.find(f => f.field_name === 'employment_status')` → `getFieldByRole(schema, ROLES.STATUS)`
   - `getDashboardEvents()` line ~530: same pattern
   - `syncStatusEventsForEmployee()` line ~1669: same pattern
   - All `emp.employment_status` → `emp[statusFieldName]` using resolved field name
-- [ ] Replace `birth_date` hardcoded lookups (~6 places):
+- [x] Replace `birth_date` hardcoded lookups (~6 places):
   - `getRetirementEvents()` lines ~790-842: `emp.birth_date` → `emp[birthDateFieldName]`
   - `getBirthdayEvents()` lines ~885-938: same pattern
-- [ ] Replace `last_name`, `first_name`, `middle_name` hardcoded lookups (~8 places):
+- [x] Replace `last_name`, `first_name`, `middle_name` hardcoded lookups (~8 places):
   - All name-building patterns `[emp.last_name, emp.first_name, emp.middle_name]` → use `buildNameFields(schema)` utility
   - Create helper: `buildEmployeeName(emp, schema)` in field-utils.js
-- [ ] Replace `status_start_date`, `status_end_date` hardcoded lookups (~10 places):
+- [x] Replace `status_start_date`, `status_end_date` hardcoded lookups (~10 places):
   - `syncStatusEventsForEmployee()`: use `buildStatusFields(schema)` to get field names
   - `getDashboardEvents()`: same
   - All `emp.status_start_date` / `emp.status_end_date` → `emp[startDateFieldName]`
-- [ ] Replace `active` field checks — keep as-is (system field, not user-configurable)
-- [ ] Write/update unit tests for modified store functions
-- [ ] Run `cd server && npm test` — must pass before next task
+- [x] Replace `active` field checks — keep as-is (system field, not user-configurable)
+- [x] Write/update unit tests for modified store functions
+- [x] Run `cd server && npm test` — must pass before next task
 
 ### Task 4: Replace hardcoded field_name lookups in routes and declension
 
