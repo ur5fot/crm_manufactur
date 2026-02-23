@@ -123,16 +123,16 @@
 
 ### Task 4: Verify acceptance criteria
 
-- [ ] Verify employee record moves to `data/employees_remote.csv` on delete
-- [ ] Verify status_history entries move to `data/status_history_remote.csv`
-- [ ] Verify reprimand records move to `data/reprimands_remote.csv`
-- [ ] Verify status_events move to `data/status_events_remote.csv`
-- [ ] Verify employee files directory moves to `remote/employee_{id}/`
-- [ ] Verify original data is removed from source files after archive
-- [ ] Run full unit test suite: `cd server && npm test`
-- [ ] Run full integration test suite: `cd server && npm run test:integration`
-- [ ] Run E2E tests: `npx playwright test tests/e2e/employee-crud.spec.js`
-- [ ] All tests pass
+- [x] Verify employee record moves to `data/employees_remote.csv` on delete
+- [x] Verify status_history entries move to `data/status_history_remote.csv`
+- [x] Verify reprimand records move to `data/reprimands_remote.csv`
+- [x] Verify status_events move to `data/status_events_remote.csv`
+- [x] Verify employee files directory moves to `remote/employee_{id}/`
+- [x] Verify original data is removed from source files after archive
+- [x] Run full unit test suite: `cd server && npm test`
+- [x] Run full integration test suite: `cd server && npm run test:integration`
+- [x] Run E2E tests: `npx playwright test tests/e2e/employee-crud.spec.js`
+- [x] All tests pass
 
 ### Task 5: [Final] Update documentation
 

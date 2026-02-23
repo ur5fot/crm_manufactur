@@ -78,6 +78,8 @@ async function runAllTests() {
     process.exit(1);
   }
 
+  let putEmpId = null;
+
   try {
     // GET events for new employee — should return empty array
     await runTest("GET /api/employees/:id/status-events returns empty list for new employee", async () => {
@@ -367,7 +369,6 @@ async function runAllTests() {
 
     // Setup: create a fresh event for PUT tests
     let putEventId = null;
-    let putEmpId = null;
 
     await runTest("PUT setup: create employee and event for update tests", async () => {
       const empRes = await fetch(`${BASE_URL}/employees`, {
