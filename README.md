@@ -112,7 +112,7 @@ An icon button in the employee card opens a popup for managing employee discipli
 - Add new records via inline form within the popup
 - Edit existing records (all fields editable)
 - Delete individual records with confirmation
-- Records automatically cleaned up when employee is deleted
+- Records automatically archived when employee is deleted
 
 ## Dashboard Notifications
 

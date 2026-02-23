@@ -151,18 +151,16 @@ async function runAllTests() {
     await runTest("DELETE archives reprimand records to reprimands_remote.csv", async () => {
       const remoteRepAfter = await readRemoteCsv(REPRIMANDS_REMOTE_PATH, REPRIMAND_COLUMNS);
       const archived = remoteRepAfter.filter(r => r.employee_id === empId);
-      if (archived.length < 1) throw new Error(`Expected at least 1 archived reprimand, got ${archived.length}`);
-      const latestArchived = archived[archived.length - 1];
-      if (latestArchived.record_type !== 'Догана') throw new Error(`Expected record_type 'Догана', got '${latestArchived.record_type}'`);
+      if (archived.length !== 1) throw new Error(`Expected exactly 1 archived reprimand, got ${archived.length}`);
+      if (archived[0].record_type !== 'Догана') throw new Error(`Expected record_type 'Догана', got '${archived[0].record_type}'`);
     });
 
     // Test: status events archived to status_events_remote.csv
     await runTest("DELETE archives status events to status_events_remote.csv", async () => {
       const remoteEvtAfter = await readRemoteCsv(STATUS_EVENTS_REMOTE_PATH, STATUS_EVENT_COLUMNS);
       const archived = remoteEvtAfter.filter(e => e.employee_id === empId);
-      if (archived.length < 1) throw new Error(`Expected at least 1 archived status event, got ${archived.length}`);
-      const latestArchived = archived[archived.length - 1];
-      if (latestArchived.status !== 'Відпустка') throw new Error(`Expected status 'Відпустка', got '${latestArchived.status}'`);
+      if (archived.length !== 1) throw new Error(`Expected exactly 1 archived status event, got ${archived.length}`);
+      if (archived[0].status !== 'Відпустка') throw new Error(`Expected status 'Відпустка', got '${archived[0].status}'`);
     });
 
     // Test: employee files directory moved to remote/employee_{id}/

@@ -12,18 +12,15 @@ import {
   getDocumentFieldsSync,
   addStatusHistoryEntry,
   loadStatusHistory,
-  removeStatusHistoryForEmployee,
   loadReprimands,
   addReprimand,
   updateReprimand,
   deleteReprimand,
-  removeReprimandsForEmployee,
   getStatusEventsForEmployee,
   loadStatusEvents,
   addStatusEvent,
   updateStatusEvent,
   deleteStatusEvent,
-  removeStatusEventsForEmployee,
   syncStatusEventsForEmployee,
   loadFieldsSchema,
   archiveEmployee,
@@ -707,7 +704,9 @@ export function registerEmployeeRoutes(app) {
 
       // Archive employee record to employees_remote.csv
       if (deletedEmployee) {
-        await archiveEmployee(deletedEmployee);
+        await archiveEmployee({ ...deletedEmployee, active: 'no' }).catch(err => {
+          console.error('Failed to archive employee record:', err);
+        });
       }
 
       // Move employee files directory to remote/employee_{id}/
@@ -715,6 +714,7 @@ export function registerEmployeeRoutes(app) {
       if (validatePath(employeeDir, FILES_DIR)) {
         const remoteEmployeeDir = path.join(REMOTE_DIR, `employee_${req.params.id}`);
         await fsPromises.mkdir(REMOTE_DIR, { recursive: true });
+        await fsPromises.rm(remoteEmployeeDir, { recursive: true, force: true }).catch(() => {});
         await fsPromises.rename(employeeDir, remoteEmployeeDir).catch((err) => {
           if (err.code !== 'ENOENT') {
             console.error('Failed to move employee files to remote:', err);
