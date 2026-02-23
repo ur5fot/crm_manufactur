@@ -152,30 +152,30 @@ Replace all hardcoded `field_name === 'employment_status'` / `emp.birth_date` / 
 
 ### Task 4: Replace hardcoded field_name lookups in routes and declension
 
-- [ ] `server/src/routes/employees.js`:
+- [x] `server/src/routes/employees.js`:
   - `validateStatusEventInput()` line ~81: replace `field_name === 'employment_status'` with role-based lookup
   - Status history recording: replace hardcoded `employment_status`, `status_start_date`, `status_end_date` references
   - Employee name building for logs: use `buildEmployeeName()` utility
-- [ ] `server/src/routes/misc.js`:
+- [x] `server/src/routes/misc.js`:
   - Global search line ~87: replace `schema.filter(f => f.field_type !== 'file')` → keep (this is type-based, not name-based, already correct)
   - Placeholder reference: replace hardcoded `full_name`, `last_name` labels with schema-driven lookup
-- [ ] `server/src/routes/employee-files.js`:
+- [x] `server/src/routes/employee-files.js`:
   - Replace `{ photo: relativePath }` with role-based field name lookup
   - Replace name building for log messages with `buildEmployeeName()`
-- [ ] `server/src/declension.js`:
+- [x] `server/src/declension.js`:
   - `generateDeclinedNames()`: replace `data.last_name`, `data.first_name`, `data.middle_name` with role-resolved field names
   - Replace `data.indeclinable_name`, `data.indeclinable_first_name` with role-resolved field names
   - Replace `data.gender` with role-resolved field name
   - `generateDeclinedGradePosition()`: replace `data.grade`, `data.position` with role-resolved field names
   - Replace `data.indeclinable_grade`, `data.indeclinable_position` with role-resolved field names
   - **Key change**: declension functions receive schema as parameter; output placeholder keys use field_id prefix (e.g., `f_last_name_genitive` instead of `last_name_genitive`)
-- [ ] `server/src/utils.js`:
+- [x] `server/src/utils.js`:
   - Replace `buildFullName()` to use role-based name field resolution
-- [ ] Write/update unit tests for:
+- [x] Write/update unit tests for:
   - declension with role-based field resolution
   - utils.buildFullName with role-based resolution
   - routes that changed
-- [ ] Run `cd server && npm test` and `cd server && npm run test:integration` — must pass before next task
+- [x] Run `cd server && npm test` and `cd server && npm run test:integration` — must pass before next task
 
 ### Task 5: Implement field_mapping tracking and auto-rename on startup
 

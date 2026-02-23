@@ -480,6 +480,175 @@ async function testBothGradePositionIndeclinable() {
   }
 }
 
+// --- Schema-based tests (role-resolved field names) ---
+
+// Mock schema with non-default field names to verify role-based resolution
+const mockNameSchema = [
+  { field_name: 'surname', role: 'LAST_NAME' },
+  { field_name: 'given_name', role: 'FIRST_NAME' },
+  { field_name: 'patronymic', role: 'MIDDLE_NAME' },
+  { field_name: 'sex', role: 'GENDER' },
+  { field_name: 'no_decline_surname', role: 'INDECL_NAME' },
+  { field_name: 'no_decline_given', role: 'INDECL_FIRST' },
+  { field_name: 'appointment', role: 'GRADE' },
+  { field_name: 'rank', role: 'POSITION' },
+  { field_name: 'no_decline_appointment', role: 'INDECL_GRADE' },
+  { field_name: 'no_decline_rank', role: 'INDECL_POSITION' },
+];
+
+// Test 20: Schema-based name declension uses resolved field names for input and output
+async function testSchemaBasedNameDeclension() {
+  const data = {
+    surname: 'Іванов',
+    given_name: 'Петро',
+    patronymic: 'Миколайович',
+    sex: 'Чоловіча',
+  };
+
+  const result = await generateDeclinedNames(data, mockNameSchema);
+
+  // Output keys should use resolved field names (surname, given_name, patronymic)
+  if (result.surname_genitive !== 'Іванова') {
+    throw new Error(`Expected surname_genitive "Іванова", got "${result.surname_genitive}"`);
+  }
+  if (result.given_name_genitive !== 'Петра') {
+    throw new Error(`Expected given_name_genitive "Петра", got "${result.given_name_genitive}"`);
+  }
+  if (result.patronymic_genitive !== 'Миколайовича') {
+    throw new Error(`Expected patronymic_genitive "Миколайовича", got "${result.patronymic_genitive}"`);
+  }
+  if (result.full_name_genitive !== 'Іванова Петра Миколайовича') {
+    throw new Error(`Expected full_name_genitive "Іванова Петра Миколайовича", got "${result.full_name_genitive}"`);
+  }
+
+  // Should NOT have old hardcoded keys
+  if ('last_name_genitive' in result) {
+    throw new Error('Should not have hardcoded last_name_genitive key when schema provides different field name');
+  }
+}
+
+// Test 21: Schema-based name declension produces correct number of placeholders
+async function testSchemaBasedNamePlaceholderCount() {
+  const data = {
+    surname: 'Іванов',
+    given_name: 'Петро',
+    patronymic: 'Миколайович',
+    sex: 'Чоловіча',
+  };
+
+  const result = await generateDeclinedNames(data, mockNameSchema);
+  const keys = Object.keys(result);
+
+  // 6 cases x 4 fields (surname, given_name, patronymic, full_name) = 24
+  if (keys.length !== 24) {
+    throw new Error(`Expected 24 placeholders, got ${keys.length}: ${keys.join(', ')}`);
+  }
+}
+
+// Test 22: Schema-based indeclinable flags resolved via roles
+async function testSchemaBasedIndeclinable() {
+  const data = {
+    surname: 'Дюма',
+    given_name: 'Олександр',
+    patronymic: 'Давидович',
+    sex: 'Чоловіча',
+    no_decline_surname: 'yes',
+  };
+
+  const result = await generateDeclinedNames(data, mockNameSchema);
+
+  // Surname should stay nominative
+  if (result.surname_genitive !== 'Дюма') {
+    throw new Error(`Expected surname_genitive "Дюма", got "${result.surname_genitive}"`);
+  }
+  // Given name should be declined
+  if (result.given_name_genitive !== 'Олександра') {
+    throw new Error(`Expected given_name_genitive "Олександра", got "${result.given_name_genitive}"`);
+  }
+}
+
+// Test 23: Schema-based grade/position declension
+async function testSchemaBasedGradePosition() {
+  const data = {
+    appointment: 'командир роти',
+    rank: 'капітан',
+    sex: 'Чоловіча',
+  };
+
+  const result = await generateDeclinedGradePosition(data, mockNameSchema);
+
+  // Output keys should use resolved field names
+  if (result.appointment_genitive !== 'командира роти') {
+    throw new Error(`Expected appointment_genitive "командира роти", got "${result.appointment_genitive}"`);
+  }
+  if (result.rank_genitive !== 'капітана') {
+    throw new Error(`Expected rank_genitive "капітана", got "${result.rank_genitive}"`);
+  }
+
+  // Should NOT have old hardcoded keys
+  if ('grade_genitive' in result) {
+    throw new Error('Should not have hardcoded grade_genitive key when schema provides different field name');
+  }
+}
+
+// Test 24: Schema-based grade/position placeholder count
+async function testSchemaBasedGradePositionCount() {
+  const data = {
+    appointment: 'командир роти',
+    rank: 'капітан',
+    sex: 'Чоловіча',
+  };
+
+  const result = await generateDeclinedGradePosition(data, mockNameSchema);
+  const keys = Object.keys(result);
+
+  if (keys.length !== 12) {
+    throw new Error(`Expected 12 placeholders, got ${keys.length}: ${keys.join(', ')}`);
+  }
+}
+
+// Test 25: Schema-based indeclinable grade/position
+async function testSchemaBasedIndeclinableGradePosition() {
+  const data = {
+    appointment: 'командир роти',
+    rank: 'капітан',
+    sex: 'Чоловіча',
+    no_decline_appointment: 'yes',
+  };
+
+  const result = await generateDeclinedGradePosition(data, mockNameSchema);
+
+  // Appointment should stay nominative
+  if (result.appointment_genitive !== 'командир роти') {
+    throw new Error(`Expected appointment_genitive "командир роти", got "${result.appointment_genitive}"`);
+  }
+  // Rank should be declined
+  if (result.rank_genitive !== 'капітана') {
+    throw new Error(`Expected rank_genitive "капітана", got "${result.rank_genitive}"`);
+  }
+}
+
+// Test 26: Backward compatibility - no schema still works with hardcoded field names
+async function testBackwardCompatNoSchema() {
+  const data = {
+    last_name: 'Іванов',
+    first_name: 'Петро',
+    middle_name: 'Миколайович',
+    gender: 'Чоловіча',
+  };
+
+  // Call without schema parameter (backward compat)
+  const result = await generateDeclinedNames(data);
+
+  // Should use hardcoded field names in output keys
+  if (result.last_name_genitive !== 'Іванова') {
+    throw new Error(`Expected last_name_genitive "Іванова", got "${result.last_name_genitive}"`);
+  }
+  if (result.first_name_genitive !== 'Петра') {
+    throw new Error(`Expected first_name_genitive "Петра", got "${result.first_name_genitive}"`);
+  }
+}
+
 // Main test runner
 async function runAllTests() {
   console.log('Starting declension module tests...\n');
@@ -505,6 +674,16 @@ async function runAllTests() {
   await runTest('Grade/position: indeclinable grade stays nominative', testIndeclinableGrade);
   await runTest('Grade/position: indeclinable position stays nominative', testIndeclinablePosition);
   await runTest('Grade/position: both indeclinable stay nominative', testBothGradePositionIndeclinable);
+
+  // Schema-based tests
+  console.log('\n--- Schema-based (role-resolved field names) ---');
+  await runTest('Schema: name declension uses resolved field names', testSchemaBasedNameDeclension);
+  await runTest('Schema: name declension produces 24 placeholders', testSchemaBasedNamePlaceholderCount);
+  await runTest('Schema: indeclinable flags resolved via roles', testSchemaBasedIndeclinable);
+  await runTest('Schema: grade/position uses resolved field names', testSchemaBasedGradePosition);
+  await runTest('Schema: grade/position produces 12 placeholders', testSchemaBasedGradePositionCount);
+  await runTest('Schema: indeclinable grade resolved via roles', testSchemaBasedIndeclinableGradePosition);
+  await runTest('Backward compat: no schema uses hardcoded fields', testBackwardCompatNoSchema);
 
   console.log('\n' + '='.repeat(50));
   console.log(`Tests passed: ${testsPassed}`);

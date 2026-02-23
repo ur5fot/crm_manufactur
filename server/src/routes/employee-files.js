@@ -10,10 +10,12 @@ import {
   formatFieldNameWithLabel,
   ROOT_DIR,
   getEmployeeColumnsSync,
-  getDocumentFieldsSync
+  getDocumentFieldsSync,
+  loadFieldsSchema
 } from "../store.js";
 import { mergeRow, normalizeRows } from "../csv.js";
 import { getNextId, openFolder } from "../utils.js";
+import { ROLES, getFieldNameByRole, buildEmployeeName } from "../field-utils.js";
 
 export function registerEmployeeFileRoutes(app, importUpload, employeeFileUpload, photoUpload) {
   // Upload file for employee document field
@@ -158,9 +160,8 @@ export function registerEmployeeFileRoutes(app, importUpload, employeeFileUpload
         updated.employee_id = req.params.id;
         employees[index] = updated;
 
-        employeeName = [updated.last_name, updated.first_name, updated.middle_name]
-          .filter(Boolean)
-          .join(" ");
+        const fileSchema = await loadFieldsSchema();
+        employeeName = buildEmployeeName(updated, fileSchema);
 
         return employees;
       });
@@ -238,9 +239,8 @@ export function registerEmployeeFileRoutes(app, importUpload, employeeFileUpload
         updated.employee_id = id;
         employees[index] = updated;
 
-        employeeName = [employee.last_name, employee.first_name, employee.middle_name]
-          .filter(Boolean)
-          .join(" ");
+        const delFileSchema = await loadFieldsSchema();
+        employeeName = buildEmployeeName(employee, delFileSchema);
 
         return employees;
       });
@@ -305,6 +305,8 @@ export function registerEmployeeFileRoutes(app, importUpload, employeeFileUpload
       // Use withEmployeeLock to wrap the entire read-modify-write cycle,
       // preventing lost updates from concurrent requests
       let employeeName;
+      const photoSchema = await loadFieldsSchema();
+      const photoFieldName = getFieldNameByRole(photoSchema, ROLES.PHOTO) || 'photo';
       await withEmployeeLock(async (employees) => {
         const index = employees.findIndex((item) => item.employee_id === req.params.id);
 
@@ -313,15 +315,13 @@ export function registerEmployeeFileRoutes(app, importUpload, employeeFileUpload
         }
 
         const employee = employees[index];
-        oldPhoto = employee.photo;
+        oldPhoto = employee[photoFieldName];
 
-        const updated = mergeRow(getEmployeeColumnsSync(), employee, { photo: relativePath });
+        const updated = mergeRow(getEmployeeColumnsSync(), employee, { [photoFieldName]: relativePath });
         updated.employee_id = req.params.id;
         employees[index] = updated;
 
-        employeeName = [employee.last_name, employee.first_name, employee.middle_name]
-          .filter(Boolean)
-          .join(" ");
+        employeeName = buildEmployeeName(employee, photoSchema);
 
         return employees;
       });
@@ -387,6 +387,8 @@ export function registerEmployeeFileRoutes(app, importUpload, employeeFileUpload
       // preventing lost updates from concurrent requests
       let photoPath;
       let employeeName;
+      const delPhotoSchema = await loadFieldsSchema();
+      const delPhotoFieldName = getFieldNameByRole(delPhotoSchema, ROLES.PHOTO) || 'photo';
       await withEmployeeLock(async (employees) => {
         const index = employees.findIndex((item) => item.employee_id === id);
 
@@ -395,20 +397,18 @@ export function registerEmployeeFileRoutes(app, importUpload, employeeFileUpload
         }
 
         const employee = employees[index];
-        photoPath = employee.photo;
+        photoPath = employee[delPhotoFieldName];
 
         if (!photoPath) {
           throw Object.assign(new Error("Фото не знайдено"), { statusCode: 404 });
         }
 
         // Clear photo field in DB
-        const updated = mergeRow(getEmployeeColumnsSync(), employee, { photo: "" });
+        const updated = mergeRow(getEmployeeColumnsSync(), employee, { [delPhotoFieldName]: "" });
         updated.employee_id = id;
         employees[index] = updated;
 
-        employeeName = [employee.last_name, employee.first_name, employee.middle_name]
-          .filter(Boolean)
-          .join(" ");
+        employeeName = buildEmployeeName(employee, delPhotoSchema);
 
         return employees;
       });
@@ -507,6 +507,12 @@ export function registerEmployeeFileRoutes(app, importUpload, employeeFileUpload
     let skipped = 0;
     let newEmployees = [];
 
+    // Load schema for role-based field resolution
+    const importSchema = await loadFieldsSchema();
+    const importFirstNameField = getFieldNameByRole(importSchema, ROLES.FIRST_NAME) || 'first_name';
+    const importLastNameField = getFieldNameByRole(importSchema, ROLES.LAST_NAME) || 'last_name';
+    const importPhotoField = getFieldNameByRole(importSchema, ROLES.PHOTO) || 'photo';
+
     // Use withEmployeeLock for atomic read-modify-write to prevent lost updates
     await withEmployeeLock(async (employees) => {
       const existingIds = new Set(employees.map((item) => item.employee_id));
@@ -520,8 +526,8 @@ export function registerEmployeeFileRoutes(app, importUpload, employeeFileUpload
           return;
         }
 
-        const hasFirstName = String(normalized.first_name || "").trim();
-        const hasLastName = String(normalized.last_name || "").trim();
+        const hasFirstName = String(normalized[importFirstNameField] || "").trim();
+        const hasLastName = String(normalized[importLastNameField] || "").trim();
         if (!hasFirstName || !hasLastName) {
           skipped += 1;
           if (errors.length < maxErrors) {
@@ -547,7 +553,7 @@ export function registerEmployeeFileRoutes(app, importUpload, employeeFileUpload
         for (const docField of getDocumentFieldsSync()) {
           normalized[docField] = "";
         }
-        normalized.photo = "";
+        if (importPhotoField) normalized[importPhotoField] = "";
 
         normalized.employee_id = employeeId;
         existingIds.add(employeeId);
@@ -561,9 +567,7 @@ export function registerEmployeeFileRoutes(app, importUpload, employeeFileUpload
 
     // Логирование импортированных сотрудников
     for (const employee of newEmployees) {
-      const employeeName = [employee.last_name, employee.first_name, employee.middle_name]
-        .filter(Boolean)
-        .join(" ");
+      const employeeName = buildEmployeeName(employee, importSchema);
       await addLog("CREATE", employee.employee_id, employeeName, "", "", "", "Створено співробітника (імпорт)");
     }
 

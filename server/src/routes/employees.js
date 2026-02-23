@@ -35,8 +35,8 @@ import {
   validateRequired,
   validatePath,
   findById,
-  buildFullName
 } from "../utils.js";
+import { ROLES, getFieldByRole, getFieldNameByRole, buildNameFields, buildStatusFields, buildEmployeeName } from "../field-utils.js";
 
 /**
  * Date validation logic - validates format and correctness of date fields
@@ -78,7 +78,7 @@ async function validateStatusEventInput(status, start_date, end_date) {
     return "Статус обов'язковий";
   }
   const fieldsSchema = await loadFieldsSchema();
-  const statusFieldDef = fieldsSchema.find(f => f.field_name === 'employment_status');
+  const statusFieldDef = getFieldByRole(fieldsSchema, ROLES.STATUS);
   if (statusFieldDef && statusFieldDef.field_options) {
     const allowedOptions = statusFieldDef.field_options.split('|').map(s => s.trim()).filter(Boolean);
     if (!allowedOptions.includes(String(status).trim())) {
@@ -107,10 +107,10 @@ async function validateStatusEventInput(status, start_date, end_date) {
 /**
  * Detect which fields changed between current and next employee objects
  */
-function detectChangedFields(current, next) {
+function detectChangedFields(current, next, employeeIdFieldName) {
   const changedFields = [];
   getEmployeeColumnsSync().forEach((field) => {
-    if (field !== "employee_id" && current[field] !== next[field]) {
+    if (field !== employeeIdFieldName && current[field] !== next[field]) {
       changedFields.push(field);
     }
   });
@@ -163,18 +163,23 @@ export function registerEmployeeRoutes(app) {
       const baseEmployee = normalizeEmployeeInput(payload);
 
       // Запрещаем установку файловых полей и фото через create — только через upload endpoint
+      const schema = await loadFieldsSchema();
+      const photoFieldName = getFieldNameByRole(schema, ROLES.PHOTO);
+      const firstNameField = getFieldNameByRole(schema, ROLES.FIRST_NAME);
+      const lastNameField = getFieldNameByRole(schema, ROLES.LAST_NAME);
+
       for (const docField of getDocumentFieldsSync()) {
         baseEmployee[docField] = "";
       }
-      baseEmployee.photo = "";
+      if (photoFieldName) baseEmployee[photoFieldName] = "";
 
       // Валидация обязательных полей
-      const firstNameError = validateRequired(baseEmployee.first_name, 'first_name', "Ім'я обов'язкове для заповнення");
+      const firstNameError = validateRequired(firstNameField ? baseEmployee[firstNameField] : '', firstNameField || 'first_name', "Ім'я обов'язкове для заповнення");
       if (firstNameError) {
         res.status(400).json({ error: firstNameError });
         return;
       }
-      const lastNameError = validateRequired(baseEmployee.last_name, 'last_name', "Прізвище обов'язкове для заповнення");
+      const lastNameError = validateRequired(lastNameField ? baseEmployee[lastNameField] : '', lastNameField || 'last_name', "Прізвище обов'язкове для заповнення");
       if (lastNameError) {
         res.status(400).json({ error: lastNameError });
         return;
@@ -195,7 +200,7 @@ export function registerEmployeeRoutes(app) {
       });
 
       // Логирование создания
-      const employeeName = buildFullName(baseEmployee);
+      const employeeName = buildEmployeeName(baseEmployee, schema);
       await addLog("CREATE", employeeId, employeeName, "", "", "", "Створено нового співробітника");
 
       res.status(201).json({ employee_id: employeeId });
@@ -216,7 +221,13 @@ export function registerEmployeeRoutes(app) {
 
       // Запрещаем изменение файловых полей через PUT — только через upload endpoint
       // Build updates object safely to prevent prototype pollution
-      const allowedColumns = getEmployeeColumnsSync().filter(col => !getDocumentFieldsSync().includes(col) && col !== 'photo');
+      const schema = await loadFieldsSchema();
+      const photoFieldName = getFieldNameByRole(schema, ROLES.PHOTO);
+      const firstNameField = getFieldNameByRole(schema, ROLES.FIRST_NAME);
+      const lastNameField = getFieldNameByRole(schema, ROLES.LAST_NAME);
+      const employeeIdFieldName = getFieldNameByRole(schema, ROLES.EMPLOYEE_ID) || 'employee_id';
+      const { status: statusFieldName, startDate: startDateFieldName, endDate: endDateFieldName } = buildStatusFields(schema);
+      const allowedColumns = getEmployeeColumnsSync().filter(col => !getDocumentFieldsSync().includes(col) && col !== photoFieldName);
       const updates = {};
       for (const col of allowedColumns) {
         if (col in payload && col !== '__proto__' && col !== 'constructor' && col !== 'prototype') {
@@ -240,11 +251,11 @@ export function registerEmployeeRoutes(app) {
         next.employee_id = req.params.id;
 
         // Валидация обязательных полей
-        const firstNameError = validateRequired(next.first_name, 'first_name', "Ім'я обов'язкове для заповнення");
+        const firstNameError = validateRequired(firstNameField ? next[firstNameField] : '', firstNameField || 'first_name', "Ім'я обов'язкове для заповнення");
         if (firstNameError) {
           throw Object.assign(new Error(firstNameError), { statusCode: 400 });
         }
-        const lastNameError = validateRequired(next.last_name, 'last_name', "Прізвище обов'язкове для заповнення");
+        const lastNameError = validateRequired(lastNameField ? next[lastNameField] : '', lastNameField || 'last_name', "Прізвище обов'язкове для заповнення");
         if (lastNameError) {
           throw Object.assign(new Error(lastNameError), { statusCode: 400 });
         }
@@ -252,8 +263,10 @@ export function registerEmployeeRoutes(app) {
         // Валидация дат (формат и корректность)
         // ВАЖНО: Валидируем только поля которые были изменены в этом запросе
         // Это предотвращает ошибки валидации из-за legacy невалидных данных в других полях
+        // Use schema field_type='date' for proper detection, plus _date suffix heuristic for auto-generated date columns
+        const schemaDateFieldNames = new Set(schema.filter(f => f.field_type === 'date').map(f => f.field_name));
         const dateFields = getEmployeeColumnsSync().filter(col =>
-          col.includes('_date') || col === 'birth_date'
+          schemaDateFieldNames.has(col) || col.includes('_date')
         );
 
         // Находим какие поля были изменены в этом запросе
@@ -283,13 +296,13 @@ export function registerEmployeeRoutes(app) {
         }
 
         employees[index] = next;
-        changedFields = detectChangedFields(current, next);
+        changedFields = detectChangedFields(current, next, employeeIdFieldName);
 
         return employees;
       });
 
       // Логирование изменений
-      const employeeName = buildFullName(next);
+      const employeeName = buildEmployeeName(next, schema);
 
       // Логируем все изменения одной batch-операцией для предотвращения race condition
       if (changedFields.length > 0) {
@@ -309,16 +322,16 @@ export function registerEmployeeRoutes(app) {
       }
 
       // Record status history when employment_status changes (best-effort: employee update already committed)
-      if (changedFields.includes('employment_status')) {
+      if (statusFieldName && changedFields.includes(statusFieldName)) {
         try {
           await addStatusHistoryEntry({
             employee_id: req.params.id,
-            old_status: current.employment_status || '',
-            new_status: next.employment_status || '',
-            old_start_date: current.status_start_date || '',
-            old_end_date: current.status_end_date || '',
-            new_start_date: next.status_start_date || '',
-            new_end_date: next.status_end_date || '',
+            old_status: current[statusFieldName] || '',
+            new_status: next[statusFieldName] || '',
+            old_start_date: startDateFieldName ? (current[startDateFieldName] || '') : '',
+            old_end_date: endDateFieldName ? (current[endDateFieldName] || '') : '',
+            new_start_date: startDateFieldName ? (next[startDateFieldName] || '') : '',
+            new_end_date: endDateFieldName ? (next[endDateFieldName] || '') : '',
             changed_by: 'user'
           });
         } catch (historyErr) {
@@ -418,7 +431,8 @@ export function registerEmployeeRoutes(app) {
       const updatedEmployees = await loadEmployees();
       const updatedEmployee = findById(updatedEmployees, 'employee_id', req.params.id);
 
-      const employeeName = buildFullName(employee);
+      const evtSchema = await loadFieldsSchema();
+      const employeeName = buildEmployeeName(employee, evtSchema);
       await addLog("CREATE", req.params.id, employeeName, "status_event", "", event.event_id, `Додано подію статусу: ${event.status} з ${event.start_date}`);
 
       res.status(201).json({ event, employee: updatedEmployee });
@@ -484,7 +498,8 @@ export function registerEmployeeRoutes(app) {
       const updatedEmployees = await loadEmployees();
       const updatedEmployee = findById(updatedEmployees, 'employee_id', req.params.id);
 
-      const employeeName = buildFullName(employee);
+      const putEvtSchema = await loadFieldsSchema();
+      const employeeName = buildEmployeeName(employee, putEvtSchema);
       await addLog("UPDATE", req.params.id, employeeName, "status_event", req.params.eventId, req.params.eventId, `Оновлено подію статусу: ${updatedEvent.status} з ${updatedEvent.start_date}`);
 
       res.json({ event: updatedEvent, employee: updatedEmployee });
@@ -522,7 +537,8 @@ export function registerEmployeeRoutes(app) {
       // forceReset: true ensures reset to "Працює" even when the last event was deleted
       await syncStatusEventsForEmployee(req.params.id, { forceReset: true });
 
-      const employeeName = buildFullName(employee);
+      const delEvtSchema = await loadFieldsSchema();
+      const employeeName = buildEmployeeName(employee, delEvtSchema);
       await addLog("DELETE", req.params.id, employeeName, "status_event", req.params.eventId, "", `Видалено подію статусу: ${event.status} з ${event.start_date}`);
 
       res.status(204).end();
@@ -583,7 +599,8 @@ export function registerEmployeeRoutes(app) {
         note: note ? String(note).trim() : ""
       });
 
-      const employeeName = buildFullName(employee);
+      const repSchema = await loadFieldsSchema();
+      const employeeName = buildEmployeeName(employee, repSchema);
       await addLog("CREATE", req.params.id, employeeName, "reprimand", "", reprimand.record_id, `Додано запис: ${reprimand.record_type}`);
 
       res.status(201).json({ reprimand });
@@ -638,7 +655,8 @@ export function registerEmployeeRoutes(app) {
         return;
       }
 
-      const employeeName = buildFullName(employee);
+      const repUpdSchema = await loadFieldsSchema();
+      const employeeName = buildEmployeeName(employee, repUpdSchema);
       await addLog("UPDATE", req.params.id, employeeName, "reprimand", req.params.recordId, req.params.recordId, `Оновлено запис: ${updated.record_type}`);
 
       res.json({ reprimand: updated });
@@ -676,7 +694,8 @@ export function registerEmployeeRoutes(app) {
         return;
       }
 
-      const employeeName = buildFullName(employee);
+      const repDelSchema = await loadFieldsSchema();
+      const employeeName = buildEmployeeName(employee, repDelSchema);
       await addLog("DELETE", req.params.id, employeeName, "reprimand", req.params.recordId, "", `Видалено запис: ${record.record_type}`);
 
       res.status(204).end();
@@ -739,7 +758,8 @@ export function registerEmployeeRoutes(app) {
 
       // Логирование удаления
       if (deletedEmployee) {
-        const employeeName = buildFullName(deletedEmployee);
+        const delSchema = await loadFieldsSchema();
+        const employeeName = buildEmployeeName(deletedEmployee, delSchema);
         await addLog("DELETE", req.params.id, employeeName, "", "", "", "Співробітник видалено (перенесено в архів)");
       }
 

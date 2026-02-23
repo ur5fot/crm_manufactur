@@ -1,7 +1,8 @@
 import { DATA_DIR } from "../store.js";
 import { loadFieldsSchema, loadEmployees, loadTemplates, loadGeneratedDocuments } from "../store.js";
-import { openFolder, MIN_SEARCH_LENGTH, MAX_SEARCH_LENGTH, MAX_EMPLOYEE_RESULTS, MAX_TEMPLATE_RESULTS, MAX_DOCUMENT_RESULTS, findById, buildFullName } from "../utils.js";
+import { openFolder, MIN_SEARCH_LENGTH, MAX_SEARCH_LENGTH, MAX_EMPLOYEE_RESULTS, MAX_TEMPLATE_RESULTS, MAX_DOCUMENT_RESULTS, findById } from "../utils.js";
 import { generateDeclinedNames, generateDeclinedGradePosition } from "../declension.js";
+import { ROLES, getFieldNameByRole, buildEmployeeName } from "../field-utils.js";
 
 export function registerMiscRoutes(app) {
   app.post("/api/open-data-folder", async (req, res) => {
@@ -32,12 +33,14 @@ export function registerMiscRoutes(app) {
       const fieldData = {
         order: parseInt(field.field_order, 10),
         key: field.field_name,
+        fieldId: field.field_id || '',
         label: field.field_label,
         type: field.field_type,
         options: field.field_options ? field.field_options.split('|') : [],
         group: field.field_group,
         showInTable: field.show_in_table === 'yes',
-        editableInTable: field.editable_in_table === 'yes'
+        editableInTable: field.editable_in_table === 'yes',
+        role: field.role || ''
       };
 
       allFields.push(fieldData);
@@ -106,7 +109,7 @@ export function registerMiscRoutes(app) {
         if (doc.docx_filename && doc.docx_filename.toLowerCase().includes(query)) return true;
         const emp = employeeMap.get(doc.employee_id);
         if (emp) {
-          const name = buildFullName(emp);
+          const name = buildEmployeeName(emp, schema);
           if (name.toLowerCase().includes(query)) return true;
         }
         const tmpl = templateMap.get(doc.template_id);
@@ -121,20 +124,27 @@ export function registerMiscRoutes(app) {
           employee_id: doc.employee_id,
           docx_filename: doc.docx_filename,
           generation_date: doc.generation_date,
-          employee_name: emp ? buildFullName(emp) : "",
+          employee_name: emp ? buildEmployeeName(emp, schema) : "",
           template_name: tmpl ? tmpl.template_name : ""
         };
       });
 
       matchedDocuments.sort((a, b) => (b.generation_date || "").localeCompare(a.generation_date || ""));
 
+      // Resolve field names from roles for search result response
+      const empIdField = getFieldNameByRole(schema, ROLES.EMPLOYEE_ID) || 'employee_id';
+      const lastNameField = getFieldNameByRole(schema, ROLES.LAST_NAME) || 'last_name';
+      const firstNameField = getFieldNameByRole(schema, ROLES.FIRST_NAME) || 'first_name';
+      const middleNameField = getFieldNameByRole(schema, ROLES.MIDDLE_NAME) || 'middle_name';
+      const statusField = getFieldNameByRole(schema, ROLES.STATUS) || 'employment_status';
+
       res.json({
         employees: matchedEmployees.slice(0, MAX_EMPLOYEE_RESULTS).map(e => ({
-          employee_id: e.employee_id,
-          last_name: e.last_name,
-          first_name: e.first_name,
-          middle_name: e.middle_name,
-          employment_status: e.employment_status,
+          employee_id: e[empIdField],
+          last_name: e[lastNameField],
+          first_name: e[firstNameField],
+          middle_name: e[middleNameField],
+          employment_status: e[statusField],
           department: e.department
         })),
         templates: matchedTemplates.slice(0, MAX_TEMPLATE_RESULTS),
@@ -185,7 +195,7 @@ export function registerMiscRoutes(app) {
       }
 
       // Declension placeholders
-      const declined = await generateDeclinedNames(employee);
+      const declined = await generateDeclinedNames(employee, schema);
       const caseLabels = {
         genitive: 'родовий',
         dative: 'давальний',
@@ -194,10 +204,17 @@ export function registerMiscRoutes(app) {
         locative: 'місцевий',
         ablative: 'орудний'
       };
+      // Build name fields map from schema roles for label display
+      const lastNameFieldName = getFieldNameByRole(schema, ROLES.LAST_NAME) || 'last_name';
+      const firstNameFieldName = getFieldNameByRole(schema, ROLES.FIRST_NAME) || 'first_name';
+      const middleNameFieldName = getFieldNameByRole(schema, ROLES.MIDDLE_NAME) || 'middle_name';
+      const lastNameLabel = schema.find(f => f.field_name === lastNameFieldName)?.field_label || 'Прізвище';
+      const firstNameLabel = schema.find(f => f.field_name === firstNameFieldName)?.field_label || "Ім'я";
+      const middleNameLabel = schema.find(f => f.field_name === middleNameFieldName)?.field_label || 'По батькові';
       const nameFields = {
-        last_name: 'Прізвище',
-        first_name: "Ім'я",
-        middle_name: 'По батькові',
+        [lastNameFieldName]: lastNameLabel,
+        [firstNameFieldName]: firstNameLabel,
+        [middleNameFieldName]: middleNameLabel,
         full_name: 'Повне ПІБ'
       };
       for (const [suffix, caseLabel] of Object.entries(caseLabels)) {
@@ -213,10 +230,14 @@ export function registerMiscRoutes(app) {
       }
 
       // Grade/position declension placeholders
-      const declinedGradePosition = await generateDeclinedGradePosition(employee);
+      const declinedGradePosition = await generateDeclinedGradePosition(employee, schema);
+      const gradeFieldName = getFieldNameByRole(schema, ROLES.GRADE) || 'grade';
+      const positionFieldName = getFieldNameByRole(schema, ROLES.POSITION) || 'position';
+      const gradeLabel = schema.find(f => f.field_name === gradeFieldName)?.field_label || 'Посада';
+      const positionLabel = schema.find(f => f.field_name === positionFieldName)?.field_label || 'Звання';
       const gradePositionFields = {
-        grade: 'Посада',
-        position: 'Звання'
+        [gradeFieldName]: gradeLabel,
+        [positionFieldName]: positionLabel
       };
       for (const [suffix, caseLabel] of Object.entries(caseLabels)) {
         for (const [field, fieldLabel] of Object.entries(gradePositionFields)) {
@@ -271,7 +292,7 @@ export function registerMiscRoutes(app) {
         });
       }
 
-      const employeeName = buildFullName(employee);
+      const employeeName = buildEmployeeName(employee, schema);
 
       res.json({
         employee_name: employeeName,
