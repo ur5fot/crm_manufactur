@@ -23,6 +23,12 @@ const STATUS_HISTORY_PATH = path.join(DATA_DIR, "status_history.csv");
 const REPRIMANDS_PATH = path.join(DATA_DIR, "reprimands.csv");
 const STATUS_EVENTS_PATH = path.join(DATA_DIR, "status_events.csv");
 
+export const REMOTE_DIR = path.join(ROOT_DIR, "remote");
+const EMPLOYEES_REMOTE_PATH = path.join(DATA_DIR, "employees_remote.csv");
+const STATUS_HISTORY_REMOTE_PATH = path.join(DATA_DIR, "status_history_remote.csv");
+const REPRIMANDS_REMOTE_PATH = path.join(DATA_DIR, "reprimands_remote.csv");
+const STATUS_EVENTS_REMOTE_PATH = path.join(DATA_DIR, "status_events_remote.csv");
+
 // Simple in-memory lock for log writes to prevent race conditions
 let logWriteLock = Promise.resolve();
 
@@ -48,6 +54,7 @@ let statusEventWriteLock = Promise.resolve();
 export async function ensureDataDirs() {
   await fs.mkdir(DATA_DIR, { recursive: true });
   await fs.mkdir(FILES_DIR, { recursive: true });
+  await fs.mkdir(REMOTE_DIR, { recursive: true });
 }
 
 /**
@@ -1721,6 +1728,115 @@ export async function syncStatusEventsForEmployee(employeeId, { forceReset = fal
       new_end_date: newEndDate,
       changed_by: 'system'
     });
+  }
+}
+
+// ===========================
+// Archive (remote) store functions
+// ===========================
+
+/**
+ * Archive a deleted employee record by appending it to employees_remote.csv
+ * Uses employeeWriteLock to serialize with regular employee writes
+ * @param {Object} employee - The employee record to archive
+ */
+export async function archiveEmployee(employee) {
+  const previousLock = employeeWriteLock;
+  let releaseLock;
+  employeeWriteLock = new Promise(resolve => { releaseLock = resolve; });
+
+  try {
+    await previousLock;
+    const columns = await getEmployeeColumns();
+    const remoteEmployees = await readCsv(EMPLOYEES_REMOTE_PATH, columns);
+    remoteEmployees.push(employee);
+    await writeCsv(EMPLOYEES_REMOTE_PATH, columns, remoteEmployees);
+  } finally {
+    releaseLock();
+  }
+}
+
+/**
+ * Archive status history entries for an employee: move matching entries from
+ * status_history.csv to status_history_remote.csv (append), then remove from source.
+ * Uses statusHistoryWriteLock.
+ * @param {string} employeeId
+ */
+export async function archiveStatusHistoryForEmployee(employeeId) {
+  const previousLock = statusHistoryWriteLock;
+  let releaseLock;
+  statusHistoryWriteLock = new Promise(resolve => { releaseLock = resolve; });
+
+  try {
+    await previousLock;
+    const history = await readCsv(STATUS_HISTORY_PATH, STATUS_HISTORY_COLUMNS);
+    const toArchive = history.filter(h => h.employee_id === String(employeeId));
+    const toKeep = history.filter(h => h.employee_id !== String(employeeId));
+
+    if (toArchive.length > 0) {
+      const remoteHistory = await readCsv(STATUS_HISTORY_REMOTE_PATH, STATUS_HISTORY_COLUMNS);
+      remoteHistory.push(...toArchive);
+      await writeCsv(STATUS_HISTORY_REMOTE_PATH, STATUS_HISTORY_COLUMNS, remoteHistory);
+      await writeCsv(STATUS_HISTORY_PATH, STATUS_HISTORY_COLUMNS, toKeep);
+    }
+  } finally {
+    releaseLock();
+  }
+}
+
+/**
+ * Archive reprimand records for an employee: move matching entries from
+ * reprimands.csv to reprimands_remote.csv (append), then remove from source.
+ * Uses reprimandWriteLock.
+ * @param {string} employeeId
+ */
+export async function archiveReprimandsForEmployee(employeeId) {
+  const previousLock = reprimandWriteLock;
+  let releaseLock;
+  reprimandWriteLock = new Promise(resolve => { releaseLock = resolve; });
+
+  try {
+    await previousLock;
+    const reprimands = await readCsv(REPRIMANDS_PATH, REPRIMAND_COLUMNS);
+    const toArchive = reprimands.filter(r => r.employee_id === String(employeeId));
+    const toKeep = reprimands.filter(r => r.employee_id !== String(employeeId));
+
+    if (toArchive.length > 0) {
+      const remoteReprimands = await readCsv(REPRIMANDS_REMOTE_PATH, REPRIMAND_COLUMNS);
+      remoteReprimands.push(...toArchive);
+      await writeCsv(REPRIMANDS_REMOTE_PATH, REPRIMAND_COLUMNS, remoteReprimands);
+      await writeCsv(REPRIMANDS_PATH, REPRIMAND_COLUMNS, toKeep);
+    }
+  } finally {
+    releaseLock();
+  }
+}
+
+/**
+ * Archive status events for an employee: move matching entries from
+ * status_events.csv to status_events_remote.csv (append), then remove from source.
+ * Uses statusEventWriteLock.
+ * @param {string} employeeId
+ */
+export async function archiveStatusEventsForEmployee(employeeId) {
+  const previousLock = statusEventWriteLock;
+  let releaseLock;
+  statusEventWriteLock = new Promise(resolve => { releaseLock = resolve; });
+
+  try {
+    await previousLock;
+    const events = await readCsv(STATUS_EVENTS_PATH, STATUS_EVENT_COLUMNS);
+    const toArchive = events.filter(e => e.employee_id === String(employeeId));
+    const toKeep = events.filter(e => e.employee_id !== String(employeeId));
+
+    if (toArchive.length > 0) {
+      const remoteEvents = await readCsv(STATUS_EVENTS_REMOTE_PATH, STATUS_EVENT_COLUMNS);
+      remoteEvents.push(...toArchive);
+      await writeCsv(STATUS_EVENTS_REMOTE_PATH, STATUS_EVENT_COLUMNS, remoteEvents);
+      await writeCsv(STATUS_EVENTS_PATH, STATUS_EVENT_COLUMNS, toKeep);
+    }
+  } finally {
+    releaseLock();
   }
 }
 
