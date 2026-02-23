@@ -141,6 +141,7 @@ async function runAllTests() {
       const archived = matchingRecords[matchingRecords.length - 1];
       if (archived.last_name !== 'Видалення') throw new Error(`Expected last_name 'Видалення', got '${archived.last_name}'`);
       if (archived.first_name !== 'АрхівТест') throw new Error(`Expected first_name 'АрхівТест', got '${archived.first_name}'`);
+      if (archived.active !== 'no') throw new Error(`Expected active 'no', got '${archived.active}'`);
       // Count should have increased
       if (remoteEmpAfter.length <= remoteEmpBefore.length) {
         throw new Error(`Expected remote employees count to increase from ${remoteEmpBefore.length}`);
