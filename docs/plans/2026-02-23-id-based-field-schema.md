@@ -108,7 +108,7 @@ Fields without a role (e.g., department, education, salary_amount) are regular d
 
 ### Task 2: Create role-based field resolution utilities
 
-- [ ] Create `server/src/field-utils.js` with exported utility functions:
+- [x] Create `server/src/field-utils.js` with exported utility functions:
   - `ROLES` constant object: `{ PHOTO: 'PHOTO', EMPLOYEE_ID: 'EMPLOYEE_ID', LAST_NAME: 'LAST_NAME', ... }`
   - `getFieldByRole(schema, role)` → returns full field object or null
   - `getFieldNameByRole(schema, role)` → returns field_name string or null
@@ -117,14 +117,14 @@ Fields without a role (e.g., department, education, salary_amount) are regular d
   - `buildFieldNameToIdMap(schema)` → returns Map<field_name, field_id>
   - `buildNameFields(schema)` → returns `{ lastName, firstName, middleName }` field_name values (for name display)
   - `buildStatusFields(schema)` → returns `{ status, startDate, endDate }` field_name values
-- [ ] Export utilities from `field-utils.js`
-- [ ] Write comprehensive unit tests in `server/test/field-utils.test.js`:
+- [x] Export utilities from `field-utils.js`
+- [x] Write comprehensive unit tests in `server/test/field-utils.test.js`:
   - Test getFieldByRole with valid/invalid roles
   - Test getFieldNameByRole with valid/invalid roles
   - Test buildFieldIdToNameMap correctness
   - Test buildNameFields and buildStatusFields
   - Test with empty/missing role fields (graceful fallback)
-- [ ] Run `cd server && npm test` — must pass before next task
+- [x] Run `cd server && npm test` — must pass before next task
 
 ### Task 3: Replace hardcoded field_name lookups in store.js
 
