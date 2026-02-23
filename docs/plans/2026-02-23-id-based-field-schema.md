@@ -263,7 +263,7 @@ Replace all hardcoded `field_name === 'employment_status'` / `emp.birth_date` / 
 
 ### Task 8: Create production migration script
 
-- [ ] Create `server/src/migrate-to-field-id.js` — one-time migration script:
+- [x] Create `server/src/migrate-to-field-id.js` — one-time migration script:
   1. Read current `data/fields_schema.csv`
   2. Check if `field_id` column already exists (skip if migrated)
   3. Generate `field_id = f_<field_name>` for each field
@@ -271,15 +271,15 @@ Replace all hardcoded `field_name === 'employment_status'` / `emp.birth_date` / 
   5. Write updated `data/fields_schema.csv` with new columns
   6. Create `data/field_mapping.csv` (initial snapshot)
   7. Log migration summary
-- [ ] Add migration to `run.sh` startup sequence:
+- [x] Add migration to `run.sh` startup sequence:
   - Run migration script after `sync-template.js` and before server start
   - Migration is idempotent (safe to run multiple times)
-- [ ] Update `fields_schema.template.csv` (already done in Task 1, verify consistency)
-- [ ] Write unit test for migration script:
+- [x] Update `fields_schema.template.csv` (already done in Task 1, verify consistency)
+- [x] Write unit test for migration script:
   - Test migration on schema without field_id (adds columns)
   - Test migration on schema with field_id (no-op)
   - Test role assignment correctness
-- [ ] Run `cd server && npm test` — must pass before next task
+- [x] Run `cd server && npm test` — must pass before next task
 
 ### Task 9: Update DEFAULT fallback lists and cleanup
 

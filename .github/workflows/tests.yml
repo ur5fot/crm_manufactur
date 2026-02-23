@@ -46,6 +46,10 @@ jobs:
         working-directory: ./server
         run: node src/sync-template.js
 
+      - name: Migrate fields_schema to field_id format
+        working-directory: ./server
+        run: node src/migrate-to-field-id.js
+
       - name: Run unit tests
         working-directory: ./server
         run: |
@@ -60,6 +64,7 @@ jobs:
           node test/dashboard-30days.test.js
           node test/remote-archive-store.test.js
           node test/schema.test.js
+          node test/migrate-to-field-id.test.js
 
       - name: Start backend server
         working-directory: ./server
