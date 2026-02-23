@@ -86,20 +86,20 @@
 
 ### Task 2: Add archive store functions
 
-- [ ] Add `archiveEmployee(employee)` function to `server/src/store.js` (after `removeStatusEventsForEmployee`, ~line 1590). Uses `employeeWriteLock`, reads `EMPLOYEES_REMOTE_PATH` with dynamic columns, appends employee, writes back
-- [ ] Add `archiveStatusHistoryForEmployee(employeeId)` — uses `statusHistoryWriteLock`, loads status_history, splits by employeeId, appends matching to `STATUS_HISTORY_REMOTE_PATH`, removes from `STATUS_HISTORY_PATH`
-- [ ] Add `archiveReprimandsForEmployee(employeeId)` — uses `reprimandWriteLock`, same split+append+remove pattern with `REPRIMANDS_REMOTE_PATH` and `REPRIMANDS_PATH`
-- [ ] Add `archiveStatusEventsForEmployee(employeeId)` — uses `statusEventWriteLock`, same split+append+remove pattern with `STATUS_EVENTS_REMOTE_PATH` and `STATUS_EVENTS_PATH`
-- [ ] Create `server/test/remote-archive-store.test.js` — unit test for archive functions using temp CSV files:
+- [x] Add `archiveEmployee(employee)` function to `server/src/store.js` (after `removeStatusEventsForEmployee`, ~line 1590). Uses `employeeWriteLock`, reads `EMPLOYEES_REMOTE_PATH` with dynamic columns, appends employee, writes back
+- [x] Add `archiveStatusHistoryForEmployee(employeeId)` — uses `statusHistoryWriteLock`, loads status_history, splits by employeeId, appends matching to `STATUS_HISTORY_REMOTE_PATH`, removes from `STATUS_HISTORY_PATH`
+- [x] Add `archiveReprimandsForEmployee(employeeId)` — uses `reprimandWriteLock`, same split+append+remove pattern with `REPRIMANDS_REMOTE_PATH` and `REPRIMANDS_PATH`
+- [x] Add `archiveStatusEventsForEmployee(employeeId)` — uses `statusEventWriteLock`, same split+append+remove pattern with `STATUS_EVENTS_REMOTE_PATH` and `STATUS_EVENTS_PATH`
+- [x] Create `server/test/remote-archive-store.test.js` — unit test for archive functions using temp CSV files:
   - test archiveEmployee appends to new remote file
   - test archiveEmployee appends to existing remote file (accumulates)
   - test archiveStatusHistoryForEmployee moves entries and removes from source
   - test archiveReprimandsForEmployee moves entries and removes from source
   - test archiveStatusEventsForEmployee moves entries and removes from source
   - test archive functions are no-op when no matching records exist
-- [ ] Add `node test/remote-archive-store.test.js` to `server/package.json` `test` script
-- [ ] Add `node test/remote-archive-store.test.js` to `.github/workflows/tests.yml` unit tests step
-- [ ] Run `cd server && npm test` — all tests must pass
+- [x] Add `node test/remote-archive-store.test.js` to `server/package.json` `test` script
+- [x] Add `node test/remote-archive-store.test.js` to `.github/workflows/tests.yml` unit tests step
+- [x] Run `cd server && npm test` — all tests must pass
 
 ### Task 3: Update DELETE endpoint to archive instead of hard-delete
 

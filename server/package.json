@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "node --watch src/index.js",
     "start": "node src/index.js",
-    "test": "node test/config.test.js && node test/upload-limit.test.js && node test/docx-generator.test.js && node test/declension.test.js && node test/retirement-events.test.js && node test/utils.test.js && node test/reprimands-store.test.js && node test/status-events-store.test.js && node test/dashboard-30days.test.js",
+    "test": "node test/config.test.js && node test/upload-limit.test.js && node test/docx-generator.test.js && node test/declension.test.js && node test/retirement-events.test.js && node test/utils.test.js && node test/reprimands-store.test.js && node test/status-events-store.test.js && node test/dashboard-30days.test.js && node test/remote-archive-store.test.js",
     "test:integration": "node test/templates-api.test.js && node test/retirement-api.test.js && node test/search-api.test.js && node test/photo-api.test.js && node test/status-history.test.js && node test/reprimands-api.test.js && node test/status-events-api.test.js"
   },
   "dependencies": {

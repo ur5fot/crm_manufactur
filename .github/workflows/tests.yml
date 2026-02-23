@@ -57,6 +57,7 @@ jobs:
           node test/utils.test.js
           node test/reprimands-store.test.js
           node test/dashboard-30days.test.js
+          node test/remote-archive-store.test.js
 
       - name: Start backend server
         working-directory: ./server
