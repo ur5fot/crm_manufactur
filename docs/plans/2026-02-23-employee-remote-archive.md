@@ -64,7 +64,7 @@
 
 ### Task 1: Add remote paths, REMOTE_DIR, and gitignore entries
 
-- [ ] Add `REMOTE_DIR` export and `*_REMOTE_PATH` constants to `server/src/store.js` after line 24 (after `STATUS_EVENTS_PATH`):
+- [x] Add `REMOTE_DIR` export and `*_REMOTE_PATH` constants to `server/src/store.js` after line 24 (after `STATUS_EVENTS_PATH`):
   ```javascript
   export const REMOTE_DIR = path.join(ROOT_DIR, "remote");
   const EMPLOYEES_REMOTE_PATH = path.join(DATA_DIR, "employees_remote.csv");
@@ -72,8 +72,8 @@
   const REPRIMANDS_REMOTE_PATH = path.join(DATA_DIR, "reprimands_remote.csv");
   const STATUS_EVENTS_REMOTE_PATH = path.join(DATA_DIR, "status_events_remote.csv");
   ```
-- [ ] Add `await fs.mkdir(REMOTE_DIR, { recursive: true });` to `ensureDataDirs()` after the `FILES_DIR` mkdir
-- [ ] Add gitignore entries after `data/status_events.csv` line:
+- [x] Add `await fs.mkdir(REMOTE_DIR, { recursive: true });` to `ensureDataDirs()` after the `FILES_DIR` mkdir
+- [x] Add gitignore entries after `data/status_events.csv` line:
   ```
   data/employees_remote.csv
   data/status_history_remote.csv
@@ -81,8 +81,8 @@
   data/status_events_remote.csv
   remote/
   ```
-- [ ] Add `mkdir -p remote` to `.github/workflows/tests.yml` in "Setup test data files" step after `mkdir -p data files`
-- [ ] Run `cd server && npm test` — all existing tests must pass
+- [x] Add `mkdir -p remote` to `.github/workflows/tests.yml` in "Setup test data files" step after `mkdir -p data files`
+- [x] Run `cd server && npm test` — all existing tests must pass
 
 ### Task 2: Add archive store functions
 

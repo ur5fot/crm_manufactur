@@ -23,6 +23,12 @@ const STATUS_HISTORY_PATH = path.join(DATA_DIR, "status_history.csv");
 const REPRIMANDS_PATH = path.join(DATA_DIR, "reprimands.csv");
 const STATUS_EVENTS_PATH = path.join(DATA_DIR, "status_events.csv");
 
+export const REMOTE_DIR = path.join(ROOT_DIR, "remote");
+const EMPLOYEES_REMOTE_PATH = path.join(DATA_DIR, "employees_remote.csv");
+const STATUS_HISTORY_REMOTE_PATH = path.join(DATA_DIR, "status_history_remote.csv");
+const REPRIMANDS_REMOTE_PATH = path.join(DATA_DIR, "reprimands_remote.csv");
+const STATUS_EVENTS_REMOTE_PATH = path.join(DATA_DIR, "status_events_remote.csv");
+
 // Simple in-memory lock for log writes to prevent race conditions
 let logWriteLock = Promise.resolve();
 
@@ -48,6 +54,7 @@ let statusEventWriteLock = Promise.resolve();
 export async function ensureDataDirs() {
   await fs.mkdir(DATA_DIR, { recursive: true });
   await fs.mkdir(FILES_DIR, { recursive: true });
+  await fs.mkdir(REMOTE_DIR, { recursive: true });
 }
 
 /**

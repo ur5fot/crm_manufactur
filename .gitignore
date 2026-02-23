@@ -16,6 +16,11 @@ data/generated_documents.csv
 data/status_history.csv
 data/reprimands.csv
 data/status_events.csv
+data/employees_remote.csv
+data/status_history_remote.csv
+data/reprimands_remote.csv
+data/status_events_remote.csv
+remote/
 
 # Claude Code та Ralphex (особисті налаштування та output)
 .claude/
