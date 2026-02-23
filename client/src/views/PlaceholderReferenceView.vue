@@ -12,10 +12,17 @@ const placeholderRefLoading = ref(false);
 const placeholderRefError = ref('');
 const placeholderRefSearch = ref('');
 
+// Show/hide legacy placeholders
+const showLegacy = ref(false);
+
 // Computed filtered placeholders
 const filteredPlaceholders = computed(() => {
   if (!placeholderRefData.value) return [];
-  const items = placeholderRefData.value.placeholders || [];
+  let items = placeholderRefData.value.placeholders || [];
+  // Filter out legacy format if toggle is off
+  if (!showLegacy.value) {
+    items = items.filter(p => p.format !== 'legacy');
+  }
   if (!placeholderRefSearch.value) return items;
   const term = placeholderRefSearch.value.toLowerCase();
   return items.filter(p =>
@@ -66,13 +73,18 @@ onMounted(() => {
           Дані співробітника: <strong>{{ placeholderRefData.employee_name }}</strong>
         </div>
 
-        <div class="filter-row" style="margin-bottom: 12px;">
+        <div class="filter-row" style="margin-bottom: 12px; display: flex; gap: 12px; align-items: center;">
           <input
             type="text"
             class="form-control"
             v-model="placeholderRefSearch"
             placeholder="Пошук плейсхолдера..."
+            style="flex: 1;"
           />
+          <label style="white-space: nowrap; display: flex; align-items: center; gap: 4px; cursor: pointer;">
+            <input type="checkbox" v-model="showLegacy" />
+            Показати застарілі (field_name)
+          </label>
         </div>
 
         <table class="table table-striped">
@@ -98,7 +110,7 @@ onMounted(() => {
                   class="placeholder-cell"
                   @click="copyPlaceholder(item.placeholder)"
                   :title="'Натисніть, щоб скопіювати ' + item.placeholder"
-                >{{ item.placeholder }}</td>
+                >{{ item.placeholder }} <span v-if="item.format === 'legacy'" class="badge-legacy">застарілий</span></td>
                 <td>{{ item.label }}</td>
                 <td>{{ item.value }}</td>
               </tr>
@@ -113,3 +125,16 @@ onMounted(() => {
     </div>
   </div>
 </template>
+
+<style scoped>
+.badge-legacy {
+  display: inline-block;
+  font-size: 0.7em;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: var(--color-status-warning, #ffc107);
+  color: #333;
+  vertical-align: middle;
+  margin-left: 4px;
+}
+</style>

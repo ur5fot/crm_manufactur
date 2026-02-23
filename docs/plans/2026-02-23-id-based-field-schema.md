@@ -241,25 +241,25 @@ Replace all hardcoded `field_name === 'employment_status'` / `emp.birth_date` / 
 
 ### Task 7: Update frontend
 
-- [ ] Update `client/src/composables/useFieldsSchema.js`:
+- [x] Update `client/src/composables/useFieldsSchema.js`:
   - Include `fieldId` and `role` in field objects returned by `loadSchema()`
   - Add `getFieldByRole(role)` utility function
   - Add `getFieldNameByRole(role)` utility function
   - Export role constants: `ROLES` object matching backend
-- [ ] Update `client/src/composables/useStatusManagement.js`:
+- [x] Update `client/src/composables/useStatusManagement.js`:
   - Replace `allFieldsSchema.value.find(f => f.key === 'employment_status')` with `getFieldByRole('STATUS')`
-- [ ] Update `client/src/utils/employee.js`:
+- [x] Update `client/src/utils/employee.js`:
   - Replace hardcoded `employee.last_name, employee.first_name, employee.middle_name` with schema-driven name field resolution
   - Accept schema parameter or use singleton schema from useFieldsSchema
-- [ ] Update `client/src/views/EmployeeCardsView.vue`:
+- [x] Update `client/src/views/EmployeeCardsView.vue`:
   - Remove hardcoded `employeeFields` fallback list (lines 18-36), use schema-driven field list
-- [ ] Update `client/src/views/DashboardView.vue`:
+- [x] Update `client/src/views/DashboardView.vue`:
   - Replace hardcoded `emp.position` references with role-based field lookup
   - Replace hardcoded `employment_status` field lookup
-- [ ] Update `client/src/views/PlaceholderReferenceView.vue`:
+- [x] Update `client/src/views/PlaceholderReferenceView.vue`:
   - Display field_id as primary placeholder format
   - Add visual indicator for new vs legacy format
-- [ ] Run E2E tests: `npm run test:e2e` — must pass before next task
+- [x] Run E2E tests: `npm run test:e2e` — must pass before next task
 
 ### Task 8: Create production migration script
 
