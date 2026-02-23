@@ -358,7 +358,7 @@ Add a UI page in SystemSettings for editing fields_schema — renaming fields, c
 
 ### Task 12: [Final] Update documentation
 
-- [ ] Update `CLAUDE.md`:
+- [x] Update `CLAUDE.md`:
   - Document field_id and role columns in Data Storage Architecture section
   - Document auto-migration behavior in Key Technical Decisions
   - Document role-based lookup pattern in Backend Patterns
@@ -366,8 +366,8 @@ Add a UI page in SystemSettings for editing fields_schema — renaming fields, c
   - Update fields_schema.csv documentation with new columns
   - Document Field Schema Editor UI in Frontend Patterns section
   - Add FieldSchemaEditorView to Project Structure and Routing
-- [ ] Update `README.md` if user-facing API changes (placeholder format documentation, field schema editor)
-- [ ] Archive this plan to `docs/plans/completed/`
+- [x] Update `README.md` if user-facing API changes (no user-facing API changes needed — internal refactoring)
+- [x] Archive this plan to `docs/plans/completed/`
 
 *Note: ralphex automatically moves completed plans to `docs/plans/completed/`*
 
