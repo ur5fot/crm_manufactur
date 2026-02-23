@@ -2,10 +2,11 @@ import path from "path";
 import fs from "fs";
 import fsPromises from "fs/promises";
 import { execFile } from "child_process";
-import { FILES_DIR, loadTemplates, saveTemplates, addLog, loadEmployees, addGeneratedDocument } from "../store.js";
+import { FILES_DIR, loadTemplates, saveTemplates, addLog, loadEmployees, addGeneratedDocument, loadFieldsSchema } from "../store.js";
 import { extractPlaceholders, generateDocx } from "../docx-generator.js";
-import { getOpenCommand, getNextId, validateRequired, validatePath, findById, buildFullName } from "../utils.js";
+import { getOpenCommand, getNextId, validateRequired, validatePath, findById } from "../utils.js";
 import { createTemplateUpload } from "../upload-config.js";
+import { buildEmployeeName, buildFieldNameToIdMap, getFieldNameByRole, ROLES } from "../field-utils.js";
 
 export function registerTemplateRoutes(app, appConfig) {
   const templateUpload = createTemplateUpload(appConfig);
@@ -347,8 +348,8 @@ export function registerTemplateRoutes(app, appConfig) {
         return;
       }
 
-      // Load employee data
-      const employees = await loadEmployees();
+      // Load employee data and schema
+      const [employees, schema] = await Promise.all([loadEmployees(), loadFieldsSchema()]);
       const employee = findById(employees, 'employee_id', employee_id);
 
       if (!employee) {
@@ -362,10 +363,11 @@ export function registerTemplateRoutes(app, appConfig) {
         ...employee
       };
 
-      // Generate DOCX filename
+      // Generate DOCX filename using role-based field resolution
       const timestamp = Date.now();
       const sanitizedName = template.template_name.replace(/[^a-zA-Z0-9а-яА-ЯіїєґІЇЄҐ]/g, '_');
-      const sanitizedLastName = (employee.last_name || '').replace(/[^a-zA-Z0-9а-яА-ЯіїєґІЇЄҐ]/g, '_');
+      const lastNameField = getFieldNameByRole(schema, ROLES.LAST_NAME) || 'last_name';
+      const sanitizedLastName = (employee[lastNameField] || '').replace(/[^a-zA-Z0-9а-яА-ЯіїєґІЇЄҐ]/g, '_');
       const docxFilename = sanitizedLastName
         ? `${sanitizedName}_${sanitizedLastName}_${employee_id}_${timestamp}.docx`
         : `${sanitizedName}_${employee_id}_${timestamp}.docx`;
@@ -387,8 +389,22 @@ export function registerTemplateRoutes(app, appConfig) {
         return;
       }
 
-      // Call generateDocx
-      await generateDocx(templatePath, data, outputPath);
+      // Call generateDocx with schema for field_id-based placeholders
+      await generateDocx(templatePath, data, outputPath, schema);
+
+      // Build data_snapshot with field_id keys for stability across renames
+      const nameToId = buildFieldNameToIdMap(schema);
+      const snapshotData = {};
+      for (const [key, value] of Object.entries(data)) {
+        const fieldId = nameToId.get(key);
+        if (fieldId) {
+          snapshotData[fieldId] = value;
+        }
+        // Also keep field_name key for reference
+        snapshotData[key] = value;
+      }
+      // Include mapping for historical reference
+      snapshotData._field_mapping = Object.fromEntries(nameToId);
 
       // Create record in generated_documents.csv atomically with race condition protection
       const newDocId = await addGeneratedDocument({
@@ -397,11 +413,11 @@ export function registerTemplateRoutes(app, appConfig) {
         docx_filename: docxFilename,
         generation_date: new Date().toISOString(),
         generated_by: 'system', // Can be enhanced with user authentication later
-        data_snapshot: JSON.stringify(data)
+        data_snapshot: JSON.stringify(snapshotData)
       });
 
       // Add audit log
-      const employeeName = buildFullName(employee);
+      const employeeName = buildEmployeeName(employee, schema);
       await addLog(
         "GENERATE_DOCUMENT",
         employee_id,

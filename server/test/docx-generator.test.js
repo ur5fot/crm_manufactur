@@ -444,6 +444,201 @@ async function testGenerateDocxCaseVariantsEmpty() {
   }
 }
 
+// Test schema for field_id tests
+const TEST_SCHEMA = [
+  { field_id: 'f_employee_id', field_name: 'employee_id', field_label: 'ID', field_type: 'text', role: 'EMPLOYEE_ID' },
+  { field_id: 'f_last_name', field_name: 'last_name', field_label: 'Прізвище', field_type: 'text', role: 'LAST_NAME' },
+  { field_id: 'f_first_name', field_name: 'first_name', field_label: "Ім'я", field_type: 'text', role: 'FIRST_NAME' },
+  { field_id: 'f_middle_name', field_name: 'middle_name', field_label: 'По батькові', field_type: 'text', role: 'MIDDLE_NAME' },
+  { field_id: 'f_birth_date', field_name: 'birth_date', field_label: 'Дата народження', field_type: 'date', role: 'BIRTH_DATE' },
+  { field_id: 'f_gender', field_name: 'gender', field_label: 'Стать', field_type: 'select', role: 'GENDER' },
+  { field_id: 'f_photo', field_name: 'photo', field_label: 'Фото', field_type: 'photo', role: 'PHOTO' },
+  { field_id: 'f_grade', field_name: 'grade', field_label: 'Посада', field_type: 'text', role: 'GRADE' },
+  { field_id: 'f_position', field_name: 'position', field_label: 'Звання', field_type: 'text', role: 'POSITION' },
+  { field_id: 'f_indeclinable_name', field_name: 'indeclinable_name', field_label: '', field_type: 'checkbox', role: 'INDECL_NAME' },
+  { field_id: 'f_indeclinable_first_name', field_name: 'indeclinable_first_name', field_label: '', field_type: 'checkbox', role: 'INDECL_FIRST' },
+  { field_id: 'f_indeclinable_grade', field_name: 'indeclinable_grade', field_label: '', field_type: 'checkbox', role: 'INDECL_GRADE' },
+  { field_id: 'f_indeclinable_position', field_name: 'indeclinable_position', field_label: '', field_type: 'checkbox', role: 'INDECL_POSITION' },
+  { field_id: 'f_department', field_name: 'department', field_label: 'Підрозділ', field_type: 'text', role: '' },
+];
+
+// Test 15: generateDocx() with schema generates both field_id and field_name placeholders
+async function testGenerateDocxFieldIdKeys() {
+  const testPath = path.join(TEST_FIXTURES_DIR, 'test-field-id.docx');
+  // Template uses both field_id and field_name placeholders
+  createTestDocx(testPath, ['f_last_name', 'last_name', 'f_birth_date', 'department']);
+
+  const outputPath = path.join(TEST_OUTPUT_DIR, 'field-id.docx');
+  const data = {
+    last_name: 'Петренко',
+    first_name: 'Іван',
+    middle_name: 'Миколайович',
+    birth_date: '1990-05-15',
+    department: 'ІТ',
+    gender: 'Чоловіча',
+    photo: '/some/path.jpg' // should be skipped
+  };
+
+  await generateDocx(testPath, data, outputPath, TEST_SCHEMA);
+
+  const content = fs.readFileSync(outputPath, 'binary');
+  const zip = new PizZip(content);
+  const documentXml = zip.file('word/document.xml').asText();
+
+  // Both field_id and field_name placeholders should be replaced with the same value
+  if (documentXml.includes('{f_last_name}') || documentXml.includes('{last_name}')) {
+    throw new Error('Placeholders should have been replaced');
+  }
+
+  // Value should appear (replacing both placeholders)
+  const count = (documentXml.match(/Петренко/g) || []).length;
+  if (count < 2) {
+    throw new Error(`Expected "Петренко" to appear at least 2 times (for both f_last_name and last_name), got ${count}`);
+  }
+
+  // Birth date should work via field_id
+  if (!documentXml.includes('1990-05-15')) {
+    throw new Error('f_birth_date placeholder was not replaced');
+  }
+
+  // Photo should not appear in the document
+  if (documentXml.includes('/some/path.jpg')) {
+    throw new Error('Photo field should have been skipped');
+  }
+}
+
+// Test 16: generateDocx() without schema works as before (backwards compat)
+async function testGenerateDocxWithoutSchema() {
+  const testPath = path.join(TEST_FIXTURES_DIR, 'test-no-schema.docx');
+  createTestDocx(testPath, ['last_name', 'first_name']);
+
+  const outputPath = path.join(TEST_OUTPUT_DIR, 'no-schema.docx');
+  const data = { last_name: 'Шевченко', first_name: 'Тарас', photo: 'skip.jpg' };
+
+  // Call without schema parameter
+  await generateDocx(testPath, data, outputPath);
+
+  const content = fs.readFileSync(outputPath, 'binary');
+  const zip = new PizZip(content);
+  const documentXml = zip.file('word/document.xml').asText();
+
+  if (!documentXml.includes('Шевченко') || !documentXml.includes('Тарас')) {
+    throw new Error('Legacy placeholders should still work without schema');
+  }
+
+  if (documentXml.includes('skip.jpg')) {
+    throw new Error('Photo field should be skipped even without schema');
+  }
+}
+
+// Test 17: generateDocx() with schema generates field_id-based declension keys
+async function testGenerateDocxFieldIdDeclension() {
+  const testPath = path.join(TEST_FIXTURES_DIR, 'test-field-id-declension.docx');
+  // Template uses field_id-based declension placeholders
+  createTestDocx(testPath, ['f_last_name_genitive', 'last_name_genitive', 'f_full_name_dative', 'full_name_dative']);
+
+  const outputPath = path.join(TEST_OUTPUT_DIR, 'field-id-declension.docx');
+  const data = {
+    last_name: 'Петренко',
+    first_name: 'Іван',
+    middle_name: 'Миколайович',
+    gender: 'Чоловіча'
+  };
+
+  await generateDocx(testPath, data, outputPath, TEST_SCHEMA);
+
+  const content = fs.readFileSync(outputPath, 'binary');
+  const zip = new PizZip(content);
+  const documentXml = zip.file('word/document.xml').asText();
+
+  // Both field_id and field_name declension placeholders should be replaced
+  if (documentXml.includes('{f_last_name_genitive}') || documentXml.includes('{last_name_genitive}')) {
+    throw new Error('Declension placeholders should have been replaced');
+  }
+
+  // Declined value should appear at least twice (field_id and field_name versions)
+  // Петренка is genitive of Петренко
+  if (!documentXml.includes('Петренка')) {
+    throw new Error('Expected genitive form "Петренка" in document');
+  }
+
+  // Full name dative should also be present
+  if (documentXml.includes('{f_full_name_dative}') || documentXml.includes('{full_name_dative}')) {
+    throw new Error('Full name dative placeholders should have been replaced');
+  }
+}
+
+// Test 18: generateDocx() with schema generates field_id-based case variants
+async function testGenerateDocxFieldIdCaseVariants() {
+  const testPath = path.join(TEST_FIXTURES_DIR, 'test-field-id-case.docx');
+  createTestDocx(testPath, ['f_last_name_upper', 'last_name_upper', 'f_department_cap']);
+
+  const outputPath = path.join(TEST_OUTPUT_DIR, 'field-id-case.docx');
+  const data = { last_name: 'петренко', department: 'інформаційний відділ' };
+
+  await generateDocx(testPath, data, outputPath, TEST_SCHEMA);
+
+  const content = fs.readFileSync(outputPath, 'binary');
+  const zip = new PizZip(content);
+  const documentXml = zip.file('word/document.xml').asText();
+
+  // field_id _upper should work
+  if (!documentXml.includes('ПЕТРЕНКО')) {
+    throw new Error('f_last_name_upper should produce ПЕТРЕНКО');
+  }
+
+  // field_id _cap should work
+  if (!documentXml.includes('Інформаційний відділ')) {
+    throw new Error('f_department_cap should produce capitalized value');
+  }
+}
+
+// Test 19: extractPlaceholders() with schema returns validation info
+async function testExtractPlaceholdersWithSchema() {
+  const testPath = path.join(TEST_FIXTURES_DIR, 'test-validate-placeholders.docx');
+  createTestDocx(testPath, ['f_last_name', 'last_name', 'unknown_field', 'current_date', 'f_birth_date_upper']);
+
+  const result = await extractPlaceholders(testPath, TEST_SCHEMA);
+
+  // With schema, should return object with placeholders and unknown arrays
+  if (!result.placeholders || !result.unknown) {
+    throw new Error('Expected { placeholders, unknown } object when schema provided');
+  }
+
+  // All placeholders should be in the list
+  if (result.placeholders.length !== 5) {
+    throw new Error(`Expected 5 placeholders, got ${result.placeholders.length}: ${JSON.stringify(result.placeholders)}`);
+  }
+
+  // unknown_field should be flagged as unknown
+  if (!result.unknown.includes('unknown_field')) {
+    throw new Error(`Expected "unknown_field" in unknown list, got: ${JSON.stringify(result.unknown)}`);
+  }
+
+  // Known fields should NOT be in unknown list
+  if (result.unknown.includes('f_last_name') || result.unknown.includes('last_name') ||
+      result.unknown.includes('current_date') || result.unknown.includes('f_birth_date_upper')) {
+    throw new Error(`Known fields should not be in unknown list: ${JSON.stringify(result.unknown)}`);
+  }
+}
+
+// Test 20: extractPlaceholders() without schema returns plain array (backwards compat)
+async function testExtractPlaceholdersWithoutSchemaCompat() {
+  const testPath = path.join(TEST_FIXTURES_DIR, 'test-no-schema-extract.docx');
+  createTestDocx(testPath, ['name', 'position']);
+
+  const result = await extractPlaceholders(testPath);
+
+  // Without schema, should return plain array
+  if (!Array.isArray(result)) {
+    throw new Error('Expected plain array when no schema provided');
+  }
+
+  if (result.length !== 2 || result[0] !== 'name' || result[1] !== 'position') {
+    throw new Error(`Expected ['name', 'position'], got ${JSON.stringify(result)}`);
+  }
+}
+
 // Main test runner
 async function runAllTests() {
   console.log('Starting DOCX Generator unit tests...\n');
@@ -465,6 +660,12 @@ async function runAllTests() {
   await runTest('extractPlaceholders() finds placeholders split across XML runs', testExtractPlaceholdersSplitRuns);
   await runTest('generateDocx() adds _upper and _cap case variants', testGenerateDocxCaseVariants);
   await runTest('generateDocx() handles _upper/_cap for empty values', testGenerateDocxCaseVariantsEmpty);
+  await runTest('generateDocx() with schema generates both field_id and field_name keys', testGenerateDocxFieldIdKeys);
+  await runTest('generateDocx() without schema works as before (backwards compat)', testGenerateDocxWithoutSchema);
+  await runTest('generateDocx() with schema generates field_id-based declension keys', testGenerateDocxFieldIdDeclension);
+  await runTest('generateDocx() with schema generates field_id-based case variants', testGenerateDocxFieldIdCaseVariants);
+  await runTest('extractPlaceholders() with schema returns validation info', testExtractPlaceholdersWithSchema);
+  await runTest('extractPlaceholders() without schema returns plain array', testExtractPlaceholdersWithoutSchemaCompat);
 
   // Cleanup
   cleanup();

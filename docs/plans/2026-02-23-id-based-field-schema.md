@@ -208,36 +208,36 @@ Replace all hardcoded `field_name === 'employment_status'` / `emp.birth_date` / 
 
 ### Task 6: Switch DOCX generation to field_id-based placeholders
 
-- [ ] Update `prepareData()` in `server/src/docx-generator.js`:
+- [x] Update `prepareData()` in `server/src/docx-generator.js`:
   - Accept schema as parameter
   - Build field_name → field_id mapping from schema
   - For each employee field: add BOTH `{field_id}` key (primary) AND `{field_name}` key (backwards compatibility)
   - Example: employee has `birth_date: "1990-05-15"` → prepared data gets `f_birth_date: "1990-05-15"` AND `birth_date: "1990-05-15"`
-- [ ] Update declension placeholder keys:
+- [x] Update declension placeholder keys:
   - `generateDeclinedNames()` output: `f_last_name_genitive` (primary) + `last_name_genitive` (compat)
   - `generateDeclinedGradePosition()` output: `f_grade_genitive` (primary) + `grade_genitive` (compat)
   - `full_name` computed placeholder: `f_full_name` (primary) + `full_name` (compat)
-- [ ] Update case variant generation:
+- [x] Update case variant generation:
   - Generate `{f_last_name_upper}` and `{last_name_upper}` (both)
   - Generate `{f_last_name_cap}` and `{last_name_cap}` (both)
-- [ ] Update special placeholders:
+- [x] Update special placeholders:
   - Keep `{current_date}` and `{current_datetime}` as-is (no field_id for these)
-- [ ] Update `extractPlaceholders()`:
+- [x] Update `extractPlaceholders()`:
   - Return extracted placeholder names as-is (they come from DOCX content)
   - Add validation: flag placeholders that match neither field_id nor field_name
-- [ ] Update `data_snapshot` in generated_documents.csv:
+- [x] Update `data_snapshot` in generated_documents.csv:
   - Store with field_id keys (stable across renames)
   - Include field_name → field_id mapping in snapshot for historical reference
-- [ ] Update placeholder reference endpoint (`GET /api/placeholder-preview`):
+- [x] Update placeholder reference endpoint (`GET /api/placeholder-preview`):
   - Show field_id as primary placeholder format (e.g., `{f_last_name}`)
   - Show field_name as legacy format (e.g., `{last_name}`)
   - Group: add note about migration to field_id format
-- [ ] Write/update unit tests in `server/test/docx-generator.test.js`:
+- [x] Write/update unit tests in `server/test/docx-generator.test.js`:
   - Test prepareData() generates both field_id and field_name keys
   - Test declension placeholders use field_id prefix
   - Test backwards compatibility (old {last_name} placeholders still work)
   - Test extractPlaceholders() with mixed old/new format
-- [ ] Run `cd server && npm test` — must pass before next task
+- [x] Run `cd server && npm test` — must pass before next task
 
 ### Task 7: Update frontend
 

@@ -186,11 +186,23 @@ export function registerMiscRoutes(app) {
 
       // Fields from schema (exclude photo — file path, not template data)
       for (const field of schema.filter(f => f.field_type !== 'photo')) {
+        // Primary: field_id-based placeholder (when field_id exists)
+        if (field.field_id) {
+          placeholders.push({
+            placeholder: `{${field.field_id}}`,
+            label: field.field_label || field.field_name,
+            value: employee[field.field_name] || '',
+            group: 'fields',
+            format: 'primary'
+          });
+        }
+        // Legacy: field_name-based placeholder (backwards compatibility)
         placeholders.push({
           placeholder: `{${field.field_name}}`,
           label: field.field_label || field.field_name,
           value: employee[field.field_name] || '',
-          group: 'fields'
+          group: 'fields',
+          format: field.field_id ? 'legacy' : 'primary'
         });
       }
 
@@ -208,23 +220,40 @@ export function registerMiscRoutes(app) {
       const lastNameFieldName = getFieldNameByRole(schema, ROLES.LAST_NAME) || 'last_name';
       const firstNameFieldName = getFieldNameByRole(schema, ROLES.FIRST_NAME) || 'first_name';
       const middleNameFieldName = getFieldNameByRole(schema, ROLES.MIDDLE_NAME) || 'middle_name';
+      const lastNameFieldId = schema.find(f => f.field_name === lastNameFieldName)?.field_id || '';
+      const firstNameFieldId = schema.find(f => f.field_name === firstNameFieldName)?.field_id || '';
+      const middleNameFieldId = schema.find(f => f.field_name === middleNameFieldName)?.field_id || '';
       const lastNameLabel = schema.find(f => f.field_name === lastNameFieldName)?.field_label || 'Прізвище';
       const firstNameLabel = schema.find(f => f.field_name === firstNameFieldName)?.field_label || "Ім'я";
       const middleNameLabel = schema.find(f => f.field_name === middleNameFieldName)?.field_label || 'По батькові';
-      const nameFields = {
-        [lastNameFieldName]: lastNameLabel,
-        [firstNameFieldName]: firstNameLabel,
-        [middleNameFieldName]: middleNameLabel,
-        full_name: 'Повне ПІБ'
-      };
+      // Declension name entries: fieldName, fieldId, label
+      const nameEntries = [
+        { fieldName: lastNameFieldName, fieldId: lastNameFieldId, label: lastNameLabel },
+        { fieldName: firstNameFieldName, fieldId: firstNameFieldId, label: firstNameLabel },
+        { fieldName: middleNameFieldName, fieldId: middleNameFieldId, label: middleNameLabel },
+        { fieldName: 'full_name', fieldId: 'f_full_name', label: 'Повне ПІБ' }
+      ];
       for (const [suffix, caseLabel] of Object.entries(caseLabels)) {
-        for (const [field, fieldLabel] of Object.entries(nameFields)) {
-          const key = `${field}_${suffix}`;
+        for (const entry of nameEntries) {
+          const legacyKey = `${entry.fieldName}_${suffix}`;
+          const val = declined[legacyKey] || '';
+          // Primary: field_id-based
+          if (entry.fieldId) {
+            placeholders.push({
+              placeholder: `{${entry.fieldId}_${suffix}}`,
+              label: `${entry.label} (${caseLabel})`,
+              value: val,
+              group: 'declension',
+              format: 'primary'
+            });
+          }
+          // Legacy: field_name-based
           placeholders.push({
-            placeholder: `{${key}}`,
-            label: `${fieldLabel} (${caseLabel})`,
-            value: declined[key] || '',
-            group: 'declension'
+            placeholder: `{${legacyKey}}`,
+            label: `${entry.label} (${caseLabel})`,
+            value: val,
+            group: 'declension',
+            format: entry.fieldId ? 'legacy' : 'primary'
           });
         }
       }
@@ -233,20 +262,35 @@ export function registerMiscRoutes(app) {
       const declinedGradePosition = await generateDeclinedGradePosition(employee, schema);
       const gradeFieldName = getFieldNameByRole(schema, ROLES.GRADE) || 'grade';
       const positionFieldName = getFieldNameByRole(schema, ROLES.POSITION) || 'position';
+      const gradeFieldId = schema.find(f => f.field_name === gradeFieldName)?.field_id || '';
+      const positionFieldId = schema.find(f => f.field_name === positionFieldName)?.field_id || '';
       const gradeLabel = schema.find(f => f.field_name === gradeFieldName)?.field_label || 'Посада';
       const positionLabel = schema.find(f => f.field_name === positionFieldName)?.field_label || 'Звання';
-      const gradePositionFields = {
-        [gradeFieldName]: gradeLabel,
-        [positionFieldName]: positionLabel
-      };
+      const gradePositionEntries = [
+        { fieldName: gradeFieldName, fieldId: gradeFieldId, label: gradeLabel },
+        { fieldName: positionFieldName, fieldId: positionFieldId, label: positionLabel }
+      ];
       for (const [suffix, caseLabel] of Object.entries(caseLabels)) {
-        for (const [field, fieldLabel] of Object.entries(gradePositionFields)) {
-          const key = `${field}_${suffix}`;
+        for (const entry of gradePositionEntries) {
+          const legacyKey = `${entry.fieldName}_${suffix}`;
+          const val = declinedGradePosition[legacyKey] || '';
+          // Primary: field_id-based
+          if (entry.fieldId) {
+            placeholders.push({
+              placeholder: `{${entry.fieldId}_${suffix}}`,
+              label: `${entry.label} (${caseLabel})`,
+              value: val,
+              group: 'declension_fields',
+              format: 'primary'
+            });
+          }
+          // Legacy: field_name-based
           placeholders.push({
-            placeholder: `{${key}}`,
-            label: `${fieldLabel} (${caseLabel})`,
-            value: declinedGradePosition[key] || '',
-            group: 'declension_fields'
+            placeholder: `{${legacyKey}}`,
+            label: `${entry.label} (${caseLabel})`,
+            value: val,
+            group: 'declension_fields',
+            format: entry.fieldId ? 'legacy' : 'primary'
           });
         }
       }
@@ -282,13 +326,15 @@ export function registerMiscRoutes(app) {
           placeholder: p.placeholder.replace('}', '_upper}'),
           label: `${p.label} (ВЕЛИКІ)`,
           value: val.length > 0 ? val.toUpperCase() : '',
-          group: 'case_variants'
+          group: 'case_variants',
+          format: p.format || 'primary'
         });
         placeholders.push({
           placeholder: p.placeholder.replace('}', '_cap}'),
           label: `${p.label} (З великої)`,
           value: val.length > 0 ? val.charAt(0).toUpperCase() + val.slice(1) : '',
-          group: 'case_variants'
+          group: 'case_variants',
+          format: p.format || 'primary'
         });
       }
 
