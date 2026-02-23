@@ -59,6 +59,7 @@ jobs:
           node test/status-events-store.test.js
           node test/dashboard-30days.test.js
           node test/remote-archive-store.test.js
+          node test/schema.test.js
 
       - name: Start backend server
         working-directory: ./server

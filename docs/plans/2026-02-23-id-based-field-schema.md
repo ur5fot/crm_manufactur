@@ -95,16 +95,16 @@ Fields without a role (e.g., department, education, salary_amount) are regular d
 
 ### Task 1: Add field_id and role columns to fields_schema
 
-- [ ] Update `data/fields_schema.template.csv`: add `field_id` and `role` columns to all rows
+- [x] Update `data/fields_schema.template.csv`: add `field_id` and `role` columns to all rows
   - field_id = `f_<field_name>` for every field
   - role = one of the 16 roles above for critical fields, empty for regular fields
   - New column order: `field_id;field_order;field_name;field_label;field_type;field_options;show_in_table;field_group;editable_in_table;role`
-- [ ] Update `FIELD_SCHEMA_COLUMNS` in `server/src/schema.js` to include `field_id` and `role`
-- [ ] Update `loadEmployeeColumns()` in `server/src/schema.js` to read and cache field_id mapping alongside column names
-- [ ] Update `syncFieldsSchemaWithTemplate()` in `server/src/store.js` to handle new columns during merge
-- [ ] Ensure `migrateEmployeesSchema()` in `server/src/store.js` still works with new schema format
-- [ ] Write unit tests for schema loading with field_id and role columns
-- [ ] Run `cd server && npm test` — must pass before next task
+- [x] Update `FIELD_SCHEMA_COLUMNS` in `server/src/schema.js` to include `field_id` and `role`
+- [x] Update `loadEmployeeColumns()` in `server/src/schema.js` to read and cache field_id mapping alongside column names
+- [x] Update `syncFieldsSchemaWithTemplate()` in `server/src/store.js` to handle new columns during merge
+- [x] Ensure `migrateEmployeesSchema()` in `server/src/store.js` still works with new schema format
+- [x] Write unit tests for schema loading with field_id and role columns
+- [x] Run `cd server && npm test` — must pass before next task
 
 ### Task 2: Create role-based field resolution utilities
 

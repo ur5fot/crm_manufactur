@@ -92,11 +92,32 @@ async function syncFieldsSchemaWithTemplate() {
 
     if (templateSchema.length === 0) return;
 
+    // Build template lookup by field_name for merging field_id/role
+    const templateByName = new Map(templateSchema.map(f => [f.field_name, f]));
+
     // Находим поля из шаблона, отсутствующие в runtime
     const runtimeFieldNames = new Set(runtimeSchema.map(f => f.field_name));
     const missingFields = templateSchema.filter(f => f.field_name && !runtimeFieldNames.has(f.field_name));
 
-    if (missingFields.length === 0) return;
+    // Check if existing runtime fields need field_id/role updates from template
+    let fieldsUpdated = 0;
+    for (const runtimeField of runtimeSchema) {
+      const templateField = templateByName.get(runtimeField.field_name);
+      if (!templateField) continue;
+
+      // Backfill field_id from template if missing in runtime
+      if (!runtimeField.field_id && templateField.field_id) {
+        runtimeField.field_id = templateField.field_id;
+        fieldsUpdated++;
+      }
+      // Backfill role from template if missing in runtime
+      if (!runtimeField.role && templateField.role) {
+        runtimeField.role = templateField.role;
+        fieldsUpdated++;
+      }
+    }
+
+    if (missingFields.length === 0 && fieldsUpdated === 0) return;
 
     // Добавляем отсутствующие поля
     const updatedSchema = [...runtimeSchema, ...missingFields];
@@ -104,7 +125,14 @@ async function syncFieldsSchemaWithTemplate() {
     updatedSchema.sort((a, b) => parseInt(a.field_order || 0, 10) - parseInt(b.field_order || 0, 10));
 
     await writeCsv(FIELD_SCHEMA_PATH, FIELD_SCHEMA_COLUMNS, updatedSchema);
-    console.log(`✓ fields_schema.csv: додано ${missingFields.length} полів з шаблону (${missingFields.map(f => f.field_name).join(', ')})`);
+    const messages = [];
+    if (missingFields.length > 0) {
+      messages.push(`додано ${missingFields.length} полів (${missingFields.map(f => f.field_name).join(', ')})`);
+    }
+    if (fieldsUpdated > 0) {
+      messages.push(`оновлено ${fieldsUpdated} атрибутів field_id/role`);
+    }
+    console.log(`✓ fields_schema.csv: ${messages.join(', ')}`);
   } catch (error) {
     console.error("⚠️ Помилка синхронізації fields_schema:", error.message);
   }
