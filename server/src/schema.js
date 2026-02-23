@@ -1,5 +1,7 @@
-// Fallback список колонок если fields_schema.csv недоступен
-// Должен соответствовать fields_schema.template.csv
+// Fallback список колонок если fields_schema.csv недоступен.
+// These are field_name values (CSV column headers) and must match
+// the field_name column in data/fields_schema.template.csv.
+// Used only when fields_schema.csv cannot be loaded.
 const DEFAULT_EMPLOYEE_COLUMNS = [
   "photo",
   "employee_id",
@@ -314,6 +316,8 @@ export const FIELD_MAPPING_COLUMNS = [
   "field_name"
 ];
 
+// @deprecated — labels should come from fields_schema.csv field_label column.
+// Kept for backwards compatibility; prefer schema-driven labels via loadFieldsSchema().
 export const FIELD_LABELS = {
   photo: "Фото",
   employee_id: "ID сотрудника",

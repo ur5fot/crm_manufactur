@@ -283,17 +283,17 @@ Replace all hardcoded `field_name === 'employment_status'` / `emp.birth_date` / 
 
 ### Task 9: Update DEFAULT fallback lists and cleanup
 
-- [ ] Review `DEFAULT_EMPLOYEE_COLUMNS` in `server/src/schema.js`:
+- [x] Review `DEFAULT_EMPLOYEE_COLUMNS` in `server/src/schema.js`:
   - These are field_name values (CSV column headers) — keep as-is for fallback
   - Add comment explaining they must match fields_schema.template.csv field_name values
-- [ ] Review `FIELD_LABELS` in `server/src/schema.js`:
+- [x] Review `FIELD_LABELS` in `server/src/schema.js`:
   - Deprecate: add comment that labels should come from fields_schema.csv `field_label` column
   - Keep for backwards compatibility but mark as deprecated
-- [ ] Remove any remaining hardcoded field_name references found during implementation
-- [ ] Update CI workflow (`.github/workflows/tests.yml`):
+- [x] Remove any remaining hardcoded field_name references found during implementation
+- [x] Update CI workflow (`.github/workflows/tests.yml`):
   - Ensure migration script runs during CI setup
   - Verify field_mapping.csv is created during test setup
-- [ ] Run full test suite: `cd server && npm test` and `cd server && npm run test:integration` and `npm run test:e2e`
+- [x] Run full test suite: `cd server && npm test` and `cd server && npm run test:integration` and `npm run test:e2e`
 
 ### Task 10: Field Schema Management UI
 
