@@ -179,10 +179,10 @@ Replace all hardcoded `field_name === 'employment_status'` / `emp.birth_date` / 
 
 ### Task 5: Implement field_mapping tracking and auto-rename on startup
 
-- [ ] Create `data/field_mapping.csv` with columns: `field_id;field_name` — snapshot of current field_id → field_name mapping
-- [ ] Add `FIELD_MAPPING_COLUMNS` to `server/src/schema.js`: `["field_id", "field_name"]`
-- [ ] Add `loadFieldMapping()` and `saveFieldMapping()` to `server/src/store.js`
-- [ ] Create `server/src/auto-migrate.js` with `runAutoMigration()`:
+- [x] Create `data/field_mapping.csv` with columns: `field_id;field_name` — snapshot of current field_id → field_name mapping
+- [x] Add `FIELD_MAPPING_COLUMNS` to `server/src/schema.js`: `["field_id", "field_name"]`
+- [x] Add `loadFieldMapping()` and `saveFieldMapping()` to `server/src/store.js`
+- [x] Create `server/src/auto-migrate.js` with `runAutoMigration()`:
   1. Load `fields_schema.csv` (current state: field_id + field_name)
   2. Load `data/field_mapping.csv` (previous state: field_id + old field_name)
   3. If field_mapping.csv doesn't exist: create it from current schema, return (first run)
@@ -195,8 +195,8 @@ Replace all hardcoded `field_name === 'employment_status'` / `emp.birth_date` / 
      e. Auto-generate `_issue_date` and `_expiry_date` column renames for file-type fields
   6. Save updated `data/field_mapping.csv`
   7. Log all renames performed
-- [ ] Call `runAutoMigration()` during server startup in `server/src/index.js` (before route registration, after schema load)
-- [ ] Write comprehensive unit tests in `server/test/auto-migrate.test.js`:
+- [x] Call `runAutoMigration()` during server startup in `server/src/index.js` (before route registration, after schema load)
+- [x] Write comprehensive unit tests in `server/test/auto-migrate.test.js`:
   - Test first run (creates field_mapping.csv)
   - Test no renames (field_mapping matches schema)
   - Test single field rename (employees.csv column renamed)
@@ -204,7 +204,7 @@ Replace all hardcoded `field_name === 'employment_status'` / `emp.birth_date` / 
   - Test templates.csv placeholder_fields update
   - Test logs.csv field_name column update
   - Test error handling (missing files, corrupt data)
-- [ ] Run `cd server && npm test` — must pass before next task
+- [x] Run `cd server && npm test` — must pass before next task
 
 ### Task 6: Switch DOCX generation to field_id-based placeholders
 

@@ -309,6 +309,11 @@ export const STATUS_EVENT_COLUMNS = [
   "active"
 ];
 
+export const FIELD_MAPPING_COLUMNS = [
+  "field_id",
+  "field_name"
+];
+
 export const FIELD_LABELS = {
   photo: "Фото",
   employee_id: "ID сотрудника",
