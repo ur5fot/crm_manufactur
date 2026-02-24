@@ -112,7 +112,8 @@ async function runAllTests() {
     await fs.writeFile(path.join(employeeDir, 'test_doc.txt'), 'test content');
 
     // Snapshot remote CSV counts before delete
-    const remoteEmpBefore = await readRemoteCsv(EMPLOYEES_REMOTE_PATH, empColumns);
+    const empColumnsWithActive = [...empColumns, 'active'];
+    const remoteEmpBefore = await readRemoteCsv(EMPLOYEES_REMOTE_PATH, empColumnsWithActive);
     const remoteRepBefore = await readRemoteCsv(REPRIMANDS_REMOTE_PATH, REPRIMAND_COLUMNS);
     const remoteEvtBefore = await readRemoteCsv(STATUS_EVENTS_REMOTE_PATH, STATUS_EVENT_COLUMNS);
 
@@ -134,34 +135,38 @@ async function runAllTests() {
 
     // Test: employee record archived to employees_remote.csv
     await runTest("DELETE archives employee record to employees_remote.csv", async () => {
-      const remoteEmpAfter = await readRemoteCsv(EMPLOYEES_REMOTE_PATH, empColumns);
-      // Find the last occurrence with this employee_id (most recently archived)
-      const matchingRecords = remoteEmpAfter.filter(e => e.employee_id === empId);
-      if (matchingRecords.length === 0) throw new Error("Employee not found in employees_remote.csv");
-      const archived = matchingRecords[matchingRecords.length - 1];
+      const remoteEmpAfter = await readRemoteCsv(EMPLOYEES_REMOTE_PATH, empColumnsWithActive);
+      // Find the newly added record: compare after vs before for this empId
+      const beforeIds = new Set(remoteEmpBefore.map(e => e.employee_id));
+      const newRecords = remoteEmpAfter.filter(e => e.employee_id === empId && !beforeIds.has(e.employee_id));
+      // Since employee_id may repeat across runs, find the last appended record
+      const matchingAfter = remoteEmpAfter.filter(e => e.employee_id === empId);
+      const matchingBefore = remoteEmpBefore.filter(e => e.employee_id === empId);
+      if (matchingAfter.length <= matchingBefore.length) throw new Error("Employee not found in employees_remote.csv");
+      const archived = matchingAfter[matchingAfter.length - 1];
       if (archived.last_name !== 'Видалення') throw new Error(`Expected last_name 'Видалення', got '${archived.last_name}'`);
       if (archived.first_name !== 'АрхівТест') throw new Error(`Expected first_name 'АрхівТест', got '${archived.first_name}'`);
       if (archived.active !== 'no') throw new Error(`Expected active 'no', got '${archived.active}'`);
-      // Count should have increased
-      if (remoteEmpAfter.length <= remoteEmpBefore.length) {
-        throw new Error(`Expected remote employees count to increase from ${remoteEmpBefore.length}`);
-      }
     });
 
     // Test: reprimands archived to reprimands_remote.csv
     await runTest("DELETE archives reprimand records to reprimands_remote.csv", async () => {
       const remoteRepAfter = await readRemoteCsv(REPRIMANDS_REMOTE_PATH, REPRIMAND_COLUMNS);
-      const archived = remoteRepAfter.filter(r => r.employee_id === empId);
-      if (archived.length !== 1) throw new Error(`Expected exactly 1 archived reprimand, got ${archived.length}`);
-      if (archived[0].record_type !== 'Догана') throw new Error(`Expected record_type 'Догана', got '${archived[0].record_type}'`);
+      const beforeCount = remoteRepBefore.filter(r => r.employee_id === empId).length;
+      const afterMatching = remoteRepAfter.filter(r => r.employee_id === empId);
+      const newlyArchived = afterMatching.length - beforeCount;
+      if (newlyArchived !== 1) throw new Error(`Expected exactly 1 newly archived reprimand, got ${newlyArchived}`);
+      if (afterMatching[afterMatching.length - 1].record_type !== 'Догана') throw new Error(`Expected record_type 'Догана', got '${afterMatching[afterMatching.length - 1].record_type}'`);
     });
 
     // Test: status events archived to status_events_remote.csv
     await runTest("DELETE archives status events to status_events_remote.csv", async () => {
       const remoteEvtAfter = await readRemoteCsv(STATUS_EVENTS_REMOTE_PATH, STATUS_EVENT_COLUMNS);
-      const archived = remoteEvtAfter.filter(e => e.employee_id === empId);
-      if (archived.length !== 1) throw new Error(`Expected exactly 1 archived status event, got ${archived.length}`);
-      if (archived[0].status !== 'Відпустка') throw new Error(`Expected status 'Відпустка', got '${archived[0].status}'`);
+      const beforeCount = remoteEvtBefore.filter(e => e.employee_id === empId).length;
+      const afterMatching = remoteEvtAfter.filter(e => e.employee_id === empId);
+      const newlyArchived = afterMatching.length - beforeCount;
+      if (newlyArchived !== 1) throw new Error(`Expected exactly 1 newly archived status event, got ${newlyArchived}`);
+      if (afterMatching[afterMatching.length - 1].status !== 'Відпустка') throw new Error(`Expected status 'Відпустка', got '${afterMatching[afterMatching.length - 1].status}'`);
     });
 
     // Test: employee files directory moved to remote/employee_{id}/

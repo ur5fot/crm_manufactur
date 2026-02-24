@@ -1835,7 +1835,7 @@ export async function archiveEmployee(employee) {
 
   try {
     await previousLock;
-    const columns = await getEmployeeColumns();
+    const columns = [...(await getEmployeeColumns()), 'active'];
     const remoteEmployees = await readCsv(EMPLOYEES_REMOTE_PATH, columns);
     remoteEmployees.push(employee);
     await writeCsv(EMPLOYEES_REMOTE_PATH, columns, remoteEmployees);
