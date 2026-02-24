@@ -53,6 +53,8 @@
                 class="form-control form-control-sm"
                 v-model="field.field_name"
                 :class="{ 'input-changed': isNameChanged(index) }"
+                :disabled="!!field.role"
+                :title="field.role ? 'Системне поле не можна перейменувати' : ''"
               />
             </td>
             <td class="col-label">

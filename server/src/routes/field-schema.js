@@ -9,7 +9,7 @@ import {
   initializeEmployeeColumns,
 } from "../store.js";
 import { runAutoMigration } from "../auto-migrate.js";
-import { getCachedEmployeeColumns } from "../schema.js";
+import { getCachedEmployeeColumns, resetEmployeeColumnsCache } from "../schema.js";
 import { addLog } from "../store.js";
 
 export function registerFieldSchemaRoutes(app) {
@@ -176,13 +176,17 @@ export function registerFieldSchemaRoutes(app) {
         names.add(field.field_name);
       }
 
-      // Load current schema to validate role fields not deleted
+      // Load current schema to validate role fields not deleted or renamed
       const currentSchema = await loadFieldsSchema();
       const roleFields = currentSchema.filter(f => f.role && f.role.trim() !== "");
       for (const rf of roleFields) {
         const stillPresent = fields.find(f => f.field_id === rf.field_id);
         if (!stillPresent) {
           return res.status(400).json({ error: `Cannot delete role field: ${rf.field_name} (role: ${rf.role})` });
+        }
+        // Prevent renaming field_name for role fields (used as foreign keys and in hardcoded logic)
+        if (stillPresent.field_name !== rf.field_name) {
+          return res.status(400).json({ error: `Cannot rename system field: ${rf.field_name} (role: ${rf.role})` });
         }
       }
 
@@ -207,7 +211,8 @@ export function registerFieldSchemaRoutes(app) {
       // Save schema
       await saveFieldsSchema(updatedSchema);
 
-      // Re-initialize employee columns from updated schema
+      // Clear stale column cache before re-initializing from updated schema
+      resetEmployeeColumnsCache();
       await initializeEmployeeColumns();
 
       // Run auto-migration to detect renames and propagate
