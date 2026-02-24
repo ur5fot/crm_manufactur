@@ -45,7 +45,11 @@ export function useTemplateUpload() {
 
       const result = await api.uploadTemplateFile(uploadTemplateId.value, formData);
 
-      alert(`✓ Файл завантажено успішно!\n\nВиявлені плейсхолдери:\n${result.placeholders.join(', ') || '(немає)'}`);
+      let msg = `✓ Файл завантажено успішно!\n\nВиявлені плейсхолдери:\n${result.placeholders.join(', ') || '(немає)'}`;
+      if (result.unknown?.length > 0) {
+        msg += `\n\n⚠ Невідомі плейсхолдери (не відповідають жодному полю схеми):\n${result.unknown.join(', ')}`;
+      }
+      alert(msg);
 
       closeUploadTemplateModal();
       await loadTemplates();

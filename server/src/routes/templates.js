@@ -195,8 +195,9 @@ export function registerTemplateRoutes(app, appConfig) {
         return;
       }
 
-      // Extract placeholders from uploaded DOCX
-      const { placeholders } = await extractPlaceholders(req.file.path);
+      // Extract placeholders from uploaded DOCX, validate against schema
+      const schema = await loadFieldsSchema();
+      const { placeholders, unknown } = await extractPlaceholders(req.file.path, schema);
 
       // Delete old DOCX file if exists
       if (template.docx_filename) {
@@ -221,7 +222,8 @@ export function registerTemplateRoutes(app, appConfig) {
 
       res.json({
         filename: req.file.filename,
-        placeholders: placeholders
+        placeholders: placeholders,
+        unknown
       });
     } catch (err) {
       console.error(err);
@@ -311,11 +313,12 @@ export function registerTemplateRoutes(app, appConfig) {
         return;
       }
 
-      const { placeholders } = await extractPlaceholders(resolvedPath);
+      const schema = await loadFieldsSchema();
+      const { placeholders, unknown } = await extractPlaceholders(resolvedPath, schema);
       template.placeholder_fields = placeholders.join(', ');
       await saveTemplates(templates);
 
-      res.json({ placeholders });
+      res.json({ placeholders, unknown });
     } catch (err) {
       console.error(err);
       res.status(500).json({ error: err.message });
