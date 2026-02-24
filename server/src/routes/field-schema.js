@@ -193,6 +193,11 @@ export function registerFieldSchemaRoutes(app) {
         if (names.has(field.field_name)) {
           return res.status(400).json({ error: `Duplicate field_name: ${field.field_name}` });
         }
+        // full_name and f_full_name are reserved for the computed full name placeholder in DOCX generation.
+        // A real field with this name would be silently overwritten by the computed value.
+        if (field.field_name === 'full_name' || field.field_name === 'f_full_name') {
+          return res.status(400).json({ error: `field_name "${field.field_name}" is reserved for the computed full name placeholder` });
+        }
         names.add(field.field_name);
       }
 

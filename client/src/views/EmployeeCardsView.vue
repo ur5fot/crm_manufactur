@@ -527,7 +527,6 @@ onUnmounted(() => {
             <div class="employee-meta">
               ID: {{ employee[getFieldNameByRole('EMPLOYEE_ID') || 'employee_id'] }}
               <span v-if="employee[getFieldNameByRole('POSITION') || 'position']"> · {{ employee[getFieldNameByRole('POSITION') || 'position'] }}</span>
-              <span v-if="employee.department"> · {{ employee.department }}</span>
             </div>
             <div class="employee-tags">
               <span class="tag">{{ employee[getFieldNameByRole('STATUS') || 'employment_status'] || "без статусу" }}</span>
