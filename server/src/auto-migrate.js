@@ -123,7 +123,7 @@ export async function runAutoMigration(dataDir, employeeColumns) {
   // Apply renames to CSV files
   await renameEmployeesCsv(path.join(dataDir, "employees.csv"), expandedRenames, employeeColumns);
   await renameEmployeesCsv(path.join(dataDir, "employees_remote.csv"), expandedRenames, employeeColumns);
-  await renameTemplatesPlaceholders(path.join(dataDir, "templates.csv"), renames);
+  await renameTemplatesPlaceholders(path.join(dataDir, "templates.csv"), expandedRenames);
   // Note: logs.csv is intentionally NOT migrated — log entries are immutable audit records
   // that preserve what was true at the time they were created.
 

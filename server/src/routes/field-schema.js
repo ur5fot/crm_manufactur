@@ -197,12 +197,19 @@ export function registerFieldSchemaRoutes(app) {
       }
 
       // Load current schema to validate role fields not deleted
+      // and EMPLOYEE_ID field_name not renamed (it's a FK in fixed-schema CSVs)
       const currentSchema = await loadFieldsSchema();
       const roleFields = currentSchema.filter(f => f.role && f.role.trim() !== "");
       for (const rf of roleFields) {
         const stillPresent = fields.find(f => f.field_id === rf.field_id);
         if (!stillPresent) {
           return res.status(400).json({ error: `Cannot delete role field: ${rf.field_name} (role: ${rf.role})` });
+        }
+        // employee_id is used as a foreign key in status_history, reprimands,
+        // status_events, generated_documents, and logs CSVs with fixed schemas.
+        // Renaming it would break all cross-file joins.
+        if (rf.role === "EMPLOYEE_ID" && stillPresent.field_name !== rf.field_name) {
+          return res.status(400).json({ error: `Cannot rename employee_id field (used as foreign key in related CSV files)` });
         }
       }
 
