@@ -9,7 +9,7 @@
 import fs from "fs/promises";
 import path from "path";
 import { readCsv, writeCsv } from "./csv.js";
-import { FIELD_SCHEMA_COLUMNS, FIELD_MAPPING_COLUMNS, LOG_COLUMNS } from "./schema.js";
+import { FIELD_SCHEMA_COLUMNS, FIELD_MAPPING_COLUMNS, TEMPLATE_COLUMNS } from "./schema.js";
 
 /**
  * Run auto-migration to detect and apply field_name renames.
@@ -124,7 +124,8 @@ export async function runAutoMigration(dataDir, employeeColumns) {
   await renameEmployeesCsv(path.join(dataDir, "employees.csv"), expandedRenames, employeeColumns);
   await renameEmployeesCsv(path.join(dataDir, "employees_remote.csv"), expandedRenames, employeeColumns);
   await renameTemplatesPlaceholders(path.join(dataDir, "templates.csv"), renames);
-  await renameLogsFieldName(path.join(dataDir, "logs.csv"), renames);
+  // Note: logs.csv is intentionally NOT migrated — log entries are immutable audit records
+  // that preserve what was true at the time they were created.
 
   // 6. Save updated field_mapping.csv
   const rows = [];
@@ -199,17 +200,6 @@ async function renameEmployeesCsv(filePath, renames, employeeColumns) {
  * Update placeholder_fields in templates.csv: replace old field names with new ones.
  */
 async function renameTemplatesPlaceholders(filePath, renames) {
-  const TEMPLATE_COLUMNS = [
-    "template_id",
-    "template_name",
-    "template_type",
-    "docx_filename",
-    "placeholder_fields",
-    "description",
-    "created_date",
-    "active"
-  ];
-
   let templates;
   try {
     templates = await readCsv(filePath, TEMPLATE_COLUMNS);
@@ -239,29 +229,3 @@ async function renameTemplatesPlaceholders(filePath, renames) {
   }
 }
 
-/**
- * Update field_name column in logs.csv: replace old field names with new ones.
- */
-async function renameLogsFieldName(filePath, renames) {
-  let logs;
-  try {
-    logs = await readCsv(filePath, LOG_COLUMNS);
-  } catch (err) {
-    if (err.code === 'ENOENT') return; // File doesn't exist, skip
-    throw err;
-  }
-  if (logs.length === 0) return;
-
-  let changed = false;
-  for (const log of logs) {
-    if (log.field_name && renames[log.field_name]) {
-      log.field_name = renames[log.field_name];
-      changed = true;
-    }
-  }
-
-  if (changed) {
-    await writeCsv(filePath, LOG_COLUMNS, logs);
-    console.log(`auto-migrate: Updated field_name references in logs.csv`);
-  }
-}

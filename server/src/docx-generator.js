@@ -204,7 +204,7 @@ function addFieldIdDeclensionKeys(prepared, declinedOutput, nameToId, schema) {
  *
  * @param {string} templatePath - Full path to template DOCX file
  * @param {Array} [schema] - Optional field schema for validation (flags unknown placeholders)
- * @returns {Promise<{placeholders: string[], unknown: string[]}>} When schema provided, returns object with placeholders and unknown lists. Without schema, returns plain array for backwards compatibility.
+ * @returns {Promise<{placeholders: string[], unknown: string[]}>} Object with placeholders and unknown lists (unknown is empty when schema not provided).
  * @throws {Error} If template doesn't exist or extraction fails
  */
 export async function extractPlaceholders(templatePath, schema) {
@@ -272,8 +272,8 @@ export async function extractPlaceholders(templatePath, schema) {
       return { placeholders: sorted, unknown };
     }
 
-    // Without schema, return plain array for backwards compatibility
-    return sorted;
+    // Without schema, return consistent type with empty unknown list
+    return { placeholders: sorted, unknown: [] };
   } catch (error) {
     throw new Error(`Placeholder extraction failed: ${error.message}`);
   }

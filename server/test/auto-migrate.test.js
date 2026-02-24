@@ -8,7 +8,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { runAutoMigration } from "../src/auto-migrate.js";
 import { writeCsv, readCsv } from "../src/csv.js";
-import { FIELD_SCHEMA_COLUMNS, FIELD_MAPPING_COLUMNS, LOG_COLUMNS } from "../src/schema.js";
+import { FIELD_SCHEMA_COLUMNS, FIELD_MAPPING_COLUMNS, LOG_COLUMNS, TEMPLATE_COLUMNS } from "../src/schema.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -63,12 +63,7 @@ async function writeEmployeesRemote(columns, rows) {
   await writeCsv(path.join(TEST_DIR, "employees_remote.csv"), columns, rows);
 }
 
-// Helper: write templates.csv
-const TEMPLATE_COLUMNS = [
-  "template_id", "template_name", "template_type",
-  "docx_filename", "placeholder_fields", "description",
-  "created_date", "active"
-];
+/// Helper: write templates.csv (TEMPLATE_COLUMNS imported from schema.js)
 
 async function writeTemplates(rows) {
   await writeCsv(path.join(TEST_DIR, "templates.csv"), TEMPLATE_COLUMNS, rows);
@@ -268,9 +263,9 @@ async function testTemplatesPlaceholderFieldsUpdate() {
   }
 }
 
-// --- Test: logs.csv field_name column update ---
+// --- Test: logs.csv is NOT modified during migration (logs are immutable audit records) ---
 
-async function testLogsFieldNameUpdate() {
+async function testLogsNotModifiedDuringMigration() {
   await setupTestDir();
   try {
     // Schema: "last_name" renamed to "surname"
@@ -294,10 +289,9 @@ async function testLogsFieldNameUpdate() {
 
     if (result.renames["last_name"] !== "surname") throw new Error("Expected last_name rename");
 
-    // Read logs and check field_name column
+    // Logs should be untouched — audit entries are immutable historical records
     const logs = await readFile("logs.csv", LOG_COLUMNS);
-    if (logs[0].field_name !== "surname") throw new Error(`Expected 'surname' in log 1, got '${logs[0].field_name}'`);
-    // Log 2 should be unchanged (different field)
+    if (logs[0].field_name !== "last_name") throw new Error(`Expected 'last_name' preserved in log 1, got '${logs[0].field_name}'`);
     if (logs[1].field_name !== "department") throw new Error(`Log 2 should stay 'department', got '${logs[1].field_name}'`);
   } finally {
     await cleanupTestDir();
@@ -496,7 +490,7 @@ async function runAllTests() {
   await runTest("Single field rename updates employees.csv", testSingleFieldRenameEmployees);
   await runTest("File field rename auto-expands _issue_date and _expiry_date", testFileFieldRenameAutoExpandsDates);
   await runTest("Templates placeholder_fields updated on rename", testTemplatesPlaceholderFieldsUpdate);
-  await runTest("Logs field_name column updated on rename", testLogsFieldNameUpdate);
+  await runTest("Logs NOT modified during migration (immutable audit records)", testLogsNotModifiedDuringMigration);
   await runTest("employees_remote.csv also renamed", testEmployeesRemoteAlsoRenamed);
   await runTest("Empty schema does not crash", testEmptySchemaNoCrash);
   await runTest("Missing employees.csv does not crash", testMissingEmployeesCsvNoCrash);

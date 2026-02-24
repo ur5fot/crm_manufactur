@@ -36,7 +36,7 @@ import {
   validatePath,
   findById,
 } from "../utils.js";
-import { ROLES, getFieldByRole, getFieldNameByRole, buildNameFields, buildStatusFields, buildEmployeeName } from "../field-utils.js";
+import { ROLES, getFieldByRole, getFieldNameByRole, buildStatusFields, buildEmployeeName } from "../field-utils.js";
 
 /**
  * Date validation logic - validates format and correctness of date fields

@@ -8,7 +8,6 @@ import {
   initializeEmployeeColumns,
   acquireEmployeeLock,
   acquireTemplatesLock,
-  acquireLogLock,
 } from "../store.js";
 import { runAutoMigration } from "../auto-migrate.js";
 import { resetEmployeeColumnsCache } from "../schema.js";
@@ -38,15 +37,19 @@ export function registerFieldSchemaRoutes(app) {
           return val && val.trim() !== "";
         }).length;
 
-        // Count templates using this placeholder
+        // Count templates using this placeholder (check both field_name and field_id)
         const templateCount = activeTemplates.filter(t => {
           if (!t.placeholder_fields) return false;
           const placeholders = t.placeholder_fields.split(",").map(p => p.trim());
-          return placeholders.includes(field.field_name);
+          return placeholders.includes(field.field_name) ||
+            (field.field_id && placeholders.includes(field.field_id));
         }).length;
 
-        // Count log entries referencing this field
-        const logCount = logs.filter(l => l.field_name === field.field_name).length;
+        // Count log entries referencing this field (logs store formatted labels like "Label (field_name)")
+        const logCount = logs.filter(l => {
+          if (!l.field_name) return false;
+          return l.field_name === field.field_name || l.field_name.includes(`(${field.field_name})`);
+        }).length;
 
         return {
           field_id: field.field_id || "",
@@ -122,10 +125,14 @@ export function registerFieldSchemaRoutes(app) {
       const templateCount = activeTemplates.filter(t => {
         if (!t.placeholder_fields) return false;
         const placeholders = t.placeholder_fields.split(",").map(p => p.trim());
-        return placeholders.includes(oldName);
+        return placeholders.includes(oldName) ||
+          (field.field_id && placeholders.includes(field.field_id));
       }).length;
 
-      const logCount = logs.filter(l => l.field_name === oldName).length;
+      const logCount = logs.filter(l => {
+        if (!l.field_name) return false;
+        return l.field_name === oldName || l.field_name.includes(`(${oldName})`);
+      }).length;
 
       // Build rename list (including _issue_date / _expiry_date for file fields)
       const renames = [{ old: oldName, new: new_field_name }];
@@ -241,14 +248,12 @@ export function registerFieldSchemaRoutes(app) {
       // After migration renames CSV columns, cache is updated to match → consistent.
       // skipTemplateSync: user's schema is authoritative (prevents re-adding deleted fields from template).
       const migrationResult = await acquireEmployeeLock(() =>
-        acquireTemplatesLock(() =>
-          acquireLogLock(async () => {
-            const result = await runAutoMigration(DATA_DIR, newEmployeeColumns);
-            resetEmployeeColumnsCache();
-            await initializeEmployeeColumns({ skipTemplateSync: true });
-            return result;
-          })
-        )
+        acquireTemplatesLock(async () => {
+          const result = await runAutoMigration(DATA_DIR, newEmployeeColumns);
+          resetEmployeeColumnsCache();
+          await initializeEmployeeColumns({ skipTemplateSync: true });
+          return result;
+        })
       );
 
       // Log the changes

@@ -95,16 +95,21 @@ async function testExtractPlaceholdersSuccess() {
   const testPath = path.join(TEST_FIXTURES_DIR, 'test-placeholders.docx');
   createTestDocx(testPath, ['first_name', 'last_name', 'position', 'first_name']); // first_name twice
 
-  const placeholders = await extractPlaceholders(testPath);
+  const result = await extractPlaceholders(testPath);
 
-  if (!Array.isArray(placeholders)) {
-    throw new Error('Expected array of placeholders');
+  if (!result.placeholders || !Array.isArray(result.placeholders)) {
+    throw new Error('Expected object with placeholders array');
   }
 
   // Should return unique, sorted placeholders
   const expected = ['first_name', 'last_name', 'position'];
-  if (JSON.stringify(placeholders) !== JSON.stringify(expected)) {
-    throw new Error(`Expected ${JSON.stringify(expected)}, got ${JSON.stringify(placeholders)}`);
+  if (JSON.stringify(result.placeholders) !== JSON.stringify(expected)) {
+    throw new Error(`Expected ${JSON.stringify(expected)}, got ${JSON.stringify(result.placeholders)}`);
+  }
+
+  // Without schema, unknown should be empty
+  if (!Array.isArray(result.unknown) || result.unknown.length !== 0) {
+    throw new Error('Expected empty unknown array when no schema provided');
   }
 }
 
@@ -113,14 +118,14 @@ async function testExtractPlaceholdersEmpty() {
   const testPath = path.join(TEST_FIXTURES_DIR, 'test-no-placeholders.docx');
   createTestDocx(testPath, []); // No placeholders
 
-  const placeholders = await extractPlaceholders(testPath);
+  const result = await extractPlaceholders(testPath);
 
-  if (!Array.isArray(placeholders)) {
-    throw new Error('Expected array of placeholders');
+  if (!result.placeholders || !Array.isArray(result.placeholders)) {
+    throw new Error('Expected object with placeholders array');
   }
 
-  if (placeholders.length !== 0) {
-    throw new Error(`Expected empty array, got ${JSON.stringify(placeholders)}`);
+  if (result.placeholders.length !== 0) {
+    throw new Error(`Expected empty array, got ${JSON.stringify(result.placeholders)}`);
   }
 }
 
@@ -372,7 +377,7 @@ async function testExtractPlaceholdersSplitRuns() {
   const testPath = path.join(TEST_FIXTURES_DIR, 'test-split-runs.docx');
   createSplitRunDocx(testPath);
 
-  const placeholders = await extractPlaceholders(testPath);
+  const { placeholders } = await extractPlaceholders(testPath);
 
   if (!Array.isArray(placeholders)) {
     throw new Error('Expected array of placeholders');
@@ -622,20 +627,26 @@ async function testExtractPlaceholdersWithSchema() {
   }
 }
 
-// Test 20: extractPlaceholders() without schema returns plain array (backwards compat)
-async function testExtractPlaceholdersWithoutSchemaCompat() {
+// Test 20: extractPlaceholders() without schema returns consistent object type
+async function testExtractPlaceholdersWithoutSchemaConsistentType() {
   const testPath = path.join(TEST_FIXTURES_DIR, 'test-no-schema-extract.docx');
   createTestDocx(testPath, ['name', 'position']);
 
   const result = await extractPlaceholders(testPath);
 
-  // Without schema, should return plain array
-  if (!Array.isArray(result)) {
-    throw new Error('Expected plain array when no schema provided');
+  // Without schema, should return same { placeholders, unknown } shape
+  if (!result.placeholders || !Array.isArray(result.placeholders)) {
+    throw new Error('Expected object with placeholders array');
+  }
+  if (!Array.isArray(result.unknown)) {
+    throw new Error('Expected object with unknown array');
   }
 
-  if (result.length !== 2 || result[0] !== 'name' || result[1] !== 'position') {
-    throw new Error(`Expected ['name', 'position'], got ${JSON.stringify(result)}`);
+  if (result.placeholders.length !== 2 || result.placeholders[0] !== 'name' || result.placeholders[1] !== 'position') {
+    throw new Error(`Expected ['name', 'position'], got ${JSON.stringify(result.placeholders)}`);
+  }
+  if (result.unknown.length !== 0) {
+    throw new Error('Expected empty unknown array when no schema provided');
   }
 }
 
@@ -665,7 +676,7 @@ async function runAllTests() {
   await runTest('generateDocx() with schema generates field_id-based declension keys', testGenerateDocxFieldIdDeclension);
   await runTest('generateDocx() with schema generates field_id-based case variants', testGenerateDocxFieldIdCaseVariants);
   await runTest('extractPlaceholders() with schema returns validation info', testExtractPlaceholdersWithSchema);
-  await runTest('extractPlaceholders() without schema returns plain array', testExtractPlaceholdersWithoutSchemaCompat);
+  await runTest('extractPlaceholders() without schema returns consistent object type', testExtractPlaceholdersWithoutSchemaConsistentType);
 
   // Cleanup
   cleanup();

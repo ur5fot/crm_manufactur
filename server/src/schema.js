@@ -316,52 +316,14 @@ export const FIELD_MAPPING_COLUMNS = [
   "field_name"
 ];
 
-// @deprecated — labels should come from fields_schema.csv field_label column.
-// Kept for backwards compatibility; prefer schema-driven labels via loadFieldsSchema().
-export const FIELD_LABELS = {
-  photo: "Фото",
-  employee_id: "ID сотрудника",
-  last_name: "Фамилия",
-  first_name: "Имя",
-  middle_name: "Отчество",
-  employment_status: "Статус работы",
-  additional_status: "Дополнительный статус",
-  gender: "Пол",
-  blood_group: "Группа крови",
-  department: "Подразделение",
-  grade: "Разряд",
-  position: "Должность",
-  specialty: "Специальность",
-  work_state: "Рабочее состояние",
-  work_type: "Тип работы",
-  fit_status: "Пригодность",
-  order_ref: "Приказ",
-  location: "Местонахождение",
-  residence_place: "Место проживания",
-  registration_place: "Место регистрации",
-  email: "Эл. почта",
-  phone: "Телефон",
-  phone_note: "Примечание к телефону",
-  education: "Образование",
-  salary_grid: "Зарплатная сетка",
-  salary_amount: "Оклад",
-  bank_name: "Банк",
-  bank_card_number: "Номер карты",
-  bank_iban: "IBAN",
-  tax_id: "ИНН",
-  personal_matter_file: "Личное дело",
-  medical_commission_file: "Медкомиссия",
-  veterans_certificate_file: "Удостоверение ветерана",
-  driver_license_file: "Водительское удостоверение",
-  id_certificate_file: "Удостоверение личности",
-  foreign_passport_number: "Номер загранпаспорта",
-  foreign_passport_file: "Загранпаспорт",
-  criminal_record_file: "Справка о несудимости",
-  military_id_file: "Военный билет",
-  medical_certificate_file: "Медицинская справка",
-  insurance_file: "Страховой полис",
-  education_diploma_file: "Диплом об образовании",
-  status_start_date: "Дата начала статуса",
-  status_end_date: "Дата окончания статуса",
-  notes: "Примечание"
-};
+export const TEMPLATE_COLUMNS = [
+  "template_id",
+  "template_name",
+  "template_type",
+  "docx_filename",
+  "placeholder_fields",
+  "description",
+  "created_date",
+  "active"
+];
+

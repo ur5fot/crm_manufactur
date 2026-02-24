@@ -2,9 +2,9 @@ import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
 import { readCsv, writeCsv } from "./csv.js";
-import { EMPLOYEE_COLUMNS, LOG_COLUMNS, FIELD_SCHEMA_COLUMNS, FIELD_MAPPING_COLUMNS, STATUS_HISTORY_COLUMNS, REPRIMAND_COLUMNS, STATUS_EVENT_COLUMNS, loadEmployeeColumns, getCachedEmployeeColumns, loadDocumentFields, getCachedDocumentFields } from "./schema.js";
+import { EMPLOYEE_COLUMNS, LOG_COLUMNS, FIELD_SCHEMA_COLUMNS, FIELD_MAPPING_COLUMNS, STATUS_HISTORY_COLUMNS, REPRIMAND_COLUMNS, STATUS_EVENT_COLUMNS, TEMPLATE_COLUMNS, loadEmployeeColumns, getCachedEmployeeColumns, loadDocumentFields, getCachedDocumentFields } from "./schema.js";
 import { getNextId } from "./utils.js";
-import { ROLES, getFieldByRole, getFieldNameByRole, buildNameFields, buildStatusFields, buildEmployeeName } from "./field-utils.js";
+import { ROLES, getFieldByRole, getFieldNameByRole, buildStatusFields, buildEmployeeName } from "./field-utils.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -385,22 +385,6 @@ export async function saveFieldsSchema(rows) {
   try {
     await previousLock;
     await writeCsv(FIELD_SCHEMA_PATH, FIELD_SCHEMA_COLUMNS, rows);
-  } finally {
-    releaseLock();
-  }
-}
-
-export async function loadFieldMapping() {
-  return readCsv(FIELD_MAPPING_PATH, FIELD_MAPPING_COLUMNS);
-}
-
-export async function saveFieldMapping(rows) {
-  const previousLock = fieldSchemaWriteLock;
-  let releaseLock;
-  fieldSchemaWriteLock = new Promise(resolve => { releaseLock = resolve; });
-  try {
-    await previousLock;
-    await writeCsv(FIELD_MAPPING_PATH, FIELD_MAPPING_COLUMNS, rows);
   } finally {
     releaseLock();
   }
@@ -1170,17 +1154,7 @@ export async function getCustomReport(filters = [], columns = null) {
   return filtered;
 }
 
-// Templates CSV columns
-const TEMPLATE_COLUMNS = [
-  'template_id',
-  'template_name',
-  'template_type',
-  'docx_filename',
-  'placeholder_fields',
-  'description',
-  'created_date',
-  'active'
-];
+// TEMPLATE_COLUMNS imported from schema.js
 
 // Generated documents CSV columns
 const GENERATED_DOCUMENT_COLUMNS = [
