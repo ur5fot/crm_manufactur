@@ -366,7 +366,7 @@ onUnmounted(() => {
             <div class="inline-expand-list">
               <div v-if="expandedEmployees.length === 0" class="inline-expand-empty">Немає працівників</div>
               <div v-for="emp in expandedEmployees" :key="emp.employee_id" class="inline-expand-item" @click.stop="openEmployeeCard(emp.employee_id)">
-                {{ displayName(emp, allFieldsSchema) }}
+                {{ displayName(emp, allFieldsSchema.value) }}
               </div>
             </div>
           </div>
@@ -394,7 +394,7 @@ onUnmounted(() => {
             <div class="inline-expand-list">
               <div v-if="expandedEmployees.length === 0" class="inline-expand-empty">Немає працівників</div>
               <div v-for="emp in expandedEmployees" :key="emp.employee_id" class="inline-expand-item" @click.stop="openEmployeeCard(emp.employee_id)">
-                {{ displayName(emp, allFieldsSchema) }}
+                {{ displayName(emp, allFieldsSchema.value) }}
               </div>
             </div>
           </div>
@@ -414,7 +414,7 @@ onUnmounted(() => {
             <div class="inline-expand-list">
               <div v-if="expandedEmployees.length === 0" class="inline-expand-empty">Немає працівників</div>
               <div v-for="emp in expandedEmployees" :key="emp.employee_id" class="inline-expand-item" @click.stop="openEmployeeCard(emp.employee_id)">
-                {{ displayName(emp, allFieldsSchema) }}
+                {{ displayName(emp, allFieldsSchema.value) }}
               </div>
             </div>
           </div>

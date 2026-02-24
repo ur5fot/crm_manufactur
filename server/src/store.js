@@ -2,7 +2,7 @@ import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
 import { readCsv, writeCsv } from "./csv.js";
-import { EMPLOYEE_COLUMNS, LOG_COLUMNS, FIELD_SCHEMA_COLUMNS, FIELD_MAPPING_COLUMNS, STATUS_HISTORY_COLUMNS, REPRIMAND_COLUMNS, STATUS_EVENT_COLUMNS, TEMPLATE_COLUMNS, loadEmployeeColumns, getCachedEmployeeColumns, loadDocumentFields, getCachedDocumentFields } from "./schema.js";
+import { EMPLOYEE_COLUMNS, LOG_COLUMNS, FIELD_SCHEMA_COLUMNS, STATUS_HISTORY_COLUMNS, REPRIMAND_COLUMNS, STATUS_EVENT_COLUMNS, TEMPLATE_COLUMNS, loadEmployeeColumns, getCachedEmployeeColumns, loadDocumentFields, getCachedDocumentFields } from "./schema.js";
 import { getNextId } from "./utils.js";
 import { ROLES, getFieldByRole, getFieldNameByRole, buildStatusFields, buildEmployeeName } from "./field-utils.js";
 
@@ -23,7 +23,6 @@ const GENERATED_DOCUMENTS_PATH = path.join(DATA_DIR, "generated_documents.csv");
 const STATUS_HISTORY_PATH = path.join(DATA_DIR, "status_history.csv");
 const REPRIMANDS_PATH = path.join(DATA_DIR, "reprimands.csv");
 const STATUS_EVENTS_PATH = path.join(DATA_DIR, "status_events.csv");
-const FIELD_MAPPING_PATH = path.join(DATA_DIR, "field_mapping.csv");
 
 export const REMOTE_DIR = path.join(ROOT_DIR, "remote");
 const EMPLOYEES_REMOTE_PATH = path.join(DATA_DIR, "employees_remote.csv");
