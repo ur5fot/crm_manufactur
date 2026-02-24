@@ -84,18 +84,6 @@ export async function acquireTemplatesLock(fn) {
   }
 }
 
-export async function acquireLogLock(fn) {
-  const previousLock = logWriteLock;
-  let releaseLock;
-  logWriteLock = new Promise(resolve => { releaseLock = resolve; });
-  try {
-    await previousLock;
-    return await fn();
-  } finally {
-    releaseLock();
-  }
-}
-
 export async function ensureDataDirs() {
   await fs.mkdir(DATA_DIR, { recursive: true });
   await fs.mkdir(FILES_DIR, { recursive: true });

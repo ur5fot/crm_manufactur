@@ -215,7 +215,7 @@ async function renameTemplatesPlaceholders(filePath, renames) {
 
     const placeholders = template.placeholder_fields.split(",").map(p => p.trim());
     const updatedPlaceholders = placeholders.map(p => renames[p] || p);
-    const newValue = updatedPlaceholders.join(",");
+    const newValue = updatedPlaceholders.join(", ");
 
     if (newValue !== template.placeholder_fields) {
       template.placeholder_fields = newValue;

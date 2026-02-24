@@ -134,7 +134,7 @@ async function testMigrateSummaryMessage() {
   const result = migrateSchema(rows);
 
   if (!result.summary.includes("2 fields")) throw new Error(`Summary should mention 2 fields: ${result.summary}`);
-  if (!result.summary.includes("1 roles")) throw new Error(`Summary should mention 1 role: ${result.summary}`);
+  if (!result.summary.includes("1 role")) throw new Error(`Summary should mention 1 role: ${result.summary}`);
 }
 
 async function runAllTests() {

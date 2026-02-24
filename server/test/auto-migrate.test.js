@@ -239,10 +239,10 @@ async function testTemplatesPlaceholderFieldsUpdate() {
       { field_id: "f_bdate", field_name: "birth_date" }
     ]);
 
-    // Templates with old placeholder names
+    // Templates with old placeholder names (using ", " format matching production)
     await writeTemplates([
-      { template_id: "1", template_name: "Contract", template_type: "contract", docx_filename: "template_1.docx", placeholder_fields: "employee_id,birth_date,department", description: "Test", created_date: "2025-01-01", active: "yes" },
-      { template_id: "2", template_name: "Badge", template_type: "badge", docx_filename: "template_2.docx", placeholder_fields: "employee_id,full_name", description: "No birth_date", created_date: "2025-01-01", active: "yes" }
+      { template_id: "1", template_name: "Contract", template_type: "contract", docx_filename: "template_1.docx", placeholder_fields: "employee_id, birth_date, department", description: "Test", created_date: "2025-01-01", active: "yes" },
+      { template_id: "2", template_name: "Badge", template_type: "badge", docx_filename: "template_2.docx", placeholder_fields: "employee_id, full_name", description: "No birth_date", created_date: "2025-01-01", active: "yes" }
     ]);
 
     const result = await runAutoMigration(TEST_DIR);
@@ -251,11 +251,11 @@ async function testTemplatesPlaceholderFieldsUpdate() {
 
     // Read templates and check placeholder_fields
     const templates = await readFile("templates.csv", TEMPLATE_COLUMNS);
-    if (templates[0].placeholder_fields !== "employee_id,date_of_birth,department") {
+    if (templates[0].placeholder_fields !== "employee_id, date_of_birth, department") {
       throw new Error(`Expected updated placeholder_fields, got: ${templates[0].placeholder_fields}`);
     }
-    // Template 2 should be unchanged
-    if (templates[1].placeholder_fields !== "employee_id,full_name") {
+    // Template 2 should be unchanged (no rename, no rewrite)
+    if (templates[1].placeholder_fields !== "employee_id, full_name") {
       throw new Error(`Template 2 should be unchanged, got: ${templates[1].placeholder_fields}`);
     }
   } finally {

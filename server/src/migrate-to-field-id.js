@@ -67,7 +67,7 @@ export function migrateSchema(rows) {
   return {
     migrated: true,
     schema: migrated,
-    summary: `Migrated ${migrated.length} fields: added field_id, assigned ${rolesAssigned} roles`,
+    summary: `Migrated ${migrated.length} fields: added field_id, assigned ${rolesAssigned} ${rolesAssigned === 1 ? 'role' : 'roles'}`,
   };
 }
 

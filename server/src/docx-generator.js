@@ -60,7 +60,7 @@ export async function generateDocx(templatePath, data, outputPath, schema) {
     // Write to file
     fs.writeFileSync(outputPath, buf);
   } catch (error) {
-    throw new Error(`DOCX generation failed: ${error.message}`);
+    throw new Error(`DOCX generation failed: ${error.message}`, { cause: error });
   }
 }
 
@@ -275,6 +275,6 @@ export async function extractPlaceholders(templatePath, schema) {
     // Without schema, return consistent type with empty unknown list
     return { placeholders: sorted, unknown: [] };
   } catch (error) {
-    throw new Error(`Placeholder extraction failed: ${error.message}`);
+    throw new Error(`Placeholder extraction failed: ${error.message}`, { cause: error });
   }
 }

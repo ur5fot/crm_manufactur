@@ -5,8 +5,6 @@ import { api } from "../api";
 import { useFieldsSchema } from "../composables/useFieldsSchema";
 import { useTableInlineEdit } from "../composables/useTableInlineEdit";
 import { useTableColumnFilters } from "../composables/useTableColumnFilters";
-import { displayName } from "../utils/employee";
-
 const router = useRouter();
 
 // Use shared fields schema composable
