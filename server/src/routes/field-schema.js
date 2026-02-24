@@ -164,10 +164,15 @@ export function registerFieldSchemaRoutes(app) {
 
       // Validate
       const names = new Set();
+      const ids = new Set();
       for (const field of fields) {
         if (!field.field_id) {
           return res.status(400).json({ error: "field_id is required for each field" });
         }
+        if (ids.has(field.field_id)) {
+          return res.status(400).json({ error: `Duplicate field_id: ${field.field_id}` });
+        }
+        ids.add(field.field_id);
         if (!field.field_name || !field.field_name.trim()) {
           return res.status(400).json({ error: `field_name is required (field_id: ${field.field_id})` });
         }

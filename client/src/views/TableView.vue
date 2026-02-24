@@ -48,15 +48,14 @@ const filteredEmployees = computed(() => {
   const query = searchTerm.value.trim().toLowerCase();
   let result = employees.value;
 
-  // Text search
+  // Text search across all text fields from schema
   if (query) {
+    const searchableKeys = allFieldsSchema.value
+      .filter(f => !['file', 'photo'].includes(f.type))
+      .map(f => f.key);
     result = result.filter((employee) => {
-      const haystack = [
-        displayName(employee, allFieldsSchema.value),
-        employee.department,
-        employee.position,
-        employee.employee_id
-      ]
+      const haystack = searchableKeys
+        .map(k => employee[k] || '')
         .filter(Boolean)
         .join(" ")
         .toLowerCase();

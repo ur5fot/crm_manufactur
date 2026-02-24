@@ -145,7 +145,6 @@ export function registerMiscRoutes(app) {
           first_name: e[firstNameField],
           middle_name: e[middleNameField],
           employment_status: e[statusField],
-          department: e.department
         })),
         templates: matchedTemplates.slice(0, MAX_TEMPLATE_RESULTS),
         documents: matchedDocuments.slice(0, MAX_DOCUMENT_RESULTS),

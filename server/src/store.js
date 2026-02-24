@@ -695,18 +695,16 @@ export async function exportEmployees(filters, searchTerm = '') {
   // Створити whitelist для валідації фільтрів
   const allFieldNames = schema.map(f => f.field_name);
 
-  // Текстовий пошук (як в App.vue filteredEmployees)
+  // Текстовий пошук по всіх текстових полях зі схеми
   let filtered = employees;
   const query = searchTerm.trim().toLowerCase();
   if (query) {
+    const searchableFields = schema
+      .filter(f => !['file', 'photo'].includes(f.field_type))
+      .map(f => f.field_name);
     filtered = filtered.filter(emp => {
-      const displayName = buildEmployeeName(emp, schema);
-      const haystack = [
-        displayName,
-        emp.department,
-        emp.position,
-        emp.employee_id
-      ]
+      const haystack = searchableFields
+        .map(fn => emp[fn] || '')
         .filter(Boolean)
         .join(' ')
         .toLowerCase();
