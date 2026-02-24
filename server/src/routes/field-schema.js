@@ -218,6 +218,28 @@ export function registerFieldSchemaRoutes(app) {
         }
       }
 
+      // Validate that explicit field_names don't conflict with auto-generated companion columns
+      // of file-type fields (e.g., a file field "doc" auto-generates "doc_issue_date" and
+      // "doc_expiry_date" as CSV columns; an explicit field with the same name would produce
+      // duplicate CSV headers and ambiguous read/write behavior).
+      const currentFieldTypeMap = new Map(currentSchema.map(f => [f.field_id, f.field_type]));
+      for (const field of fields) {
+        const fieldType = currentFieldTypeMap.get(field.field_id) || field.field_type || "text";
+        if (fieldType === "file") {
+          const companionNames = [
+            `${field.field_name}_issue_date`,
+            `${field.field_name}_expiry_date`,
+          ];
+          for (const companionName of companionNames) {
+            if (names.has(companionName)) {
+              return res.status(400).json({
+                error: `field_name "${companionName}" conflicts with auto-generated companion column for file field "${field.field_name}". Rename the conflicting field first.`,
+              });
+            }
+          }
+        }
+      }
+
       // Build updated schema rows preserving field_id and role
       const currentMap = new Map(currentSchema.map(f => [f.field_id, f]));
       const updatedSchema = fields.map(field => {

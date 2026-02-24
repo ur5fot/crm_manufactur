@@ -2,7 +2,7 @@ import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
 import { readCsv, writeCsv } from "./csv.js";
-import { EMPLOYEE_COLUMNS, LOG_COLUMNS, FIELD_SCHEMA_COLUMNS, STATUS_HISTORY_COLUMNS, REPRIMAND_COLUMNS, STATUS_EVENT_COLUMNS, TEMPLATE_COLUMNS, loadEmployeeColumns, getCachedEmployeeColumns, loadDocumentFields, getCachedDocumentFields } from "./schema.js";
+import { EMPLOYEE_COLUMNS, LOG_COLUMNS, FIELD_SCHEMA_COLUMNS, STATUS_HISTORY_COLUMNS, REPRIMAND_COLUMNS, STATUS_EVENT_COLUMNS, TEMPLATE_COLUMNS, loadEmployeeColumns, getCachedEmployeeColumns, loadDocumentFields, getCachedDocumentFields, getCachedRawFieldSchema } from "./schema.js";
 import { getNextId } from "./utils.js";
 import { ROLES, getFieldByRole, getFieldNameByRole, buildStatusFields, buildEmployeeName } from "./field-utils.js";
 
@@ -128,8 +128,15 @@ async function syncFieldsSchemaWithTemplate() {
     const templateByName = new Map(templateSchema.map(f => [f.field_name, f]));
 
     // Находим поля из шаблона, отсутствующие в runtime
+    // Also check field_id to avoid re-adding fields that were renamed or deleted via the schema editor
+    // (a field present in runtime under a different field_name but same field_id = renamed, not absent)
     const runtimeFieldNames = new Set(runtimeSchema.map(f => f.field_name));
-    const missingFields = templateSchema.filter(f => f.field_name && !runtimeFieldNames.has(f.field_name));
+    const runtimeFieldIds = new Set(runtimeSchema.map(f => f.field_id).filter(Boolean));
+    const missingFields = templateSchema.filter(f =>
+      f.field_name &&
+      !runtimeFieldNames.has(f.field_name) &&
+      !(f.field_id && runtimeFieldIds.has(f.field_id))
+    );
 
     // Check if existing runtime fields need field_id/role updates from template
     let fieldsUpdated = 0;
@@ -362,6 +369,12 @@ export async function withEmployeeLock(fn) {
 }
 
 export async function loadFieldsSchema() {
+  // Use the in-memory cache when available. This keeps concurrent reads consistent:
+  // during a schema rename migration the cache still holds the old schema that matches
+  // the (not-yet-migrated) employee CSV columns. The cache is rebuilt inside the
+  // migration lock after CSV renames complete (resetEmployeeColumnsCache + initializeEmployeeColumns).
+  const cached = getCachedRawFieldSchema();
+  if (cached) return cached;
   return readCsv(FIELD_SCHEMA_PATH, FIELD_SCHEMA_COLUMNS);
 }
 

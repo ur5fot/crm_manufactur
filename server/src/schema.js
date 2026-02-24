@@ -93,6 +93,7 @@ let cachedEmployeeColumns = null;
 let cachedDocumentFields = null;
 let cachedFieldIdMap = null; // Map<field_id, field_name>
 let cachedFieldSchema = null; // Full schema array with field_id/role
+let cachedRawFieldSchema = null; // Raw rows from fields_schema.csv (all FIELD_SCHEMA_COLUMNS)
 
 /**
  * Загружает список колонок из fields_schema.csv отсортированный по field_order
@@ -111,6 +112,10 @@ export async function loadEmployeeColumns(loadFieldsSchemaFn) {
       cachedEmployeeColumns = DEFAULT_EMPLOYEE_COLUMNS;
       return cachedEmployeeColumns;
     }
+
+    // Cache the raw schema rows so loadFieldsSchema() can use this cached version
+    // during schema migrations, keeping concurrent reads consistent with the CSV files.
+    cachedRawFieldSchema = schema;
 
     // Сортируем по field_order и извлекаем field_name
     const sortedFields = schema
@@ -210,6 +215,7 @@ export function resetEmployeeColumnsCache() {
   cachedDocumentFields = null;
   cachedFieldIdMap = null;
   cachedFieldSchema = null;
+  cachedRawFieldSchema = null;
 }
 
 /**
@@ -228,6 +234,17 @@ export function getCachedEmployeeColumns() {
  */
 export function getCachedDocumentFields() {
   return cachedDocumentFields || DEFAULT_DOCUMENT_FIELDS;
+}
+
+/**
+ * Возвращает закэшированные сырые строки fields_schema.csv (синхронно).
+ * Populated by loadEmployeeColumns(). Used by loadFieldsSchema() in store.js
+ * to return consistent (old) schema during migration windows instead of reading
+ * the newly-written schema file before CSV column renames have been applied.
+ * @returns {Array|null}
+ */
+export function getCachedRawFieldSchema() {
+  return cachedRawFieldSchema;
 }
 
 /**
