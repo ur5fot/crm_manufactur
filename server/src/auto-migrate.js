@@ -52,13 +52,14 @@ export async function runAutoMigration(dataDir, employeeColumns) {
     }
   }
 
-  // 2. Load previous mapping
+  // 2. Load previous mapping (check existence without auto-creating via ensureCsvFile)
   let previousMapping;
-  let mappingExists = true;
+  let mappingExists = false;
   try {
     await fs.access(mappingPath);
+    mappingExists = true;
   } catch {
-    mappingExists = false;
+    // file doesn't exist
   }
 
   if (!mappingExists) {
@@ -141,13 +142,13 @@ export async function runAutoMigration(dataDir, employeeColumns) {
  * Reads the file with raw headers, renames matching columns, writes back.
  */
 async function renameEmployeesCsv(filePath, renames, employeeColumns) {
+  let content;
   try {
-    await fs.access(filePath);
-  } catch {
-    return; // File doesn't exist, skip
+    content = await fs.readFile(filePath, "utf-8");
+  } catch (err) {
+    if (err.code === 'ENOENT') return; // File doesn't exist, skip
+    throw err;
   }
-
-  const content = await fs.readFile(filePath, "utf-8");
   const lines = content.split("\n").filter(line => line.trim());
   if (lines.length === 0) return;
 
@@ -209,13 +210,13 @@ async function renameTemplatesPlaceholders(filePath, renames) {
     "active"
   ];
 
+  let templates;
   try {
-    await fs.access(filePath);
-  } catch {
-    return; // File doesn't exist, skip
+    templates = await readCsv(filePath, TEMPLATE_COLUMNS);
+  } catch (err) {
+    if (err.code === 'ENOENT') return; // File doesn't exist, skip
+    throw err;
   }
-
-  const templates = await readCsv(filePath, TEMPLATE_COLUMNS);
   if (templates.length === 0) return;
 
   let changed = false;
@@ -242,13 +243,13 @@ async function renameTemplatesPlaceholders(filePath, renames) {
  * Update field_name column in logs.csv: replace old field names with new ones.
  */
 async function renameLogsFieldName(filePath, renames) {
+  let logs;
   try {
-    await fs.access(filePath);
-  } catch {
-    return; // File doesn't exist, skip
+    logs = await readCsv(filePath, LOG_COLUMNS);
+  } catch (err) {
+    if (err.code === 'ENOENT') return; // File doesn't exist, skip
+    throw err;
   }
-
-  const logs = await readCsv(filePath, LOG_COLUMNS);
   if (logs.length === 0) return;
 
   let changed = false;

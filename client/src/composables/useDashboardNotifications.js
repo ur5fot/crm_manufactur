@@ -129,7 +129,7 @@ export function useDashboardNotifications(employees, employmentOptions, workingS
       if (endDate === today && !isFired) {
         returningToday.push({
           id: employee.employee_id,
-          name: displayName(employee),
+          name: displayName(employee, allFieldsSchema && allFieldsSchema.value),
           position: employee[positionKey] || '',
           statusType: employee[statusKey]
         });
@@ -149,7 +149,7 @@ export function useDashboardNotifications(employees, employmentOptions, workingS
       if (startDate === today && employee[statusKey] !== workingStatus.value) {
         startingToday.push({
           id: employee.employee_id,
-          name: displayName(employee),
+          name: displayName(employee, allFieldsSchema && allFieldsSchema.value),
           position: employee[positionKey] || '',
           endDate: endDate,
           statusType: employee[statusKey]

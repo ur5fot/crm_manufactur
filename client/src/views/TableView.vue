@@ -10,7 +10,7 @@ import { displayName } from "../utils/employee";
 const router = useRouter();
 
 // Use shared fields schema composable
-const { summaryColumns, dictionaries, loadFieldsSchema } = useFieldsSchema();
+const { summaryColumns, dictionaries, loadFieldsSchema, allFieldsSchema } = useFieldsSchema();
 
 // State
 const employees = ref([]);
@@ -52,7 +52,7 @@ const filteredEmployees = computed(() => {
   if (query) {
     result = result.filter((employee) => {
       const haystack = [
-        displayName(employee),
+        displayName(employee, allFieldsSchema.value),
         employee.department,
         employee.position,
         employee.employee_id

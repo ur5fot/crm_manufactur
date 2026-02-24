@@ -1,7 +1,7 @@
 import path from "path";
 import fs from "fs";
 import { FILES_DIR } from "../store.js";
-import { loadGeneratedDocuments, loadTemplates, loadEmployees } from "../store.js";
+import { loadGeneratedDocuments, loadTemplates, loadEmployees, loadFieldsSchema } from "../store.js";
 import { validatePagination, validatePath, findById, buildFullName } from "../utils.js";
 
 export function registerDocumentRoutes(app) {
@@ -14,6 +14,7 @@ export function registerDocumentRoutes(app) {
       const documents = await loadGeneratedDocuments();
       const templates = await loadTemplates();
       const employees = await loadEmployees();
+      const schema = await loadFieldsSchema();
 
       // Create lookup maps for joins
       const templateMap = new Map(templates.map(t => [t.template_id, t]));
@@ -88,7 +89,7 @@ export function registerDocumentRoutes(app) {
           template_name: template ? template.template_name : 'Unknown Template',
           employee_id: doc.employee_id,
           employee_name: employee
-            ? buildFullName(employee)
+            ? buildFullName(employee, schema)
             : 'Невідомий співробітник',
           docx_filename: doc.docx_filename,
           generation_date: doc.generation_date,

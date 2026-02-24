@@ -166,9 +166,9 @@ export function registerFieldSchemaRoutes(app) {
         if (!field.field_name || !field.field_name.trim()) {
           return res.status(400).json({ error: `field_name is required (field_id: ${field.field_id})` });
         }
-        // No reserved characters
-        if (/[;,"\n\r]/.test(field.field_name)) {
-          return res.status(400).json({ error: `field_name contains reserved characters (field_id: ${field.field_id})` });
+        // field_name must contain only letters, digits, and underscores (valid for CSV headers and DOCX placeholders)
+        if (!/^[a-zA-Z0-9_]+$/.test(field.field_name)) {
+          return res.status(400).json({ error: `field_name must contain only letters, digits, and underscores (field_id: ${field.field_id})` });
         }
         if (names.has(field.field_name)) {
           return res.status(400).json({ error: `Duplicate field_name: ${field.field_name}` });

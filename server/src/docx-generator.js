@@ -100,6 +100,25 @@ async function prepareData(data, schema) {
     }
   }
 
+  // Add computed full_name placeholder (nominative case)
+  // full_name is not a CSV column; it's assembled from name parts
+  if (schema) {
+    const lastNameField = getFieldNameByRole(schema, ROLES.LAST_NAME);
+    const firstNameField = getFieldNameByRole(schema, ROLES.FIRST_NAME);
+    const middleNameField = getFieldNameByRole(schema, ROLES.MIDDLE_NAME);
+    const fullNameParts = [
+      lastNameField ? data[lastNameField] : null,
+      firstNameField ? data[firstNameField] : null,
+      middleNameField ? data[middleNameField] : null,
+    ].filter(Boolean);
+    const fullNameValue = fullNameParts.join(' ');
+    prepared['full_name'] = fullNameValue;
+    prepared['f_full_name'] = fullNameValue;
+  } else {
+    const fullNameParts = [data.last_name, data.first_name, data.middle_name].filter(Boolean);
+    prepared['full_name'] = fullNameParts.join(' ');
+  }
+
   // Add special placeholders
   const now = new Date();
 

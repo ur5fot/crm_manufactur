@@ -64,6 +64,9 @@ jobs:
           node test/dashboard-30days.test.js
           node test/remote-archive-store.test.js
           node test/schema.test.js
+          node test/field-utils.test.js
+          node test/auto-migrate.test.js
+          node test/store-role-lookups.test.js
           node test/migrate-to-field-id.test.js
 
       - name: Start backend server

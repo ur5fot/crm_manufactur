@@ -75,13 +75,12 @@ export function migrateSchema(rows) {
  * Write field_mapping.csv snapshot.
  */
 async function writeFieldMapping(schema) {
-  const mappingColumns = ["field_id", "field_name", "role"];
+  const mappingColumns = ["field_id", "field_name"];
   const mappingRows = schema
     .filter(r => r.field_id)
     .map(r => ({
       field_id: r.field_id,
       field_name: r.field_name,
-      role: r.role || "",
     }));
 
   const output = stringify(mappingRows, {

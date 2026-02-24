@@ -53,6 +53,9 @@ let reprimandWriteLock = Promise.resolve();
 // Simple in-memory lock for status_events writes to prevent race conditions
 let statusEventWriteLock = Promise.resolve();
 
+// Simple in-memory lock for field schema writes to prevent race conditions
+let fieldSchemaWriteLock = Promise.resolve();
+
 export async function ensureDataDirs() {
   await fs.mkdir(DATA_DIR, { recursive: true });
   await fs.mkdir(FILES_DIR, { recursive: true });
@@ -332,7 +335,15 @@ export async function loadFieldsSchema() {
 }
 
 export async function saveFieldsSchema(rows) {
-  return writeCsv(FIELD_SCHEMA_PATH, FIELD_SCHEMA_COLUMNS, rows);
+  const previousLock = fieldSchemaWriteLock;
+  let releaseLock;
+  fieldSchemaWriteLock = new Promise(resolve => { releaseLock = resolve; });
+  try {
+    await previousLock;
+    await writeCsv(FIELD_SCHEMA_PATH, FIELD_SCHEMA_COLUMNS, rows);
+  } finally {
+    releaseLock();
+  }
 }
 
 export async function loadFieldMapping() {
@@ -340,7 +351,15 @@ export async function loadFieldMapping() {
 }
 
 export async function saveFieldMapping(rows) {
-  return writeCsv(FIELD_MAPPING_PATH, FIELD_MAPPING_COLUMNS, rows);
+  const previousLock = fieldSchemaWriteLock;
+  let releaseLock;
+  fieldSchemaWriteLock = new Promise(resolve => { releaseLock = resolve; });
+  try {
+    await previousLock;
+    await writeCsv(FIELD_MAPPING_PATH, FIELD_MAPPING_COLUMNS, rows);
+  } finally {
+    releaseLock();
+  }
 }
 
 /**
