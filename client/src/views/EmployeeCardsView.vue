@@ -2,7 +2,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { api } from "../api";
-import { useFieldsSchema } from "../composables/useFieldsSchema";
+import { useFieldsSchema, ROLES } from "../composables/useFieldsSchema";
 import { useEmployeeForm } from "../composables/useEmployeeForm";
 import { useEmployeePhoto } from "../composables/useEmployeePhoto";
 import { useEmployeeDocuments } from "../composables/useEmployeeDocuments";
@@ -14,30 +14,24 @@ import { displayName } from "../utils/employee";
 const router = useRouter();
 const route = useRoute();
 
-// Fallback employee fields
-const employeeFields = [
-  "photo", "employee_id", "last_name", "first_name", "middle_name", "birth_date",
-  "employment_status", "additional_status", "gender", "blood_group", "department",
-  "grade", "position", "specialty", "work_state", "work_type", "fit_status",
-  "order_ref", "location", "residence_place", "registration_place", "email",
-  "phone", "phone_note", "education", "salary_grid", "salary_amount",
-  "bank_name", "bank_card_number", "bank_iban", "tax_id",
-  "personal_matter_file", "personal_matter_file_issue_date", "personal_matter_file_expiry_date",
-  "medical_commission_file", "medical_commission_file_issue_date", "medical_commission_file_expiry_date",
-  "veterans_certificate_file", "veterans_certificate_file_issue_date", "veterans_certificate_file_expiry_date",
-  "driver_license_file", "driver_license_file_issue_date", "driver_license_file_expiry_date",
-  "id_certificate_file", "id_certificate_file_issue_date", "id_certificate_file_expiry_date",
-  "foreign_passport_number", "foreign_passport_file", "foreign_passport_file_issue_date", "foreign_passport_file_expiry_date",
-  "criminal_record_file", "criminal_record_file_issue_date", "criminal_record_file_expiry_date",
-  "military_id_file", "military_id_file_issue_date", "military_id_file_expiry_date",
-  "medical_certificate_file", "medical_certificate_file_issue_date", "medical_certificate_file_expiry_date",
-  "insurance_file", "insurance_file_issue_date", "insurance_file_expiry_date",
-  "education_diploma_file", "education_diploma_file_issue_date", "education_diploma_file_expiry_date",
-  "status_start_date", "status_end_date", "notes"
-];
-
 // Load fields schema
-const { allFieldsSchema, fieldGroups, loadFieldsSchema } = useFieldsSchema();
+const { allFieldsSchema, fieldGroups, loadFieldsSchema, getFieldNameByRole } = useFieldsSchema();
+
+// Derive employee fields from schema (used as fallback for empty form construction)
+const employeeFields = computed(() => {
+  if (allFieldsSchema.value.length > 0) {
+    const cols = [];
+    for (const field of allFieldsSchema.value) {
+      cols.push(field.key);
+      if (field.type === 'file') {
+        cols.push(`${field.key}_issue_date`);
+        cols.push(`${field.key}_expiry_date`);
+      }
+    }
+    return cols;
+  }
+  return [];
+});
 
 // Field labels computed from schema
 const fieldLabels = computed(() => {
@@ -209,9 +203,10 @@ const filteredEmployeesForCards = computed(() => {
       const val = employee[field.key];
       if (val && String(val).toLowerCase().includes(query)) return true;
     }
-    const name = displayName(employee);
+    const name = displayName(employee, allFieldsSchema.value);
     if (name.toLowerCase().includes(query)) return true;
-    if (employee.employee_id && String(employee.employee_id).toLowerCase().includes(query)) return true;
+    const empIdKey = getFieldNameByRole('EMPLOYEE_ID') || 'employee_id';
+    if (employee[empIdKey] && String(employee[empIdKey]).toLowerCase().includes(query)) return true;
     return false;
   });
 });
@@ -224,8 +219,8 @@ const filteredFieldGroups = computed(() => {
   // Filter groups and fields based on label and value match
   return fieldGroups.value.map(group => {
     const filteredFields = group.fields.filter(field => {
-      // Always include employment_status so reprimands button remains accessible
-      if (field.key === 'employment_status') return true;
+      // Always include status field so reprimands button remains accessible
+      if (field.role === 'STATUS') return true;
 
       // Match against field label
       if (field.label.toLowerCase().includes(query)) return true;
@@ -275,12 +270,18 @@ async function saveEmployee() {
   saving.value = true;
   errorMessage.value = "";
   try {
-    if (!form.first_name || !form.first_name.trim()) {
+    const firstNameKey = getFieldNameByRole(ROLES.FIRST_NAME) || 'first_name';
+    const lastNameKey = getFieldNameByRole(ROLES.LAST_NAME) || 'last_name';
+    const statusKey = getFieldNameByRole(ROLES.STATUS) || 'employment_status';
+    const statusStartKey = getFieldNameByRole(ROLES.STATUS_START) || 'status_start_date';
+    const statusEndKey = getFieldNameByRole(ROLES.STATUS_END) || 'status_end_date';
+
+    if (!form[firstNameKey] || !form[firstNameKey].trim()) {
       errorMessage.value = "Ім'я обов'язкове для заповнення";
       saving.value = false;
       return;
     }
-    if (!form.last_name || !form.last_name.trim()) {
+    if (!form[lastNameKey] || !form[lastNameKey].trim()) {
       errorMessage.value = "Прізвище обов'язкове для заповнення";
       saving.value = false;
       return;
@@ -290,14 +291,14 @@ async function saveEmployee() {
 
     // Remove status fields for existing employees
     if (!isNew.value) {
-      delete payload.employment_status;
-      delete payload.status_start_date;
-      delete payload.status_end_date;
+      delete payload[statusKey];
+      delete payload[statusStartKey];
+      delete payload[statusEndKey];
     }
 
     // Set default status for new employees
-    if (isNew.value && !payload.employment_status && workingStatus.value) {
-      payload.employment_status = workingStatus.value;
+    if (isNew.value && !payload[statusKey] && workingStatus.value) {
+      payload[statusKey] = workingStatus.value;
     }
 
     // Clean empty document fields for new employees
@@ -522,14 +523,13 @@ onUnmounted(() => {
             </div>
           </div>
           <div class="employee-card-info">
-            <div class="employee-name">{{ displayName(employee) }}</div>
+            <div class="employee-name">{{ displayName(employee, allFieldsSchema) }}</div>
             <div class="employee-meta">
-              ID: {{ employee.employee_id }}
-              <span v-if="employee.position"> · {{ employee.position }}</span>
-              <span v-if="employee.department"> · {{ employee.department }}</span>
+              ID: {{ employee[getFieldNameByRole('EMPLOYEE_ID') || 'employee_id'] }}
+              <span v-if="employee[getFieldNameByRole('POSITION') || 'position']"> · {{ employee[getFieldNameByRole('POSITION') || 'position'] }}</span>
             </div>
             <div class="employee-tags">
-              <span class="tag">{{ employee.employment_status || "без статусу" }}</span>
+              <span class="tag">{{ employee[getFieldNameByRole('STATUS') || 'employment_status'] || "без статусу" }}</span>
             </div>
           </div>
         </div>
@@ -637,8 +637,8 @@ onUnmounted(() => {
           <div class="form-grid">
             <template v-for="field in group.fields" :key="field.key">
             <div class="field">
-              <label :for="field.key">{{ field.label }}<span v-if="field.key === 'first_name' || field.key === 'last_name' || field.key === 'gender'" style="color: red;"> *</span></label>
-              <template v-if="field.key === 'employment_status'">
+              <label :for="field.key">{{ field.label }}<span v-if="field.role === 'FIRST_NAME' || field.role === 'LAST_NAME' || field.role === 'GENDER'" style="color: red;"> *</span></label>
+              <template v-if="field.role === 'STATUS'">
                 <div class="status-field-row">
                   <input
                     :id="field.key"
@@ -656,7 +656,7 @@ onUnmounted(() => {
                     Змінити статус
                   </button>
                   <button
-                    v-if="!isNew && form.employment_status && form.employment_status !== workingStatus"
+                    v-if="!isNew && form[field.key] && form[field.key] !== workingStatus"
                     class="secondary small"
                     type="button"
                     :disabled="saving"
@@ -682,7 +682,7 @@ onUnmounted(() => {
                 v-else-if="field.type === 'select'"
                 :id="field.key"
                 v-model="form[field.key]"
-                :required="field.key === 'gender'"
+                :required="field.role === 'GENDER'"
               >
                 <option value="">--</option>
                 <option
@@ -704,18 +704,18 @@ onUnmounted(() => {
                 :type="field.type || 'text'"
                 v-model="form[field.key]"
                 :readonly="field.readOnly"
-                :required="field.key === 'first_name' || field.key === 'last_name'"
+                :required="field.role === 'FIRST_NAME' || field.role === 'LAST_NAME'"
               />
-              <label v-if="field.key === 'last_name'" class="field-checkbox-hint">
-                <input type="checkbox" v-model="form.indeclinable_name" true-value="yes" false-value="" />
+              <label v-if="field.role === 'LAST_NAME'" class="field-checkbox-hint">
+                <input type="checkbox" v-model="form[getFieldNameByRole('INDECL_NAME') || 'indeclinable_name']" true-value="yes" false-value="" />
                 Прізвище не схиляється
               </label>
-              <label v-if="field.key === 'first_name'" class="field-checkbox-hint">
-                <input type="checkbox" v-model="form.indeclinable_first_name" true-value="yes" false-value="" />
+              <label v-if="field.role === 'FIRST_NAME'" class="field-checkbox-hint">
+                <input type="checkbox" v-model="form[getFieldNameByRole('INDECL_FIRST') || 'indeclinable_first_name']" true-value="yes" false-value="" />
                 Ім'я не схиляється
               </label>
             </div>
-            <div v-if="field.key === 'employment_status' && !isNew" class="field field-reprimands-btn">
+            <div v-if="field.role === 'STATUS' && !isNew" class="field field-reprimands-btn">
               <label>&nbsp;</label>
               <button class="secondary small" type="button" @click="openReprimandsPopup(selectedId)">
                 📋 Догани та відзнаки{{ reprimands.length > 0 ? ` (${reprimands.length})` : '' }}

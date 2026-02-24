@@ -54,7 +54,9 @@ export function useEmployeeForm(allFieldsSchema, employeeFields, fieldLabels) {
         }
       }
     } else {
-      for (const field of fallbackFields) {
+      // fallbackFields can be a computed ref or plain array
+      const fields = fallbackFields?.value ?? fallbackFields ?? [];
+      for (const field of fields) {
         base[field] = "";
       }
     }

@@ -2,9 +2,9 @@ import { ref, computed, reactive } from "vue";
 import { api } from "../api";
 
 export function useStatusManagement(allFieldsSchema, form, employees, saving, errorMessage) {
-  // Employment status options
+  // Employment status options (find by role instead of hardcoded field_name)
   const employmentOptions = computed(() => {
-    const field = allFieldsSchema.value.find(f => f.key === 'employment_status');
+    const field = allFieldsSchema.value.find(f => f.role === 'STATUS');
     return field?.options || [];
   });
 
@@ -205,10 +205,14 @@ export function useStatusManagement(allFieldsSchema, form, employees, saving, er
       } else {
         // Fall back: update employee directly with only status fields
         // (avoid spreading full employee object to prevent overwriting concurrent edits)
+        // Use role-based field name resolution
+        const statusKey = allFieldsSchema.value.find(f => f.role === 'STATUS')?.key || 'employment_status';
+        const startKey = allFieldsSchema.value.find(f => f.role === 'STATUS_START')?.key || 'status_start_date';
+        const endKey = allFieldsSchema.value.find(f => f.role === 'STATUS_END')?.key || 'status_end_date';
         await api.updateEmployee(form.employee_id, {
-          employment_status: workingStatus.value,
-          status_start_date: '',
-          status_end_date: ''
+          [statusKey]: workingStatus.value,
+          [startKey]: '',
+          [endKey]: ''
         });
       }
 

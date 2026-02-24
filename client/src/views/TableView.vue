@@ -5,12 +5,10 @@ import { api } from "../api";
 import { useFieldsSchema } from "../composables/useFieldsSchema";
 import { useTableInlineEdit } from "../composables/useTableInlineEdit";
 import { useTableColumnFilters } from "../composables/useTableColumnFilters";
-import { displayName } from "../utils/employee";
-
 const router = useRouter();
 
 // Use shared fields schema composable
-const { summaryColumns, dictionaries, loadFieldsSchema } = useFieldsSchema();
+const { summaryColumns, dictionaries, loadFieldsSchema, allFieldsSchema } = useFieldsSchema();
 
 // State
 const employees = ref([]);
@@ -48,15 +46,14 @@ const filteredEmployees = computed(() => {
   const query = searchTerm.value.trim().toLowerCase();
   let result = employees.value;
 
-  // Text search
+  // Text search across all text fields from schema
   if (query) {
+    const searchableKeys = allFieldsSchema.value
+      .filter(f => !['file', 'photo'].includes(f.type))
+      .map(f => f.key);
     result = result.filter((employee) => {
-      const haystack = [
-        displayName(employee),
-        employee.department,
-        employee.position,
-        employee.employee_id
-      ]
+      const haystack = searchableKeys
+        .map(k => employee[k] || '')
         .filter(Boolean)
         .join(" ")
         .toLowerCase();

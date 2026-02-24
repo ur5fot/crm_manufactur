@@ -18,7 +18,8 @@ const routes = [
   { path: "/document-history", name: "document-history", component: App },
   { path: "/placeholder-reference/:employeeId?", name: "placeholder-reference", component: App },
   { path: "/logs", name: "logs", component: App },
-  { path: "/system-settings", name: "system-settings", component: SystemSettingsView }
+  { path: "/system-settings", name: "system-settings", component: SystemSettingsView },
+  { path: "/field-schema", name: "field-schema", component: App }
 ];
 
 const router = createRouter({

@@ -7,6 +7,7 @@ import { useDashboardNotifications } from "../composables/useDashboardNotificati
 import { useDashboardStats } from "../composables/useDashboardStats";
 import { useDashboardTimeline } from "../composables/useDashboardTimeline";
 import { useDashboardReport } from "../composables/useDashboardReport";
+import { displayName } from "../utils/employee";
 
 const router = useRouter();
 
@@ -19,7 +20,10 @@ const isRefreshing = ref(false);
 // Refresh interval
 const refreshIntervalId = ref(null);
 
-// Dynamic status values from employees (get employment_status field options)
+// Fields schema for role-based lookups
+const allFieldsSchema = ref([]);
+
+// Dynamic status values from employees (get employment_status field options via role)
 const employmentOptions = ref([]);
 const workingStatus = computed(() => employmentOptions.value[0] || '');
 
@@ -51,7 +55,7 @@ const {
   dismissDocExpiryNotification,
   dismissBirthdayNotification,
   dismissRetirementNotification,
-} = useDashboardNotifications(employees, employmentOptions, workingStatus, dismissed);
+} = useDashboardNotifications(employees, employmentOptions, workingStatus, dismissed, allFieldsSchema);
 
 const {
   expandedCard,
@@ -59,7 +63,7 @@ const {
   expandedEmployees,
   statusCardColor,
   toggleStatCard,
-} = useDashboardStats(employees, employmentOptions);
+} = useDashboardStats(employees, employmentOptions, allFieldsSchema);
 
 const {
   dashboardEvents,
@@ -143,8 +147,9 @@ function stopDashboardRefresh() {
 async function loadFieldsSchema() {
   try {
     const data = await api.getFieldsSchema();
-    const allFields = data.allFields || [];
-    const statusField = allFields.find(f => f.key === 'employment_status');
+    allFieldsSchema.value = data.allFields || [];
+    // Find employment status field by role instead of hardcoded field_name
+    const statusField = allFieldsSchema.value.find(f => f.role === 'STATUS');
     employmentOptions.value = statusField?.options || [];
   } catch (error) {
     console.error('Failed to load fields schema:', error);
@@ -361,7 +366,7 @@ onUnmounted(() => {
             <div class="inline-expand-list">
               <div v-if="expandedEmployees.length === 0" class="inline-expand-empty">Немає працівників</div>
               <div v-for="emp in expandedEmployees" :key="emp.employee_id" class="inline-expand-item" @click.stop="openEmployeeCard(emp.employee_id)">
-                {{ [emp.last_name, emp.first_name, emp.middle_name].filter(Boolean).join(' ') }}
+                {{ displayName(emp, allFieldsSchema.value) }}
               </div>
             </div>
           </div>
@@ -389,7 +394,7 @@ onUnmounted(() => {
             <div class="inline-expand-list">
               <div v-if="expandedEmployees.length === 0" class="inline-expand-empty">Немає працівників</div>
               <div v-for="emp in expandedEmployees" :key="emp.employee_id" class="inline-expand-item" @click.stop="openEmployeeCard(emp.employee_id)">
-                {{ [emp.last_name, emp.first_name, emp.middle_name].filter(Boolean).join(' ') }}
+                {{ displayName(emp, allFieldsSchema.value) }}
               </div>
             </div>
           </div>
@@ -409,7 +414,7 @@ onUnmounted(() => {
             <div class="inline-expand-list">
               <div v-if="expandedEmployees.length === 0" class="inline-expand-empty">Немає працівників</div>
               <div v-for="emp in expandedEmployees" :key="emp.employee_id" class="inline-expand-item" @click.stop="openEmployeeCard(emp.employee_id)">
-                {{ [emp.last_name, emp.first_name, emp.middle_name].filter(Boolean).join(' ') }}
+                {{ displayName(emp, allFieldsSchema.value) }}
               </div>
             </div>
           </div>

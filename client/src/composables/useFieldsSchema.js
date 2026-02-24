@@ -1,5 +1,25 @@
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import { api } from "../api";
+
+// Role constants matching backend ROLES in field-utils.js
+export const ROLES = {
+  PHOTO: 'PHOTO',
+  EMPLOYEE_ID: 'EMPLOYEE_ID',
+  LAST_NAME: 'LAST_NAME',
+  FIRST_NAME: 'FIRST_NAME',
+  MIDDLE_NAME: 'MIDDLE_NAME',
+  BIRTH_DATE: 'BIRTH_DATE',
+  GENDER: 'GENDER',
+  STATUS: 'STATUS',
+  STATUS_START: 'STATUS_START',
+  STATUS_END: 'STATUS_END',
+  GRADE: 'GRADE',
+  POSITION: 'POSITION',
+  INDECL_NAME: 'INDECL_NAME',
+  INDECL_FIRST: 'INDECL_FIRST',
+  INDECL_GRADE: 'INDECL_GRADE',
+  INDECL_POSITION: 'INDECL_POSITION',
+};
 
 // Shared state for fields schema (singleton pattern)
 const allFieldsSchema = ref([]);
@@ -29,19 +49,23 @@ export function useFieldsSchema() {
             .filter(field => field.type !== 'photo')
             .map(field => ({
               key: field.key,
+              fieldId: field.fieldId || '',
               label: field.label,
               type: field.type,
+              role: field.role || '',
               optionsKey: field.type === 'select' ? field.key : undefined,
-              readOnly: field.key === 'employee_id'
+              readOnly: field.role === ROLES.EMPLOYEE_ID
             }))
         }));
 
       // Формируем колонки для сводной таблицы
       summaryColumns.value = (data.tableFields || []).map(field => ({
         key: field.key,
+        fieldId: field.fieldId || '',
         label: field.label,
         editable: field.editableInTable,
         type: field.type,
+        role: field.role || '',
         optionsKey: field.type === 'select' ? field.key : undefined
       }));
 
@@ -84,6 +108,25 @@ export function useFieldsSchema() {
     return field?.label || fieldName;
   }
 
+  function resetSchema() {
+    isLoaded = false;
+    allFieldsSchema.value = [];
+    fieldGroups.value = [];
+    summaryColumns.value = [];
+    dictionaries.value = {};
+    documentFields.value = [];
+  }
+
+  function getFieldByRole(role) {
+    if (!role) return null;
+    return allFieldsSchema.value.find(f => f.role === role) || null;
+  }
+
+  function getFieldNameByRole(role) {
+    const field = getFieldByRole(role);
+    return field ? field.key : null;
+  }
+
   return {
     allFieldsSchema,
     fieldGroups,
@@ -91,7 +134,10 @@ export function useFieldsSchema() {
     dictionaries,
     documentFields,
     loadFieldsSchema,
+    resetSchema,
     getFieldType,
-    getFieldLabel
+    getFieldLabel,
+    getFieldByRole,
+    getFieldNameByRole
   };
 }

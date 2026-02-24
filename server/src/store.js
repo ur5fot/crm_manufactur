@@ -2,8 +2,9 @@ import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
 import { readCsv, writeCsv } from "./csv.js";
-import { EMPLOYEE_COLUMNS, LOG_COLUMNS, FIELD_SCHEMA_COLUMNS, STATUS_HISTORY_COLUMNS, REPRIMAND_COLUMNS, STATUS_EVENT_COLUMNS, loadEmployeeColumns, getCachedEmployeeColumns, loadDocumentFields, getCachedDocumentFields } from "./schema.js";
+import { EMPLOYEE_COLUMNS, LOG_COLUMNS, FIELD_SCHEMA_COLUMNS, STATUS_HISTORY_COLUMNS, REPRIMAND_COLUMNS, STATUS_EVENT_COLUMNS, TEMPLATE_COLUMNS, loadEmployeeColumns, getCachedEmployeeColumns, loadDocumentFields, getCachedDocumentFields, getCachedRawFieldSchema } from "./schema.js";
 import { getNextId } from "./utils.js";
+import { ROLES, getFieldByRole, getFieldNameByRole, buildStatusFields, buildEmployeeName } from "./field-utils.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -51,6 +52,37 @@ let reprimandWriteLock = Promise.resolve();
 // Simple in-memory lock for status_events writes to prevent race conditions
 let statusEventWriteLock = Promise.resolve();
 
+// Simple in-memory lock for field schema writes to prevent race conditions
+let fieldSchemaWriteLock = Promise.resolve();
+
+/**
+ * Generic lock helpers for acquiring write locks without data load/save.
+ * Used by auto-migration to serialize with regular write operations.
+ */
+export async function acquireEmployeeLock(fn) {
+  const previousLock = employeeWriteLock;
+  let releaseLock;
+  employeeWriteLock = new Promise(resolve => { releaseLock = resolve; });
+  try {
+    await previousLock;
+    return await fn();
+  } finally {
+    releaseLock();
+  }
+}
+
+export async function acquireTemplatesLock(fn) {
+  const previousLock = templatesWriteLock;
+  let releaseLock;
+  templatesWriteLock = new Promise(resolve => { releaseLock = resolve; });
+  try {
+    await previousLock;
+    return await fn();
+  } finally {
+    releaseLock();
+  }
+}
+
 export async function ensureDataDirs() {
   await fs.mkdir(DATA_DIR, { recursive: true });
   await fs.mkdir(FILES_DIR, { recursive: true });
@@ -92,11 +124,39 @@ async function syncFieldsSchemaWithTemplate() {
 
     if (templateSchema.length === 0) return;
 
-    // Находим поля из шаблона, отсутствующие в runtime
-    const runtimeFieldNames = new Set(runtimeSchema.map(f => f.field_name));
-    const missingFields = templateSchema.filter(f => f.field_name && !runtimeFieldNames.has(f.field_name));
+    // Build template lookup by field_name for merging field_id/role
+    const templateByName = new Map(templateSchema.map(f => [f.field_name, f]));
 
-    if (missingFields.length === 0) return;
+    // Находим поля из шаблона, отсутствующие в runtime
+    // Also check field_id to avoid re-adding fields that were renamed or deleted via the schema editor
+    // (a field present in runtime under a different field_name but same field_id = renamed, not absent)
+    const runtimeFieldNames = new Set(runtimeSchema.map(f => f.field_name));
+    const runtimeFieldIds = new Set(runtimeSchema.map(f => f.field_id).filter(Boolean));
+    const missingFields = templateSchema.filter(f =>
+      f.field_name &&
+      !runtimeFieldNames.has(f.field_name) &&
+      !(f.field_id && runtimeFieldIds.has(f.field_id))
+    );
+
+    // Check if existing runtime fields need field_id/role updates from template
+    let fieldsUpdated = 0;
+    for (const runtimeField of runtimeSchema) {
+      const templateField = templateByName.get(runtimeField.field_name);
+      if (!templateField) continue;
+
+      // Backfill field_id from template if missing in runtime
+      if (!runtimeField.field_id && templateField.field_id) {
+        runtimeField.field_id = templateField.field_id;
+        fieldsUpdated++;
+      }
+      // Backfill role from template if missing in runtime
+      if (!runtimeField.role && templateField.role) {
+        runtimeField.role = templateField.role;
+        fieldsUpdated++;
+      }
+    }
+
+    if (missingFields.length === 0 && fieldsUpdated === 0) return;
 
     // Добавляем отсутствующие поля
     const updatedSchema = [...runtimeSchema, ...missingFields];
@@ -104,7 +164,14 @@ async function syncFieldsSchemaWithTemplate() {
     updatedSchema.sort((a, b) => parseInt(a.field_order || 0, 10) - parseInt(b.field_order || 0, 10));
 
     await writeCsv(FIELD_SCHEMA_PATH, FIELD_SCHEMA_COLUMNS, updatedSchema);
-    console.log(`✓ fields_schema.csv: додано ${missingFields.length} полів з шаблону (${missingFields.map(f => f.field_name).join(', ')})`);
+    const messages = [];
+    if (missingFields.length > 0) {
+      messages.push(`додано ${missingFields.length} полів (${missingFields.map(f => f.field_name).join(', ')})`);
+    }
+    if (fieldsUpdated > 0) {
+      messages.push(`оновлено ${fieldsUpdated} атрибутів field_id/role`);
+    }
+    console.log(`✓ fields_schema.csv: ${messages.join(', ')}`);
   } catch (error) {
     console.error("⚠️ Помилка синхронізації fields_schema:", error.message);
   }
@@ -113,10 +180,14 @@ async function syncFieldsSchemaWithTemplate() {
 /**
  * Инициализирует колонки из fields_schema.csv при старте сервера
  * Должна быть вызвана один раз при запуске
+ * @param {Object} [options]
+ * @param {boolean} [options.skipTemplateSync=false] - Skip template sync (used after schema editor save where user's schema is authoritative)
  */
-export async function initializeEmployeeColumns() {
-  // Сначала синхронизируем fields_schema.csv с шаблоном
-  await syncFieldsSchemaWithTemplate();
+export async function initializeEmployeeColumns({ skipTemplateSync = false } = {}) {
+  // Синхронизируем fields_schema.csv с шаблоном (skip when user just saved schema via editor)
+  if (!skipTemplateSync) {
+    await syncFieldsSchemaWithTemplate();
+  }
 
   console.log("Инициализация колонок из fields_schema.csv...");
   const columns = await getEmployeeColumns();
@@ -298,11 +369,25 @@ export async function withEmployeeLock(fn) {
 }
 
 export async function loadFieldsSchema() {
+  // Use the in-memory cache when available. This keeps concurrent reads consistent:
+  // during a schema rename migration the cache still holds the old schema that matches
+  // the (not-yet-migrated) employee CSV columns. The cache is rebuilt inside the
+  // migration lock after CSV renames complete (resetEmployeeColumnsCache + initializeEmployeeColumns).
+  const cached = getCachedRawFieldSchema();
+  if (cached) return cached;
   return readCsv(FIELD_SCHEMA_PATH, FIELD_SCHEMA_COLUMNS);
 }
 
 export async function saveFieldsSchema(rows) {
-  return writeCsv(FIELD_SCHEMA_PATH, FIELD_SCHEMA_COLUMNS, rows);
+  const previousLock = fieldSchemaWriteLock;
+  let releaseLock;
+  fieldSchemaWriteLock = new Promise(resolve => { releaseLock = resolve; });
+  try {
+    await previousLock;
+    await writeCsv(FIELD_SCHEMA_PATH, FIELD_SCHEMA_COLUMNS, rows);
+  } finally {
+    releaseLock();
+  }
 }
 
 /**
@@ -339,8 +424,9 @@ export async function getDashboardStats() {
   const employees = await loadEmployees();
   const schema = await loadFieldsSchema();
 
-  // Знаходимо поле employment_status та його options з fields_schema
-  const statusField = schema.find(f => f.field_name === 'employment_status');
+  // Знаходимо поле статусу та його options через роль
+  const statusField = getFieldByRole(schema, ROLES.STATUS);
+  const statusFieldName = statusField?.field_name;
   const options = statusField?.field_options?.split('|') || [];
 
   const total = employees.length;
@@ -348,7 +434,7 @@ export async function getDashboardStats() {
   // Підрахунок по кожній опції з schema — без хардкоду значень
   const statusCounts = options.map(opt => ({
     label: opt,
-    count: employees.filter(e => e.employment_status === opt).length
+    count: employees.filter(e => statusFieldName ? e[statusFieldName] === opt : false).length
   }));
 
   const counted = statusCounts.reduce((sum, s) => sum + s.count, 0);
@@ -364,6 +450,8 @@ function localDateStr(date) {
 
 export async function getDashboardEvents() {
   const employees = await loadEmployees();
+  const schema = await loadFieldsSchema();
+  const { status: statusFieldName, startDate: startDateFieldName, endDate: endDateFieldName } = buildStatusFields(schema);
   const now = new Date();
   const today = localDateStr(now);
 
@@ -379,10 +467,10 @@ export async function getDashboardEvents() {
   const weekEvents = [];
 
   employees.forEach(emp => {
-    const name = [emp.last_name, emp.first_name, emp.middle_name].filter(Boolean).join(' ');
-    const startDate = emp.status_start_date;
-    const endDate = emp.status_end_date;
-    const statusType = emp.employment_status || '';
+    const name = buildEmployeeName(emp, schema);
+    const startDate = startDateFieldName ? emp[startDateFieldName] : '';
+    const endDate = endDateFieldName ? emp[endDateFieldName] : '';
+    const statusType = statusFieldName ? (emp[statusFieldName] || '') : '';
 
     if (startDate === today) {
       todayEvents.push({
@@ -451,7 +539,7 @@ export async function getDocumentExpiryEvents() {
   const weekEvents = [];
 
   employees.forEach(emp => {
-    const name = [emp.last_name, emp.first_name, emp.middle_name].filter(Boolean).join(' ');
+    const name = buildEmployeeName(emp, schema);
 
     fileFields.forEach(field => {
       const expiryDateField = `${field.field_name}_expiry_date`;
@@ -495,7 +583,7 @@ export async function getDocumentOverdueEvents() {
   const overdueEvents = [];
 
   employees.forEach(emp => {
-    const name = [emp.last_name, emp.first_name, emp.middle_name].filter(Boolean).join(' ');
+    const name = buildEmployeeName(emp, schema);
 
     fileFields.forEach(field => {
       const expiryDateField = `${field.field_name}_expiry_date`;
@@ -527,9 +615,11 @@ export async function getDocumentOverdueEvents() {
 export async function getStatusReport(type) {
   const employees = await loadEmployees();
   const schema = await loadFieldsSchema();
-  const statusField = schema.find(f => f.field_name === 'employment_status');
+  const statusField = getFieldByRole(schema, ROLES.STATUS);
+  const statusFieldName = statusField?.field_name;
   const options = statusField?.field_options?.split('|') || [];
   const workingOpt = options[0] || '';
+  const { startDate: startDateFieldName, endDate: endDateFieldName } = buildStatusFields(schema);
 
   const now = new Date();
   const today = localDateStr(now);
@@ -538,9 +628,10 @@ export async function getStatusReport(type) {
   if (type === 'current') {
     // Employees with active non-working status (start_date <= today, no end_date or end_date >= today)
     filtered = employees.filter(emp => {
-      if (!emp.employment_status || emp.employment_status === workingOpt) return false;
-      const start = emp.status_start_date;
-      const end = emp.status_end_date;
+      const empStatus = statusFieldName ? emp[statusFieldName] : '';
+      if (!empStatus || empStatus === workingOpt) return false;
+      const start = startDateFieldName ? emp[startDateFieldName] : '';
+      const end = endDateFieldName ? emp[endDateFieldName] : '';
       if (!start) return false;
       if (start > today) return false;
       if (end && end < today) return false;
@@ -551,9 +642,10 @@ export async function getStatusReport(type) {
     const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
     const monthEnd = today.slice(0, 7) + '-' + String(lastDay).padStart(2, '0');
     filtered = employees.filter(emp => {
-      if (!emp.employment_status || emp.employment_status === workingOpt) return false;
-      const start = emp.status_start_date;
-      const end = emp.status_end_date;
+      const empStatus = statusFieldName ? emp[statusFieldName] : '';
+      if (!empStatus || empStatus === workingOpt) return false;
+      const start = startDateFieldName ? emp[startDateFieldName] : '';
+      const end = endDateFieldName ? emp[endDateFieldName] : '';
       if (!start && !end) return false;
       if (start && start >= monthStart && start <= monthEnd) return true;
       if (end && end >= monthStart && end <= monthEnd) return true;
@@ -565,15 +657,16 @@ export async function getStatusReport(type) {
   }
 
   return filtered.map(emp => {
-    const name = [emp.last_name, emp.first_name, emp.middle_name].filter(Boolean).join(' ');
-    const start = emp.status_start_date;
-    const end = emp.status_end_date;
+    const name = buildEmployeeName(emp, schema);
+    const start = startDateFieldName ? emp[startDateFieldName] : '';
+    const end = endDateFieldName ? emp[endDateFieldName] : '';
     let days = 0;
     if (start && end) {
       days = Math.floor((new Date(end) - new Date(start)) / 86400000) + 1;
       if (days < 0) days = 0;
     }
-    return { employee_id: emp.employee_id, name, status_type: emp.employment_status || '', status_start_date: start, status_end_date: end, days };
+    const empStatus = statusFieldName ? (emp[statusFieldName] || '') : '';
+    return { employee_id: emp.employee_id, name, status_type: empStatus, status_start_date: start, status_end_date: end, days };
   });
 }
 
@@ -590,20 +683,16 @@ export async function exportEmployees(filters, searchTerm = '') {
   // Створити whitelist для валідації фільтрів
   const allFieldNames = schema.map(f => f.field_name);
 
-  // Текстовий пошук (як в App.vue filteredEmployees)
+  // Текстовий пошук по всіх текстових полях зі схеми
   let filtered = employees;
   const query = searchTerm.trim().toLowerCase();
   if (query) {
+    const searchableFields = schema
+      .filter(f => !['file', 'photo'].includes(f.field_type))
+      .map(f => f.field_name);
     filtered = filtered.filter(emp => {
-      const displayName = [emp.last_name, emp.first_name, emp.middle_name]
-        .filter(Boolean)
-        .join(' ');
-      const haystack = [
-        displayName,
-        emp.department,
-        emp.position,
-        emp.employee_id
-      ]
+      const haystack = searchableFields
+        .map(fn => emp[fn] || '')
         .filter(Boolean)
         .join(' ')
         .toLowerCase();
@@ -773,6 +862,8 @@ export async function loadConfig() {
  */
 export async function getBirthdayEvents() {
   const employees = await loadEmployees();
+  const schema = await loadFieldsSchema();
+  const birthDateFieldName = getFieldNameByRole(schema, ROLES.BIRTH_DATE);
   const now = new Date();
   const currentYear = now.getFullYear();
   const today = localDateStr(now);
@@ -787,7 +878,7 @@ export async function getBirthdayEvents() {
   const next30DaysEvents = [];
 
   employees.forEach(emp => {
-    const birthDate = emp.birth_date;
+    const birthDate = birthDateFieldName ? emp[birthDateFieldName] : '';
     if (!birthDate) return;
 
     // Парсим дату рождения
@@ -810,7 +901,7 @@ export async function getBirthdayEvents() {
     const thisYearBirthday = new Date(currentYear, birthMonth - 1, birthDay);
     const nextYearBirthday = new Date(currentYear + 1, birthMonth - 1, birthDay);
 
-    const name = [emp.last_name, emp.first_name, emp.middle_name].filter(Boolean).join(' ');
+    const name = buildEmployeeName(emp, schema);
 
     // Проверяем день рождения в текущем году
     if (thisYearBirthday >= nowDateOnly && thisYearBirthday <= in30days) {
@@ -867,6 +958,8 @@ export async function getBirthdayEvents() {
  */
 export async function getRetirementEvents(retirementAge = 60) {
   const employees = await loadEmployees();
+  const schema = await loadFieldsSchema();
+  const birthDateFieldName = getFieldNameByRole(schema, ROLES.BIRTH_DATE);
   const now = new Date();
   const currentYear = now.getFullYear();
   const today = localDateStr(now);
@@ -882,7 +975,7 @@ export async function getRetirementEvents(retirementAge = 60) {
   const thisMonthEvents = [];
 
   employees.forEach(emp => {
-    const birthDate = emp.birth_date;
+    const birthDate = birthDateFieldName ? emp[birthDateFieldName] : '';
     if (!birthDate) return;
 
     // Парсим дату рождения
@@ -905,7 +998,7 @@ export async function getRetirementEvents(retirementAge = 60) {
     const thisYearBirthday = new Date(currentYear, birthMonth - 1, birthDay);
     const nextYearBirthday = new Date(currentYear + 1, birthMonth - 1, birthDay);
 
-    const name = [emp.last_name, emp.first_name, emp.middle_name].filter(Boolean).join(' ');
+    const name = buildEmployeeName(emp, schema);
 
     // Проверяем день рождения в текущем году
     const age = currentYear - birthYear;
@@ -1061,17 +1154,7 @@ export async function getCustomReport(filters = [], columns = null) {
   return filtered;
 }
 
-// Templates CSV columns
-const TEMPLATE_COLUMNS = [
-  'template_id',
-  'template_name',
-  'template_type',
-  'docx_filename',
-  'placeholder_fields',
-  'description',
-  'created_date',
-  'active'
-];
+// TEMPLATE_COLUMNS imported from schema.js
 
 // Generated documents CSV columns
 const GENERATED_DOCUMENT_COLUMNS = [
@@ -1666,9 +1749,11 @@ export async function syncStatusEventsForEmployee(employeeId, { forceReset = fal
 
   // 4. Load schema to determine the working status (first option = Працює)
   const schema = await loadFieldsSchema();
-  const statusField = schema.find(f => f.field_name === 'employment_status');
+  const statusField = getFieldByRole(schema, ROLES.STATUS);
+  const statusFieldName = statusField?.field_name;
   const options = statusField?.field_options?.split('|') || [];
   const workingStatus = options[0] || 'Працює';
+  const { startDate: startDateFieldName, endDate: endDateFieldName } = buildStatusFields(schema);
 
   // 5. Atomically read-check-update employee under write lock
   let oldStatus, oldStartDate, oldEndDate, newStatus, newStartDate, newEndDate;
@@ -1679,32 +1764,35 @@ export async function syncStatusEventsForEmployee(employeeId, { forceReset = fal
     if (idx === -1) return null; // Employee not found — skip write
 
     const emp = employees[idx];
+    const empStatus = statusFieldName ? emp[statusFieldName] : '';
+    const empStartDate = startDateFieldName ? emp[startDateFieldName] : '';
+    const empEndDate = endDateFieldName ? emp[endDateFieldName] : '';
 
     if (activeEvent) {
-      if (emp.employment_status !== activeEvent.status) {
-        oldStatus = emp.employment_status || '';
-        oldStartDate = emp.status_start_date || '';
-        oldEndDate = emp.status_end_date || '';
+      if (empStatus !== activeEvent.status) {
+        oldStatus = empStatus || '';
+        oldStartDate = empStartDate || '';
+        oldEndDate = empEndDate || '';
         newStatus = activeEvent.status;
         newStartDate = activeEvent.start_date;
         newEndDate = activeEvent.end_date || '';
-        employees[idx].employment_status = newStatus;
-        employees[idx].status_start_date = newStartDate;
-        employees[idx].status_end_date = newEndDate;
+        if (statusFieldName) employees[idx][statusFieldName] = newStatus;
+        if (startDateFieldName) employees[idx][startDateFieldName] = newStartDate;
+        if (endDateFieldName) employees[idx][endDateFieldName] = newEndDate;
         changed = true;
       }
     } else {
       // No active event — reset to working status if currently different, or clear stale date fields
-      if (emp.employment_status !== workingStatus || emp.status_start_date || emp.status_end_date) {
-        oldStatus = emp.employment_status || '';
-        oldStartDate = emp.status_start_date || '';
-        oldEndDate = emp.status_end_date || '';
+      if (empStatus !== workingStatus || empStartDate || empEndDate) {
+        oldStatus = empStatus || '';
+        oldStartDate = empStartDate || '';
+        oldEndDate = empEndDate || '';
         newStatus = workingStatus;
         newStartDate = '';
         newEndDate = '';
-        employees[idx].employment_status = newStatus;
-        employees[idx].status_start_date = newStartDate;
-        employees[idx].status_end_date = newEndDate;
+        if (statusFieldName) employees[idx][statusFieldName] = newStatus;
+        if (startDateFieldName) employees[idx][startDateFieldName] = newStartDate;
+        if (endDateFieldName) employees[idx][endDateFieldName] = newEndDate;
         changed = true;
       }
     }
@@ -1747,7 +1835,7 @@ export async function archiveEmployee(employee) {
 
   try {
     await previousLock;
-    const columns = await getEmployeeColumns();
+    const columns = [...(await getEmployeeColumns()), 'active'];
     const remoteEmployees = await readCsv(EMPLOYEES_REMOTE_PATH, columns);
     remoteEmployees.push(employee);
     await writeCsv(EMPLOYEES_REMOTE_PATH, columns, remoteEmployees);

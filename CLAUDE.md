@@ -78,7 +78,8 @@ crm_manufactur/
 │   │   │   ├── TemplatesView.vue         # Template management
 │   │   │   ├── DocumentHistoryView.vue   # Document generation history
 │   │   │   ├── DocumentsView.vue         # Tabbed container for Templates + Document History
-│   │   │   ├── SystemSettingsView.vue    # Tabbed container for Import + Logs
+│   │   │   ├── SystemSettingsView.vue    # Tabbed container for Import + Logs + Field Schema
+│   │   │   ├── FieldSchemaEditorView.vue   # Field schema editor (rename, reorder, impact preview)
 │   │   │   ├── PlaceholderReferenceView.vue # Placeholder reference guide
 │   │   │   └── LogsView.vue              # Audit log viewer
 │   │   ├── composables/        # Shared composable functions
@@ -98,7 +99,8 @@ crm_manufactur/
 │   │   │   ├── useTemplateUpload.js      # Template DOCX file upload
 │   │   │   ├── useTableInlineEdit.js     # Table inline cell editing
 │   │   │   ├── useTableColumnFilters.js  # Table column checkbox filters
-│   │   │   └── useReprimands.js          # Employee reprimands/commendations CRUD popup
+│   │   │   ├── useReprimands.js          # Employee reprimands/commendations CRUD popup
+│   │   │   └── useFieldSchemaEditor.js   # Field schema editor state (load, edit, preview, apply)
 │   │   ├── utils/              # Utility modules
 │   │   │   ├── constants.js              # Application-wide constants
 │   │   │   └── employee.js               # Employee display name utility
@@ -119,7 +121,8 @@ crm_manufactur/
 │   │   │   ├── templates.js    # Template CRUD and generation routes
 │   │   │   ├── documents.js    # Document history and download routes
 │   │   │   ├── logs.js         # Audit log routes
-│   │   │   └── misc.js         # Utility routes (folder, schema, search)
+│   │   │   ├── misc.js         # Utility routes (folder, schema, search)
+│   │   │   └── field-schema.js # Field schema editor routes (details, rename-preview, update)
 │   │   ├── index.js            # Express server setup and route registration
 │   │   ├── store.js            # CSV data storage layer (load/save functions)
 │   │   ├── csv.js              # Low-level CSV read/write utilities
@@ -127,6 +130,9 @@ crm_manufactur/
 │   │   ├── docx-generator.js   # DOCX template processing and placeholder replacement
 │   │   ├── declension.js       # Ukrainian name/grade/position declension (shevchenko + shevchenko-ext-military)
 │   │   ├── utils.js            # Shared utility functions (getNextId, normalizeEmployeeInput, etc.)
+│   │   ├── field-utils.js      # Role-based field resolution utilities (ROLES, getFieldByRole, buildEmployeeName)
+│   │   ├── auto-migrate.js     # Auto-migration: detect field_name renames via field_mapping.csv, propagate across CSVs
+│   │   ├── migrate-to-field-id.js # One-time migration: add field_id and role columns to fields_schema.csv
 │   │   ├── upload-config.js    # Multer configuration for file uploads
 │   │   ├── sync-template.js    # CSV template synchronization utility
 │   │   └── clean-invalid-dates.js # Data migration utility
@@ -146,7 +152,13 @@ crm_manufactur/
 │   │   ├── reprimands-store.test.js
 │   │   ├── status-events-store.test.js
 │   │   ├── status-events-api.test.js
-│   │   └── dashboard-30days.test.js
+│   │   ├── dashboard-30days.test.js
+│   │   ├── remote-archive-store.test.js
+│   │   ├── schema.test.js
+│   │   ├── field-utils.test.js
+│   │   ├── store-role-lookups.test.js
+│   │   ├── auto-migrate.test.js
+│   │   └── migrate-to-field-id.test.js
 │   └── package.json            # Backend dependencies
 │
 ├── tests/
@@ -164,6 +176,7 @@ crm_manufactur/
 │   ├── logs.csv                # Audit log entries
 │   ├── config.csv              # Application configuration (gitignored, from template)
 │   ├── fields_schema.csv       # Dynamic field schema (gitignored, from template)
+│   ├── field_mapping.csv       # Field ID ↔ field name mapping for rename detection (gitignored, auto-generated)
 │   ├── employees_remote.csv    # Archived employee records (gitignored)
 │   ├── status_history_remote.csv # Archived status history (gitignored)
 │   ├── reprimands_remote.csv   # Archived reprimands (gitignored)
@@ -271,8 +284,17 @@ These locks ensure that only one write operation occurs at a time per file, prev
 
 **fields_schema.csv**
 - Dynamic field schema defining all employee fields
-- Controls: field name, data type, display label (Ukrainian), validation, UI visibility
-- Changes trigger automatic schema migration in employees.csv
+- Columns: field_id, field_order, field_name, field_label, field_type, field_options, show_in_table, field_group, editable_in_table, role
+- `field_id`: Stable identifier (format: `f_<original_name>`, e.g., `f_last_name`) — never changes after creation
+- `role`: Semantic role for ~16 critical fields (STATUS, BIRTH_DATE, LAST_NAME, etc.) — used for business logic lookups
+- `field_name`: CSV column header name — can be renamed freely; auto-migration propagates renames across all CSV files
+- Changes trigger automatic schema migration in employees.csv via auto-migrate.js
+
+**field_mapping.csv**
+- Tracks field_id ↔ field_name mapping for rename detection
+- Auto-generated on first run by migrate-to-field-id.js
+- Updated after each successful rename migration by auto-migrate.js
+- Used to detect field_name renames: compares current schema against previous mapping
 
 **status_history.csv**
 - Records every employment status change for audit trail
@@ -504,6 +526,37 @@ function getNextId(items, idField) {
 - document_id in generated_documents.csv
 - log_id in logs.csv
 
+### ID-Based Field Schema and Auto-Migration
+
+The system uses a stable `field_id` / `role` architecture to decouple business logic from field names, allowing field renaming without breaking the system.
+
+**field_id**: Stable identifier for each field (format: `f_<original_name>`). Never changes after creation. Used as the primary DOCX placeholder format.
+
+**role**: Semantic identifier for ~16 critical fields used in business logic (STATUS, BIRTH_DATE, LAST_NAME, etc.). All hardcoded field_name lookups have been replaced with role-based resolution via `getFieldByRole(schema, ROLES.STATUS)`.
+
+**Role-based field resolution** (from field-utils.js):
+```javascript
+import { ROLES, getFieldByRole, getFieldNameByRole, buildEmployeeName } from "./field-utils.js";
+
+// Instead of: emp.employment_status or schema.find(f => f.field_name === 'employment_status')
+const statusField = getFieldByRole(schema, ROLES.STATUS);
+const statusFieldName = statusField?.field_name;
+const statusValue = emp[statusFieldName];
+
+// Instead of: `${emp.last_name} ${emp.first_name} ${emp.middle_name}`
+const name = buildEmployeeName(emp, schema);
+```
+
+**Auto-migration on field rename** (auto-migrate.js):
+1. On server startup, loads `fields_schema.csv` → Map<field_id, current_field_name>
+2. Loads `field_mapping.csv` → Map<field_id, previous_field_name>
+3. Detects renames: where current_field_name !== previous_field_name
+4. Applies column renames across employees.csv, employees_remote.csv, templates.csv (placeholder_fields), logs.csv (field_name column)
+5. For file-type fields, also renames companion `_issue_date` and `_expiry_date` columns
+6. Updates `field_mapping.csv` with new mapping
+
+**DOCX placeholder backwards compatibility**: Both `{f_last_name}` (primary, field_id-based) and `{last_name}` (legacy, field_name-based) work in templates. The `prepareData()` function generates both keys when schema is available.
+
 ### Security Decisions
 
 The application implements several security measures to protect against common vulnerabilities:
@@ -618,6 +671,7 @@ All API routes follow consistent patterns for clarity and maintainability.
 - `documents.js` - Document history and downloads
 - `logs.js` - Audit log retrieval
 - `misc.js` - Utility routes (folder opening, schema, search)
+- `field-schema.js` - Field schema management (details with impact stats, rename preview, update with auto-migration)
 
 **Route Module Pattern**:
 Each route module exports a registration function that takes the Express app instance and registers its routes:
@@ -1158,6 +1212,7 @@ const routes = [
   { path: "/reports", name: "reports", component: ReportsView },
   { path: "/documents", name: "documents", component: DocumentsView },
   { path: "/system-settings", name: "system-settings", component: SystemSettingsView },
+  { path: "/field-schema", name: "field-schema", component: FieldSchemaEditorView },
   { path: "/placeholder-reference/:employeeId?", name: "placeholder-reference", component: PlaceholderReferenceView },
   // Legacy routes for backwards compatibility:
   { path: "/import", name: "import", component: ImportView },
@@ -1177,8 +1232,9 @@ Each view is a standalone Vue component with its own state and methods:
 - `TemplatesView.vue` - Document template management (also embedded in DocumentsView)
 - `DocumentHistoryView.vue` - History of all generated documents with pagination (also embedded in DocumentsView)
 - `DocumentsView.vue` - Tabbed container combining TemplatesView and DocumentHistoryView (main navigation tab)
-- `SystemSettingsView.vue` - Tabbed container combining ImportView and LogsView (accessed via dropdown menu)
-- `PlaceholderReferenceView.vue` - Placeholder reference guide with preview values
+- `SystemSettingsView.vue` - Tabbed container combining ImportView, LogsView, and FieldSchemaEditorView (accessed via dropdown menu)
+- `FieldSchemaEditorView.vue` - Field schema editor with inline editing, rename preview, and auto-migration trigger (also direct route: /field-schema)
+- `PlaceholderReferenceView.vue` - Placeholder reference guide with preview values, field_id as primary format
 - `LogsView.vue` - Audit log viewer with pagination (also embedded in SystemSettingsView)
 
 **View Component Pattern**:
@@ -1444,6 +1500,7 @@ export function useEmployeeForm(allFieldsSchema, employeeFields, fieldLabels) {
 | `useTableInlineEdit.js` | TableView | Inline cell editing (start, save, cancel) |
 | `useTableColumnFilters.js` | TableView | Column checkbox filters (toggle, clear, count) |
 | `useReprimands.js` | EmployeeCardsView | Reprimands/commendations CRUD popup (add, edit, delete records) |
+| `useFieldSchemaEditor.js` | FieldSchemaEditorView | Field schema editor state (load, edit, dirty tracking, preview, apply) |
 
 **Dependency Injection Pattern**:
 Composables receive external dependencies via function parameters rather than importing them internally. This keeps composables testable and decoupled. The parent view wires composables together:
@@ -1665,8 +1722,8 @@ function switchTab(tab) {
 - Accessible via Documents tab in main navigation
 
 **SystemSettingsView** (dropdown menu):
-- Combines ImportView and LogsView
-- Two sub-tabs: "Імпорт" and "Логи"
+- Combines ImportView, LogsView, and FieldSchemaEditorView
+- Three sub-tabs: "Імпорт", "Логи", "Схема полів"
 - Accessible via three-dots dropdown menu in top-right corner
 
 **Benefits**:
@@ -2112,6 +2169,7 @@ End-to-end tests validate complete user workflows across the full stack (databas
 - `status-history.spec.js`: Status history popup open, display, and close
 - `reprimands.spec.js`: Reprimands and commendations popup UI interactions, CRUD operations
 - `status-events.spec.js`: Status event scheduling: add immediate/future events, overlap error, delete event, status revert
+- `field-schema-editor.spec.js`: Field schema editor: load, rename label, cancel, role field protection, duplicate name validation, direct route
 
 **Configuration** (`playwright.config.js`):
 - Test directory: `./tests/e2e`
@@ -2193,6 +2251,12 @@ Unit and integration tests focus on backend business logic, API endpoints, and d
 - `status-events-api.test.js`: Status event API endpoint validation (GET, POST with overlap/400/409, DELETE, auto-sync behavior, PUT with 200/400/403/404/409 and self-overlap exclusion)
 - `dashboard-30days.test.js`: Dashboard 30-day window logic for birthday, status, and document expiry events
 - `utils.test.js`: Shared utility function tests
+- `schema.test.js`: Schema loading with field_id map and caching
+- `field-utils.test.js`: Role-based field resolution (ROLES, getFieldByRole, buildEmployeeName, etc.)
+- `store-role-lookups.test.js`: Store functions using role-based field resolution
+- `auto-migrate.test.js`: Auto-migration rename detection and CSV column propagation
+- `migrate-to-field-id.test.js`: One-time migration script adding field_id and role columns
+- `remote-archive-store.test.js`: Remote archive functions (archiveEmployee, archiveStatusHistory, etc.)
 
 **Test Framework**: Node.js native test runner (no external dependencies)
 
@@ -2268,7 +2332,7 @@ node server/test/docx-generator.test.js
 ```
 
 **Unit vs. Integration Test Distinction**:
-- **Unit tests** (no server required): config.test.js, upload-limit.test.js, docx-generator.test.js, declension.test.js, retirement-events.test.js, utils.test.js, reprimands-store.test.js, status-events-store.test.js, dashboard-30days.test.js
+- **Unit tests** (no server required): config.test.js, upload-limit.test.js, docx-generator.test.js, declension.test.js, retirement-events.test.js, utils.test.js, reprimands-store.test.js, status-events-store.test.js, dashboard-30days.test.js, remote-archive-store.test.js, schema.test.js, field-utils.test.js, store-role-lookups.test.js, auto-migrate.test.js, migrate-to-field-id.test.js
 - **Integration tests** (require running server on port 3000): templates-api.test.js, retirement-api.test.js, search-api.test.js, photo-api.test.js, status-history.test.js, reprimands-api.test.js, status-events-api.test.js
 - `npm test` runs only unit tests; `npm run test:integration` runs integration tests
 - CI runs unit tests before starting servers, and integration tests after servers are ready
@@ -2645,6 +2709,30 @@ All API endpoints are served under the `/api` prefix:
   - visible_in_card: 'yes' or 'no'
   - visible_in_table: 'yes' or 'no'
 - Used by frontend to dynamically render forms and tables
+
+### Field Schema Editor Endpoints
+
+**GET /api/fields-schema/details**
+- Returns full schema with impact stats per field
+- Each field includes: field_id, field_order, field_name, field_label, field_type, field_options, field_group, show_in_table, editable_in_table, role
+- Impact stats per field: count of employees with non-empty values, templates using placeholder, log entries referencing field
+- Used by FieldSchemaEditorView
+
+**GET /api/fields-schema/rename-preview**
+- Preview impact of renaming a field (read-only, no changes applied)
+- Query params: field_id, new_field_name
+- Returns: list of renames (including _issue_date/_expiry_date for file fields), impact counts
+- 400 if field_id/new_field_name missing or duplicate name detected
+- 404 if field not found
+
+**PUT /api/fields-schema**
+- Update field schema (rename fields, change labels, reorder)
+- Request body: `{ fields: [...] }` — array of field objects
+- field_id is immutable; field_name, field_label, field_order, field_options, field_group, show_in_table, editable_in_table can change
+- Validates: no duplicate field_name, no empty field_name, no reserved characters, role fields cannot be deleted
+- Triggers auto-migration immediately (renames CSV columns across all files)
+- Returns: updated schema and migration summary (renames performed, count)
+- Creates audit log entry
 
 ### Template CRUD Endpoints
 
@@ -3086,17 +3174,17 @@ files/templates/template_{template_id}_{timestamp}.docx
 Placeholders in DOCX templates follow a simple, consistent syntax that gets replaced with real data during document generation.
 
 **Placeholder Format**:
-- Syntax: `{field_name}` (curly braces around field name)
-- Field names must match fields from fields_schema.csv
+- Primary format: `{field_id}` (e.g., `{f_last_name}`, `{f_birth_date}`) — stable, won't break on field rename
+- Legacy format: `{field_name}` (e.g., `{last_name}`, `{birth_date}`) — still supported for backwards compatibility
+- Both formats work simultaneously in DOCX templates
 - Case-sensitive matching
 - Alphanumeric and underscores only (no hyphens)
 
 **Standard Placeholders** (from employee data):
-- `{full_name}` - Employee full name
-- `{birth_date}` - Birth date in YYYY-MM-DD format
-- `{employment_status}` - Current employment status
-- `{hire_date}` - Date of hire
-- Any field from fields_schema.csv can be used as placeholder
+- `{f_full_name}` / `{full_name}` - Employee full name
+- `{f_birth_date}` / `{birth_date}` - Birth date in YYYY-MM-DD format
+- `{f_employment_status}` / `{employment_status}` - Current employment status
+- Any field from fields_schema.csv can be used as placeholder (both field_id and field_name formats)
 
 **Special Placeholders** (auto-generated):
 - `{current_date}` - Current date in DD.MM.YYYY format

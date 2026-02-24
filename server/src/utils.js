@@ -2,6 +2,7 @@ import path from "path";
 import { execFile } from "child_process";
 import { DATA_DIR, FILES_DIR, getEmployeeColumnsSync } from "./store.js";
 import { normalizeRows } from "./csv.js";
+import { buildEmployeeName } from "./field-utils.js";
 
 // Pagination constants
 export const DEFAULT_PAGINATION_LIMIT = 50;
@@ -148,11 +149,17 @@ export function findById(items, idField, idValue) {
 }
 
 /**
- * Build full name from employee name parts
+ * Build full name from employee name parts.
+ * When schema is provided, uses role-based field resolution via buildEmployeeName.
+ * Without schema, falls back to hardcoded last_name/first_name/middle_name fields.
  * @param {Object} employee - Employee object with name fields
+ * @param {Array} [schema] - Optional field schema for role-based resolution
  * @returns {string} Full name (last first middle)
  */
-export function buildFullName(employee) {
+export function buildFullName(employee, schema) {
+  if (schema) {
+    return buildEmployeeName(employee, schema);
+  }
   return [employee.last_name, employee.first_name, employee.middle_name]
     .filter(Boolean)
     .join(" ");

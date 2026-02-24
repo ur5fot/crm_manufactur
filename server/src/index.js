@@ -2,10 +2,13 @@ import express from "express";
 import cors from "cors";
 import {
   ensureDataDirs,
+  DATA_DIR,
   FILES_DIR,
   initializeEmployeeColumns,
   loadConfig
 } from "./store.js";
+import { runAutoMigration } from "./auto-migrate.js";
+import { getCachedEmployeeColumns } from "./schema.js";
 import { createImportUpload, createEmployeeFileUpload, createPhotoUpload } from "./upload-config.js";
 import { registerDashboardRoutes } from "./routes/dashboard.js";
 import { registerReportRoutes } from "./routes/reports.js";
@@ -15,12 +18,16 @@ import { registerTemplateRoutes } from "./routes/templates.js";
 import { registerDocumentRoutes } from "./routes/documents.js";
 import { registerLogRoutes } from "./routes/logs.js";
 import { registerMiscRoutes } from "./routes/misc.js";
+import { registerFieldSchemaRoutes } from "./routes/field-schema.js";
 
 const app = express();
 const port = process.env.PORT || 3000;
 
 await ensureDataDirs();
 await initializeEmployeeColumns();
+
+// Run auto-migration: detect field_name renames and propagate across CSV files
+await runAutoMigration(DATA_DIR, getCachedEmployeeColumns());
 
 // Load configuration with fallback
 let appConfig;
@@ -70,6 +77,9 @@ registerLogRoutes(app);
 
 // Register miscellaneous routes (schema, search, placeholder preview, open folder)
 registerMiscRoutes(app);
+
+// Register field schema management routes
+registerFieldSchemaRoutes(app);
 
 app.listen(port, () => {
   console.log(`CRM server running on http://localhost:${port}`);

@@ -1,5 +1,7 @@
-// Fallback список колонок если fields_schema.csv недоступен
-// Должен соответствовать fields_schema.template.csv
+// Fallback список колонок если fields_schema.csv недоступен.
+// These are field_name values (CSV column headers) and must match
+// the field_name column in data/fields_schema.template.csv.
+// Used only when fields_schema.csv cannot be loaded.
 const DEFAULT_EMPLOYEE_COLUMNS = [
   "photo",
   "employee_id",
@@ -89,6 +91,9 @@ const DEFAULT_DOCUMENT_FIELDS = [
 // Кэш для динамически загруженных колонок
 let cachedEmployeeColumns = null;
 let cachedDocumentFields = null;
+let cachedFieldIdMap = null; // Map<field_id, field_name>
+let cachedFieldSchema = null; // Full schema array with field_id/role
+let cachedRawFieldSchema = null; // Raw rows from fields_schema.csv (all FIELD_SCHEMA_COLUMNS)
 
 /**
  * Загружает список колонок из fields_schema.csv отсортированный по field_order
@@ -107,6 +112,10 @@ export async function loadEmployeeColumns(loadFieldsSchemaFn) {
       cachedEmployeeColumns = DEFAULT_EMPLOYEE_COLUMNS;
       return cachedEmployeeColumns;
     }
+
+    // Cache the raw schema rows so loadFieldsSchema() can use this cached version
+    // during schema migrations, keeping concurrent reads consistent with the CSV files.
+    cachedRawFieldSchema = schema;
 
     // Сортируем по field_order и извлекаем field_name
     const sortedFields = schema
@@ -130,6 +139,25 @@ export async function loadEmployeeColumns(loadFieldsSchemaFn) {
     }
 
     cachedEmployeeColumns = columns;
+
+    // Cache field_id mapping and full schema
+    cachedFieldIdMap = new Map();
+    cachedFieldSchema = [];
+    for (const field of sortedFields) {
+      if (field.field_id && field.field_name) {
+        cachedFieldIdMap.set(field.field_id, field.field_name);
+      }
+      cachedFieldSchema.push({
+        field_id: field.field_id || '',
+        field_name: field.field_name,
+        field_label: field.field_label || '',
+        field_type: field.field_type || 'text',
+        field_options: field.field_options || '',
+        field_group: field.field_group || '',
+        role: field.role || ''
+      });
+    }
+
     console.log(`Загружено ${columns.length} колонок из fields_schema.csv (включая auto-generated date колонки для документов)`);
     return cachedEmployeeColumns;
   } catch (error) {
@@ -185,6 +213,9 @@ export async function loadDocumentFields(loadFieldsSchemaFn) {
 export function resetEmployeeColumnsCache() {
   cachedEmployeeColumns = null;
   cachedDocumentFields = null;
+  cachedFieldIdMap = null;
+  cachedFieldSchema = null;
+  cachedRawFieldSchema = null;
 }
 
 /**
@@ -205,11 +236,42 @@ export function getCachedDocumentFields() {
   return cachedDocumentFields || DEFAULT_DOCUMENT_FIELDS;
 }
 
+/**
+ * Возвращает закэшированные сырые строки fields_schema.csv (синхронно).
+ * Populated by loadEmployeeColumns(). Used by loadFieldsSchema() in store.js
+ * to return consistent (old) schema during migration windows instead of reading
+ * the newly-written schema file before CSV column renames have been applied.
+ * @returns {Array|null}
+ */
+export function getCachedRawFieldSchema() {
+  return cachedRawFieldSchema;
+}
+
+/**
+ * Возвращает закэшированную карту field_id → field_name (синхронно)
+ * Должен быть вызван после loadEmployeeColumns()
+ * @returns {Map<string, string>|null}
+ */
+export function getCachedFieldIdMap() {
+  return cachedFieldIdMap;
+}
+
+/**
+ * Возвращает закэшированную полную схему полей (синхронно)
+ * Каждый элемент: { field_id, field_name, field_label, field_type, field_options, field_group, role }
+ * Должен быть вызван после loadEmployeeColumns()
+ * @returns {Array|null}
+ */
+export function getCachedFieldSchema() {
+  return cachedFieldSchema;
+}
+
 // Для обратной совместимости экспортируем дефолтные колонки
 export const EMPLOYEE_COLUMNS = DEFAULT_EMPLOYEE_COLUMNS;
 export const DOCUMENT_FIELDS = DEFAULT_DOCUMENT_FIELDS;
 
 export const FIELD_SCHEMA_COLUMNS = [
+  "field_id",
   "field_order",
   "field_name",
   "field_label",
@@ -217,7 +279,8 @@ export const FIELD_SCHEMA_COLUMNS = [
   "field_options",
   "show_in_table",
   "field_group",
-  "editable_in_table"
+  "editable_in_table",
+  "role"
 ];
 
 export const LOG_COLUMNS = [
@@ -265,50 +328,19 @@ export const STATUS_EVENT_COLUMNS = [
   "active"
 ];
 
-export const FIELD_LABELS = {
-  photo: "Фото",
-  employee_id: "ID сотрудника",
-  last_name: "Фамилия",
-  first_name: "Имя",
-  middle_name: "Отчество",
-  employment_status: "Статус работы",
-  additional_status: "Дополнительный статус",
-  gender: "Пол",
-  blood_group: "Группа крови",
-  department: "Подразделение",
-  grade: "Разряд",
-  position: "Должность",
-  specialty: "Специальность",
-  work_state: "Рабочее состояние",
-  work_type: "Тип работы",
-  fit_status: "Пригодность",
-  order_ref: "Приказ",
-  location: "Местонахождение",
-  residence_place: "Место проживания",
-  registration_place: "Место регистрации",
-  email: "Эл. почта",
-  phone: "Телефон",
-  phone_note: "Примечание к телефону",
-  education: "Образование",
-  salary_grid: "Зарплатная сетка",
-  salary_amount: "Оклад",
-  bank_name: "Банк",
-  bank_card_number: "Номер карты",
-  bank_iban: "IBAN",
-  tax_id: "ИНН",
-  personal_matter_file: "Личное дело",
-  medical_commission_file: "Медкомиссия",
-  veterans_certificate_file: "Удостоверение ветерана",
-  driver_license_file: "Водительское удостоверение",
-  id_certificate_file: "Удостоверение личности",
-  foreign_passport_number: "Номер загранпаспорта",
-  foreign_passport_file: "Загранпаспорт",
-  criminal_record_file: "Справка о несудимости",
-  military_id_file: "Военный билет",
-  medical_certificate_file: "Медицинская справка",
-  insurance_file: "Страховой полис",
-  education_diploma_file: "Диплом об образовании",
-  status_start_date: "Дата начала статуса",
-  status_end_date: "Дата окончания статуса",
-  notes: "Примечание"
-};
+export const FIELD_MAPPING_COLUMNS = [
+  "field_id",
+  "field_name"
+];
+
+export const TEMPLATE_COLUMNS = [
+  "template_id",
+  "template_name",
+  "template_type",
+  "docx_filename",
+  "placeholder_fields",
+  "description",
+  "created_date",
+  "active"
+];
+

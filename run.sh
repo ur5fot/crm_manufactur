@@ -91,6 +91,12 @@ echo "Синхронізація шаблону CSV..."
   echo "⚠️  Попередження: синхронізація шаблону не вдалася, продовжуємо запуск..."
 }
 
+# Migrate fields_schema.csv to field_id format (idempotent)
+echo "Міграція field_id..."
+(cd "$root_dir/server" && node src/migrate-to-field-id.js) || {
+  echo "⚠️  Попередження: міграція field_id не вдалася, продовжуємо запуск..."
+}
+
 start_service "server" "$root_dir/server" "npm run dev"
 start_service "client" "$root_dir/client" "npm run dev"
 

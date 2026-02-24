@@ -3,7 +3,7 @@
  * Run with: node server/test/utils.test.js
  */
 
-import { getNextId, normalizeEmployeeInput, getOpenCommand } from '../src/utils.js';
+import { getNextId, normalizeEmployeeInput, getOpenCommand, buildFullName } from '../src/utils.js';
 
 let testsPassed = 0;
 let testsFailed = 0;
@@ -113,6 +113,51 @@ async function testNormalizeEmployeeInputNonObject() {
   }
 }
 
+// buildFullName tests
+
+async function testBuildFullNameWithoutSchema() {
+  const employee = { last_name: 'Іванов', first_name: 'Петро', middle_name: 'Миколайович' };
+  const result = buildFullName(employee);
+  if (result !== 'Іванов Петро Миколайович') {
+    throw new Error(`Expected "Іванов Петро Миколайович", got "${result}"`);
+  }
+}
+
+async function testBuildFullNamePartialFields() {
+  const employee = { last_name: 'Іванов', first_name: '', middle_name: '' };
+  const result = buildFullName(employee);
+  if (result !== 'Іванов') {
+    throw new Error(`Expected "Іванов", got "${result}"`);
+  }
+}
+
+async function testBuildFullNameWithSchema() {
+  const schema = [
+    { field_name: 'surname', role: 'LAST_NAME' },
+    { field_name: 'given_name', role: 'FIRST_NAME' },
+    { field_name: 'patronymic', role: 'MIDDLE_NAME' },
+  ];
+  const employee = { surname: 'Петренко', given_name: 'Марія', patronymic: 'Іванівна' };
+  const result = buildFullName(employee, schema);
+  if (result !== 'Петренко Марія Іванівна') {
+    throw new Error(`Expected "Петренко Марія Іванівна", got "${result}"`);
+  }
+}
+
+async function testBuildFullNameSchemaOverridesHardcoded() {
+  const schema = [
+    { field_name: 'surname', role: 'LAST_NAME' },
+    { field_name: 'given_name', role: 'FIRST_NAME' },
+    { field_name: 'patronymic', role: 'MIDDLE_NAME' },
+  ];
+  // Data has both old and new field names; schema-based should use new names
+  const employee = { last_name: 'OLD', first_name: 'OLD', surname: 'Петренко', given_name: 'Марія', patronymic: 'Іванівна' };
+  const result = buildFullName(employee, schema);
+  if (result !== 'Петренко Марія Іванівна') {
+    throw new Error(`Expected "Петренко Марія Іванівна", got "${result}"`);
+  }
+}
+
 // getOpenCommand tests
 
 async function testGetOpenCommandReturnsString() {
@@ -144,6 +189,12 @@ async function runAllTests() {
   await runTest('handles null input', testNormalizeEmployeeInputNull);
   await runTest('handles undefined input', testNormalizeEmployeeInputUndefined);
   await runTest('handles non-object input', testNormalizeEmployeeInputNonObject);
+
+  console.log('\n--- buildFullName ---');
+  await runTest('builds full name without schema', testBuildFullNameWithoutSchema);
+  await runTest('handles partial fields', testBuildFullNamePartialFields);
+  await runTest('uses schema-based field resolution', testBuildFullNameWithSchema);
+  await runTest('schema overrides hardcoded field names', testBuildFullNameSchemaOverridesHardcoded);
 
   console.log('\n--- getOpenCommand ---');
   await runTest('returns valid platform command', testGetOpenCommandReturnsString);

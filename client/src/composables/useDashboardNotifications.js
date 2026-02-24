@@ -10,8 +10,17 @@ let birthdayNotifiedDate = '';
 const retirementNotifiedIds = new Set();
 let retirementNotifiedDate = '';
 
-export function useDashboardNotifications(employees, employmentOptions, workingStatus, dismissed) {
+export function useDashboardNotifications(employees, employmentOptions, workingStatus, dismissed, allFieldsSchema) {
   const { dismissedEvents, generateEventId, dismissEvent } = dismissed;
+
+  // Helper to resolve field name by role from schema
+  function fieldKey(role, fallback) {
+    if (allFieldsSchema && allFieldsSchema.value) {
+      const f = allFieldsSchema.value.find(f => f.role === role);
+      if (f) return f.key;
+    }
+    return fallback;
+  }
 
   // Notification state
   const statusReturning = ref([]);
@@ -103,21 +112,26 @@ export function useDashboardNotifications(employees, employmentOptions, workingS
     const startingToday = [];
     const needsUpdate = [];
 
+    const statusKey = fieldKey('STATUS', 'employment_status');
+    const startDateKey = fieldKey('STATUS_START', 'status_start_date');
+    const endDateKey = fieldKey('STATUS_END', 'status_end_date');
+    const positionKey = fieldKey('POSITION', 'position');
+
     employees.value.forEach(employee => {
-      const startDate = employee.status_start_date;
-      const endDate = employee.status_end_date;
+      const startDate = employee[startDateKey];
+      const endDate = employee[endDateKey];
 
       if (!startDate && !endDate) return;
 
       const firedStatus = employmentOptions.value[1] || '';
-      const isFired = firedStatus && employee.employment_status === firedStatus;
+      const isFired = firedStatus && employee[statusKey] === firedStatus;
 
       if (endDate === today && !isFired) {
         returningToday.push({
           id: employee.employee_id,
-          name: displayName(employee),
-          position: employee.position || '',
-          statusType: employee.employment_status
+          name: displayName(employee, allFieldsSchema && allFieldsSchema.value),
+          position: employee[positionKey] || '',
+          statusType: employee[statusKey]
         });
         return;
       }
@@ -125,20 +139,20 @@ export function useDashboardNotifications(employees, employmentOptions, workingS
       if (endDate && endDate < today && !isFired) {
         needsUpdate.push({
           ...employee,
-          status_start_date: '',
-          status_end_date: '',
-          employment_status: workingStatus.value
+          [startDateKey]: '',
+          [endDateKey]: '',
+          [statusKey]: workingStatus.value
         });
         return;
       }
 
-      if (startDate === today && employee.employment_status !== workingStatus.value) {
+      if (startDate === today && employee[statusKey] !== workingStatus.value) {
         startingToday.push({
           id: employee.employee_id,
-          name: displayName(employee),
-          position: employee.position || '',
+          name: displayName(employee, allFieldsSchema && allFieldsSchema.value),
+          position: employee[positionKey] || '',
           endDate: endDate,
-          statusType: employee.employment_status
+          statusType: employee[statusKey]
         });
         return;
       }
@@ -239,13 +253,14 @@ export function useDashboardNotifications(employees, employmentOptions, workingS
 
       if (newTodayItems.length > 0) {
         const firedStatus = employmentOptions.value[1];
+        const retStatusKey = fieldKey('STATUS', 'employment_status');
         for (const event of newTodayItems) {
           const emp = employees.value.find(e => e.employee_id === event.employee_id);
-          if (emp && emp.employment_status === workingStatus.value) {
+          if (emp && emp[retStatusKey] === workingStatus.value) {
             try {
               await api.updateEmployee(event.employee_id, {
                 ...emp,
-                employment_status: firedStatus
+                [retStatusKey]: firedStatus
               });
               console.log(`Auto-dismissed employee ${event.employee_name} (ID: ${event.employee_id}) due to retirement`);
               retirementNotifiedIds.add(event.employee_id);
