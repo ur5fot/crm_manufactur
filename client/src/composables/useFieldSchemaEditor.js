@@ -136,9 +136,10 @@ export function useFieldSchemaEditor() {
   function addField() {
     const timestamp = Date.now();
     const newFieldName = `new_field_${timestamp}`;
+    const maxOrder = fields.value.reduce((max, f) => Math.max(max, parseInt(f.field_order || 0, 10)), 0);
     fields.value.push({
       field_id: `f_${newFieldName}`,
-      field_order: String(fields.value.length),
+      field_order: String(maxOrder + 1),
       field_name: newFieldName,
       field_label: "Нове поле",
       field_type: "text",

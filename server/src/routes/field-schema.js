@@ -211,6 +211,11 @@ export function registerFieldSchemaRoutes(app) {
         if (rf.role === "EMPLOYEE_ID" && stillPresent.field_name !== rf.field_name) {
           return res.status(400).json({ error: `Cannot rename employee_id field (used as foreign key in related CSV files)` });
         }
+        // photo field has dedicated API endpoints and hardcoded frontend references.
+        // Renaming it would break photo upload/display/delete functionality.
+        if (rf.role === "PHOTO" && stillPresent.field_name !== rf.field_name) {
+          return res.status(400).json({ error: `Cannot rename photo field (used by dedicated photo API endpoints)` });
+        }
       }
 
       // Build updated schema rows preserving field_id and role
