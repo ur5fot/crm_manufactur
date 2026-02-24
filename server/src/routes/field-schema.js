@@ -176,6 +176,9 @@ export function registerFieldSchemaRoutes(app) {
         if (!field.field_id) {
           return res.status(400).json({ error: "field_id is required for each field" });
         }
+        if (!/^f_[a-zA-Z0-9_]+$/.test(field.field_id)) {
+          return res.status(400).json({ error: `field_id must start with 'f_' and contain only letters, digits, and underscores: ${field.field_id}` });
+        }
         if (ids.has(field.field_id)) {
           return res.status(400).json({ error: `Duplicate field_id: ${field.field_id}` });
         }
@@ -193,17 +196,13 @@ export function registerFieldSchemaRoutes(app) {
         names.add(field.field_name);
       }
 
-      // Load current schema to validate role fields not deleted or renamed
+      // Load current schema to validate role fields not deleted
       const currentSchema = await loadFieldsSchema();
       const roleFields = currentSchema.filter(f => f.role && f.role.trim() !== "");
       for (const rf of roleFields) {
         const stillPresent = fields.find(f => f.field_id === rf.field_id);
         if (!stillPresent) {
           return res.status(400).json({ error: `Cannot delete role field: ${rf.field_name} (role: ${rf.role})` });
-        }
-        // Prevent renaming field_name for role fields (used as foreign keys and in hardcoded logic)
-        if (stillPresent.field_name !== rf.field_name) {
-          return res.status(400).json({ error: `Cannot rename system field: ${rf.field_name} (role: ${rf.role})` });
         }
       }
 
