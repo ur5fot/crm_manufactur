@@ -186,10 +186,14 @@ async function syncFieldsSchemaWithTemplate() {
 /**
  * Инициализирует колонки из fields_schema.csv при старте сервера
  * Должна быть вызвана один раз при запуске
+ * @param {Object} [options]
+ * @param {boolean} [options.skipTemplateSync=false] - Skip template sync (used after schema editor save where user's schema is authoritative)
  */
-export async function initializeEmployeeColumns() {
-  // Сначала синхронизируем fields_schema.csv с шаблоном
-  await syncFieldsSchemaWithTemplate();
+export async function initializeEmployeeColumns({ skipTemplateSync = false } = {}) {
+  // Синхронизируем fields_schema.csv с шаблоном (skip when user just saved schema via editor)
+  if (!skipTemplateSync) {
+    await syncFieldsSchemaWithTemplate();
+  }
 
   console.log("Инициализация колонок из fields_schema.csv...");
   const columns = await getEmployeeColumns();

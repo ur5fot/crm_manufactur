@@ -11,7 +11,7 @@ import {
   acquireLogLock,
 } from "../store.js";
 import { runAutoMigration } from "../auto-migrate.js";
-import { getCachedEmployeeColumns, resetEmployeeColumnsCache } from "../schema.js";
+import { resetEmployeeColumnsCache } from "../schema.js";
 import { addLog } from "../store.js";
 
 export function registerFieldSchemaRoutes(app) {
@@ -221,17 +221,33 @@ export function registerFieldSchemaRoutes(app) {
       // Save schema
       await saveFieldsSchema(updatedSchema);
 
-      // Clear stale column cache before re-initializing from updated schema
-      resetEmployeeColumnsCache();
-      await initializeEmployeeColumns();
+      // Derive employee columns from the updated schema for migration.
+      // This avoids resetting the global cache before migration completes,
+      // preventing a race where concurrent reads see new column names but CSV files still have old ones.
+      const sortedForCols = [...updatedSchema]
+        .sort((a, b) => parseInt(a.field_order || 0, 10) - parseInt(b.field_order || 0, 10))
+        .filter(f => f.field_name && f.field_name.trim() !== "");
+      const newEmployeeColumns = [];
+      for (const field of sortedForCols) {
+        newEmployeeColumns.push(field.field_name);
+        if (field.field_type === "file") {
+          newEmployeeColumns.push(`${field.field_name}_issue_date`);
+          newEmployeeColumns.push(`${field.field_name}_expiry_date`);
+        }
+      }
 
-      // Run auto-migration to detect renames and propagate.
-      // Acquire all data file locks to prevent race conditions with concurrent writes.
+      // Run auto-migration and update cache atomically inside locks.
+      // During migration, the global cache retains OLD column names → concurrent reads consistent.
+      // After migration renames CSV columns, cache is updated to match → consistent.
+      // skipTemplateSync: user's schema is authoritative (prevents re-adding deleted fields from template).
       const migrationResult = await acquireEmployeeLock(() =>
         acquireTemplatesLock(() =>
-          acquireLogLock(() =>
-            runAutoMigration(DATA_DIR, getCachedEmployeeColumns())
-          )
+          acquireLogLock(async () => {
+            const result = await runAutoMigration(DATA_DIR, newEmployeeColumns);
+            resetEmployeeColumnsCache();
+            await initializeEmployeeColumns({ skipTemplateSync: true });
+            return result;
+          })
         )
       );
 
