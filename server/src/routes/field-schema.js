@@ -4,9 +4,11 @@ import {
   loadEmployees,
   loadTemplates,
   loadLogs,
-  loadFieldMapping,
   DATA_DIR,
   initializeEmployeeColumns,
+  acquireEmployeeLock,
+  acquireTemplatesLock,
+  acquireLogLock,
 } from "../store.js";
 import { runAutoMigration } from "../auto-migrate.js";
 import { getCachedEmployeeColumns, resetEmployeeColumnsCache } from "../schema.js";
@@ -81,6 +83,9 @@ export function registerFieldSchemaRoutes(app) {
       const { field_id, new_field_name } = req.query;
       if (!field_id || !new_field_name) {
         return res.status(400).json({ error: "field_id and new_field_name required" });
+      }
+      if (!/^[a-zA-Z0-9_]+$/.test(new_field_name)) {
+        return res.status(400).json({ error: "field_name must contain only letters, digits, and underscores" });
       }
 
       const schema = await loadFieldsSchema();
@@ -215,8 +220,15 @@ export function registerFieldSchemaRoutes(app) {
       resetEmployeeColumnsCache();
       await initializeEmployeeColumns();
 
-      // Run auto-migration to detect renames and propagate
-      const migrationResult = await runAutoMigration(DATA_DIR, getCachedEmployeeColumns());
+      // Run auto-migration to detect renames and propagate.
+      // Acquire all data file locks to prevent race conditions with concurrent writes.
+      const migrationResult = await acquireEmployeeLock(() =>
+        acquireTemplatesLock(() =>
+          acquireLogLock(() =>
+            runAutoMigration(DATA_DIR, getCachedEmployeeColumns())
+          )
+        )
+      );
 
       // Log the changes
       const renameCount = Object.keys(migrationResult.renames).length;

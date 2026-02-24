@@ -108,6 +108,15 @@ export function useFieldsSchema() {
     return field?.label || fieldName;
   }
 
+  function resetSchema() {
+    isLoaded = false;
+    allFieldsSchema.value = [];
+    fieldGroups.value = [];
+    summaryColumns.value = [];
+    dictionaries.value = {};
+    documentFields.value = [];
+  }
+
   function getFieldByRole(role) {
     if (!role) return null;
     return allFieldsSchema.value.find(f => f.role === role) || null;
@@ -125,6 +134,7 @@ export function useFieldsSchema() {
     dictionaries,
     documentFields,
     loadFieldsSchema,
+    resetSchema,
     getFieldType,
     getFieldLabel,
     getFieldByRole,

@@ -1,7 +1,9 @@
 import { ref, computed } from "vue";
 import { api } from "../api";
+import { useFieldsSchema } from "./useFieldsSchema";
 
 export function useFieldSchemaEditor() {
+  const { resetSchema } = useFieldsSchema();
   const fields = ref([]);
   const originalFields = ref([]);
   const loading = ref(false);
@@ -118,6 +120,9 @@ export function useFieldSchemaEditor() {
       successMessage.value = renameCount > 0
         ? `Схему оновлено. Перейменувань: ${renameCount}`
         : "Схему оновлено.";
+
+      // Invalidate the shared fields schema cache so other views reload fresh data
+      resetSchema();
 
       // Reload to get fresh impact stats
       await loadSchema();

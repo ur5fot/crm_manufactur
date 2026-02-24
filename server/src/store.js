@@ -56,6 +56,46 @@ let statusEventWriteLock = Promise.resolve();
 // Simple in-memory lock for field schema writes to prevent race conditions
 let fieldSchemaWriteLock = Promise.resolve();
 
+/**
+ * Generic lock helpers for acquiring write locks without data load/save.
+ * Used by auto-migration to serialize with regular write operations.
+ */
+export async function acquireEmployeeLock(fn) {
+  const previousLock = employeeWriteLock;
+  let releaseLock;
+  employeeWriteLock = new Promise(resolve => { releaseLock = resolve; });
+  try {
+    await previousLock;
+    return await fn();
+  } finally {
+    releaseLock();
+  }
+}
+
+export async function acquireTemplatesLock(fn) {
+  const previousLock = templatesWriteLock;
+  let releaseLock;
+  templatesWriteLock = new Promise(resolve => { releaseLock = resolve; });
+  try {
+    await previousLock;
+    return await fn();
+  } finally {
+    releaseLock();
+  }
+}
+
+export async function acquireLogLock(fn) {
+  const previousLock = logWriteLock;
+  let releaseLock;
+  logWriteLock = new Promise(resolve => { releaseLock = resolve; });
+  try {
+    await previousLock;
+    return await fn();
+  } finally {
+    releaseLock();
+  }
+}
+
 export async function ensureDataDirs() {
   await fs.mkdir(DATA_DIR, { recursive: true });
   await fs.mkdir(FILES_DIR, { recursive: true });
