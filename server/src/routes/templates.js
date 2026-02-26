@@ -371,8 +371,9 @@ export function registerTemplateRoutes(app, appConfig) {
         }
       }
 
-      // Build quantity placeholders from all active employees
-      const quantities = buildQuantityPlaceholders(schema, employees);
+      // Build quantity placeholders from active employees only
+      const activeEmployees = employees.filter(e => e.active !== 'no');
+      const quantities = buildQuantityPlaceholders(schema, activeEmployees);
 
       // Prepare data: quantity placeholders + employee fields (if available) + custom overrides
       // Priority: custom_data > employee > quantities
@@ -392,8 +393,9 @@ export function registerTemplateRoutes(app, appConfig) {
           ? `${sanitizedName}_${sanitizedLastName}_${employee_id}_${timestamp}.docx`
           : `${sanitizedName}_${employee_id}_${timestamp}.docx`;
       } else {
-        // General template without employee: TemplateName_timestamp.docx
-        docxFilename = `${sanitizedName}_${timestamp}.docx`;
+        // General template without employee: TemplateName_timestamp_random.docx
+        const rand = Math.random().toString(36).slice(2, 8);
+        docxFilename = `${sanitizedName}_${timestamp}_${rand}.docx`;
       }
 
       // Paths with path traversal protection

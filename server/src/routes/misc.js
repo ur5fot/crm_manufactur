@@ -316,12 +316,17 @@ export function registerMiscRoutes(app) {
         group: 'special'
       });
 
-      // Quantity placeholders for select fields
-      const quantities = buildQuantityPlaceholders(schema, employees);
+      // Quantity placeholders for select fields (active employees only)
+      const activeEmployees = employees.filter(e => e.active !== 'no');
+      const quantities = buildQuantityPlaceholders(schema, activeEmployees);
       for (const [key, value] of Object.entries(quantities)) {
         // Parse the key to build a descriptive label
         // Keys are like: f_gender_quantity, f_gender_option1_quantity
-        const selectField = schema.find(f => f.field_id && key.startsWith(f.field_id + '_'));
+        // Find the longest matching field_id to avoid prefix-overlap mismatches
+        // (e.g. f_status vs f_status_new — must match the longer one)
+        const selectField = schema
+          .filter(f => f.field_id && key.startsWith(f.field_id + '_'))
+          .sort((a, b) => b.field_id.length - a.field_id.length)[0] || null;
         let label = key;
         if (selectField) {
           const fieldLabel = selectField.field_label || selectField.field_name;
