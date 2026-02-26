@@ -25,7 +25,7 @@ A comprehensive CRM system for managing employee records, documents, and templat
   - Within-card field search to filter form fields by label and value
 - Organized navigation:
   - Main tabs: Dashboard, Cards, Table, Reports, Documents
-  - Documents tab combines Templates and Document History in sub-tabs
+  - Documents tab combines Templates, General Templates, and Document History in sub-tabs
   - System Settings dropdown (three dots menu) for Import and Logs
 
 ## Navigation Structure
@@ -40,13 +40,14 @@ Located in the header tab bar:
 - **Cards (Картки)** - Employee card-based editing interface with sidebar list
 - **Table (Таблиця)** - Employee table view with sorting and filtering
 - **Reports (Звіти)** - Custom reports with dynamic filter builder
-- **Documents (Документи)** - Template management and document history (combines two sub-tabs)
+- **Documents (Документи)** - Template management, general templates, and document history (combines three sub-tabs)
 
 ### Documents Tab Sub-tabs
 
-The Documents section contains two sub-tabs for document management:
+The Documents section contains three sub-tabs for document management:
 
 - **Templates (Шаблони)** - Manage DOCX templates, upload template files, extract placeholders
+- **General Templates (Загальні шаблони)** - Generate documents from general templates without employee binding (e.g., reports, statistics)
 - **Document History (Історія документів)** - View all generated documents with filters and pagination
 
 ### System Settings Dropdown
@@ -445,6 +446,20 @@ For every text placeholder, two additional variants are automatically generated:
 
 Works for all placeholders: employee fields, name declensions, grade/position declensions, and special placeholders. Empty values do not get _upper/_cap variants.
 
+### Quantity Placeholders
+
+For each select-type field in the employee schema, quantity placeholders are automatically generated counting active employees:
+
+- `{f_<field_id>_quantity}` - total count of all active employees
+- `{f_<field_id>_option<N>_quantity}` - count of employees with the Nth option value (1-indexed)
+
+Example for field `gender` (field_id: `f_gender`, options: `Чоловіча|Жіноча`):
+- `{f_gender_quantity}` -> total active employees (e.g., "10")
+- `{f_gender_option1_quantity}` -> count with "Чоловіча" (e.g., "7")
+- `{f_gender_option2_quantity}` -> count with "Жіноча" (e.g., "3")
+
+Option counts may not sum to total (employees with empty values are not counted in any option). Quantity placeholders are available in all templates (both regular and general).
+
 ### Склонение ФИО по падежам
 
 При генерации документа система автоматически склоняет ФИО сотрудника по всем 6 падежам украинского языка (библиотека [shevchenko](https://github.com/tooleks/shevchenko-js)). Доступно 24 плейсхолдера (6 падежей × 4 поля):
@@ -528,6 +543,7 @@ Tests run automatically via GitHub Actions on push to `master`/`feature/*` branc
 │   │   │   ├── TemplatesView.vue
 │   │   │   ├── DocumentHistoryView.vue
 │   │   │   ├── DocumentsView.vue
+│   │   │   ├── GeneralTemplatesView.vue
 │   │   │   ├── SystemSettingsView.vue
 │   │   │   ├── ImportView.vue
 │   │   │   ├── PlaceholderReferenceView.vue
@@ -571,6 +587,7 @@ Tests run automatically via GitHub Actions on push to `master`/`feature/*` branc
 │   │   ├── index.js       # Express server setup & route registration
 │   │   ├── store.js       # CSV data storage
 │   │   ├── docx-generator.js  # DOCX generation
+│   │   ├── quantity-placeholders.js # Quantity placeholders for select fields
 │   │   ├── utils.js       # Shared utilities
 │   │   └── schema.js      # Employee field schema
 │   ├── test/              # Unit & integration tests

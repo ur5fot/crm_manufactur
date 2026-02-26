@@ -7,7 +7,7 @@ export function useDocumentGeneration(form) {
   async function loadTemplates() {
     try {
       const data = await api.getTemplates();
-      templates.value = data.templates || [];
+      templates.value = (data.templates || []).filter(t => t.is_general !== 'yes');
     } catch (error) {
       console.error('Failed to load templates:', error);
     }

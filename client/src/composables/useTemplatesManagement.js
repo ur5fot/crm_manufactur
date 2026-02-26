@@ -12,7 +12,8 @@ export function useTemplatesManagement() {
     template_type: '',
     description: '',
     placeholder_fields: '',
-    docx_filename: ''
+    docx_filename: '',
+    is_general: 'no'
   });
 
   async function loadTemplates() {
@@ -35,7 +36,8 @@ export function useTemplatesManagement() {
       template_type: '',
       description: '',
       placeholder_fields: '',
-      docx_filename: ''
+      docx_filename: '',
+      is_general: 'no'
     });
     showTemplateDialog.value = true;
   }
@@ -48,7 +50,8 @@ export function useTemplatesManagement() {
       template_type: template.template_type,
       description: template.description || '',
       placeholder_fields: template.placeholder_fields || '',
-      docx_filename: template.docx_filename || ''
+      docx_filename: template.docx_filename || '',
+      is_general: template.is_general || 'no'
     });
     showTemplateDialog.value = true;
   }
@@ -58,7 +61,8 @@ export function useTemplatesManagement() {
       const payload = {
         template_name: templateForm.template_name,
         template_type: templateForm.template_type,
-        description: templateForm.description || ''
+        description: templateForm.description || '',
+        is_general: templateForm.is_general
       };
 
       if (templateDialogMode.value === 'create') {
@@ -84,7 +88,8 @@ export function useTemplatesManagement() {
       template_type: '',
       description: '',
       placeholder_fields: '',
-      docx_filename: ''
+      docx_filename: '',
+      is_general: 'no'
     });
   }
 

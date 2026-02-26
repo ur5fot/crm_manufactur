@@ -186,6 +186,13 @@ export const api = {
       body: JSON.stringify({ employee_id: employeeId, custom_data: customData })
     });
   },
+  generateGeneralDocument(templateId, customData = {}) {
+    return request(`/templates/${templateId}/generate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ custom_data: customData })
+    });
+  },
   downloadDocument(documentId) {
     return `${BASE_URL}/documents/${documentId}/download`;
   },

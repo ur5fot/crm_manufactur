@@ -3,6 +3,7 @@ import { loadFieldsSchema, loadEmployees, loadTemplates, loadGeneratedDocuments 
 import { openFolder, MIN_SEARCH_LENGTH, MAX_SEARCH_LENGTH, MAX_EMPLOYEE_RESULTS, MAX_TEMPLATE_RESULTS, MAX_DOCUMENT_RESULTS, findById } from "../utils.js";
 import { generateDeclinedNames, generateDeclinedGradePosition } from "../declension.js";
 import { ROLES, getFieldNameByRole, buildEmployeeName } from "../field-utils.js";
+import { buildQuantityPlaceholders } from "../quantity-placeholders.js";
 
 export function registerMiscRoutes(app) {
   app.post("/api/open-data-folder", async (req, res) => {
@@ -314,6 +315,42 @@ export function registerMiscRoutes(app) {
         value: `${day}.${month}.${year} ${hours}:${minutes}`,
         group: 'special'
       });
+
+      // Quantity placeholders for select fields (active employees only)
+      const activeEmployees = employees.filter(e => e.active !== 'no');
+      const quantities = buildQuantityPlaceholders(schema, activeEmployees);
+      for (const [key, value] of Object.entries(quantities)) {
+        // Parse the key to build a descriptive label
+        // Keys are like: f_gender_quantity, f_gender_option1_quantity
+        // Find the longest matching field_id to avoid prefix-overlap mismatches
+        // (e.g. f_status vs f_status_new — must match the longer one)
+        const selectField = schema
+          .filter(f => f.field_id && key.startsWith(f.field_id + '_'))
+          .sort((a, b) => b.field_id.length - a.field_id.length)[0] || null;
+        let label = key;
+        if (selectField) {
+          const fieldLabel = selectField.field_label || selectField.field_name;
+          const suffix = key.slice(selectField.field_id.length + 1); // e.g. "quantity" or "option1_quantity"
+          if (suffix === 'quantity') {
+            label = `${fieldLabel} — кількість (всі)`;
+          } else {
+            // Parse optionN_quantity
+            const optMatch = suffix.match(/^option(\d+)_quantity$/);
+            if (optMatch) {
+              const optIndex = parseInt(optMatch[1], 10) - 1;
+              const options = selectField.field_options ? selectField.field_options.split('|').filter(Boolean) : [];
+              const optionName = options[optIndex] || `опція ${optMatch[1]}`;
+              label = `${fieldLabel} — кількість "${optionName}"`;
+            }
+          }
+        }
+        placeholders.push({
+          placeholder: `{${key}}`,
+          label,
+          value,
+          group: 'quantities'
+        });
+      }
 
       // Case variant placeholders (_upper and _cap for all text placeholders)
       // Create variants only for original placeholders, not for the variants themselves

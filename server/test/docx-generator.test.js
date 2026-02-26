@@ -7,6 +7,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { extractPlaceholders, generateDocx } from '../src/docx-generator.js';
+import { buildQuantityPlaceholders } from '../src/quantity-placeholders.js';
 import PizZip from 'pizzip';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -650,6 +651,73 @@ async function testExtractPlaceholdersWithoutSchemaConsistentType() {
   }
 }
 
+// Test 21: generateDocx() with quantity placeholders merged into data
+async function testGenerateDocxWithQuantityPlaceholders() {
+  const testPath = path.join(TEST_FIXTURES_DIR, 'test-quantity.docx');
+  // Template uses quantity placeholders
+  createTestDocx(testPath, [
+    'f_gender_quantity', 'f_gender_option1_quantity', 'f_gender_option2_quantity',
+    'last_name', 'f_last_name'
+  ]);
+
+  const outputPath = path.join(TEST_OUTPUT_DIR, 'quantity.docx');
+
+  // Schema with a select field
+  const quantitySchema = [
+    { field_id: 'f_last_name', field_name: 'last_name', field_label: 'Прізвище', field_type: 'text', role: 'LAST_NAME' },
+    { field_id: 'f_first_name', field_name: 'first_name', field_label: "Ім'я", field_type: 'text', role: 'FIRST_NAME' },
+    { field_id: 'f_middle_name', field_name: 'middle_name', field_label: 'По батькові', field_type: 'text', role: 'MIDDLE_NAME' },
+    { field_id: 'f_gender', field_name: 'gender', field_label: 'Стать', field_type: 'select', field_options: 'Чоловіча|Жіноча', role: 'GENDER' },
+  ];
+
+  // Simulate employees
+  const employees = [
+    { last_name: 'Петренко', gender: 'Чоловіча' },
+    { last_name: 'Іваненко', gender: 'Чоловіча' },
+    { last_name: 'Коваленко', gender: 'Жіноча' },
+  ];
+
+  // Build quantity placeholders (same as generate route does)
+  const quantities = buildQuantityPlaceholders(quantitySchema, employees);
+
+  // Merge: quantities first, then employee data (employee overrides on conflict)
+  const employeeData = { last_name: 'Петренко', first_name: 'Іван', middle_name: 'Миколайович', gender: 'Чоловіча' };
+  const data = { ...quantities, ...employeeData };
+
+  await generateDocx(testPath, data, outputPath, quantitySchema);
+
+  const content = fs.readFileSync(outputPath, 'binary');
+  const zip = new PizZip(content);
+  const documentXml = zip.file('word/document.xml').asText();
+
+  // Verify quantity placeholders were replaced with correct counts
+  // f_gender_quantity = 3 (total employees)
+  if (!documentXml.includes('>3<')) {
+    throw new Error('f_gender_quantity should be replaced with "3"');
+  }
+
+  // f_gender_option1_quantity = 2 (Чоловіча)
+  if (!documentXml.includes('>2<')) {
+    throw new Error('f_gender_option1_quantity should be replaced with "2"');
+  }
+
+  // f_gender_option2_quantity = 1 (Жіноча)
+  // Note: "1" might appear in other places, so we check that placeholder is gone
+  if (documentXml.includes('{f_gender_option2_quantity}')) {
+    throw new Error('f_gender_option2_quantity placeholder should have been replaced');
+  }
+
+  // Verify employee data still works alongside quantities
+  if (!documentXml.includes('Петренко')) {
+    throw new Error('Employee last_name should still be present');
+  }
+
+  // Verify no quantity placeholders remain unreplaced
+  if (documentXml.includes('{f_gender_quantity}') || documentXml.includes('{f_gender_option1_quantity}')) {
+    throw new Error('Quantity placeholders should all be replaced');
+  }
+}
+
 // Main test runner
 async function runAllTests() {
   console.log('Starting DOCX Generator unit tests...\n');
@@ -677,6 +745,7 @@ async function runAllTests() {
   await runTest('generateDocx() with schema generates field_id-based case variants', testGenerateDocxFieldIdCaseVariants);
   await runTest('extractPlaceholders() with schema returns validation info', testExtractPlaceholdersWithSchema);
   await runTest('extractPlaceholders() without schema returns consistent object type', testExtractPlaceholdersWithoutSchemaConsistentType);
+  await runTest('generateDocx() with quantity placeholders merged into data', testGenerateDocxWithQuantityPlaceholders);
 
   // Cleanup
   cleanup();

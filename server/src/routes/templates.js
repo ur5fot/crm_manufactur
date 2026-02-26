@@ -7,6 +7,7 @@ import { extractPlaceholders, generateDocx } from "../docx-generator.js";
 import { getOpenCommand, getNextId, validateRequired, validatePath, findById } from "../utils.js";
 import { createTemplateUpload } from "../upload-config.js";
 import { buildEmployeeName, buildFieldNameToIdMap, getFieldNameByRole, ROLES } from "../field-utils.js";
+import { buildQuantityPlaceholders } from "../quantity-placeholders.js";
 
 export function registerTemplateRoutes(app, appConfig) {
   const templateUpload = createTemplateUpload(appConfig);
@@ -68,7 +69,8 @@ export function registerTemplateRoutes(app, appConfig) {
         placeholder_fields: '',
         description: payload.description || '',
         created_date: new Date().toISOString().split('T')[0],
-        active: 'yes'
+        active: 'yes',
+        is_general: payload.is_general === 'yes' ? 'yes' : 'no'
       };
 
       templates.push(newTemplate);
@@ -122,6 +124,7 @@ export function registerTemplateRoutes(app, appConfig) {
         template_name: payload.template_name || oldTemplate.template_name,
         template_type: payload.template_type || oldTemplate.template_type,
         description: payload.description !== undefined ? payload.description : oldTemplate.description,
+        is_general: payload.is_general !== undefined ? (payload.is_general === 'yes' ? 'yes' : 'no') : oldTemplate.is_general,
         // Don't allow manual changes to docx_filename, placeholder_fields, active
       };
 
@@ -148,13 +151,14 @@ export function registerTemplateRoutes(app, appConfig) {
   app.delete("/api/templates/:id", async (req, res) => {
     try {
       const templates = await loadTemplates();
-      const template = findById(templates, 'template_id', req.params.id);
       const index = templates.findIndex((t) => t.template_id === req.params.id);
 
-      if (index === -1 || !template) {
+      if (index === -1) {
         res.status(404).json({ error: "Шаблон не знайдено" });
         return;
       }
+
+      const template = templates[index];
 
       // Soft delete: set active='no'
       templates[index].active = 'no';
@@ -328,19 +332,22 @@ export function registerTemplateRoutes(app, appConfig) {
   // Generate document from template
   app.post("/api/templates/:id/generate", async (req, res) => {
     try {
-      const { employee_id } = req.body;
+      const { employee_id, custom_data } = req.body;
 
-      if (!employee_id) {
-        res.status(400).json({ error: "employee_id обов'язковий" });
-        return;
-      }
-
-      // Load template
+      // Load template first to check is_general before validating employee_id
       const templates = await loadTemplates();
       const template = findById(templates, 'template_id', req.params.id);
 
       if (!template) {
         res.status(404).json({ error: "Шаблон не знайдено" });
+        return;
+      }
+
+      const isGeneral = template.is_general === 'yes';
+
+      // employee_id is required for non-general templates
+      if (!employee_id && !isGeneral) {
+        res.status(400).json({ error: "employee_id обов'язковий" });
         return;
       }
 
@@ -351,29 +358,45 @@ export function registerTemplateRoutes(app, appConfig) {
         return;
       }
 
-      // Load employee data and schema
+      // Load employees and schema
       const [employees, schema] = await Promise.all([loadEmployees(), loadFieldsSchema()]);
-      const employee = findById(employees, 'employee_id', employee_id);
 
-      if (!employee) {
-        res.status(404).json({ error: "Співробітник не знайдено" });
-        return;
+      // Load employee if employee_id provided
+      let employee = null;
+      if (employee_id) {
+        employee = findById(employees, 'employee_id', employee_id);
+        if (!employee) {
+          res.status(404).json({ error: "Співробітник не знайдено" });
+          return;
+        }
       }
 
-      // Prepare data with employee fields
-      // Note: special placeholders (current_date, current_datetime) are added by prepareData() in docx-generator.js
-      const data = {
-        ...employee
-      };
+      // Build quantity placeholders from active employees only
+      const activeEmployees = employees.filter(e => e.active !== 'no');
+      const quantities = buildQuantityPlaceholders(schema, activeEmployees);
 
-      // Generate DOCX filename using role-based field resolution
+      // Prepare data: quantity placeholders + employee fields (if available) + custom overrides
+      // Priority: custom_data > employee > quantities
+      // Note: special placeholders (current_date, current_datetime) are added by prepareData() in docx-generator.js
+      const data = { ...quantities, ...(employee || {}), ...(custom_data && typeof custom_data === 'object' ? custom_data : {}) };
+
+      // Generate DOCX filename
       const timestamp = Date.now();
       const sanitizedName = template.template_name.replace(/[^a-zA-Z0-9а-яА-ЯіїєґІЇЄҐ]/g, '_');
-      const lastNameField = getFieldNameByRole(schema, ROLES.LAST_NAME) || 'last_name';
-      const sanitizedLastName = (employee[lastNameField] || '').replace(/[^a-zA-Z0-9а-яА-ЯіїєґІЇЄҐ]/g, '_');
-      const docxFilename = sanitizedLastName
-        ? `${sanitizedName}_${sanitizedLastName}_${employee_id}_${timestamp}.docx`
-        : `${sanitizedName}_${employee_id}_${timestamp}.docx`;
+      let docxFilename;
+
+      if (employee) {
+        // Regular generation with employee: TemplateName_LastName_employeeId_timestamp.docx
+        const lastNameField = getFieldNameByRole(schema, ROLES.LAST_NAME) || 'last_name';
+        const sanitizedLastName = (employee[lastNameField] || '').replace(/[^a-zA-Z0-9а-яА-ЯіїєґІЇЄҐ]/g, '_');
+        docxFilename = sanitizedLastName
+          ? `${sanitizedName}_${sanitizedLastName}_${employee_id}_${timestamp}.docx`
+          : `${sanitizedName}_${employee_id}_${timestamp}.docx`;
+      } else {
+        // General template without employee: TemplateName_timestamp_random.docx
+        const rand = Math.random().toString(36).slice(2, 8);
+        docxFilename = `${sanitizedName}_${timestamp}_${rand}.docx`;
+      }
 
       // Paths with path traversal protection
       const templatePath = path.join(FILES_DIR, 'templates', template.docx_filename);
@@ -412,7 +435,7 @@ export function registerTemplateRoutes(app, appConfig) {
       // Create record in generated_documents.csv atomically with race condition protection
       const newDocId = await addGeneratedDocument({
         template_id: template.template_id,
-        employee_id: employee_id,
+        employee_id: employee_id || '',
         docx_filename: docxFilename,
         generation_date: new Date().toISOString(),
         generated_by: 'system', // Can be enhanced with user authentication later
@@ -420,15 +443,18 @@ export function registerTemplateRoutes(app, appConfig) {
       });
 
       // Add audit log
-      const employeeName = buildEmployeeName(employee, schema);
+      const employeeName = employee ? buildEmployeeName(employee, schema) : '';
+      const logDetail = employee
+        ? `Згенеровано документ з шаблону: ${template.template_name}, файл: ${docxFilename}`
+        : `Згенеровано загальний документ з шаблону: ${template.template_name}, файл: ${docxFilename}`;
       await addLog(
         "GENERATE_DOCUMENT",
-        employee_id,
+        employee_id || '',
         employeeName,
         "",
         "",
         "",
-        `Згенеровано документ з шаблону: ${template.template_name}, файл: ${docxFilename}`
+        logDetail
       );
 
       // Return response

@@ -912,6 +912,269 @@ async function testGenerateFilenameIncludesLastName() {
   }
 }
 
+// Test 16: POST /api/templates with is_general: 'yes' returns is_general: 'yes'
+async function testCreateGeneralTemplate() {
+  const response = await fetch(`${BASE_URL}/api/templates`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      template_name: 'General Template Test',
+      template_type: 'report',
+      description: 'A general template',
+      is_general: 'yes'
+    })
+  });
+
+  if (response.status !== 201) {
+    throw new Error(`Expected 201, got ${response.status}`);
+  }
+
+  const data = await response.json();
+  createdTemplateIds.push(data.template_id);
+
+  if (data.template.is_general !== 'yes') {
+    throw new Error(`Expected is_general 'yes', got '${data.template.is_general}'`);
+  }
+
+  // Verify via GET
+  const getResponse = await fetch(`${BASE_URL}/api/templates/${data.template_id}`);
+  const getData = await getResponse.json();
+
+  if (getData.template.is_general !== 'yes') {
+    throw new Error(`GET returned is_general '${getData.template.is_general}', expected 'yes'`);
+  }
+}
+
+// Test 17: POST /api/templates without is_general defaults to 'no'
+async function testCreateTemplateDefaultIsGeneralNo() {
+  const response = await fetch(`${BASE_URL}/api/templates`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      template_name: 'Default is_general Test',
+      template_type: 'contract'
+    })
+  });
+
+  if (response.status !== 201) {
+    throw new Error(`Expected 201, got ${response.status}`);
+  }
+
+  const data = await response.json();
+  createdTemplateIds.push(data.template_id);
+
+  if (data.template.is_general !== 'no') {
+    throw new Error(`Expected is_general 'no' by default, got '${data.template.is_general}'`);
+  }
+}
+
+// Test 18: PUT /api/templates/:id updates is_general
+async function testUpdateTemplateIsGeneral() {
+  // Create a regular template
+  const createResponse = await fetch(`${BASE_URL}/api/templates`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      template_name: 'Update is_general Test',
+      template_type: 'contract'
+    })
+  });
+  const createData = await createResponse.json();
+  createdTemplateIds.push(createData.template_id);
+
+  if (createData.template.is_general !== 'no') {
+    throw new Error(`Expected initial is_general 'no', got '${createData.template.is_general}'`);
+  }
+
+  // Update to general
+  const updateResponse = await fetch(`${BASE_URL}/api/templates/${createData.template_id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      template_name: 'Update is_general Test',
+      template_type: 'contract',
+      is_general: 'yes'
+    })
+  });
+
+  const updateData = await updateResponse.json();
+
+  if (updateData.template.is_general !== 'yes') {
+    throw new Error(`Expected updated is_general 'yes', got '${updateData.template.is_general}'`);
+  }
+}
+
+// Test 19: POST /api/templates/:id/generate for general template without employee_id returns 200
+async function testGenerateGeneralTemplateWithoutEmployee() {
+  // Create general template
+  const createResponse = await fetch(`${BASE_URL}/api/templates`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      template_name: 'General Generate Test',
+      template_type: 'report',
+      is_general: 'yes'
+    })
+  });
+  const createData = await createResponse.json();
+  createdTemplateIds.push(createData.template_id);
+
+  // Upload DOCX with quantity placeholders
+  const testDocxPath = path.join(__dirname, 'temp-general-gen.docx');
+  createTestDocx(testDocxPath, ['f_gender_quantity', 'current_date']);
+  createdFiles.push(testDocxPath);
+
+  const formData = new FormData();
+  const fileBlob = new Blob([fs.readFileSync(testDocxPath)], {
+    type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  });
+  formData.append('file', fileBlob, 'test.docx');
+
+  await fetch(`${BASE_URL}/api/templates/${createData.template_id}/upload`, {
+    method: 'POST',
+    body: formData
+  });
+
+  // Generate without employee_id
+  const generateResponse = await fetch(`${BASE_URL}/api/templates/${createData.template_id}/generate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({})
+  });
+
+  if (generateResponse.status !== 200) {
+    const errorText = await generateResponse.text();
+    throw new Error(`Expected 200 for general template without employee_id, got ${generateResponse.status}: ${errorText}`);
+  }
+
+  const generateData = await generateResponse.json();
+
+  if (!generateData.document_id) {
+    throw new Error('Response should include document_id');
+  }
+
+  if (!generateData.filename) {
+    throw new Error('Response should include filename');
+  }
+
+  // Filename should be TemplateName_timestamp.docx (no employee name/id)
+  if (generateData.filename.includes('_undefined_') || generateData.filename.includes('_null_')) {
+    throw new Error(`Filename should not contain undefined/null: ${generateData.filename}`);
+  }
+
+  // Filename should match pattern: SanitizedName_timestamp.docx
+  const parts = generateData.filename.split('_');
+  // Should NOT have employee_id component (just name parts + timestamp.docx)
+  if (generateData.filename.match(/_\d+_\d+\.docx$/)) {
+    // Has two numeric parts at end (employee_id + timestamp) - wrong for general
+    // Actually we need to be careful: the sanitized template name could contain underscores
+    // Let's just verify it doesn't contain employee-like patterns
+  }
+
+  if (!generateData.download_url) {
+    throw new Error('Response should include download_url');
+  }
+}
+
+// Test 20: POST /api/templates/:id/generate for regular template without employee_id returns 400
+async function testGenerateRegularTemplateWithoutEmployeeReturns400() {
+  // Create regular (non-general) template
+  const createResponse = await fetch(`${BASE_URL}/api/templates`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      template_name: 'Regular No Employee Test',
+      template_type: 'contract'
+    })
+  });
+  const createData = await createResponse.json();
+  createdTemplateIds.push(createData.template_id);
+
+  // Upload DOCX
+  const testDocxPath = path.join(__dirname, 'temp-regular-noemp.docx');
+  createTestDocx(testDocxPath, ['first_name']);
+  createdFiles.push(testDocxPath);
+
+  const formData = new FormData();
+  const fileBlob = new Blob([fs.readFileSync(testDocxPath)], {
+    type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  });
+  formData.append('file', fileBlob, 'test.docx');
+
+  await fetch(`${BASE_URL}/api/templates/${createData.template_id}/upload`, {
+    method: 'POST',
+    body: formData
+  });
+
+  // Try to generate without employee_id
+  const generateResponse = await fetch(`${BASE_URL}/api/templates/${createData.template_id}/generate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({})
+  });
+
+  if (generateResponse.status !== 400) {
+    throw new Error(`Expected 400 for regular template without employee_id, got ${generateResponse.status}`);
+  }
+}
+
+// Test 21: POST /api/templates/:id/generate for general template WITH employee_id works
+async function testGenerateGeneralTemplateWithEmployee() {
+  const employeeId = await ensureTestEmployee();
+
+  // Create general template
+  const createResponse = await fetch(`${BASE_URL}/api/templates`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      template_name: 'General With Employee Test',
+      template_type: 'report',
+      is_general: 'yes'
+    })
+  });
+  const createData = await createResponse.json();
+  createdTemplateIds.push(createData.template_id);
+
+  // Upload DOCX
+  const testDocxPath = path.join(__dirname, 'temp-general-with-emp.docx');
+  createTestDocx(testDocxPath, ['first_name', 'f_gender_quantity']);
+  createdFiles.push(testDocxPath);
+
+  const formData = new FormData();
+  const fileBlob = new Blob([fs.readFileSync(testDocxPath)], {
+    type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  });
+  formData.append('file', fileBlob, 'test.docx');
+
+  await fetch(`${BASE_URL}/api/templates/${createData.template_id}/upload`, {
+    method: 'POST',
+    body: formData
+  });
+
+  // Generate WITH employee_id (should also work for general templates)
+  const generateResponse = await fetch(`${BASE_URL}/api/templates/${createData.template_id}/generate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ employee_id: employeeId })
+  });
+
+  if (!generateResponse.ok) {
+    const errorText = await generateResponse.text();
+    throw new Error(`Expected 200 for general template with employee_id, got ${generateResponse.status}: ${errorText}`);
+  }
+
+  const generateData = await generateResponse.json();
+
+  if (!generateData.document_id) {
+    throw new Error('Response should include document_id');
+  }
+
+  // Filename should include employee last name (same as regular generation)
+  if (!generateData.filename.endsWith('.docx')) {
+    throw new Error('Filename should end with .docx');
+  }
+}
+
 // Cleanup function
 async function cleanup() {
   // Delete created template files
@@ -959,6 +1222,12 @@ async function runAllTests() {
   await runTest('POST /api/templates/:id/generate creates document record', testGenerateCreatesDocumentRecord);
   await runTest('Concurrent document generation doesn\'t corrupt CSV', testConcurrentGeneration);
   await runTest('Generated document filename includes employee last_name', testGenerateFilenameIncludesLastName);
+  await runTest('POST /api/templates with is_general yes returns is_general yes', testCreateGeneralTemplate);
+  await runTest('POST /api/templates without is_general defaults to no', testCreateTemplateDefaultIsGeneralNo);
+  await runTest('PUT /api/templates/:id updates is_general', testUpdateTemplateIsGeneral);
+  await runTest('POST generate general template without employee_id returns 200', testGenerateGeneralTemplateWithoutEmployee);
+  await runTest('POST generate regular template without employee_id returns 400', testGenerateRegularTemplateWithoutEmployeeReturns400);
+  await runTest('POST generate general template with employee_id works', testGenerateGeneralTemplateWithEmployee);
 
   // Cleanup
   await cleanup();

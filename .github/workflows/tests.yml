@@ -68,6 +68,7 @@ jobs:
           node test/auto-migrate.test.js
           node test/store-role-lookups.test.js
           node test/migrate-to-field-id.test.js
+          node test/quantity-placeholders.test.js
 
       - name: Start backend server
         working-directory: ./server
@@ -128,6 +129,7 @@ jobs:
           node test/reprimands-api.test.js
           node test/status-events-api.test.js
           node test/remote-archive-api.test.js
+          node test/placeholder-preview-api.test.js
 
       - name: Run Playwright tests
         run: npm run test:e2e
