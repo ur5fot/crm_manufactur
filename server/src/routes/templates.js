@@ -333,17 +333,20 @@ export function registerTemplateRoutes(app, appConfig) {
     try {
       const { employee_id } = req.body;
 
-      if (!employee_id) {
-        res.status(400).json({ error: "employee_id обов'язковий" });
-        return;
-      }
-
-      // Load template
+      // Load template first to check is_general before validating employee_id
       const templates = await loadTemplates();
       const template = findById(templates, 'template_id', req.params.id);
 
       if (!template) {
         res.status(404).json({ error: "Шаблон не знайдено" });
+        return;
+      }
+
+      const isGeneral = template.is_general === 'yes';
+
+      // employee_id is required for non-general templates
+      if (!employee_id && !isGeneral) {
+        res.status(400).json({ error: "employee_id обов'язковий" });
         return;
       }
 
@@ -354,34 +357,45 @@ export function registerTemplateRoutes(app, appConfig) {
         return;
       }
 
-      // Load employee data and schema
+      // Load employees and schema
       const [employees, schema] = await Promise.all([loadEmployees(), loadFieldsSchema()]);
-      const employee = findById(employees, 'employee_id', employee_id);
 
-      if (!employee) {
-        res.status(404).json({ error: "Співробітник не знайдено" });
-        return;
+      // Load employee if employee_id provided
+      let employee = null;
+      if (employee_id) {
+        employee = findById(employees, 'employee_id', employee_id);
+        if (!employee) {
+          res.status(404).json({ error: "Співробітник не знайдено" });
+          return;
+        }
       }
 
       // Build quantity placeholders from all active employees
       const quantities = buildQuantityPlaceholders(schema, employees);
 
-      // Prepare data with quantity placeholders + employee fields
+      // Prepare data: quantity placeholders + employee fields (if available)
       // Employee data has higher priority (overrides quantity keys on conflict)
       // Note: special placeholders (current_date, current_datetime) are added by prepareData() in docx-generator.js
-      const data = {
-        ...quantities,
-        ...employee
-      };
+      const data = employee
+        ? { ...quantities, ...employee }
+        : { ...quantities };
 
-      // Generate DOCX filename using role-based field resolution
+      // Generate DOCX filename
       const timestamp = Date.now();
       const sanitizedName = template.template_name.replace(/[^a-zA-Z0-9а-яА-ЯіїєґІЇЄҐ]/g, '_');
-      const lastNameField = getFieldNameByRole(schema, ROLES.LAST_NAME) || 'last_name';
-      const sanitizedLastName = (employee[lastNameField] || '').replace(/[^a-zA-Z0-9а-яА-ЯіїєґІЇЄҐ]/g, '_');
-      const docxFilename = sanitizedLastName
-        ? `${sanitizedName}_${sanitizedLastName}_${employee_id}_${timestamp}.docx`
-        : `${sanitizedName}_${employee_id}_${timestamp}.docx`;
+      let docxFilename;
+
+      if (employee) {
+        // Regular generation with employee: TemplateName_LastName_employeeId_timestamp.docx
+        const lastNameField = getFieldNameByRole(schema, ROLES.LAST_NAME) || 'last_name';
+        const sanitizedLastName = (employee[lastNameField] || '').replace(/[^a-zA-Z0-9а-яА-ЯіїєґІЇЄҐ]/g, '_');
+        docxFilename = sanitizedLastName
+          ? `${sanitizedName}_${sanitizedLastName}_${employee_id}_${timestamp}.docx`
+          : `${sanitizedName}_${employee_id}_${timestamp}.docx`;
+      } else {
+        // General template without employee: TemplateName_timestamp.docx
+        docxFilename = `${sanitizedName}_${timestamp}.docx`;
+      }
 
       // Paths with path traversal protection
       const templatePath = path.join(FILES_DIR, 'templates', template.docx_filename);
@@ -420,7 +434,7 @@ export function registerTemplateRoutes(app, appConfig) {
       // Create record in generated_documents.csv atomically with race condition protection
       const newDocId = await addGeneratedDocument({
         template_id: template.template_id,
-        employee_id: employee_id,
+        employee_id: employee_id || '',
         docx_filename: docxFilename,
         generation_date: new Date().toISOString(),
         generated_by: 'system', // Can be enhanced with user authentication later
@@ -428,15 +442,18 @@ export function registerTemplateRoutes(app, appConfig) {
       });
 
       // Add audit log
-      const employeeName = buildEmployeeName(employee, schema);
+      const employeeName = employee ? buildEmployeeName(employee, schema) : '';
+      const logDetail = employee
+        ? `Згенеровано документ з шаблону: ${template.template_name}, файл: ${docxFilename}`
+        : `Згенеровано загальний документ з шаблону: ${template.template_name}, файл: ${docxFilename}`;
       await addLog(
         "GENERATE_DOCUMENT",
-        employee_id,
+        employee_id || '',
         employeeName,
         "",
         "",
         "",
-        `Згенеровано документ з шаблону: ${template.template_name}, файл: ${docxFilename}`
+        logDetail
       );
 
       // Return response
