@@ -29,5 +29,26 @@ export function buildQuantityPlaceholders(schema, employees) {
     });
   }
 
+  // present_quantity / absent_quantity based on STATUS role field
+  const statusField = schema.find(f => f.role === 'STATUS' && f.field_type === 'select');
+  if (statusField && statusField.field_id) {
+    const options = statusField.field_options ? statusField.field_options.split('|').filter(Boolean) : [];
+    const workingStatus = options[0] || '';    // e.g. "Працює"
+    const dismissedStatus = options[1] || '';  // e.g. "Звільнений"
+    const statusFieldName = statusField.field_name;
+
+    if (workingStatus) {
+      result['present_quantity'] = String(
+        employees.filter(e => e[statusFieldName] === workingStatus).length
+      );
+      result['absent_quantity'] = String(
+        employees.filter(e => {
+          const v = e[statusFieldName];
+          return v && v !== workingStatus && v !== dismissedStatus;
+        }).length
+      );
+    }
+  }
+
   return result;
 }
