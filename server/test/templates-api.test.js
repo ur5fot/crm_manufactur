@@ -912,6 +912,98 @@ async function testGenerateFilenameIncludesLastName() {
   }
 }
 
+// Test 16: POST /api/templates with is_general: 'yes' returns is_general: 'yes'
+async function testCreateGeneralTemplate() {
+  const response = await fetch(`${BASE_URL}/api/templates`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      template_name: 'General Template Test',
+      template_type: 'report',
+      description: 'A general template',
+      is_general: 'yes'
+    })
+  });
+
+  if (response.status !== 201) {
+    throw new Error(`Expected 201, got ${response.status}`);
+  }
+
+  const data = await response.json();
+  createdTemplateIds.push(data.template_id);
+
+  if (data.template.is_general !== 'yes') {
+    throw new Error(`Expected is_general 'yes', got '${data.template.is_general}'`);
+  }
+
+  // Verify via GET
+  const getResponse = await fetch(`${BASE_URL}/api/templates/${data.template_id}`);
+  const getData = await getResponse.json();
+
+  if (getData.template.is_general !== 'yes') {
+    throw new Error(`GET returned is_general '${getData.template.is_general}', expected 'yes'`);
+  }
+}
+
+// Test 17: POST /api/templates without is_general defaults to 'no'
+async function testCreateTemplateDefaultIsGeneralNo() {
+  const response = await fetch(`${BASE_URL}/api/templates`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      template_name: 'Default is_general Test',
+      template_type: 'contract'
+    })
+  });
+
+  if (response.status !== 201) {
+    throw new Error(`Expected 201, got ${response.status}`);
+  }
+
+  const data = await response.json();
+  createdTemplateIds.push(data.template_id);
+
+  if (data.template.is_general !== 'no') {
+    throw new Error(`Expected is_general 'no' by default, got '${data.template.is_general}'`);
+  }
+}
+
+// Test 18: PUT /api/templates/:id updates is_general
+async function testUpdateTemplateIsGeneral() {
+  // Create a regular template
+  const createResponse = await fetch(`${BASE_URL}/api/templates`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      template_name: 'Update is_general Test',
+      template_type: 'contract'
+    })
+  });
+  const createData = await createResponse.json();
+  createdTemplateIds.push(createData.template_id);
+
+  if (createData.template.is_general !== 'no') {
+    throw new Error(`Expected initial is_general 'no', got '${createData.template.is_general}'`);
+  }
+
+  // Update to general
+  const updateResponse = await fetch(`${BASE_URL}/api/templates/${createData.template_id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      template_name: 'Update is_general Test',
+      template_type: 'contract',
+      is_general: 'yes'
+    })
+  });
+
+  const updateData = await updateResponse.json();
+
+  if (updateData.template.is_general !== 'yes') {
+    throw new Error(`Expected updated is_general 'yes', got '${updateData.template.is_general}'`);
+  }
+}
+
 // Cleanup function
 async function cleanup() {
   // Delete created template files
@@ -959,6 +1051,9 @@ async function runAllTests() {
   await runTest('POST /api/templates/:id/generate creates document record', testGenerateCreatesDocumentRecord);
   await runTest('Concurrent document generation doesn\'t corrupt CSV', testConcurrentGeneration);
   await runTest('Generated document filename includes employee last_name', testGenerateFilenameIncludesLastName);
+  await runTest('POST /api/templates with is_general yes returns is_general yes', testCreateGeneralTemplate);
+  await runTest('POST /api/templates without is_general defaults to no', testCreateTemplateDefaultIsGeneralNo);
+  await runTest('PUT /api/templates/:id updates is_general', testUpdateTemplateIsGeneral);
 
   // Cleanup
   await cleanup();

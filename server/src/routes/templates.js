@@ -68,7 +68,8 @@ export function registerTemplateRoutes(app, appConfig) {
         placeholder_fields: '',
         description: payload.description || '',
         created_date: new Date().toISOString().split('T')[0],
-        active: 'yes'
+        active: 'yes',
+        is_general: payload.is_general === 'yes' ? 'yes' : 'no'
       };
 
       templates.push(newTemplate);
@@ -122,6 +123,7 @@ export function registerTemplateRoutes(app, appConfig) {
         template_name: payload.template_name || oldTemplate.template_name,
         template_type: payload.template_type || oldTemplate.template_type,
         description: payload.description !== undefined ? payload.description : oldTemplate.description,
+        is_general: payload.is_general !== undefined ? (payload.is_general === 'yes' ? 'yes' : 'no') : oldTemplate.is_general,
         // Don't allow manual changes to docx_filename, placeholder_fields, active
       };
 

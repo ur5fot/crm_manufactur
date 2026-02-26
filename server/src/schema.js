@@ -341,6 +341,7 @@ export const TEMPLATE_COLUMNS = [
   "placeholder_fields",
   "description",
   "created_date",
-  "active"
+  "active",
+  "is_general"
 ];
 

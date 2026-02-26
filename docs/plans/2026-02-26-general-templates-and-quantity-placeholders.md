@@ -83,12 +83,12 @@ Quantity-плейхолдери доступні у **всіх** шаблона�
 
 **Ціль:** Бекенд зберігає та повертає поле `is_general` для шаблонів.
 
-- [ ] У `server/src/schema.js`: додати `"is_general"` до масиву `TEMPLATE_COLUMNS` (після `"active"`, рядок ~345)
-- [ ] У `server/src/routes/templates.js` POST `/api/templates` (~рядок 63-72): додати `is_general: payload.is_general === 'yes' ? 'yes' : 'no'` до `newTemplate`
-- [ ] У `server/src/routes/templates.js` PUT `/api/templates/:id` (~рядок 120-126): додати збереження `is_general` з payload (аналогічно description)
-- [ ] Написати тест у `server/test/templates-api.test.js`: POST з `is_general: 'yes'` → GET повертає шаблон з `is_general: 'yes'`
-- [ ] Написати тест: POST без `is_general` → шаблон має `is_general: 'no'` (default)
-- [ ] Запустити `cd server && npm test` — всі тести проходять
+- [x] У `server/src/schema.js`: додати `"is_general"` до масиву `TEMPLATE_COLUMNS` (після `"active"`, рядок ~345)
+- [x] У `server/src/routes/templates.js` POST `/api/templates` (~рядок 63-72): додати `is_general: payload.is_general === 'yes' ? 'yes' : 'no'` до `newTemplate`
+- [x] У `server/src/routes/templates.js` PUT `/api/templates/:id` (~рядок 120-126): додати збереження `is_general` з payload (аналогічно description)
+- [x] Написати тест у `server/test/templates-api.test.js`: POST з `is_general: 'yes'` → GET повертає шаблон з `is_general: 'yes'`
+- [x] Написати тест: POST без `is_general` → шаблон має `is_general: 'no'` (default)
+- [x] Запустити `cd server && npm test` — всі тести проходять
 
 ### Task 2: Функція buildQuantityPlaceholders
 
