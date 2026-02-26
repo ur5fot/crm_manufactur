@@ -225,12 +225,12 @@ Quantity-плейхолдери доступні у **всіх** шаблона�
 
 ### Task 10: Оновлення документації
 
-- [ ] Оновити `CLAUDE.md`:
+- [x] Оновити `CLAUDE.md`:
   - Секція TEMPLATE_COLUMNS — додати `is_general`
   - Секція "Placeholder Syntax and Replacement" — додати опис quantity-плейхолдерів
   - Секція API: POST `/api/templates/:id/generate` — документувати опціональний employee_id
   - Секція "Project Structure" — додати `quantity-placeholders.js` та `GeneralTemplatesView.vue`
-- [ ] Оновити `README.md` якщо потрібно (нова вкладка у документах)
+- [x] Оновити `README.md` якщо потрібно (нова вкладка у документах)
 
 *Note: ralphex automatically moves completed plans to `docs/plans/completed/`*
 

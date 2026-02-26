@@ -25,7 +25,7 @@ A comprehensive CRM system for managing employee records, documents, and templat
   - Within-card field search to filter form fields by label and value
 - Organized navigation:
   - Main tabs: Dashboard, Cards, Table, Reports, Documents
-  - Documents tab combines Templates and Document History in sub-tabs
+  - Documents tab combines Templates, General Templates, and Document History in sub-tabs
   - System Settings dropdown (three dots menu) for Import and Logs
 
 ## Navigation Structure
@@ -40,13 +40,14 @@ Located in the header tab bar:
 - **Cards (Картки)** - Employee card-based editing interface with sidebar list
 - **Table (Таблиця)** - Employee table view with sorting and filtering
 - **Reports (Звіти)** - Custom reports with dynamic filter builder
-- **Documents (Документи)** - Template management and document history (combines two sub-tabs)
+- **Documents (Документи)** - Template management, general templates, and document history (combines three sub-tabs)
 
 ### Documents Tab Sub-tabs
 
-The Documents section contains two sub-tabs for document management:
+The Documents section contains three sub-tabs for document management:
 
 - **Templates (Шаблони)** - Manage DOCX templates, upload template files, extract placeholders
+- **General Templates (Загальні шаблони)** - Generate documents from general templates without employee binding (e.g., reports, statistics)
 - **Document History (Історія документів)** - View all generated documents with filters and pagination
 
 ### System Settings Dropdown
@@ -528,6 +529,7 @@ Tests run automatically via GitHub Actions on push to `master`/`feature/*` branc
 │   │   │   ├── TemplatesView.vue
 │   │   │   ├── DocumentHistoryView.vue
 │   │   │   ├── DocumentsView.vue
+│   │   │   ├── GeneralTemplatesView.vue
 │   │   │   ├── SystemSettingsView.vue
 │   │   │   ├── ImportView.vue
 │   │   │   ├── PlaceholderReferenceView.vue
@@ -571,6 +573,7 @@ Tests run automatically via GitHub Actions on push to `master`/`feature/*` branc
 │   │   ├── index.js       # Express server setup & route registration
 │   │   ├── store.js       # CSV data storage
 │   │   ├── docx-generator.js  # DOCX generation
+│   │   ├── quantity-placeholders.js # Quantity placeholders for select fields
 │   │   ├── utils.js       # Shared utilities
 │   │   └── schema.js      # Employee field schema
 │   ├── test/              # Unit & integration tests

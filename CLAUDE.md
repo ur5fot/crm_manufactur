@@ -77,7 +77,8 @@ crm_manufactur/
 │   │   │   ├── ImportView.vue            # CSV import interface
 │   │   │   ├── TemplatesView.vue         # Template management
 │   │   │   ├── DocumentHistoryView.vue   # Document generation history
-│   │   │   ├── DocumentsView.vue         # Tabbed container for Templates + Document History
+│   │   │   ├── DocumentsView.vue         # Tabbed container for Templates + General Templates + Document History
+│   │   │   ├── GeneralTemplatesView.vue  # General template list with document generation (no employee)
 │   │   │   ├── SystemSettingsView.vue    # Tabbed container for Import + Logs + Field Schema
 │   │   │   ├── FieldSchemaEditorView.vue   # Field schema editor (rename, reorder, impact preview)
 │   │   │   ├── PlaceholderReferenceView.vue # Placeholder reference guide
@@ -133,6 +134,7 @@ crm_manufactur/
 │   │   ├── field-utils.js      # Role-based field resolution utilities (ROLES, getFieldByRole, buildEmployeeName)
 │   │   ├── auto-migrate.js     # Auto-migration: detect field_name renames via field_mapping.csv, propagate across CSVs
 │   │   ├── migrate-to-field-id.js # One-time migration: add field_id and role columns to fields_schema.csv
+│   │   ├── quantity-placeholders.js # Quantity placeholders for select fields (buildQuantityPlaceholders)
 │   │   ├── upload-config.js    # Multer configuration for file uploads
 │   │   ├── sync-template.js    # CSV template synchronization utility
 │   │   └── clean-invalid-dates.js # Data migration utility
@@ -158,14 +160,16 @@ crm_manufactur/
 │   │   ├── field-utils.test.js
 │   │   ├── store-role-lookups.test.js
 │   │   ├── auto-migrate.test.js
-│   │   └── migrate-to-field-id.test.js
+│   │   ├── migrate-to-field-id.test.js
+│   │   └── quantity-placeholders.test.js
 │   └── package.json            # Backend dependencies
 │
 ├── tests/
 │   └── e2e/                    # Playwright E2E tests
 │       ├── templates-generation.spec.js
 │       ├── templates-crud.spec.js
-│       └── document-history.spec.js
+│       ├── document-history.spec.js
+│       └── general-templates.spec.js
 │
 ├── data/                       # CSV data files (runtime state)
 │   ├── fields_schema.template.csv # Field schema template (tracked in git)
@@ -252,6 +256,7 @@ These locks ensure that only one write operation occurs at a time per file, prev
 - Template metadata (name, type, description, placeholders)
 - References DOCX files in files/templates/
 - Soft delete: active='yes'/'no'
+- `is_general`: 'yes'/'no' — general templates generate documents without employee binding
 - Auto-increment template_id
 - Gitignored — auto-created with headers by `ensureCsvFile()` on first read
 
@@ -1231,7 +1236,8 @@ Each view is a standalone Vue component with its own state and methods:
 - `ImportView.vue` - CSV import interface for bulk employee operations
 - `TemplatesView.vue` - Document template management (also embedded in DocumentsView)
 - `DocumentHistoryView.vue` - History of all generated documents with pagination (also embedded in DocumentsView)
-- `DocumentsView.vue` - Tabbed container combining TemplatesView and DocumentHistoryView (main navigation tab)
+- `DocumentsView.vue` - Tabbed container combining TemplatesView, GeneralTemplatesView, and DocumentHistoryView (main navigation tab)
+- `GeneralTemplatesView.vue` - General template list with document generation without employee selection
 - `SystemSettingsView.vue` - Tabbed container combining ImportView, LogsView, and FieldSchemaEditorView (accessed via dropdown menu)
 - `FieldSchemaEditorView.vue` - Field schema editor with inline editing, rename preview, and auto-migration trigger (also direct route: /field-schema)
 - `PlaceholderReferenceView.vue` - Placeholder reference guide with preview values, field_id as primary format
@@ -1717,8 +1723,8 @@ function switchTab(tab) {
 **Usage Examples**:
 
 **DocumentsView** (main tab in navigation):
-- Combines TemplatesView and DocumentHistoryView
-- Two sub-tabs: "Шаблони" and "Історія документів"
+- Combines TemplatesView, GeneralTemplatesView, and DocumentHistoryView
+- Three sub-tabs: "Шаблони", "Загальні шаблони", and "Історія документів"
 - Accessible via Documents tab in main navigation
 
 **SystemSettingsView** (dropdown menu):
@@ -2170,6 +2176,7 @@ End-to-end tests validate complete user workflows across the full stack (databas
 - `reprimands.spec.js`: Reprimands and commendations popup UI interactions, CRUD operations
 - `status-events.spec.js`: Status event scheduling: add immediate/future events, overlap error, delete event, status revert
 - `field-schema-editor.spec.js`: Field schema editor: load, rename label, cancel, role field protection, duplicate name validation, direct route
+- `general-templates.spec.js`: General template CRUD, is_general checkbox, generation without employee, Documents tab integration
 
 **Configuration** (`playwright.config.js`):
 - Test directory: `./tests/e2e`
@@ -2256,6 +2263,7 @@ Unit and integration tests focus on backend business logic, API endpoints, and d
 - `store-role-lookups.test.js`: Store functions using role-based field resolution
 - `auto-migrate.test.js`: Auto-migration rename detection and CSV column propagation
 - `migrate-to-field-id.test.js`: One-time migration script adding field_id and role columns
+- `quantity-placeholders.test.js`: Quantity placeholder generation for select fields (buildQuantityPlaceholders)
 - `remote-archive-store.test.js`: Remote archive functions (archiveEmployee, archiveStatusHistory, etc.)
 
 **Test Framework**: Node.js native test runner (no external dependencies)
@@ -2332,7 +2340,7 @@ node server/test/docx-generator.test.js
 ```
 
 **Unit vs. Integration Test Distinction**:
-- **Unit tests** (no server required): config.test.js, upload-limit.test.js, docx-generator.test.js, declension.test.js, retirement-events.test.js, utils.test.js, reprimands-store.test.js, status-events-store.test.js, dashboard-30days.test.js, remote-archive-store.test.js, schema.test.js, field-utils.test.js, store-role-lookups.test.js, auto-migrate.test.js, migrate-to-field-id.test.js
+- **Unit tests** (no server required): config.test.js, upload-limit.test.js, docx-generator.test.js, declension.test.js, retirement-events.test.js, utils.test.js, reprimands-store.test.js, status-events-store.test.js, dashboard-30days.test.js, remote-archive-store.test.js, schema.test.js, field-utils.test.js, store-role-lookups.test.js, auto-migrate.test.js, migrate-to-field-id.test.js, quantity-placeholders.test.js
 - **Integration tests** (require running server on port 3000): templates-api.test.js, retirement-api.test.js, search-api.test.js, photo-api.test.js, status-history.test.js, reprimands-api.test.js, status-events-api.test.js
 - `npm test` runs only unit tests; `npm run test:integration` runs integration tests
 - CI runs unit tests before starting servers, and integration tests after servers are ready
@@ -2739,7 +2747,7 @@ All API endpoints are served under the `/api` prefix:
 **GET /api/templates**
 - List all active templates (active='yes')
 - Returns: Array of template objects
-- Fields: template_id, template_name, template_type, description, placeholder_fields, active
+- Fields: template_id, template_name, template_type, description, placeholder_fields, active, is_general
 
 **GET /api/templates/:id**
 - Get single template by ID
@@ -2783,17 +2791,20 @@ All API endpoints are served under the `/api` prefix:
 - Returns: Template object with extracted placeholders array
 
 **POST /api/templates/:id/generate**
-- Generate DOCX document from template for employee
+- Generate DOCX document from template for employee (or without employee for general templates)
 - Request body:
-  - employee_id: Target employee ID
+  - employee_id: Target employee ID (required for regular templates, optional for general templates with `is_general='yes'`)
   - custom_data: Optional object with additional placeholder values
-- Merges employee data with custom_data
+- Merges employee data with custom_data and quantity placeholders
+- Quantity placeholders (counts per select field) are included in all generated documents
 - Replaces placeholders in template DOCX
 - Adds special placeholders: {current_date}, {current_datetime}
-- Saves generated document to: `files/documents/{TemplateName}_{LastName}_{id}_{timestamp}.docx`
+- For regular templates: saves as `files/documents/{TemplateName}_{LastName}_{id}_{timestamp}.docx`
+- For general templates (no employee_id): saves as `files/documents/{TemplateName}_{timestamp}.docx`, employee_id stored as empty string
 - Records generation in generated_documents.csv with data snapshot
 - Creates audit log entry
 - Returns: Document object with download URL
+- 400 if employee_id missing for non-general template
 - 404 if template or employee not found
 
 ### Placeholder Reference Endpoint
@@ -2814,6 +2825,7 @@ All API endpoints are served under the `/api` prefix:
   - 'declension': Name declension placeholders (24 items)
   - 'declension_fields': Grade/position declension placeholders (12 items)
   - 'special': Auto-generated placeholders (current_date, current_datetime)
+  - 'quantities': Quantity placeholders for select fields (total and per-option counts)
 - 404 if specific employeeId not found or no active employees exist
 - Used by placeholder reference page
 
@@ -3162,6 +3174,8 @@ The templates system allows users to create standardized documents (contracts, c
 - Template metadata: name, type, description
 - Placeholder fields stored as comma-separated list
 - Soft delete support (active='yes'/'no')
+- `is_general` flag: 'yes'/'no' — general templates generate documents without employee binding
+- General templates are hidden from employee card generation list and shown in a dedicated "Загальні шаблони" tab
 - One DOCX file per template (old file replaced on re-upload)
 
 **DOCX File Storage**:
@@ -3189,6 +3203,21 @@ Placeholders in DOCX templates follow a simple, consistent syntax that gets repl
 **Special Placeholders** (auto-generated):
 - `{current_date}` - Current date in DD.MM.YYYY format
 - `{current_datetime}` - Current date and time in DD.MM.YYYY HH:MM format
+
+**Quantity Placeholders** (auto-generated from select fields):
+
+For each `select`-type field in fields_schema.csv, the system automatically generates quantity placeholders counting active employees:
+- `{f_<field_id>_quantity}` — total count of all active employees
+- `{f_<field_id>_option<N>_quantity}` — count of employees with the Nth option value (1-indexed)
+
+Example for field `gender` (`field_id: f_gender`, options `Чоловіча|Жіноча`):
+- `{f_gender_quantity}` → total active employees (e.g., "10")
+- `{f_gender_option1_quantity}` → count with "Чоловіча" (e.g., "7")
+- `{f_gender_option2_quantity}` → count with "Жіноча" (e.g., "3")
+
+Option counts may not sum to total (employees with empty values are not counted in any option).
+Quantity placeholders are available in all templates (both regular and general).
+Implementation: `buildQuantityPlaceholders()` in `server/src/quantity-placeholders.js`.
 
 **Placeholder Extraction** (from docx-generator.js):
 ```javascript
@@ -3256,6 +3285,7 @@ The system generates 12 additional declined placeholders (6 cases × 2 fields) f
 - Name declension placeholders displayed under "Відмінювання імен" group
 - Grade/position declension placeholders displayed under "Відмінювання посади та звання" group (separate section)
 - Case variant placeholders displayed under "case_variants" group
+- Quantity placeholders displayed under "quantities" group with header "Кількість по полях (select)"
 
 **Uppercase and Capitalized Case Variants** (from docx-generator.js):
 
