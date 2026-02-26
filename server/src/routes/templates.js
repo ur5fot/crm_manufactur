@@ -338,7 +338,7 @@ export function registerTemplateRoutes(app, appConfig) {
       const templates = await loadTemplates();
       const template = findById(templates, 'template_id', req.params.id);
 
-      if (!template) {
+      if (!template || template.active === 'no') {
         res.status(404).json({ error: "Шаблон не знайдено" });
         return;
       }
@@ -365,7 +365,7 @@ export function registerTemplateRoutes(app, appConfig) {
       let employee = null;
       if (employee_id) {
         employee = findById(employees, 'employee_id', employee_id);
-        if (!employee) {
+        if (!employee || employee.active === 'no') {
           res.status(404).json({ error: "Співробітник не знайдено" });
           return;
         }
@@ -380,22 +380,23 @@ export function registerTemplateRoutes(app, appConfig) {
       // Note: special placeholders (current_date, current_datetime) are added by prepareData() in docx-generator.js
       const data = { ...quantities, ...(employee || {}), ...(custom_data && typeof custom_data === 'object' ? custom_data : {}) };
 
-      // Generate DOCX filename
-      const timestamp = Date.now();
+      // Generate DOCX filename with human-readable date and random suffix for uniqueness
+      const now = new Date();
+      const dateStr = `${String(now.getDate()).padStart(2, '0')}.${String(now.getMonth() + 1).padStart(2, '0')}.${now.getFullYear()}`;
+      const rand = Math.random().toString(36).slice(2, 8);
       const sanitizedName = template.template_name.replace(/[^a-zA-Z0-9а-яА-ЯіїєґІЇЄҐ]/g, '_');
       let docxFilename;
 
       if (employee) {
-        // Regular generation with employee: TemplateName_LastName_employeeId_timestamp.docx
+        // Regular generation with employee: TemplateName_LastName_employeeId_DD.MM.YYYY_random.docx
         const lastNameField = getFieldNameByRole(schema, ROLES.LAST_NAME) || 'last_name';
         const sanitizedLastName = (employee[lastNameField] || '').replace(/[^a-zA-Z0-9а-яА-ЯіїєґІЇЄҐ]/g, '_');
         docxFilename = sanitizedLastName
-          ? `${sanitizedName}_${sanitizedLastName}_${employee_id}_${timestamp}.docx`
-          : `${sanitizedName}_${employee_id}_${timestamp}.docx`;
+          ? `${sanitizedName}_${sanitizedLastName}_${employee_id}_${dateStr}_${rand}.docx`
+          : `${sanitizedName}_${employee_id}_${dateStr}_${rand}.docx`;
       } else {
-        // General template without employee: TemplateName_timestamp_random.docx
-        const rand = Math.random().toString(36).slice(2, 8);
-        docxFilename = `${sanitizedName}_${timestamp}_${rand}.docx`;
+        // General template without employee: TemplateName_DD.MM.YYYY_random.docx
+        docxFilename = `${sanitizedName}_${dateStr}_${rand}.docx`;
       }
 
       // Paths with path traversal protection

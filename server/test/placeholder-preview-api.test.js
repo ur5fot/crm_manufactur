@@ -91,13 +91,19 @@ async function testQuantityPlaceholderLabels() {
 
   // Regular field total placeholders (e.g. {f_gender_quantity}) should have "кількість" in label
   const totalP = quantityPlaceholders.find(p => p.placeholder.match(/^\{f_\w+_quantity\}$/) && !p.placeholder.includes('_option') && !p.placeholder.includes('_present'));
-  if (totalP && !totalP.label.includes('кількість')) {
+  if (!totalP) {
+    throw new Error('Expected at least one total quantity placeholder matching {f_<field>_quantity}');
+  }
+  if (!totalP.label.includes('кількість')) {
     throw new Error(`Expected total quantity label to contain "кількість", got "${totalP.label}"`);
   }
 
   // Option placeholders should have the option name in label
   const optionP = quantityPlaceholders.find(p => p.placeholder.includes('_option'));
-  if (optionP && !optionP.label.includes('кількість')) {
+  if (!optionP) {
+    throw new Error('Expected at least one option-level quantity placeholder');
+  }
+  if (!optionP.label.includes('кількість')) {
     throw new Error(`Expected option quantity label to contain "кількість", got "${optionP.label}"`);
   }
 }
