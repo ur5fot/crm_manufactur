@@ -748,6 +748,68 @@ async function testGenerateDocxWithQuantityPlaceholders() {
   }
 }
 
+// Test 22: extractPlaceholders() flags quantity placeholders for non-select fields as unknown
+async function testExtractPlaceholdersQuantityNonSelectUnknown() {
+  const testPath = path.join(TEST_FIXTURES_DIR, 'test-quantity-nonselect.docx');
+  // f_last_name is a text field, f_gender is a select field
+  createTestDocx(testPath, [
+    'f_gender_quantity', 'f_gender_option1_quantity',  // valid: select field
+    'f_last_name_quantity', 'f_last_name_option1_quantity', // invalid: text field
+    'f_department_quantity',  // invalid: text field
+  ]);
+
+  const schemaWithSelect = [
+    { field_id: 'f_last_name', field_name: 'last_name', field_label: 'Прізвище', field_type: 'text', role: 'LAST_NAME' },
+    { field_id: 'f_first_name', field_name: 'first_name', field_label: "Ім'я", field_type: 'text', role: 'FIRST_NAME' },
+    { field_id: 'f_middle_name', field_name: 'middle_name', field_label: 'По батькові', field_type: 'text', role: 'MIDDLE_NAME' },
+    { field_id: 'f_gender', field_name: 'gender', field_label: 'Стать', field_type: 'select', field_options: 'Чоловіча|Жіноча', role: 'GENDER' },
+    { field_id: 'f_department', field_name: 'department', field_label: 'Підрозділ', field_type: 'text', role: '' },
+  ];
+
+  const result = await extractPlaceholders(testPath, schemaWithSelect);
+
+  // Select field quantity placeholders should NOT be unknown
+  if (result.unknown.includes('f_gender_quantity') || result.unknown.includes('f_gender_option1_quantity')) {
+    throw new Error(`Select field quantity placeholders should be valid, but got unknown: ${JSON.stringify(result.unknown)}`);
+  }
+
+  // Non-select field quantity placeholders SHOULD be unknown
+  if (!result.unknown.includes('f_last_name_quantity')) {
+    throw new Error(`f_last_name_quantity (text field) should be flagged as unknown, got unknown: ${JSON.stringify(result.unknown)}`);
+  }
+  if (!result.unknown.includes('f_last_name_option1_quantity')) {
+    throw new Error(`f_last_name_option1_quantity (text field) should be flagged as unknown, got unknown: ${JSON.stringify(result.unknown)}`);
+  }
+  if (!result.unknown.includes('f_department_quantity')) {
+    throw new Error(`f_department_quantity (text field) should be flagged as unknown, got unknown: ${JSON.stringify(result.unknown)}`);
+  }
+}
+
+// Test 23: extractPlaceholders() recognizes quantity case variants (_upper/_cap) as valid
+async function testExtractPlaceholdersQuantityCaseVariants() {
+  const testPath = path.join(TEST_FIXTURES_DIR, 'test-quantity-case.docx');
+  createTestDocx(testPath, [
+    'f_gender_quantity_upper', 'f_gender_quantity_cap',
+    'f_gender_option1_quantity_upper',
+    'present_quantity_upper', 'present_quantity_cap',
+    'absent_quantity_upper',
+  ]);
+
+  const schemaWithSelect = [
+    { field_id: 'f_last_name', field_name: 'last_name', field_label: 'Прізвище', field_type: 'text', role: 'LAST_NAME' },
+    { field_id: 'f_first_name', field_name: 'first_name', field_label: "Ім'я", field_type: 'text', role: 'FIRST_NAME' },
+    { field_id: 'f_middle_name', field_name: 'middle_name', field_label: 'По батькові', field_type: 'text', role: 'MIDDLE_NAME' },
+    { field_id: 'f_gender', field_name: 'gender', field_label: 'Стать', field_type: 'select', field_options: 'Чоловіча|Жіноча', role: 'GENDER' },
+  ];
+
+  const result = await extractPlaceholders(testPath, schemaWithSelect);
+
+  // All quantity case variants should be recognized as valid (not unknown)
+  if (result.unknown.length > 0) {
+    throw new Error(`All quantity case variants should be valid, but got unknown: ${JSON.stringify(result.unknown)}`);
+  }
+}
+
 // Main test runner
 async function runAllTests() {
   console.log('Starting DOCX Generator unit tests...\n');
@@ -777,6 +839,8 @@ async function runAllTests() {
   await runTest('extractPlaceholders() with schema returns validation info', testExtractPlaceholdersWithSchema);
   await runTest('extractPlaceholders() without schema returns consistent object type', testExtractPlaceholdersWithoutSchemaConsistentType);
   await runTest('generateDocx() with quantity placeholders merged into data', testGenerateDocxWithQuantityPlaceholders);
+  await runTest('extractPlaceholders() flags quantity placeholders for non-select fields as unknown', testExtractPlaceholdersQuantityNonSelectUnknown);
+  await runTest('extractPlaceholders() recognizes quantity case variants as valid', testExtractPlaceholdersQuantityCaseVariants);
 
   // Cleanup
   cleanup();
