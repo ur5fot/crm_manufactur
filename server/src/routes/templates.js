@@ -7,6 +7,7 @@ import { extractPlaceholders, generateDocx } from "../docx-generator.js";
 import { getOpenCommand, getNextId, validateRequired, validatePath, findById } from "../utils.js";
 import { createTemplateUpload } from "../upload-config.js";
 import { buildEmployeeName, buildFieldNameToIdMap, getFieldNameByRole, ROLES } from "../field-utils.js";
+import { buildQuantityPlaceholders } from "../quantity-placeholders.js";
 
 export function registerTemplateRoutes(app, appConfig) {
   const templateUpload = createTemplateUpload(appConfig);
@@ -362,9 +363,14 @@ export function registerTemplateRoutes(app, appConfig) {
         return;
       }
 
-      // Prepare data with employee fields
+      // Build quantity placeholders from all active employees
+      const quantities = buildQuantityPlaceholders(schema, employees);
+
+      // Prepare data with quantity placeholders + employee fields
+      // Employee data has higher priority (overrides quantity keys on conflict)
       // Note: special placeholders (current_date, current_datetime) are added by prepareData() in docx-generator.js
       const data = {
+        ...quantities,
         ...employee
       };
 

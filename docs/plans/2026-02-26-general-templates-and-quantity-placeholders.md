@@ -113,11 +113,11 @@ Quantity-плейхолдери доступні у **всіх** шаблона�
 
 **Ціль:** Quantity-плейхолдери потрапляють у кожен згенерований документ.
 
-- [ ] У `server/src/routes/templates.js`: імпортувати `buildQuantityPlaceholders` з `../quantity-placeholders.js`
-- [ ] У POST `/api/templates/:id/generate` (~рядок 355): `employees` вже завантажується через `loadEmployees()`, `schema` через `loadFieldsSchema()` — додати виклик `const quantities = buildQuantityPlaceholders(schema, employees)` після їх завантаження
-- [ ] Включити quantities у data перед generateDocx: `const data = { ...quantities, ...employee }` (employee-дані мають вищий пріоритет)
-- [ ] Написати тест: генерація з обома наборами → quantity-ключі присутні у data (або перевірити через mock/інтеграцію)
-- [ ] Запустити `cd server && npm test`
+- [x] У `server/src/routes/templates.js`: імпортувати `buildQuantityPlaceholders` з `../quantity-placeholders.js`
+- [x] У POST `/api/templates/:id/generate` (~рядок 355): `employees` вже завантажується через `loadEmployees()`, `schema` через `loadFieldsSchema()` — додати виклик `const quantities = buildQuantityPlaceholders(schema, employees)` після їх завантаження
+- [x] Включити quantities у data перед generateDocx: `const data = { ...quantities, ...employee }` (employee-дані мають вищий пріоритет)
+- [x] Написати тест: генерація з обома наборами → quantity-ключі присутні у data (або перевірити через mock/інтеграцію)
+- [x] Запустити `cd server && npm test`
 
 ### Task 4: Генерація документу без employee_id (загальні шаблони)
 
