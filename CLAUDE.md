@@ -2264,6 +2264,7 @@ Unit and integration tests focus on backend business logic, API endpoints, and d
 - `auto-migrate.test.js`: Auto-migration rename detection and CSV column propagation
 - `migrate-to-field-id.test.js`: One-time migration script adding field_id and role columns
 - `quantity-placeholders.test.js`: Quantity placeholder generation for select fields (buildQuantityPlaceholders)
+- `placeholder-preview-api.test.js`: Placeholder preview API validation (quantity placeholders in preview response)
 - `remote-archive-store.test.js`: Remote archive functions (archiveEmployee, archiveStatusHistory, etc.)
 
 **Test Framework**: Node.js native test runner (no external dependencies)
@@ -2341,7 +2342,7 @@ node server/test/docx-generator.test.js
 
 **Unit vs. Integration Test Distinction**:
 - **Unit tests** (no server required): config.test.js, upload-limit.test.js, docx-generator.test.js, declension.test.js, retirement-events.test.js, utils.test.js, reprimands-store.test.js, status-events-store.test.js, dashboard-30days.test.js, remote-archive-store.test.js, schema.test.js, field-utils.test.js, store-role-lookups.test.js, auto-migrate.test.js, migrate-to-field-id.test.js, quantity-placeholders.test.js
-- **Integration tests** (require running server on port 3000): templates-api.test.js, retirement-api.test.js, search-api.test.js, photo-api.test.js, status-history.test.js, reprimands-api.test.js, status-events-api.test.js
+- **Integration tests** (require running server on port 3000): templates-api.test.js, retirement-api.test.js, search-api.test.js, photo-api.test.js, status-history.test.js, reprimands-api.test.js, status-events-api.test.js, remote-archive-api.test.js, placeholder-preview-api.test.js
 - `npm test` runs only unit tests; `npm run test:integration` runs integration tests
 - CI runs unit tests before starting servers, and integration tests after servers are ready
 

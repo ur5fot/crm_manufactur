@@ -151,13 +151,14 @@ export function registerTemplateRoutes(app, appConfig) {
   app.delete("/api/templates/:id", async (req, res) => {
     try {
       const templates = await loadTemplates();
-      const template = findById(templates, 'template_id', req.params.id);
       const index = templates.findIndex((t) => t.template_id === req.params.id);
 
-      if (index === -1 || !template) {
+      if (index === -1) {
         res.status(404).json({ error: "Шаблон не знайдено" });
         return;
       }
+
+      const template = templates[index];
 
       // Soft delete: set active='no'
       templates[index].active = 'no';
@@ -331,7 +332,7 @@ export function registerTemplateRoutes(app, appConfig) {
   // Generate document from template
   app.post("/api/templates/:id/generate", async (req, res) => {
     try {
-      const { employee_id } = req.body;
+      const { employee_id, custom_data } = req.body;
 
       // Load template first to check is_general before validating employee_id
       const templates = await loadTemplates();
@@ -373,12 +374,10 @@ export function registerTemplateRoutes(app, appConfig) {
       // Build quantity placeholders from all active employees
       const quantities = buildQuantityPlaceholders(schema, employees);
 
-      // Prepare data: quantity placeholders + employee fields (if available)
-      // Employee data has higher priority (overrides quantity keys on conflict)
+      // Prepare data: quantity placeholders + employee fields (if available) + custom overrides
+      // Priority: custom_data > employee > quantities
       // Note: special placeholders (current_date, current_datetime) are added by prepareData() in docx-generator.js
-      const data = employee
-        ? { ...quantities, ...employee }
-        : { ...quantities };
+      const data = { ...quantities, ...(employee || {}), ...(custom_data && typeof custom_data === 'object' ? custom_data : {}) };
 
       // Generate DOCX filename
       const timestamp = Date.now();

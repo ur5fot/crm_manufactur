@@ -446,6 +446,20 @@ For every text placeholder, two additional variants are automatically generated:
 
 Works for all placeholders: employee fields, name declensions, grade/position declensions, and special placeholders. Empty values do not get _upper/_cap variants.
 
+### Quantity Placeholders
+
+For each select-type field in the employee schema, quantity placeholders are automatically generated counting active employees:
+
+- `{f_<field_id>_quantity}` - total count of all active employees
+- `{f_<field_id>_option<N>_quantity}` - count of employees with the Nth option value (1-indexed)
+
+Example for field `gender` (field_id: `f_gender`, options: `Чоловіча|Жіноча`):
+- `{f_gender_quantity}` -> total active employees (e.g., "10")
+- `{f_gender_option1_quantity}` -> count with "Чоловіча" (e.g., "7")
+- `{f_gender_option2_quantity}` -> count with "Жіноча" (e.g., "3")
+
+Option counts may not sum to total (employees with empty values are not counted in any option). Quantity placeholders are available in all templates (both regular and general).
+
 ### Склонение ФИО по падежам
 
 При генерации документа система автоматически склоняет ФИО сотрудника по всем 6 падежам украинского языка (библиотека [shevchenko](https://github.com/tooleks/shevchenko-js)). Доступно 24 плейсхолдера (6 падежей × 4 поля):

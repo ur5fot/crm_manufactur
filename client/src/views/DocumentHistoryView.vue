@@ -116,7 +116,10 @@
           ← Попередня
         </button>
 
-        <span>
+        <span v-if="documentHistorySearchTerm">
+          Знайдено: {{ filteredDocuments.length }} з {{ generatedDocuments.length }} на сторінці
+        </span>
+        <span v-else>
           Сторінка {{ documentHistoryCurrentPage }} з {{ documentHistoryTotalPages }}
           (всього: {{ documentHistoryPagination.total }} документів)
         </span>
