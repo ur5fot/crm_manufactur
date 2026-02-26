@@ -435,6 +435,7 @@ Any employee field can be used as a placeholder:
 
 Auto-generated placeholders available in all templates:
 - {current_date} - Current date in DD.MM.YYYY format
+- {current_date_iso} - Current date in YYYY-MM-DD format
 - {current_datetime} - Current date/time in DD.MM.YYYY HH:MM format
 
 ### Case Variants (uppercase / capitalized)
@@ -459,6 +460,23 @@ Example for field `gender` (field_id: `f_gender`, options: `Чоловіча|Ж�
 - `{f_gender_option2_quantity}` -> count with "Жіноча" (e.g., "3")
 
 Option counts may not sum to total (employees with empty values are not counted in any option). Quantity placeholders are available in all templates (both regular and general).
+
+#### Present/Absent Quantity Placeholders
+
+- `{present_quantity}` - count of employees with working status ("Працює", first option of employment status field)
+- `{absent_quantity}` - count of absent employees (all statuses except "Працює" and "Звільнений"; empty status not counted)
+
+Dismissed employees are counted in neither present nor absent.
+
+#### Fit Status Among Present Employees
+
+For the `fit_status` field, quantity placeholders counting only among employees with "Працює" status:
+- `{f_fit_status_present_quantity}` - total present employees
+- `{f_fit_status_present_option1_quantity}` - count with "Придатний" among present
+- `{f_fit_status_present_option2_quantity}` - count with "Не придатний" among present
+- `{f_fit_status_present_option3_quantity}` - count with "Обмежено придатний" among present
+
+These placeholders require both the STATUS and fit_status fields to exist in the schema.
 
 ### Склонение ФИО по падежам
 

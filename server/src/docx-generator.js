@@ -250,11 +250,23 @@ export async function extractPlaceholders(templatePath, schema) {
       const specialNames = new Set(['current_date', 'current_date_iso', 'current_datetime', 'full_name', 'f_full_name']);
       const caseSuffixes = ['genitive', 'dative', 'accusative', 'vocative', 'locative', 'ablative', 'upper', 'cap'];
 
+      // Quantity placeholder patterns: f_<id>_quantity, f_<id>_option<N>_quantity,
+      // f_<id>_present_quantity, f_<id>_present_option<N>_quantity, present_quantity, absent_quantity
+      const quantitySpecials = new Set(['present_quantity', 'absent_quantity']);
+
       const unknown = sorted.filter(p => {
         // Direct match against field_name or field_id
         if (knownNames.has(p) || knownIds.has(p)) return false;
         // Special placeholders
         if (specialNames.has(p)) return false;
+        // Quantity special placeholders
+        if (quantitySpecials.has(p)) return false;
+        // Quantity placeholders tied to a known field_id
+        if (p.endsWith('_quantity')) {
+          for (const id of knownIds) {
+            if (p.startsWith(id + '_')) return false;
+          }
+        }
         // Check if it's a known base + case/variant suffix
         for (const suffix of caseSuffixes) {
           if (p.endsWith(`_${suffix}`)) {

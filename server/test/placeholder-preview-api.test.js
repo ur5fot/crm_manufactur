@@ -89,8 +89,8 @@ async function testQuantityPlaceholderLabels() {
 
   const quantityPlaceholders = data.placeholders.filter(p => p.group === 'quantities');
 
-  // Total placeholders should have "кількість (всі)" in label
-  const totalP = quantityPlaceholders.find(p => !p.placeholder.includes('_option'));
+  // Regular field total placeholders (e.g. {f_gender_quantity}) should have "кількість" in label
+  const totalP = quantityPlaceholders.find(p => p.placeholder.match(/^\{f_\w+_quantity\}$/) && !p.placeholder.includes('_option') && !p.placeholder.includes('_present'));
   if (totalP && !totalP.label.includes('кількість')) {
     throw new Error(`Expected total quantity label to contain "кількість", got "${totalP.label}"`);
   }
@@ -102,6 +102,62 @@ async function testQuantityPlaceholderLabels() {
   }
 }
 
+// Test 5: present_quantity and absent_quantity placeholders exist
+async function testPresentAbsentQuantityPlaceholders() {
+  const res = await fetch(`${BASE_URL}/api/placeholder-preview`);
+  const data = await res.json();
+
+  const quantityPlaceholders = data.placeholders.filter(p => p.group === 'quantities');
+
+  const presentP = quantityPlaceholders.find(p => p.placeholder === '{present_quantity}');
+  if (!presentP) {
+    throw new Error('Expected {present_quantity} placeholder in quantities group');
+  }
+  if (!presentP.label.includes('Наявні')) {
+    throw new Error(`Expected present_quantity label to contain "Наявні", got "${presentP.label}"`);
+  }
+  const presentVal = parseInt(presentP.value, 10);
+  if (isNaN(presentVal) || presentVal < 0) {
+    throw new Error(`Expected non-negative integer for present_quantity, got "${presentP.value}"`);
+  }
+
+  const absentP = quantityPlaceholders.find(p => p.placeholder === '{absent_quantity}');
+  if (!absentP) {
+    throw new Error('Expected {absent_quantity} placeholder in quantities group');
+  }
+  if (!absentP.label.includes('Відсутні')) {
+    throw new Error(`Expected absent_quantity label to contain "Відсутні", got "${absentP.label}"`);
+  }
+}
+
+// Test 6: fit_status present quantity placeholders exist (if fit_status field is in schema)
+async function testFitStatusPresentPlaceholders() {
+  const res = await fetch(`${BASE_URL}/api/placeholder-preview`);
+  const data = await res.json();
+
+  const quantityPlaceholders = data.placeholders.filter(p => p.group === 'quantities');
+
+  const fitPresentTotal = quantityPlaceholders.find(p => p.placeholder === '{f_fit_status_present_quantity}');
+  if (!fitPresentTotal) {
+    // fit_status field may not exist in test schema — skip gracefully
+    console.log('  Note: {f_fit_status_present_quantity} not found (fit_status field may not be in test schema)');
+    return;
+  }
+
+  if (!fitPresentTotal.label.includes('серед наявних')) {
+    throw new Error(`Expected fit_status_present label to contain "серед наявних", got "${fitPresentTotal.label}"`);
+  }
+
+  // Should also have at least one option-level present placeholder
+  const fitPresentOption = quantityPlaceholders.find(p => p.placeholder.match(/^\{f_fit_status_present_option\d+_quantity\}$/));
+  if (!fitPresentOption) {
+    throw new Error('Expected at least one f_fit_status_present_option<N>_quantity placeholder');
+  }
+  if (!fitPresentOption.label.includes('серед наявних')) {
+    throw new Error(`Expected fit_status_present option label to contain "серед наявних", got "${fitPresentOption.label}"`);
+  }
+}
+
 async function runAllTests() {
   console.log('Starting Placeholder Preview API tests...\n');
 
@@ -109,6 +165,8 @@ async function runAllTests() {
   await runTest('2. Quantity placeholders have numeric string values', testQuantityPlaceholderValues);
   await runTest('3. Quantity placeholders include total and option-level entries', testQuantityPlaceholderStructure);
   await runTest('4. Quantity placeholder labels are descriptive', testQuantityPlaceholderLabels);
+  await runTest('5. present_quantity and absent_quantity placeholders exist', testPresentAbsentQuantityPlaceholders);
+  await runTest('6. fit_status present quantity placeholders exist', testFitStatusPresentPlaceholders);
 
   console.log(`\nTests passed: ${testsPassed}`);
   console.log(`Tests failed: ${testsFailed}`);
