@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from "vue";
 import TemplatesView from "./TemplatesView.vue";
+import GeneralTemplatesView from "./GeneralTemplatesView.vue";
 import DocumentHistoryView from "./DocumentHistoryView.vue";
 
 const activeTab = ref('templates');
@@ -16,6 +17,12 @@ const activeTab = ref('templates');
         Шаблони
       </button>
       <button
+        :class="['documents-tab-btn', { active: activeTab === 'general' }]"
+        @click="activeTab = 'general'"
+      >
+        Загальні шаблони
+      </button>
+      <button
         :class="['documents-tab-btn', { active: activeTab === 'history' }]"
         @click="activeTab = 'history'"
       >
@@ -25,6 +32,7 @@ const activeTab = ref('templates');
 
     <div class="documents-tab-content">
       <TemplatesView v-if="activeTab === 'templates'" />
+      <GeneralTemplatesView v-else-if="activeTab === 'general'" />
       <DocumentHistoryView v-else-if="activeTab === 'history'" />
     </div>
   </div>

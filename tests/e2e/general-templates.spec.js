@@ -1,6 +1,35 @@
 const { test, expect } = require('@playwright/test');
+const path = require('path');
 
 const API_URL = 'http://localhost:3000/api';
+
+// Helper to create minimal DOCX buffer for testing
+function createTestDocxBuffer(placeholders = []) {
+  const PizZip = require(path.join(__dirname, '../../server/node_modules/pizzip'));
+  const zip = new PizZip();
+  let docContent = '<?xml version="1.0" encoding="UTF-8"?>';
+  docContent += '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">';
+  docContent += '<w:body>';
+  for (const p of placeholders) {
+    docContent += `<w:p><w:r><w:t>{${p}}</w:t></w:r></w:p>`;
+  }
+  docContent += '</w:body></w:document>';
+  zip.folder('word').file('document.xml', docContent);
+  zip.file('[Content_Types].xml',
+    '<?xml version="1.0" encoding="UTF-8"?>' +
+    '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+    '<Default Extension="xml" ContentType="application/xml"/>' +
+    '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>' +
+    '</Types>'
+  );
+  zip.folder('_rels').file('.rels',
+    '<?xml version="1.0" encoding="UTF-8"?>' +
+    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+    '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>' +
+    '</Relationships>'
+  );
+  return zip.generate({ type: 'nodebuffer', compression: 'DEFLATE' });
+}
 
 test.describe('General Templates - is_general flag', () => {
   // Clean up test templates after tests
@@ -178,5 +207,120 @@ test.describe('General Templates - is_general flag', () => {
     await expect(row).toBeVisible();
     await expect(row.locator('.general-badge')).toBeVisible();
     await expect(row.locator('.general-badge')).toHaveText('Загальний');
+  });
+
+  test('General Templates tab is visible in Documents view', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForTimeout(1000);
+
+    // Close notification popups
+    const closeButtons = page.locator('.close-btn');
+    const count = await closeButtons.count();
+    for (let i = 0; i < count; i++) {
+      await closeButtons.nth(i).click({ timeout: 1000 }).catch(() => {});
+    }
+
+    // Navigate to Documents
+    await page.click('text=Документи');
+
+    // Verify all three tabs are visible (use exact matching to avoid "Загальні шаблони" matching "Шаблони")
+    await expect(page.getByRole('button', { name: 'Шаблони', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Загальні шаблони' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Історія документів' })).toBeVisible();
+  });
+
+  test('General template appears in General Templates tab', async ({ page, request }) => {
+    // Create a general template via API
+    const timestamp = Date.now();
+    const generalName = `E2E TabGeneral ${timestamp}`;
+    const createResp = await request.post(`${API_URL}/templates`, {
+      data: { template_name: generalName, template_type: 'Інше', is_general: 'yes' }
+    });
+    const createData = await createResp.json();
+    createdTemplateIds.push(createData.template.template_id);
+
+    // Also create a regular template to verify it does NOT appear
+    const regularName = `E2E TabRegular ${timestamp}`;
+    const createResp2 = await request.post(`${API_URL}/templates`, {
+      data: { template_name: regularName, template_type: 'Заявка', is_general: 'no' }
+    });
+    const createData2 = await createResp2.json();
+    createdTemplateIds.push(createData2.template.template_id);
+
+    await page.goto('/');
+    await page.waitForTimeout(1000);
+
+    // Close notification popups
+    const closeButtons = page.locator('.close-btn');
+    const count = await closeButtons.count();
+    for (let i = 0; i < count; i++) {
+      await closeButtons.nth(i).click({ timeout: 1000 }).catch(() => {});
+    }
+
+    // Navigate to Documents -> General Templates tab
+    await page.click('text=Документи');
+    await page.click('.documents-tab-btn:has-text("Загальні шаблони")');
+    await expect(page.locator('text=Загальні шаблони').first()).toBeVisible();
+
+    // General template should be visible
+    await expect(page.locator(`text=${generalName}`)).toBeVisible();
+
+    // Regular template should NOT be in general templates tab
+    await expect(page.locator(`text=${regularName}`)).toHaveCount(0);
+  });
+
+  test('Generate document from General Templates tab', async ({ page, request }) => {
+    // Create a general template with DOCX via API
+    const timestamp = Date.now();
+    const templateName = `E2E GenDoc ${timestamp}`;
+    const createResp = await request.post(`${API_URL}/templates`, {
+      data: { template_name: templateName, template_type: 'Інше', is_general: 'yes' }
+    });
+    const createData = await createResp.json();
+    const templateId = createData.template.template_id;
+    createdTemplateIds.push(templateId);
+
+    // Upload a simple DOCX file for this template
+    const docxBuffer = createTestDocxBuffer(['current_date']);
+
+    // Upload via API
+    const uploadResp = await request.post(`${API_URL}/templates/${templateId}/upload`, {
+      multipart: {
+        file: {
+          name: 'test.docx',
+          mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          buffer: docxBuffer
+        }
+      }
+    });
+    expect(uploadResp.ok()).toBeTruthy();
+
+    // Navigate to General Templates tab
+    await page.goto('/');
+    await page.waitForTimeout(1000);
+
+    const closeButtons = page.locator('.close-btn');
+    const count = await closeButtons.count();
+    for (let i = 0; i < count; i++) {
+      await closeButtons.nth(i).click({ timeout: 1000 }).catch(() => {});
+    }
+
+    await page.click('text=Документи');
+    await page.click('.documents-tab-btn:has-text("Загальні шаблони")');
+    await page.waitForTimeout(500);
+
+    // Find the template row and click generate
+    const row = page.locator(`tr:has-text("${templateName}")`);
+    await expect(row).toBeVisible();
+
+    const generateBtn = row.locator('button:has-text("Створити документ")');
+    await expect(generateBtn).toBeEnabled();
+
+    // Handle alert for generation success
+    const dialogPromise = page.waitForEvent('dialog');
+    await generateBtn.click();
+    const dialog = await dialogPromise;
+    expect(dialog.message()).toContain('успішно');
+    await dialog.accept();
   });
 });
