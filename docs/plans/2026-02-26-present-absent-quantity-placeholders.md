@@ -80,15 +80,15 @@
 
 ### Task 2: Додати fit_status_present плейхолдери (кількість серед наявних)
 
-- [ ] У `server/src/quantity-placeholders.js`:
+- [x] У `server/src/quantity-placeholders.js`:
   - Якщо STATUS-поле знайдено і fit_status-поле знайдено (шукати `field_name === 'fit_status'` або за field_id `f_fit_status`):
   - Відфільтрувати `presentEmployees = employees.filter(e => e[statusFieldName] === workingStatus)`
   - `{f_fit_status_present_quantity}` = `String(presentEmployees.length)`
   - Для кожної опції fit_status: `{f_fit_status_present_option<N>_quantity}` = count серед presentEmployees
-- [ ] Написати тести:
+- [x] Написати тести:
   - 4 працівники (3 Працює, 1 Відпустка); серед Працює: 2 Придатний, 1 Не придатний → `f_fit_status_present_quantity: "3"`, `f_fit_status_present_option1_quantity: "2"`, `f_fit_status_present_option2_quantity: "1"`, `f_fit_status_present_option3_quantity: "0"`
   - Без STATUS-поля → fit_status_present ключі відсутні
-- [ ] Запустити `node server/test/quantity-placeholders.test.js` — все проходить
+- [x] Запустити `node server/test/quantity-placeholders.test.js` — все проходить
 
 ### Task 3: Додати current_date_iso плейхолдер
 
