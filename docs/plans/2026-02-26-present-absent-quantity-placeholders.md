@@ -113,8 +113,8 @@
 
 ### Task 5: Верифікація та документація
 
-- [ ] Запустити повний набір тестів: `cd server && npm test`
-- [ ] Оновити `CLAUDE.md`:
+- [x] Запустити повний набір тестів: `cd server && npm test`
+- [x] Оновити `CLAUDE.md`:
   - Секція "Placeholder Syntax and Replacement" — додати `{present_quantity}`, `{absent_quantity}`, `{f_fit_status_present_*}`, `{current_date_iso}`
 
 *Note: ralphex automatically moves completed plans to `docs/plans/completed/`*

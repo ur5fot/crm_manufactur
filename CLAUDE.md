@@ -1033,6 +1033,7 @@ function prepareData(data) {
   const now = new Date();
   prepared.current_date = `${day}.${month}.${year}`;  // DD.MM.YYYY
   prepared.current_datetime = `${day}.${month}.${year} ${hours}:${minutes}`;  // DD.MM.YYYY HH:MM
+  prepared.current_date_iso = `${year}-${month}-${day}`;  // YYYY-MM-DD
 
   return prepared;
 }
@@ -3204,6 +3205,7 @@ Placeholders in DOCX templates follow a simple, consistent syntax that gets repl
 **Special Placeholders** (auto-generated):
 - `{current_date}` - Current date in DD.MM.YYYY format
 - `{current_datetime}` - Current date and time in DD.MM.YYYY HH:MM format
+- `{current_date_iso}` - Current date in YYYY-MM-DD format
 
 **Quantity Placeholders** (auto-generated from select fields):
 
@@ -3219,6 +3221,23 @@ Example for field `gender` (`field_id: f_gender`, options `Чоловіча|Жі
 Option counts may not sum to total (employees with empty values are not counted in any option).
 Quantity placeholders are available in all templates (both regular and general).
 Implementation: `buildQuantityPlaceholders()` in `server/src/quantity-placeholders.js`.
+
+**Present/Absent Quantity Placeholders** (auto-generated from STATUS field):
+
+- `{present_quantity}` — count of employees with "Працює" status (first option of STATUS field)
+- `{absent_quantity}` — count of employees absent (all statuses except "Працює" and "Звільнений"; empty status not counted)
+
+Dismissed employees are counted in neither present nor absent.
+
+**Fit Status Among Present Employees** (auto-generated):
+
+For the `fit_status` field, the system generates quantity placeholders counting only among employees with "Працює" status:
+- `{f_fit_status_present_quantity}` — total present employees
+- `{f_fit_status_present_option1_quantity}` — count with "Придатний" among present
+- `{f_fit_status_present_option2_quantity}` — count with "Не придатний" among present
+- `{f_fit_status_present_option3_quantity}` — count with "Обмежено придатний" among present
+
+These placeholders require both STATUS and fit_status fields to exist in the schema.
 
 **Placeholder Extraction** (from docx-generator.js):
 ```javascript
@@ -3314,6 +3333,7 @@ function prepareData(data) {
   const month = String(now.getMonth() + 1).padStart(2, '0');
   const year = now.getFullYear();
   prepared.current_date = `${day}.${month}.${year}`;
+  prepared.current_date_iso = `${year}-${month}-${day}`;
 
   const hours = String(now.getHours()).padStart(2, '0');
   const minutes = String(now.getMinutes()).padStart(2, '0');
@@ -3933,6 +3953,7 @@ The application uses different date formats for storage, display, and API commun
 **Date/Time Display in Documents**:
 - `{current_date}`: DD.MM.YYYY format (e.g., `12.02.2026`)
 - `{current_datetime}`: DD.MM.YYYY HH:MM format (e.g., `12.02.2026 14:30`)
+- `{current_date_iso}`: YYYY-MM-DD format (e.g., `2026-02-12`)
 - Special placeholders automatically added during document generation
 
 **Date Parsing and Validation**:
