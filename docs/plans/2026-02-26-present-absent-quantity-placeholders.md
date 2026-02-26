@@ -104,12 +104,12 @@
 
 ### Task 4: Відобразити нові quantity-плейхолдери у довіднику
 
-- [ ] У `server/src/routes/misc.js` (~рядок 322-353, секція quantity placeholders):
+- [x] У `server/src/routes/misc.js` (~рядок 322-353, секція quantity placeholders):
   - Перед основним циклом по selectField-ключах, додати обробку спеціальних ключів:
   - `key === 'present_quantity'` → label = `"Наявні (зі статусом «Працює»)"`
   - `key === 'absent_quantity'` → label = `"Відсутні (крім «Працює» та «Звільнений»)"`
   - Ключі `f_fit_status_present_*` → розпізнавати та формувати label: `"Придатність серед наявних — кількість"`, `"Придатність серед наявних — «Придатний»"` і т.д.
-- [ ] Запустити `cd server && npm test`
+- [x] Запустити `cd server && npm test`
 
 ### Task 5: Верифікація та документація
 

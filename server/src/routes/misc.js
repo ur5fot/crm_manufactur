@@ -326,30 +326,55 @@ export function registerMiscRoutes(app) {
       const activeEmployees = employees.filter(e => e.active !== 'no');
       const quantities = buildQuantityPlaceholders(schema, activeEmployees);
       for (const [key, value] of Object.entries(quantities)) {
-        // Parse the key to build a descriptive label
-        // Keys are like: f_gender_quantity, f_gender_option1_quantity
-        // Find the longest matching field_id to avoid prefix-overlap mismatches
-        // (e.g. f_status vs f_status_new — must match the longer one)
-        const selectField = schema
-          .filter(f => f.field_id && key.startsWith(f.field_id + '_'))
-          .sort((a, b) => b.field_id.length - a.field_id.length)[0] || null;
         let label = key;
-        if (selectField) {
-          const fieldLabel = selectField.field_label || selectField.field_name;
-          const suffix = key.slice(selectField.field_id.length + 1); // e.g. "quantity" or "option1_quantity"
-          if (suffix === 'quantity') {
-            label = `${fieldLabel} — кількість (всі)`;
+
+        // Special keys: present_quantity, absent_quantity
+        if (key === 'present_quantity') {
+          label = 'Наявні (зі статусом «Працює»)';
+        } else if (key === 'absent_quantity') {
+          label = 'Відсутні (крім «Працює» та «Звільнений»)';
+        } else {
+          // Check for _present_ pattern (e.g. f_fit_status_present_quantity)
+          const presentMatch = key.match(/^(.+)_present_(quantity|option(\d+)_quantity)$/);
+          if (presentMatch) {
+            const fieldId = presentMatch[1];
+            const presentField = schema.find(f => f.field_id === fieldId);
+            if (presentField) {
+              const fieldLabel = presentField.field_label || presentField.field_name;
+              if (presentMatch[2] === 'quantity') {
+                label = `${fieldLabel} серед наявних — кількість`;
+              } else {
+                const optIndex = parseInt(presentMatch[3], 10) - 1;
+                const options = presentField.field_options ? presentField.field_options.split('|').filter(Boolean) : [];
+                const optionName = options[optIndex] || `опція ${presentMatch[3]}`;
+                label = `${fieldLabel} серед наявних — «${optionName}»`;
+              }
+            }
           } else {
-            // Parse optionN_quantity
-            const optMatch = suffix.match(/^option(\d+)_quantity$/);
-            if (optMatch) {
-              const optIndex = parseInt(optMatch[1], 10) - 1;
-              const options = selectField.field_options ? selectField.field_options.split('|').filter(Boolean) : [];
-              const optionName = options[optIndex] || `опція ${optMatch[1]}`;
-              label = `${fieldLabel} — кількість "${optionName}"`;
+            // Regular quantity placeholders: f_<field_id>_quantity, f_<field_id>_option<N>_quantity
+            // Find the longest matching field_id to avoid prefix-overlap mismatches
+            const selectField = schema
+              .filter(f => f.field_id && key.startsWith(f.field_id + '_'))
+              .sort((a, b) => b.field_id.length - a.field_id.length)[0] || null;
+            if (selectField) {
+              const fieldLabel = selectField.field_label || selectField.field_name;
+              const suffix = key.slice(selectField.field_id.length + 1); // e.g. "quantity" or "option1_quantity"
+              if (suffix === 'quantity') {
+                label = `${fieldLabel} — кількість (всі)`;
+              } else {
+                // Parse optionN_quantity
+                const optMatch = suffix.match(/^option(\d+)_quantity$/);
+                if (optMatch) {
+                  const optIndex = parseInt(optMatch[1], 10) - 1;
+                  const options = selectField.field_options ? selectField.field_options.split('|').filter(Boolean) : [];
+                  const optionName = options[optIndex] || `опція ${optMatch[1]}`;
+                  label = `${fieldLabel} — кількість "${optionName}"`;
+                }
+              }
             }
           }
         }
+
         placeholders.push({
           placeholder: `{${key}}`,
           label,
