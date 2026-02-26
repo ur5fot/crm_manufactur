@@ -103,6 +103,53 @@ test.describe('General Templates - is_general flag', () => {
     createdTemplateIds.push(created.template_id);
   });
 
+  test('General template NOT shown in employee card document generation list', async ({ page, request }) => {
+    // Create a general template via API
+    const timestamp = Date.now();
+    const generalName = `E2E HiddenGeneral ${timestamp}`;
+    const createResp = await request.post(`${API_URL}/templates`, {
+      data: { template_name: generalName, template_type: 'Інше', is_general: 'yes' }
+    });
+    const createData = await createResp.json();
+    createdTemplateIds.push(createData.template.template_id);
+
+    // Also create a regular template to verify it IS shown
+    const regularName = `E2E VisibleRegular ${timestamp}`;
+    const createResp2 = await request.post(`${API_URL}/templates`, {
+      data: { template_name: regularName, template_type: 'Заявка', is_general: 'no' }
+    });
+    const createData2 = await createResp2.json();
+    createdTemplateIds.push(createData2.template.template_id);
+
+    // Get first employee
+    const empResp = await request.get(`${API_URL}/employees`);
+    const empData = await empResp.json();
+    const firstEmployee = empData.employees[0];
+    expect(firstEmployee).toBeTruthy();
+
+    // Navigate to employee card
+    await page.goto(`/cards/${firstEmployee.employee_id}`);
+    await page.waitForTimeout(1000);
+
+    // Close notification popups
+    const closeButtons = page.locator('.close-btn');
+    const count = await closeButtons.count();
+    for (let i = 0; i < count; i++) {
+      await closeButtons.nth(i).click({ timeout: 1000 }).catch(() => {});
+    }
+
+    // Wait for the document generation section to load
+    await expect(page.locator('text=Генерування документів')).toBeVisible();
+
+    // The general template should NOT appear in the list
+    const generalTemplate = page.locator(`.template-card-title:has-text("${generalName}")`);
+    await expect(generalTemplate).toHaveCount(0);
+
+    // The regular template SHOULD appear in the list
+    const regularTemplate = page.locator(`.template-card-title:has-text("${regularName}")`);
+    await expect(regularTemplate).toBeVisible();
+  });
+
   test('General template shows badge in templates table', async ({ page, request }) => {
     // First create a general template via API
     const timestamp = Date.now();
