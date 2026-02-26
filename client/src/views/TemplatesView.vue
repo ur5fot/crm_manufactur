@@ -33,7 +33,10 @@
           <tbody>
             <tr v-for="template in templates" :key="template.template_id">
               <td style="text-align: center;">{{ template.template_id }}</td>
-              <td>{{ template.template_name }}</td>
+              <td>
+                {{ template.template_name }}
+                <span v-if="template.is_general === 'yes'" class="general-badge">Загальний</span>
+              </td>
               <td>
                 <span class="template-type-badge" :data-type="template.template_type">
                   {{ template.template_type }}
@@ -110,6 +113,18 @@
               rows="3"
               placeholder="Опис шаблону та його призначення"
             ></textarea>
+          </div>
+
+          <div class="form-group">
+            <label class="checkbox-label">
+              <input
+                type="checkbox"
+                v-model="templateForm.is_general"
+                true-value="yes"
+                false-value="no"
+              />
+              Загальний шаблон (не прив'язаний до співробітника)
+            </label>
           </div>
 
           <div v-if="templateForm.placeholder_fields || templateForm.docx_filename" class="form-group">

@@ -2496,6 +2496,30 @@ button.small {
   color: #e65100;
 }
 
+.general-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  margin-left: 8px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: 500;
+  background: #e8eaf6;
+  color: #283593;
+  vertical-align: middle;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-weight: normal;
+}
+
+.checkbox-label input[type="checkbox"] {
+  margin: 0;
+}
+
 .file-uploaded {
   color: #2e7d32;
   font-weight: 500;
@@ -2875,6 +2899,11 @@ button.small {
 [data-theme="dark"] .template-type-badge[data-type="Інше"] {
   background: var(--badge-orange-bg);
   color: var(--badge-orange-text);
+}
+
+[data-theme="dark"] .general-badge {
+  background: #1a237e;
+  color: #9fa8da;
 }
 
 [data-theme="dark"] .action-create {
