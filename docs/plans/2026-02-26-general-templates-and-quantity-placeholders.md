@@ -94,20 +94,20 @@ Quantity-плейхолдери доступні у **всіх** шаблона�
 
 **Ціль:** Чиста функція, яка приймає schema + employees → повертає об'єкт з quantity-плейхолдерами.
 
-- [ ] Створити `server/src/quantity-placeholders.js` з експортом `buildQuantityPlaceholders(schema, employees)`:
+- [x] Створити `server/src/quantity-placeholders.js` з експортом `buildQuantityPlaceholders(schema, employees)`:
   - Фільтрувати `schema` по `field_type === 'select'`
   - Для кожного select-поля:
     - `{f_<field_id>_quantity}` = `String(employees.length)` (всі активні)
     - Розбити `field_options` по `|`, для кожної опції (1-indexed):
       - `{f_<field_id>_option<N>_quantity}` = `String(count)` де count = employees з цим значенням field_name
   - Повернути plain object `{ "f_gender_quantity": "10", "f_gender_option1_quantity": "7", ... }`
-- [ ] Написати `server/test/quantity-placeholders.test.js`:
+- [x] Написати `server/test/quantity-placeholders.test.js`:
   - Тест: порожня schema → порожній об'єкт
   - Тест: 1 select-поле (`f_gender`, опції `Чоловіча|Жіноча`), 3 працівники (2 Чоловіча, 1 Жіноча) → `f_gender_quantity: "3"`, `f_gender_option1_quantity: "2"`, `f_gender_option2_quantity: "1"`
   - Тест: поле з `field_type: 'text'` ігнорується
   - Тест: порожнє `field_options` → тільки `f_X_quantity`, без option-плейхолдерів
   - Тест: працівник з порожнім значенням → не рахується ні в одну option
-- [ ] Запустити `node server/test/quantity-placeholders.test.js` — всі тести проходять
+- [x] Запустити `node server/test/quantity-placeholders.test.js` — всі тести проходять
 
 ### Task 3: Інтегрувати quantity-плейхолдери у генерацію документів
 
