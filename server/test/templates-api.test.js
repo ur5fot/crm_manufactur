@@ -1062,13 +1062,9 @@ async function testGenerateGeneralTemplateWithoutEmployee() {
     throw new Error(`Filename should not contain undefined/null: ${generateData.filename}`);
   }
 
-  // Filename should match pattern: SanitizedName_timestamp.docx
-  const parts = generateData.filename.split('_');
-  // Should NOT have employee_id component (just name parts + timestamp.docx)
-  if (generateData.filename.match(/_\d+_\d+\.docx$/)) {
-    // Has two numeric parts at end (employee_id + timestamp) - wrong for general
-    // Actually we need to be careful: the sanitized template name could contain underscores
-    // Let's just verify it doesn't contain employee-like patterns
+  // Filename should not contain undefined/null employee references
+  if (generateData.filename.includes('_emp') || generateData.filename.includes('employee')) {
+    throw new Error(`General template filename should not contain employee references: ${generateData.filename}`);
   }
 
   if (!generateData.download_url) {

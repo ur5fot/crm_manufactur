@@ -194,6 +194,126 @@ async function testZeroEmployees() {
   assertEqual(result['f_gender_option2_quantity'], '0', 'Zero for option2');
 }
 
+// --- present_quantity / absent_quantity tests ---
+
+async function testPresentAbsentQuantity() {
+  const schema = [
+    {
+      field_id: 'f_status',
+      field_name: 'employment_status',
+      field_type: 'select',
+      field_options: 'Працює|Звільнений|Відпустка',
+      role: 'STATUS',
+    },
+  ];
+  const employees = [
+    { employee_id: '1', employment_status: 'Працює' },
+    { employee_id: '2', employment_status: 'Працює' },
+    { employee_id: '3', employment_status: 'Працює' },
+    { employee_id: '4', employment_status: 'Звільнений' },
+    { employee_id: '5', employment_status: 'Відпустка' },
+  ];
+
+  const result = buildQuantityPlaceholders(schema, employees);
+  assertEqual(result['present_quantity'], '3', 'present_quantity = 3 (Працює)');
+  assertEqual(result['absent_quantity'], '1', 'absent_quantity = 1 (Відпустка, not Звільнений)');
+}
+
+async function testAbsentExcludesEmptyStatus() {
+  const schema = [
+    {
+      field_id: 'f_status',
+      field_name: 'employment_status',
+      field_type: 'select',
+      field_options: 'Працює|Звільнений|Відпустка|Лікарняний',
+      role: 'STATUS',
+    },
+  ];
+  const employees = [
+    { employee_id: '1', employment_status: 'Працює' },
+    { employee_id: '2', employment_status: '' },
+    { employee_id: '3', employment_status: 'Лікарняний' },
+  ];
+
+  const result = buildQuantityPlaceholders(schema, employees);
+  assertEqual(result['present_quantity'], '1', 'present = 1');
+  assertEqual(result['absent_quantity'], '1', 'absent = 1 (empty not counted)');
+}
+
+async function testNoStatusRoleNoPresentAbsent() {
+  const schema = [
+    {
+      field_id: 'f_gender',
+      field_name: 'gender',
+      field_type: 'select',
+      field_options: 'Чоловіча|Жіноча',
+    },
+  ];
+  const employees = [
+    { employee_id: '1', gender: 'Чоловіча' },
+  ];
+
+  const result = buildQuantityPlaceholders(schema, employees);
+  assertEqual(result['present_quantity'], undefined, 'present_quantity absent without STATUS role');
+  assertEqual(result['absent_quantity'], undefined, 'absent_quantity absent without STATUS role');
+}
+
+// --- fit_status_present tests ---
+
+async function testFitStatusPresentQuantity() {
+  const schema = [
+    {
+      field_id: 'f_status',
+      field_name: 'employment_status',
+      field_type: 'select',
+      field_options: 'Працює|Звільнений|Відпустка',
+      role: 'STATUS',
+    },
+    {
+      field_id: 'f_fit_status',
+      field_name: 'fit_status',
+      field_type: 'select',
+      field_options: 'Придатний|Не придатний|Обмежено придатний',
+    },
+  ];
+  const employees = [
+    { employee_id: '1', employment_status: 'Працює', fit_status: 'Придатний' },
+    { employee_id: '2', employment_status: 'Працює', fit_status: 'Придатний' },
+    { employee_id: '3', employment_status: 'Працює', fit_status: 'Не придатний' },
+    { employee_id: '4', employment_status: 'Відпустка', fit_status: 'Придатний' },
+  ];
+
+  const result = buildQuantityPlaceholders(schema, employees);
+  assertEqual(result['f_fit_status_present_quantity'], '3', 'fit_status_present total = 3 (Працює)');
+  assertEqual(result['f_fit_status_present_option1_quantity'], '2', 'Придатний among present');
+  assertEqual(result['f_fit_status_present_option2_quantity'], '1', 'Не придатний among present');
+  assertEqual(result['f_fit_status_present_option3_quantity'], '0', 'Обмежено придатний among present');
+}
+
+async function testFitStatusPresentWithoutStatusRole() {
+  const schema = [
+    {
+      field_id: 'f_gender',
+      field_name: 'gender',
+      field_type: 'select',
+      field_options: 'Чоловіча|Жіноча',
+    },
+    {
+      field_id: 'f_fit_status',
+      field_name: 'fit_status',
+      field_type: 'select',
+      field_options: 'Придатний|Не придатний',
+    },
+  ];
+  const employees = [
+    { employee_id: '1', gender: 'Чоловіча', fit_status: 'Придатний' },
+  ];
+
+  const result = buildQuantityPlaceholders(schema, employees);
+  assertEqual(result['f_fit_status_present_quantity'], undefined, 'No present keys without STATUS role');
+  assertEqual(result['f_fit_status_present_option1_quantity'], undefined, 'No present option keys without STATUS role');
+}
+
 // --- Run all tests ---
 
 async function runAllTests() {
@@ -207,6 +327,11 @@ async function runAllTests() {
   await runTest('Multiple select fields all produce placeholders', testMultipleSelectFields);
   await runTest('Field without field_id is skipped', testFieldWithoutFieldId);
   await runTest('Zero employees produces zero counts', testZeroEmployees);
+  await runTest('present_quantity and absent_quantity with STATUS role', testPresentAbsentQuantity);
+  await runTest('absent_quantity excludes empty status values', testAbsentExcludesEmptyStatus);
+  await runTest('No STATUS role means no present/absent keys', testNoStatusRoleNoPresentAbsent);
+  await runTest('fit_status_present placeholders count among present employees', testFitStatusPresentQuantity);
+  await runTest('No STATUS role means no fit_status_present keys', testFitStatusPresentWithoutStatusRole);
 
   console.log(`\nTests passed: ${testsPassed}`);
   console.log(`Tests failed: ${testsFailed}`);

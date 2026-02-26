@@ -292,6 +292,36 @@ async function testGenerateDocxCurrentDatetime() {
   }
 }
 
+// Test 9b: generateDocx() adds current_date_iso placeholder in YYYY-MM-DD format
+async function testGenerateDocxCurrentDateIso() {
+  const testPath = path.join(TEST_FIXTURES_DIR, 'test-date-iso.docx');
+  createTestDocx(testPath, ['current_date_iso']);
+
+  const outputPath = path.join(TEST_OUTPUT_DIR, 'date-iso.docx');
+  await generateDocx(testPath, {}, outputPath);
+
+  const content = fs.readFileSync(outputPath, 'binary');
+  const zip = new PizZip(content);
+  const documentXml = zip.file('word/document.xml').asText();
+
+  // Verify date format YYYY-MM-DD is present
+  const dateRegex = /\d{4}-\d{2}-\d{2}/;
+  if (!dateRegex.test(documentXml)) {
+    throw new Error('current_date_iso placeholder was not replaced with YYYY-MM-DD format');
+  }
+
+  // Verify it's today's date
+  const now = new Date();
+  const day = String(now.getDate()).padStart(2, '0');
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const year = now.getFullYear();
+  const expectedDate = `${year}-${month}-${day}`;
+
+  if (!documentXml.includes(expectedDate)) {
+    throw new Error(`Expected today's ISO date ${expectedDate} in document`);
+  }
+}
+
 // Test 10: generateDocx() throws error for non-existent template
 async function testGenerateDocxNonExistent() {
   const testPath = path.join(TEST_FIXTURES_DIR, 'does-not-exist.docx');
@@ -718,6 +748,68 @@ async function testGenerateDocxWithQuantityPlaceholders() {
   }
 }
 
+// Test 22: extractPlaceholders() flags quantity placeholders for non-select fields as unknown
+async function testExtractPlaceholdersQuantityNonSelectUnknown() {
+  const testPath = path.join(TEST_FIXTURES_DIR, 'test-quantity-nonselect.docx');
+  // f_last_name is a text field, f_gender is a select field
+  createTestDocx(testPath, [
+    'f_gender_quantity', 'f_gender_option1_quantity',  // valid: select field
+    'f_last_name_quantity', 'f_last_name_option1_quantity', // invalid: text field
+    'f_department_quantity',  // invalid: text field
+  ]);
+
+  const schemaWithSelect = [
+    { field_id: 'f_last_name', field_name: 'last_name', field_label: 'Прізвище', field_type: 'text', role: 'LAST_NAME' },
+    { field_id: 'f_first_name', field_name: 'first_name', field_label: "Ім'я", field_type: 'text', role: 'FIRST_NAME' },
+    { field_id: 'f_middle_name', field_name: 'middle_name', field_label: 'По батькові', field_type: 'text', role: 'MIDDLE_NAME' },
+    { field_id: 'f_gender', field_name: 'gender', field_label: 'Стать', field_type: 'select', field_options: 'Чоловіча|Жіноча', role: 'GENDER' },
+    { field_id: 'f_department', field_name: 'department', field_label: 'Підрозділ', field_type: 'text', role: '' },
+  ];
+
+  const result = await extractPlaceholders(testPath, schemaWithSelect);
+
+  // Select field quantity placeholders should NOT be unknown
+  if (result.unknown.includes('f_gender_quantity') || result.unknown.includes('f_gender_option1_quantity')) {
+    throw new Error(`Select field quantity placeholders should be valid, but got unknown: ${JSON.stringify(result.unknown)}`);
+  }
+
+  // Non-select field quantity placeholders SHOULD be unknown
+  if (!result.unknown.includes('f_last_name_quantity')) {
+    throw new Error(`f_last_name_quantity (text field) should be flagged as unknown, got unknown: ${JSON.stringify(result.unknown)}`);
+  }
+  if (!result.unknown.includes('f_last_name_option1_quantity')) {
+    throw new Error(`f_last_name_option1_quantity (text field) should be flagged as unknown, got unknown: ${JSON.stringify(result.unknown)}`);
+  }
+  if (!result.unknown.includes('f_department_quantity')) {
+    throw new Error(`f_department_quantity (text field) should be flagged as unknown, got unknown: ${JSON.stringify(result.unknown)}`);
+  }
+}
+
+// Test 23: extractPlaceholders() recognizes quantity case variants (_upper/_cap) as valid
+async function testExtractPlaceholdersQuantityCaseVariants() {
+  const testPath = path.join(TEST_FIXTURES_DIR, 'test-quantity-case.docx');
+  createTestDocx(testPath, [
+    'f_gender_quantity_upper', 'f_gender_quantity_cap',
+    'f_gender_option1_quantity_upper',
+    'present_quantity_upper', 'present_quantity_cap',
+    'absent_quantity_upper',
+  ]);
+
+  const schemaWithSelect = [
+    { field_id: 'f_last_name', field_name: 'last_name', field_label: 'Прізвище', field_type: 'text', role: 'LAST_NAME' },
+    { field_id: 'f_first_name', field_name: 'first_name', field_label: "Ім'я", field_type: 'text', role: 'FIRST_NAME' },
+    { field_id: 'f_middle_name', field_name: 'middle_name', field_label: 'По батькові', field_type: 'text', role: 'MIDDLE_NAME' },
+    { field_id: 'f_gender', field_name: 'gender', field_label: 'Стать', field_type: 'select', field_options: 'Чоловіча|Жіноча', role: 'GENDER' },
+  ];
+
+  const result = await extractPlaceholders(testPath, schemaWithSelect);
+
+  // All quantity case variants should be recognized as valid (not unknown)
+  if (result.unknown.length > 0) {
+    throw new Error(`All quantity case variants should be valid, but got unknown: ${JSON.stringify(result.unknown)}`);
+  }
+}
+
 // Main test runner
 async function runAllTests() {
   console.log('Starting DOCX Generator unit tests...\n');
@@ -734,6 +826,7 @@ async function runAllTests() {
   await runTest('generateDocx() handles null/undefined values as empty string', testGenerateDocxNullHandling);
   await runTest('generateDocx() adds current_date placeholder', testGenerateDocxCurrentDate);
   await runTest('generateDocx() adds current_datetime placeholder', testGenerateDocxCurrentDatetime);
+  await runTest('generateDocx() adds current_date_iso placeholder (YYYY-MM-DD)', testGenerateDocxCurrentDateIso);
   await runTest('generateDocx() throws error for non-existent template', testGenerateDocxNonExistent);
   await runTest('generateDocx() creates output directory if missing', testGenerateDocxCreateDir);
   await runTest('extractPlaceholders() finds placeholders split across XML runs', testExtractPlaceholdersSplitRuns);
@@ -746,6 +839,8 @@ async function runAllTests() {
   await runTest('extractPlaceholders() with schema returns validation info', testExtractPlaceholdersWithSchema);
   await runTest('extractPlaceholders() without schema returns consistent object type', testExtractPlaceholdersWithoutSchemaConsistentType);
   await runTest('generateDocx() with quantity placeholders merged into data', testGenerateDocxWithQuantityPlaceholders);
+  await runTest('extractPlaceholders() flags quantity placeholders for non-select fields as unknown', testExtractPlaceholdersQuantityNonSelectUnknown);
+  await runTest('extractPlaceholders() recognizes quantity case variants as valid', testExtractPlaceholdersQuantityCaseVariants);
 
   // Cleanup
   cleanup();

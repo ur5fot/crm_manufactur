@@ -128,6 +128,9 @@ async function prepareData(data, schema) {
   const year = now.getFullYear();
   prepared.current_date = `${day}.${month}.${year}`;
 
+  // {current_date_iso} - YYYY-MM-DD format
+  prepared.current_date_iso = `${year}-${month}-${day}`;
+
   // {current_datetime} - DD.MM.YYYY HH:MM format
   const hours = String(now.getHours()).padStart(2, '0');
   const minutes = String(now.getMinutes()).padStart(2, '0');
@@ -244,19 +247,39 @@ export async function extractPlaceholders(templatePath, schema) {
       const knownIds = new Set(schema.map(f => f.field_id).filter(Boolean));
 
       // Special placeholders and common suffixes that are always valid
-      const specialNames = new Set(['current_date', 'current_datetime', 'full_name', 'f_full_name']);
+      const specialNames = new Set(['current_date', 'current_date_iso', 'current_datetime', 'full_name', 'f_full_name']);
       const caseSuffixes = ['genitive', 'dative', 'accusative', 'vocative', 'locative', 'ablative', 'upper', 'cap'];
+
+      // Quantity placeholder patterns: f_<id>_quantity, f_<id>_option<N>_quantity,
+      // f_<id>_present_quantity, f_<id>_present_option<N>_quantity, present_quantity, absent_quantity
+      const quantitySpecials = new Set(['present_quantity', 'absent_quantity']);
+      // Only select fields generate quantity placeholders
+      const selectFieldIds = new Set(schema.filter(f => f.field_type === 'select').map(f => f.field_id).filter(Boolean));
+
+      // Check if a placeholder is a known quantity placeholder
+      function isQuantityPlaceholder(name) {
+        if (quantitySpecials.has(name)) return true;
+        if (name.endsWith('_quantity')) {
+          for (const id of selectFieldIds) {
+            if (name.startsWith(id + '_')) return true;
+          }
+        }
+        return false;
+      }
 
       const unknown = sorted.filter(p => {
         // Direct match against field_name or field_id
         if (knownNames.has(p) || knownIds.has(p)) return false;
         // Special placeholders
         if (specialNames.has(p)) return false;
+        // Quantity placeholders (special or tied to a select field_id)
+        if (isQuantityPlaceholder(p)) return false;
         // Check if it's a known base + case/variant suffix
         for (const suffix of caseSuffixes) {
           if (p.endsWith(`_${suffix}`)) {
             const base = p.slice(0, -(suffix.length + 1));
             if (knownNames.has(base) || knownIds.has(base) || specialNames.has(base)) return false;
+            if (isQuantityPlaceholder(base)) return false;
             // Check deeper suffixes like full_name_genitive_upper
             for (const innerSuffix of caseSuffixes) {
               if (base.endsWith(`_${innerSuffix}`)) {
