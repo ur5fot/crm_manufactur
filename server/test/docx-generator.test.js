@@ -292,6 +292,36 @@ async function testGenerateDocxCurrentDatetime() {
   }
 }
 
+// Test 9b: generateDocx() adds current_date_iso placeholder in YYYY-MM-DD format
+async function testGenerateDocxCurrentDateIso() {
+  const testPath = path.join(TEST_FIXTURES_DIR, 'test-date-iso.docx');
+  createTestDocx(testPath, ['current_date_iso']);
+
+  const outputPath = path.join(TEST_OUTPUT_DIR, 'date-iso.docx');
+  await generateDocx(testPath, {}, outputPath);
+
+  const content = fs.readFileSync(outputPath, 'binary');
+  const zip = new PizZip(content);
+  const documentXml = zip.file('word/document.xml').asText();
+
+  // Verify date format YYYY-MM-DD is present
+  const dateRegex = /\d{4}-\d{2}-\d{2}/;
+  if (!dateRegex.test(documentXml)) {
+    throw new Error('current_date_iso placeholder was not replaced with YYYY-MM-DD format');
+  }
+
+  // Verify it's today's date
+  const now = new Date();
+  const day = String(now.getDate()).padStart(2, '0');
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const year = now.getFullYear();
+  const expectedDate = `${year}-${month}-${day}`;
+
+  if (!documentXml.includes(expectedDate)) {
+    throw new Error(`Expected today's ISO date ${expectedDate} in document`);
+  }
+}
+
 // Test 10: generateDocx() throws error for non-existent template
 async function testGenerateDocxNonExistent() {
   const testPath = path.join(TEST_FIXTURES_DIR, 'does-not-exist.docx');
@@ -734,6 +764,7 @@ async function runAllTests() {
   await runTest('generateDocx() handles null/undefined values as empty string', testGenerateDocxNullHandling);
   await runTest('generateDocx() adds current_date placeholder', testGenerateDocxCurrentDate);
   await runTest('generateDocx() adds current_datetime placeholder', testGenerateDocxCurrentDatetime);
+  await runTest('generateDocx() adds current_date_iso placeholder (YYYY-MM-DD)', testGenerateDocxCurrentDateIso);
   await runTest('generateDocx() throws error for non-existent template', testGenerateDocxNonExistent);
   await runTest('generateDocx() creates output directory if missing', testGenerateDocxCreateDir);
   await runTest('extractPlaceholders() finds placeholders split across XML runs', testExtractPlaceholdersSplitRuns);

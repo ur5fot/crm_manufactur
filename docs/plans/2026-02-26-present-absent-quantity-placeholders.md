@@ -92,15 +92,15 @@
 
 ### Task 3: Додати current_date_iso плейхолдер
 
-- [ ] У `server/src/docx-generator.js` у `prepareData()` (~рядок 129, після `prepared.current_date`):
+- [x] У `server/src/docx-generator.js` у `prepareData()` (~рядок 129, після `prepared.current_date`):
   - Додати: `prepared.current_date_iso = \`${year}-${month}-${day}\`;`
-- [ ] У `server/src/docx-generator.js` у `extractPlaceholders()` (~рядок 247):
+- [x] У `server/src/docx-generator.js` у `extractPlaceholders()` (~рядок 247):
   - Додати `'current_date_iso'` до `specialNames` Set
-- [ ] У `server/src/routes/misc.js` у `/api/placeholder-preview` (~рядок 305-316, секція special placeholders):
+- [x] У `server/src/routes/misc.js` у `/api/placeholder-preview` (~рядок 305-316, секція special placeholders):
   - Додати новий placeholder об'єкт: `{ placeholder: '{current_date_iso}', label: 'Поточна дата (ISO)', value: \`${year}-${month}-${day}\`, group: 'special' }`
-- [ ] Написати/оновити тест у `server/test/docx-generator.test.js`:
+- [x] Написати/оновити тест у `server/test/docx-generator.test.js`:
   - Перевірити що prepareData повертає `current_date_iso` у форматі YYYY-MM-DD
-- [ ] Запустити `cd server && npm test` — все проходить
+- [x] Запустити `cd server && npm test` — все проходить
 
 ### Task 4: Відобразити нові quantity-плейхолдери у довіднику
 

@@ -128,6 +128,9 @@ async function prepareData(data, schema) {
   const year = now.getFullYear();
   prepared.current_date = `${day}.${month}.${year}`;
 
+  // {current_date_iso} - YYYY-MM-DD format
+  prepared.current_date_iso = `${year}-${month}-${day}`;
+
   // {current_datetime} - DD.MM.YYYY HH:MM format
   const hours = String(now.getHours()).padStart(2, '0');
   const minutes = String(now.getMinutes()).padStart(2, '0');
@@ -244,7 +247,7 @@ export async function extractPlaceholders(templatePath, schema) {
       const knownIds = new Set(schema.map(f => f.field_id).filter(Boolean));
 
       // Special placeholders and common suffixes that are always valid
-      const specialNames = new Set(['current_date', 'current_datetime', 'full_name', 'f_full_name']);
+      const specialNames = new Set(['current_date', 'current_date_iso', 'current_datetime', 'full_name', 'f_full_name']);
       const caseSuffixes = ['genitive', 'dative', 'accusative', 'vocative', 'locative', 'ablative', 'upper', 'cap'];
 
       const unknown = sorted.filter(p => {

@@ -310,6 +310,12 @@ export function registerMiscRoutes(app) {
         group: 'special'
       });
       placeholders.push({
+        placeholder: '{current_date_iso}',
+        label: 'Поточна дата (ISO)',
+        value: `${year}-${month}-${day}`,
+        group: 'special'
+      });
+      placeholders.push({
         placeholder: '{current_datetime}',
         label: 'Поточна дата і час',
         value: `${day}.${month}.${year} ${hours}:${minutes}`,
