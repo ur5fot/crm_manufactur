@@ -201,16 +201,16 @@ Quantity-плейхолдери доступні у **всіх** шаблона�
 
 **Ціль:** Нова група "Кількість по полях" у довіднику.
 
-- [ ] У `server/src/routes/misc.js` GET `/api/placeholder-preview/:employeeId?` (~рядок 164-351):
+- [x] У `server/src/routes/misc.js` GET `/api/placeholder-preview/:employeeId?` (~рядок 164-351):
   - Після секції "Special placeholders" і перед "Case variant placeholders":
   - Імпортувати `buildQuantityPlaceholders` з `../quantity-placeholders.js`
   - Обчислити `const quantities = buildQuantityPlaceholders(schema, employees)`
   - Для кожного ключа в quantities: додати об'єкт у `placeholders[]` з `group: 'quantities'`
   - Label формувати зрозуміло: "{field_label} — кількість", "{field_label} — {option_name}"
-- [ ] У `client/src/views/PlaceholderReferenceView.vue`:
+- [x] У `client/src/views/PlaceholderReferenceView.vue`:
   - Додати відображення групи `'quantities'` з описовим заголовком "Кількість по полях (select)"
-- [ ] Написати тест: GET `/api/placeholder-preview` → є плейхолдери з `group: 'quantities'`
-- [ ] Запустити `cd server && npm test`
+- [x] Написати тест: GET `/api/placeholder-preview` → є плейхолдери з `group: 'quantities'`
+- [x] Запустити `cd server && npm test`
 
 ### Task 9: Верифікація
 
