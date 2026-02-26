@@ -366,8 +366,9 @@ Template DOCX files uploaded by users:
 ### Generated Documents (files/documents/)
 
 Documents generated from templates:
-- Naming convention: `{TemplateName}_{LastName}_{employee_id}_{timestamp}.docx`
-- Example: Contract_Петренко_123_1707845123456.docx
+- Naming convention: `{TemplateName}_{LastName}_{employee_id}_{DD.MM.YYYY}_{random}.docx`
+- Example: Contract_Петренко_123_26.02.2026_a1b2c3.docx
+- For general templates (no employee): `{TemplateName}_{DD.MM.YYYY}_{random}.docx`
 - Files are never deleted, only references in generated_documents.csv
 - Used for document history and compliance
 
@@ -1020,51 +1021,31 @@ export async function generateDocx(templatePath, data, outputPath) {
 
 **Data Preparation**:
 ```javascript
-function prepareData(data) {
-  const prepared = {};
-
-  // Handle user-provided data (null safety)
-  for (const key in data) {
-    const value = data[key];
-    prepared[key] = (value === null || value === undefined) ? '' : String(value);
-  }
-
-  // Add special placeholders
-  const now = new Date();
-  prepared.current_date = `${day}.${month}.${year}`;  // DD.MM.YYYY
-  prepared.current_datetime = `${day}.${month}.${year} ${hours}:${minutes}`;  // DD.MM.YYYY HH:MM
-  prepared.current_date_iso = `${year}-${month}-${day}`;  // YYYY-MM-DD
-
-  return prepared;
+async function prepareData(data, schema) {
+  // Converts null/undefined to empty strings
+  // When schema provided: generates both field_id keys (primary) and field_name keys (legacy)
+  // Adds declension placeholders (24 name + 12 grade/position)
+  // Adds special placeholders: current_date (DD.MM.YYYY), current_datetime, current_date_iso (YYYY-MM-DD)
+  // Adds _upper and _cap case variants for all non-empty text values
 }
 ```
 
 **Usage Pattern in API Routes**:
 ```javascript
 app.post("/api/templates/:id/generate", async (req, res) => {
-  // Load template metadata
-  const template = await loadTemplate(templateId);
+  const { employee_id, custom_data } = req.body;
+  const template = findById(templates, 'template_id', req.params.id);
+  const isGeneral = template.is_general === 'yes';
 
-  // Load employee data
-  const employee = await loadEmployee(employeeId);
+  // Build quantity placeholders from active employees
+  const activeEmployees = employees.filter(e => e.active !== 'no');
+  const quantities = buildQuantityPlaceholders(schema, activeEmployees);
 
-  // Generate unique filename
-  const sanitizedName = template.template_name.replace(/[^a-zA-Z0-9а-яА-ЯіїєґІЇЄҐ]/g, '_');
-  const sanitizedLastName = (employee.last_name || '').replace(/[^a-zA-Z0-9а-яА-ЯіїєґІЇЄҐ]/g, '_');
-  const outputFilename = `${sanitizedName}_${sanitizedLastName}_${employeeId}_${timestamp}.docx`;
-  const outputPath = path.join(FILES_DIR, 'documents', outputFilename);
+  // Merge: quantities < employee < custom_data (priority right to left)
+  const data = { ...quantities, ...(employee || {}), ...(custom_data || {}) };
 
-  // Generate DOCX
-  await generateDocx(templatePath, employee, outputPath);
-
-  // Save generation record to generated_documents.csv
-  await addGeneratedDocument({
-    template_id: templateId,
-    employee_id: employeeId,
-    filename: outputFilename,
-    generated_at: new Date().toISOString(),
-    data_snapshot: JSON.stringify(employee)
-  });
+  // Generate DOCX with schema for field_id-based placeholders
+  await generateDocx(templatePath, data, outputPath, schema);
 });
 ```
 
@@ -1074,36 +1055,20 @@ Placeholders are extracted from DOCX templates and validated against employee sc
 
 **Extract Placeholders**:
 ```javascript
-export async function extractPlaceholders(templatePath) {
-  const content = fs.readFileSync(templatePath, 'binary');
-  const zip = new PizZip(content);
-
-  // Use Docxtemplater's getFullText() to get merged plain text.
-  // This handles cases where Word splits {placeholder} across multiple XML runs.
-  const doc = new Docxtemplater(zip, {
-    paragraphLoop: true,
-    linebreaks: true,
-  });
-  const fullText = doc.getFullText();
-
-  // Extract placeholders using regex on merged text
-  const placeholderRegex = /\{([a-zA-Z0-9_]+)\}/g;
-  const placeholders = new Set();
-  let match;
-
-  while ((match = placeholderRegex.exec(fullText)) !== null) {
-    placeholders.add(match[1]);
-  }
-
-  return Array.from(placeholders).sort();
+export async function extractPlaceholders(templatePath, schema) {
+  // ... reads DOCX, extracts {placeholder} patterns via regex on merged text
+  // When schema is provided, validates placeholders against known fields
+  // Returns: { placeholders: string[], unknown: string[] }
+  // Without schema: unknown is always empty array
 }
 ```
 
 **Usage in Template Upload**:
 ```javascript
 app.post("/api/templates/:id/upload", templateUpload.single('file'), async (req, res) => {
-  // Extract placeholders from uploaded DOCX
-  const placeholders = await extractPlaceholders(req.file.path);
+  // Extract and validate placeholders from uploaded DOCX
+  const schema = await loadFieldsSchema();
+  const { placeholders, unknown } = await extractPlaceholders(req.file.path, schema);
 
   // Update template metadata with placeholder list
   template.placeholder_fields = placeholders.join(',');
@@ -2846,10 +2811,10 @@ All API endpoints are served under the `/api` prefix:
   - documents: Array of document objects with joined employee/template data
   - total: Total count of matching documents
 - Each document includes:
-  - document_id, template_id, employee_id, filename, generated_at
-  - data_snapshot: JSON string of employee data at generation time
-  - employee: Joined employee object (current data)
-  - template: Joined template object
+  - document_id, template_id, employee_id, docx_filename, generation_date, generated_by
+  - template_name, template_is_general: from joined template data
+  - employee_name: from joined employee data (empty string for general templates without employee)
+- For general template documents: employee_id is empty string, employee_name is empty
 - Used by document history view with pagination
 
 **GET /api/documents/:id/download**
@@ -3241,32 +3206,16 @@ These placeholders require both STATUS and fit_status fields to exist in the sch
 
 **Placeholder Extraction** (from docx-generator.js):
 ```javascript
-export async function extractPlaceholders(templatePath) {
-  const content = fs.readFileSync(templatePath, 'binary');
-  const zip = new PizZip(content);
-
-  // Use Docxtemplater's getFullText() to get merged plain text.
-  // This handles cases where Word splits {placeholder} across multiple XML runs.
-  const doc = new Docxtemplater(zip, {
-    paragraphLoop: true,
-    linebreaks: true,
-  });
-  const fullText = doc.getFullText();
-
-  const placeholderRegex = /\{([a-zA-Z0-9_]+)\}/g;
-  const placeholders = new Set();
-  let match;
-
-  while ((match = placeholderRegex.exec(fullText)) !== null) {
-    placeholders.add(match[1]);
-  }
-
-  return Array.from(placeholders).sort();
+export async function extractPlaceholders(templatePath, schema) {
+  // Reads DOCX, extracts {placeholder} patterns via regex on merged text
+  // When schema is provided, validates against known fields, field_ids, declension suffixes, quantity patterns
+  // Returns: { placeholders: string[], unknown: string[] }
 }
 ```
 
 **Placeholder Replacement**:
-- All employee fields merged with custom data (if provided)
+- All employee fields merged with quantity placeholders and custom data (if provided)
+- Priority: custom_data > employee > quantities
 - Null/undefined values replaced with empty strings
 - Special placeholders added with current timestamp
 - Unknown placeholders replaced with empty strings (no error)
@@ -3318,28 +3267,12 @@ Variants are generated for all prepared placeholders including employee fields, 
 
 **Data Preparation Pattern** (from docx-generator.js):
 ```javascript
-function prepareData(data) {
-  const prepared = {};
-
-  // Handle user-provided data (null safety)
-  for (const key in data) {
-    const value = data[key];
-    prepared[key] = (value === null || value === undefined) ? '' : String(value);
-  }
-
-  // Add special placeholders
-  const now = new Date();
-  const day = String(now.getDate()).padStart(2, '0');
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const year = now.getFullYear();
-  prepared.current_date = `${day}.${month}.${year}`;
-  prepared.current_date_iso = `${year}-${month}-${day}`;
-
-  const hours = String(now.getHours()).padStart(2, '0');
-  const minutes = String(now.getMinutes()).padStart(2, '0');
-  prepared.current_datetime = `${day}.${month}.${year} ${hours}:${minutes}`;
-
-  return prepared;
+async function prepareData(data, schema) {
+  // 1. Convert null/undefined values to empty strings
+  // 2. When schema provided: generate field_id keys (primary) and field_name keys (legacy)
+  // 3. Generate declension placeholders (24 name + 12 grade/position)
+  // 4. Add special placeholders: current_date, current_date_iso, current_datetime
+  // 5. Generate _upper and _cap case variants for all non-empty values
 }
 ```
 
@@ -3348,22 +3281,24 @@ function prepareData(data) {
 The document generation workflow combines templates, employee data, and optional custom data to create final DOCX documents.
 
 **Generation Process**:
-1. User selects template and employee from UI
+1. User selects template and employee from UI (or uses general template without employee)
 2. Optionally provides custom data in modal form (overrides employee fields)
 3. Frontend sends POST request to /api/templates/:id/generate
-4. Backend loads template DOCX and employee data
-5. Merges employee data with custom data (custom data takes precedence)
-6. Replaces placeholders in DOCX using docxtemplater
-7. Generates output DOCX with unique filename
-8. Records generation in generated_documents.csv with data snapshot
-9. Creates audit log entry
-10. Returns document metadata with download URL
+4. Backend loads template DOCX, employee data (if provided), and schema
+5. Builds quantity placeholders from all active employees
+6. Merges quantity placeholders, employee data, and custom data (custom data takes precedence)
+7. Replaces placeholders in DOCX using docxtemplater with schema for field_id keys
+8. Generates output DOCX with unique filename (includes random suffix for uniqueness)
+9. Records generation in generated_documents.csv with field_id-based data snapshot
+10. Creates audit log entry
+11. Returns document metadata with download URL
 
 **Generated Document Filename**:
 ```
-{TemplateName}_{LastName}_{employee_id}_{timestamp}.docx
+{TemplateName}_{LastName}_{employee_id}_{DD.MM.YYYY}_{random}.docx
 ```
-Example: `Contract_Петренко_123_1707845123456.docx`
+Example: `Contract_Петренко_123_26.02.2026_a1b2c3.docx`
+For general templates (no employee): `{TemplateName}_{DD.MM.YYYY}_{random}.docx`
 
 **Custom Data Pattern**:
 - User can override any employee field during generation
@@ -3371,32 +3306,33 @@ Example: `Contract_Петренко_123_1707845123456.docx`
 - Custom data not saved to employee record (one-time use)
 - Original employee data preserved in data snapshot
 
-**Generation API Route** (from index.js):
+**Generation API Route** (from routes/templates.js):
 ```javascript
 app.post("/api/templates/:id/generate", async (req, res) => {
   const { employee_id, custom_data } = req.body;
+  const isGeneral = template.is_general === 'yes';
 
-  // Load template and employee
-  const template = await loadTemplate(templateId);
-  const employee = await loadEmployee(employee_id);
+  // employee_id required for non-general templates, optional for general
+  if (!employee_id && !isGeneral) { return res.status(400)... }
 
-  // Merge employee data with custom overrides
-  const mergedData = { ...employee, ...custom_data };
+  // Build quantity placeholders from active employees
+  const activeEmployees = employees.filter(e => e.active !== 'no');
+  const quantities = buildQuantityPlaceholders(schema, activeEmployees);
 
-  // Generate DOCX
-  const outputPath = path.join(FILES_DIR, 'documents', outputFilename);
-  await generateDocx(templatePath, mergedData, outputPath);
+  // Merge: quantities < employee < custom_data
+  const data = { ...quantities, ...(employee || {}), ...(custom_data || {}) };
 
-  // Record generation
+  // Generate DOCX with schema for field_id placeholders
+  await generateDocx(templatePath, data, outputPath, schema);
+
+  // Record with field_id-based data snapshot
   await addGeneratedDocument({
-    template_id: templateId,
-    employee_id: employee_id,
-    filename: outputFilename,
-    generated_at: new Date().toISOString(),
-    data_snapshot: JSON.stringify(mergedData)
+    template_id: template.template_id,
+    employee_id: employee_id || '',
+    docx_filename: docxFilename,
+    generation_date: new Date().toISOString(),
+    data_snapshot: JSON.stringify(snapshotData)
   });
-
-  res.json({ document, download_url: `/files/documents/${outputFilename}` });
 });
 ```
 
@@ -3906,12 +3842,14 @@ The application uses specific naming conventions for generated files to ensure u
 - One DOCX file per template (old file replaced on re-upload)
 
 **Generated Documents**:
-- Pattern: `{TemplateName}_{LastName}_{employee_id}_{timestamp}.docx`
-- Example: `Contract_Петренко_123_1707845123456.docx`
+- Pattern: `{TemplateName}_{LastName}_{employee_id}_{DD.MM.YYYY}_{random}.docx`
+- Example: `Contract_Петренко_123_26.02.2026_a1b2c3.docx`
 - Location: `files/documents/`
 - Template name sanitized to remove special characters (replaced with underscores)
 - Last name sanitized to remove special characters (replaced with underscores)
-- If last_name is empty/null, pattern becomes: `{TemplateName}_{employee_id}_{timestamp}.docx`
+- If last_name is empty/null, pattern becomes: `{TemplateName}_{employee_id}_{DD.MM.YYYY}_{random}.docx`
+- For general templates (no employee): `{TemplateName}_{DD.MM.YYYY}_{random}.docx`
+- Random suffix: 6-character alphanumeric string for filename uniqueness
 - Sanitization regex: `/[^a-zA-Z0-9а-яА-ЯіїєґІЇЄҐ]/g` (alphanumeric + Ukrainian letters only)
 
 **Employee Document Folders**:

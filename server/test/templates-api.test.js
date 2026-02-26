@@ -249,12 +249,10 @@ async function testCreateTemplateAuditLog() {
   const logs = readCsvLines(LOGS_CSV);
 
   if (logs.length < 2) {
-    // Note: Log might be at max limit and rotating, just verify CSV exists
-    console.log('  Note: Logs CSV exists but may be at max limit');
-    return;
+    throw new Error('Logs CSV should have at least a header and one entry after template creation');
   }
 
-  // Check if our log is there (might not be if at max limit)
+  // Check if our log is there
   let found = false;
   for (const log of logs) {
     if (log.includes('CREATE_TEMPLATE')) {
@@ -263,10 +261,8 @@ async function testCreateTemplateAuditLog() {
     }
   }
 
-  if (found) {
-    console.log('  Note: Audit logging is working');
-  } else {
-    console.log('  Note: No CREATE_TEMPLATE logs found (may be at max limit)');
+  if (!found) {
+    throw new Error('Expected CREATE_TEMPLATE log entry after template creation');
   }
 }
 
@@ -901,7 +897,7 @@ async function testGenerateFilenameIncludesLastName() {
     throw new Error(`Filename "${filename}" should include sanitized last_name "${sanitizedLastName}"`);
   }
 
-  // Verify filename pattern: TemplateName_LastName_employeeId_timestamp.docx
+  // Verify filename pattern: TemplateName_LastName_employeeId_DD.MM.YYYY_random.docx
   const expectedPrefix = `Filename_Test_${sanitizedLastName}_${employeeId}_`;
   if (!filename.startsWith(expectedPrefix)) {
     throw new Error(`Filename "${filename}" should start with "${expectedPrefix}"`);
