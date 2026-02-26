@@ -80,7 +80,14 @@
             <tr v-for="doc in filteredDocuments" :key="doc.document_id">
               <td>{{ doc.document_id }}</td>
               <td>{{ doc.template_name || 'N/A' }}</td>
-              <td>{{ doc.employee_name || `ID: ${doc.employee_id}` }}</td>
+              <td>
+                <template v-if="!doc.employee_id">
+                  <span class="general-badge">Загальний</span>
+                </template>
+                <template v-else>
+                  {{ doc.employee_name || `ID: ${doc.employee_id}` }}
+                </template>
+              </td>
               <td>{{ doc.generation_date ? new Date(doc.generation_date).toLocaleDateString('uk-UA') : 'N/A' }}</td>
               <td>{{ doc.generated_by || 'Система' }}</td>
               <td>

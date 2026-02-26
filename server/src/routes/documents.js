@@ -81,16 +81,24 @@ export function registerDocumentRoutes(app) {
       // Join with templates and employees to enrich data
       const enriched = paginated.map(doc => {
         const template = templateMap.get(doc.template_id);
-        const employee = employeeMap.get(doc.employee_id);
+        const employee = doc.employee_id ? employeeMap.get(doc.employee_id) : null;
+
+        let employee_name;
+        if (!doc.employee_id) {
+          employee_name = '';
+        } else if (employee) {
+          employee_name = buildFullName(employee, schema);
+        } else {
+          employee_name = 'Невідомий співробітник';
+        }
 
         return {
           document_id: doc.document_id,
           template_id: doc.template_id,
           template_name: template ? template.template_name : 'Unknown Template',
+          template_is_general: template ? template.is_general : 'no',
           employee_id: doc.employee_id,
-          employee_name: employee
-            ? buildFullName(employee, schema)
-            : 'Невідомий співробітник',
+          employee_name,
           docx_filename: doc.docx_filename,
           generation_date: doc.generation_date,
           generated_by: doc.generated_by
