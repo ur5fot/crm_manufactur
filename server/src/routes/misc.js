@@ -385,9 +385,11 @@ export function registerMiscRoutes(app) {
 
       // Case variant placeholders (_upper and _cap for all text placeholders)
       // Create variants only for original placeholders, not for the variants themselves
+      // Skip quantity placeholders (numeric values where case variants are meaningless)
       const originalPlaceholdersCount = placeholders.length;
       for (let i = 0; i < originalPlaceholdersCount; i++) {
         const p = placeholders[i];
+        if (p.group === 'quantities') continue;
         const val = typeof p.value === 'string' ? p.value : '';
         placeholders.push({
           placeholder: p.placeholder.replace('}', '_upper}'),
