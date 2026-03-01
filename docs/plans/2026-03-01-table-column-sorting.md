@@ -56,12 +56,12 @@ Add ascending/descending sorting to every column in the `/table` page. Clicking 
 - [x] Run E2E tests — must pass before next task
 
 ### Task 4: Verify acceptance criteria
-- [ ] Verify sorting works for all column types (text, number, date, select)
-- [ ] Verify empty values sort last in both directions
-- [ ] Verify sorting works correctly with active filters and search
-- [ ] Verify inline editing still works after sorting
-- [ ] Run full test suite (unit + E2E)
-- [ ] Verify no regressions in existing table-filters E2E tests
+- [x] Verify sorting works for all column types (text, number, date, select)
+- [x] Verify empty values sort last in both directions
+- [x] Verify sorting works correctly with active filters and search
+- [x] Verify inline editing still works after sorting
+- [x] Run full test suite (unit + E2E)
+- [x] Verify no regressions in existing table-filters E2E tests
 
 ## Technical Details
 
