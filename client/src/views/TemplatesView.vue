@@ -142,7 +142,7 @@
               style="margin-top: 6px;"
               @click="reextractTemplatePlaceholders"
             >
-              Обновить плейсхолдеры
+              Оновити плейсхолдери
             </button>
           </div>
         </div>

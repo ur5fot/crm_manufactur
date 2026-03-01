@@ -242,7 +242,6 @@ export async function extractPlaceholders(templatePath, schema) {
 
     // When schema is provided, validate placeholders against known field_ids and field_names
     if (schema) {
-      const nameToId = buildFieldNameToIdMap(schema);
       const knownNames = new Set(schema.map(f => f.field_name));
       const knownIds = new Set(schema.map(f => f.field_id).filter(Boolean));
 

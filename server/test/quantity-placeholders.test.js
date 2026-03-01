@@ -29,8 +29,9 @@ function assertEqual(actual, expected, msg) {
 }
 
 function assertDeepEqual(actual, expected, msg) {
-  const actualStr = JSON.stringify(actual, Object.keys(actual).sort());
-  const expectedStr = JSON.stringify(expected, Object.keys(expected).sort());
+  const allKeys = [...new Set([...Object.keys(actual), ...Object.keys(expected)])].sort();
+  const actualStr = JSON.stringify(actual, allKeys);
+  const expectedStr = JSON.stringify(expected, allKeys);
   if (actualStr !== expectedStr) {
     throw new Error(`${msg || 'Assertion failed'}:\n  expected: ${expectedStr}\n  got:      ${actualStr}`);
   }
