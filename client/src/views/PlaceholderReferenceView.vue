@@ -15,6 +15,15 @@ const placeholderRefSearch = ref('');
 // Show/hide legacy placeholders
 const showLegacy = ref(false);
 
+const groupLabels = {
+  fields: 'Поля співробітника',
+  declension: 'Відмінювання імен',
+  declension_fields: 'Відмінювання посади та звання',
+  quantities: 'Кількість по полях (select)',
+  case_variants: 'Варіанти регістру',
+  special: 'Спеціальні',
+};
+
 // Computed filtered placeholders
 const filteredPlaceholders = computed(() => {
   if (!placeholderRefData.value) return [];
@@ -28,7 +37,7 @@ const filteredPlaceholders = computed(() => {
   return items.filter(p =>
     p.placeholder.toLowerCase().includes(term) ||
     p.label.toLowerCase().includes(term) ||
-    p.value.toLowerCase().includes(term)
+    String(p.value || '').toLowerCase().includes(term)
   );
 });
 
@@ -99,7 +108,7 @@ onMounted(() => {
             <template v-for="group in ['fields', 'declension', 'declension_fields', 'special', 'quantities', 'case_variants']" :key="group">
               <tr v-if="filteredPlaceholders.some(p => p.group === group)" class="placeholder-group-header">
                 <td colspan="3">
-                  {{ group === 'fields' ? 'Поля співробітника' : group === 'declension' ? 'Відмінювання імен' : group === 'declension_fields' ? 'Відмінювання посади та звання' : group === 'quantities' ? 'Кількість по полях (select)' : group === 'case_variants' ? 'Варіанти регістру' : 'Спеціальні' }}
+                  {{ groupLabels[group] || group }}
                 </td>
               </tr>
               <tr

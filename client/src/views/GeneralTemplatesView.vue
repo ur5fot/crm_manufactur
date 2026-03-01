@@ -12,6 +12,10 @@
         Завантаження...
       </div>
 
+      <div v-else-if="errorMessage" class="alert alert-danger" style="margin: 16px;">
+        {{ errorMessage }}
+      </div>
+
       <div v-else-if="generalTemplates.length === 0" class="empty-state">
         <p>Загальних шаблонів немає. Позначте шаблон як загальний у вкладці «Шаблони».</p>
       </div>
@@ -69,14 +73,16 @@ import { api } from "../api";
 const generalTemplates = ref([]);
 const loading = ref(false);
 const generating = ref(null);
+const errorMessage = ref('');
 
 async function loadGeneralTemplates() {
   loading.value = true;
+  errorMessage.value = '';
   try {
     const data = await api.getTemplates();
     generalTemplates.value = (data.templates || []).filter(t => t.is_general === 'yes');
   } catch (error) {
-    console.error('Failed to load general templates:', error);
+    errorMessage.value = 'Помилка завантаження шаблонів: ' + error.message;
   } finally {
     loading.value = false;
   }

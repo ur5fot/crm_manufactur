@@ -100,6 +100,7 @@ crm_manufactur/
 │   │   │   ├── useTemplateUpload.js      # Template DOCX file upload
 │   │   │   ├── useTableInlineEdit.js     # Table inline cell editing
 │   │   │   ├── useTableColumnFilters.js  # Table column checkbox filters
+│   │   │   ├── useTableSort.js           # Table column sorting (single-column, tri-state cycle)
 │   │   │   ├── useReprimands.js          # Employee reprimands/commendations CRUD popup
 │   │   │   └── useFieldSchemaEditor.js   # Field schema editor state (load, edit, preview, apply)
 │   │   ├── utils/              # Utility modules
@@ -1471,6 +1472,7 @@ export function useEmployeeForm(allFieldsSchema, employeeFields, fieldLabels) {
 | `useTemplateUpload.js` | TemplatesView | DOCX file upload modal and file handling |
 | `useTableInlineEdit.js` | TableView | Inline cell editing (start, save, cancel) |
 | `useTableColumnFilters.js` | TableView | Column checkbox filters (toggle, clear, count) |
+| `useTableSort.js` | TableView | Column sorting (toggle asc/desc/none, type-aware compare) |
 | `useReprimands.js` | EmployeeCardsView | Reprimands/commendations CRUD popup (add, edit, delete records) |
 | `useFieldSchemaEditor.js` | FieldSchemaEditorView | Field schema editor state (load, edit, dirty tracking, preview, apply) |
 
@@ -2143,6 +2145,7 @@ End-to-end tests validate complete user workflows across the full stack (databas
 - `status-events.spec.js`: Status event scheduling: add immediate/future events, overlap error, delete event, status revert
 - `field-schema-editor.spec.js`: Field schema editor: load, rename label, cancel, role field protection, duplicate name validation, direct route
 - `general-templates.spec.js`: General template CRUD, is_general checkbox, generation without employee, Documents tab integration
+- `table-sort.spec.js`: Table column sorting: ascending, descending, unsorted cycle, sort indicator display
 
 **Configuration** (`playwright.config.js`):
 - Test directory: `./tests/e2e`

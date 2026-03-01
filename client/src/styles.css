@@ -1026,6 +1026,21 @@ button:hover:not(:disabled) {
   position: relative; /* NEW: positioning context for dropdown */
 }
 
+.sortable-th {
+  cursor: pointer;
+  user-select: none;
+}
+
+.sortable-th:hover {
+  background: var(--hover-bg, rgba(0, 0, 0, 0.04));
+  color: var(--ink);
+}
+
+.sort-indicator {
+  font-size: 10px;
+  color: var(--accent);
+}
+
 .th-content {
   display: flex;
   flex-direction: row; /* CHANGED from column */
