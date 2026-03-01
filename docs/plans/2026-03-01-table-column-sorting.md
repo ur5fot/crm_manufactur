@@ -47,13 +47,13 @@ Add ascending/descending sorting to every column in the `/table` page. Clicking 
 - [x] Run tests — must pass before next task
 
 ### Task 3: Add E2E test for table sorting
-- [ ] Create `tests/e2e/table-sort.spec.js` with tests:
+- [x] Create `tests/e2e/table-sort.spec.js` with tests:
   - Click column header → rows reorder ascending
   - Click same header again → rows reorder descending
   - Click same header third time → returns to unsorted (original order)
   - Click different column → sorts by new column ascending
   - Sort indicator (▲/▼) appears on active column only
-- [ ] Run E2E tests — must pass before next task
+- [x] Run E2E tests — must pass before next task
 
 ### Task 4: Verify acceptance criteria
 - [ ] Verify sorting works for all column types (text, number, date, select)
