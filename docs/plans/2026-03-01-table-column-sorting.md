@@ -39,12 +39,12 @@ Add ascending/descending sorting to every column in the `/table` page. Clicking 
 - [x] Run tests — must pass before next task
 
 ### Task 2: Integrate sorting into TableView
-- [ ] Import `useTableSort` composable in `TableView.vue`
-- [ ] Chain sorting after filtering: `filteredEmployees` computed should apply sort via `sortData()` after search/column filters
-- [ ] Make column headers clickable: add `@click="toggleSort(col.key)"` to each `<th>` (including ID column)
-- [ ] Add sort indicator next to column label: ▲ for asc, ▼ for desc, no indicator when unsorted
-- [ ] Add `cursor: pointer` style to sortable `<th>` headers and hover highlight
-- [ ] Run tests — must pass before next task
+- [x] Import `useTableSort` composable in `TableView.vue`
+- [x] Chain sorting after filtering: `filteredEmployees` computed should apply sort via `sortData()` after search/column filters
+- [x] Make column headers clickable: add `@click="toggleSort(col.key)"` to each `<th>` (including ID column)
+- [x] Add sort indicator next to column label: ▲ for asc, ▼ for desc, no indicator when unsorted
+- [x] Add `cursor: pointer` style to sortable `<th>` headers and hover highlight
+- [x] Run tests — must pass before next task
 
 ### Task 3: Add E2E test for table sorting
 - [ ] Create `tests/e2e/table-sort.spec.js` with tests:

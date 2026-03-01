@@ -5,6 +5,7 @@ import { api } from "../api";
 import { useFieldsSchema } from "../composables/useFieldsSchema";
 import { useTableInlineEdit } from "../composables/useTableInlineEdit";
 import { useTableColumnFilters } from "../composables/useTableColumnFilters";
+import { useTableSort } from "../composables/useTableSort";
 const router = useRouter();
 
 // Use shared fields schema composable
@@ -35,6 +36,13 @@ const {
   hasActiveFilters,
   getColumnFilterCount,
 } = useTableColumnFilters();
+
+const {
+  sortColumn,
+  sortDirection,
+  toggleSort,
+  sortData,
+} = useTableSort();
 
 // Wrap saveCell to pass dependencies
 function saveCell(employee, fieldName) {
@@ -79,7 +87,8 @@ const filteredEmployees = computed(() => {
     }
   });
 
-  return result;
+  const allColumns = [{ key: "employee_id", type: "number" }, ...summaryColumns.value];
+  return sortData(result, allColumns);
 });
 
 // Load employees
@@ -156,12 +165,16 @@ onMounted(async () => {
         <table class="summary-table">
           <thead>
             <tr>
-              <th style="text-align: center;" title="ID співробітника">ID</th>
-              <th v-for="col in summaryColumns" :key="col.key" class="filterable-column">
+              <th class="sortable-th" style="text-align: center;" title="ID співробітника" @click="toggleSort('employee_id')">
+                ID
+                <span v-if="sortColumn === 'employee_id'" class="sort-indicator">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span>
+              </th>
+              <th v-for="col in summaryColumns" :key="col.key" class="filterable-column sortable-th" @click="toggleSort(col.key)">
                 <div class="th-content">
                   <div class="th-label">
                     {{ col.label }}
-                    <span v-if="col.type === 'select'" class="filter-icon" :class="{ 'has-filters': hasActiveFilters(col.key) }">
+                    <span v-if="sortColumn === col.key" class="sort-indicator">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span>
+                    <span v-if="col.type === 'select'" class="filter-icon" :class="{ 'has-filters': hasActiveFilters(col.key) }" @click.stop>
                       🔽
                       <span v-if="getColumnFilterCount(col.key) > 0" class="filter-count">{{ getColumnFilterCount(col.key) }}</span>
                     </span>
