@@ -33,17 +33,17 @@
 ## Implementation Steps
 
 ### Task 1: Удалить inline-редактирование и добавить двойной клик на строку
-- [ ] Удалить файл `client/src/composables/useTableInlineEdit.js`
-- [ ] В `TableView.vue`: убрать импорт и вызов `useTableInlineEdit`
-- [ ] В `TableView.vue`: убрать функцию-обёртку `saveCell`
-- [ ] В `TableView.vue`: убрать `@dblclick` с ID-ячейки (`<td class="id-cell">`)
-- [ ] В `TableView.vue`: убрать `@dblclick.stop` с data-ячеек, убрать edit-mode разметку (v-if/v-else с input/select/buttons), оставить только отображение значения
-- [ ] В `TableView.vue`: добавить `@dblclick="openEmployeeCardNewWindow(employee.employee_id)"` на `<tr>`
-- [ ] Изменить функцию `openEmployeeCard` → `openEmployeeCardNewWindow`: использовать `window.open(router.resolve(...).href, '_blank')` вместо `router.push`
-- [ ] Убрать CSS-стили для inline-edit: `.editable-cell`, `.edit-cell`, `.cell-input`, `.cell-btn`, `.save-btn`, `.cancel-btn`, `.cell-actions`, `.view-cell` и связанные
-- [ ] Убрать `title="Клік для редагування"` с ячеек
-- [ ] Добавить cursor: pointer на строки таблицы (`.table-row { cursor: pointer; }`)
-- [ ] Проверить что нет сломанных импортов и неиспользуемых переменных
+- [x] Удалить файл `client/src/composables/useTableInlineEdit.js`
+- [x] В `TableView.vue`: убрать импорт и вызов `useTableInlineEdit`
+- [x] В `TableView.vue`: убрать функцию-обёртку `saveCell`
+- [x] В `TableView.vue`: убрать `@dblclick` с ID-ячейки (`<td class="id-cell">`)
+- [x] В `TableView.vue`: убрать `@dblclick.stop` с data-ячеек, убрать edit-mode разметку (v-if/v-else с input/select/buttons), оставить только отображение значения
+- [x] В `TableView.vue`: добавить `@dblclick="openEmployeeCardNewWindow(employee.employee_id)"` на `<tr>`
+- [x] Изменить функцию `openEmployeeCard` → `openEmployeeCardNewWindow`: использовать `window.open(router.resolve(...).href, '_blank')` вместо `router.push`
+- [x] Убрать CSS-стили для inline-edit: `.editable-cell`, `.edit-cell`, `.cell-input`, `.cell-btn`, `.save-btn`, `.cancel-btn`, `.cell-actions`, `.view-cell` и связанные
+- [x] Убрать `title="Клік для редагування"` с ячеек
+- [x] Добавить cursor: pointer на строки таблицы (`.table-row { cursor: pointer; }`)
+- [x] Проверить что нет сломанных импортов и неиспользуемых переменных
 
 ### Task 2: Обновить E2E тесты
 - [ ] Проверить `tests/e2e/table-sort.spec.js` — убрать упоминания inline edit если есть

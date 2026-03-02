@@ -1241,94 +1241,8 @@ button:hover:not(:disabled) {
   justify-content: center;
 }
 
-.editable-cell {
-  position: relative;
-}
-
-.view-cell {
-  padding: 10px;
-  min-height: 50px;
-  display: flex;
-  align-items: center;
-  transition: background-color 0.15s ease;
+.table-row {
   cursor: pointer;
-}
-
-.editable-cell:hover .view-cell {
-  background-color: rgba(15, 118, 110, 0.06);
-}
-
-.edit-cell {
-  display: flex;
-  gap: 4px;
-  padding: 4px;
-  min-height: 50px;
-  background: var(--surface);
-  align-items: center;
-}
-
-.cell-input {
-  flex: 1;
-  min-width: 120px;
-  padding: 6px 8px;
-  border: 1px solid var(--accent);
-  border-radius: var(--radius-sm);
-  font-size: 13px;
-  background: var(--input-bg, #fff);
-  color: var(--ink);
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.1);
-}
-
-.cell-input:focus {
-  border-color: var(--accent-strong);
-  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.15);
-}
-
-.cell-actions {
-  display: flex;
-  gap: 4px;
-  flex-shrink: 0;
-}
-
-.cell-btn {
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 6px;
-  border: 1px solid var(--line);
-  background: var(--bg-accent);
-  cursor: pointer;
-  font-size: 14px;
-  transition: all 0.15s ease;
-}
-
-.cell-btn:hover {
-  transform: none;
-  box-shadow: none;
-}
-
-.save-btn {
-  color: #059669;
-  border-color: #059669;
-}
-
-.save-btn:hover {
-  background: #059669;
-  color: #fff;
-}
-
-.cancel-btn {
-  color: #dc2626;
-  border-color: #dc2626;
-}
-
-.cancel-btn:hover {
-  background: #dc2626;
-  color: #fff;
 }
 
 /* Активная кнопка режима просмотра */
@@ -1494,10 +1408,6 @@ button.small {
 
   .table-container {
     max-height: 60vh;
-  }
-
-  .cell-input {
-    min-width: 100px;
   }
 
   .document-actions {
@@ -2996,26 +2906,6 @@ button.small {
   color: var(--badge-red-text);
 }
 
-[data-theme="dark"] .save-btn {
-  color: var(--badge-green-text);
-  border-color: #059669;
-}
-
-[data-theme="dark"] .save-btn:hover {
-  background: #059669;
-  color: #fff;
-}
-
-[data-theme="dark"] .cancel-btn {
-  color: var(--badge-red-text);
-  border-color: #dc2626;
-}
-
-[data-theme="dark"] .cancel-btn:hover {
-  background: #dc2626;
-  color: #fff;
-}
-
 /* Task 7: Placeholder reference elements */
 [data-theme="dark"] .placeholder-cell:hover {
   background-color: var(--placeholder-hover-bg);
@@ -3092,11 +2982,6 @@ button.small {
   border-color: var(--accent);
 }
 
-[data-theme="dark"] .cell-btn {
-  background: var(--surface);
-  border-color: var(--line);
-  color: var(--ink);
-}
 
 [data-theme="dark"] .report-btn {
   background: transparent;
