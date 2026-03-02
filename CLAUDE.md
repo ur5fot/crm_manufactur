@@ -2144,6 +2144,7 @@ End-to-end tests validate complete user workflows across the full stack (databas
 - `field-schema-editor.spec.js`: Field schema editor: load, rename label, cancel, role field protection, duplicate name validation, direct route
 - `general-templates.spec.js`: General template CRUD, is_general checkbox, generation without employee, Documents tab integration
 - `table-sort.spec.js`: Table column sorting: ascending, descending, unsorted cycle, sort indicator display
+- `table-row-dblclick.spec.js`: Table row double-click to open employee card in new tab
 
 **Configuration** (`playwright.config.js`):
 - Test directory: `./tests/e2e`

@@ -7,7 +7,7 @@ This directory contains end-to-end (E2E) tests for the CRM Manufactur applicatio
 The test suite covers all major user flows:
 - CRUD operations (Create, Read, Update, Delete employees)
 - Document upload and management
-- Table view with filters and inline editing
+- Table view with filters and sorting
 - Custom reports with CSV export
 - CSV import functionality
 - Dashboard statistics and notifications
@@ -75,7 +75,7 @@ npx playwright test --grep "Создать нового сотрудника"
 - `tests/e2e/setup.spec.js` - Basic connectivity tests (server + client)
 - `tests/e2e/employee-crud.spec.js` - Employee CRUD operations
 - `tests/e2e/documents.spec.js` - Document upload, delete, folder opening
-- `tests/e2e/table-filters.spec.js` - Table view, filters, inline editing, search
+- `tests/e2e/table-filters.spec.js` - Table view, filters, search
 - `tests/e2e/reports.spec.js` - Custom reports, filters, CSV export
 - `tests/e2e/import.spec.js` - CSV import (valid/invalid data, template download)
 - `tests/e2e/dashboard.spec.js` - Dashboard stats, timeline, notifications, auto-refresh
@@ -337,7 +337,7 @@ Current coverage includes:
 - ✅ Document upload with dates (issue_date, expiry_date)
 - ✅ Document deletion
 - ✅ Table view with multi-select filters
-- ✅ Table inline editing
+- ✅ Table row double-click to open card in new tab
 - ✅ Search functionality
 - ✅ Custom reports with multiple filters
 - ✅ CSV export (UTF-8 BOM, selected columns)

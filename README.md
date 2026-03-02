@@ -38,7 +38,7 @@ Located in the header tab bar:
 
 - **Dashboard** - Statistics, notifications, and recent events
 - **Cards (Картки)** - Employee card-based editing interface with sidebar list
-- **Table (Таблиця)** - Employee table view with sorting and filtering
+- **Table (Таблиця)** - Employee table view with sorting, filtering, and double-click to open employee card in new tab
 - **Reports (Звіти)** - Custom reports with dynamic filter builder
 - **Documents (Документи)** - Template management, general templates, and document history (combines three sub-tabs)
 
@@ -581,7 +581,6 @@ Tests run automatically via GitHub Actions on push to `master`/`feature/*` branc
 │   │   │   ├── useCustomReport.js
 │   │   │   ├── useTemplatesManagement.js
 │   │   │   ├── useTemplateUpload.js
-│   │   │   ├── useTableInlineEdit.js
 │   │   │   ├── useTableColumnFilters.js
 │   │   │   └── useReprimands.js
 │   │   ├── utils/         # Utility modules
