@@ -72,7 +72,7 @@ crm_manufactur/
 │   │   ├── views/              # View components (one per route)
 │   │   │   ├── DashboardView.vue         # Dashboard with statistics and notifications
 │   │   │   ├── EmployeeCardsView.vue     # Employee card-based editing interface
-│   │   │   ├── TableView.vue             # Employee table with sorting and filtering
+│   │   │   ├── TableView.vue             # Employee table with sorting, filtering, dblclick opens card
 │   │   │   ├── ReportsView.vue           # Custom reports with dynamic filters
 │   │   │   ├── ImportView.vue            # CSV import interface
 │   │   │   ├── TemplatesView.vue         # Template management
@@ -98,7 +98,6 @@ crm_manufactur/
 │   │   │   ├── useCustomReport.js        # Custom report filters, results, CSV export
 │   │   │   ├── useTemplatesManagement.js # Template CRUD operations
 │   │   │   ├── useTemplateUpload.js      # Template DOCX file upload
-│   │   │   ├── useTableInlineEdit.js     # Table inline cell editing
 │   │   │   ├── useTableColumnFilters.js  # Table column checkbox filters
 │   │   │   ├── useTableSort.js           # Table column sorting (single-column, tri-state cycle)
 │   │   │   ├── useReprimands.js          # Employee reprimands/commendations CRUD popup
@@ -1198,7 +1197,7 @@ const routes = [
 Each view is a standalone Vue component with its own state and methods:
 - `DashboardView.vue` - Dashboard with statistics and notifications
 - `EmployeeCardsView.vue` - Employee card-based editing interface with optional employee ID parameter, includes employee list search and within-card field search
-- `TableView.vue` - Employee list in table format with sorting and filtering
+- `TableView.vue` - Employee list in table format with sorting, filtering, and double-click row to open card in new tab
 - `ReportsView.vue` - Custom reports with dynamic filters
 - `ImportView.vue` - CSV import interface for bulk employee operations
 - `TemplatesView.vue` - Document template management (also embedded in DocumentsView)
@@ -1470,7 +1469,6 @@ export function useEmployeeForm(allFieldsSchema, employeeFields, fieldLabels) {
 | `useCustomReport.js` | ReportsView | Filter builder, report execution, sorting, CSV export |
 | `useTemplatesManagement.js` | TemplatesView | Template CRUD operations (list, create, edit, delete) |
 | `useTemplateUpload.js` | TemplatesView | DOCX file upload modal and file handling |
-| `useTableInlineEdit.js` | TableView | Inline cell editing (start, save, cancel) |
 | `useTableColumnFilters.js` | TableView | Column checkbox filters (toggle, clear, count) |
 | `useTableSort.js` | TableView | Column sorting (toggle asc/desc/none, type-aware compare) |
 | `useReprimands.js` | EmployeeCardsView | Reprimands/commendations CRUD popup (add, edit, delete records) |
@@ -2146,6 +2144,7 @@ End-to-end tests validate complete user workflows across the full stack (databas
 - `field-schema-editor.spec.js`: Field schema editor: load, rename label, cancel, role field protection, duplicate name validation, direct route
 - `general-templates.spec.js`: General template CRUD, is_general checkbox, generation without employee, Documents tab integration
 - `table-sort.spec.js`: Table column sorting: ascending, descending, unsorted cycle, sort indicator display
+- `table-row-dblclick.spec.js`: Table row double-click to open employee card in new tab
 
 **Configuration** (`playwright.config.js`):
 - Test directory: `./tests/e2e`

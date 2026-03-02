@@ -63,7 +63,6 @@ export function useFieldsSchema() {
         key: field.key,
         fieldId: field.fieldId || '',
         label: field.label,
-        editable: field.editableInTable,
         type: field.type,
         role: field.role || '',
         optionsKey: field.type === 'select' ? field.key : undefined

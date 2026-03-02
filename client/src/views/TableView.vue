@@ -3,7 +3,6 @@ import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { api } from "../api";
 import { useFieldsSchema } from "../composables/useFieldsSchema";
-import { useTableInlineEdit } from "../composables/useTableInlineEdit";
 import { useTableColumnFilters } from "../composables/useTableColumnFilters";
 import { useTableSort } from "../composables/useTableSort";
 const router = useRouter();
@@ -18,15 +17,6 @@ const loading = ref(false);
 const errorMessage = ref("");
 
 // Composables
-const {
-  editingCells,
-  startEditCell,
-  cancelEditCell,
-  isEditingCell,
-  getEditValue,
-  saveCell: saveCellRaw,
-} = useTableInlineEdit(summaryColumns);
-
 const {
   columnFilters,
   toggleFilter,
@@ -43,11 +33,6 @@ const {
   toggleSort,
   sortData,
 } = useTableSort();
-
-// Wrap saveCell to pass dependencies
-function saveCell(employee, fieldName) {
-  return saveCellRaw(employee, fieldName, employees, errorMessage);
-}
 
 // Computed filtered employees
 const filteredEmployees = computed(() => {
@@ -116,9 +101,13 @@ async function exportTableData() {
   }
 }
 
-// Navigate to employee card
-function openEmployeeCard(employeeId) {
-  router.push({ name: 'cards', params: { id: employeeId } });
+// Open employee card in new tab
+function openEmployeeCardNewWindow(employeeId) {
+  const route = router.resolve({ name: 'cards', params: { id: employeeId } });
+  const newWindow = window.open(route.href, '_blank');
+  if (!newWindow) {
+    router.push(route);
+  }
 }
 
 // Lifecycle
@@ -216,63 +205,14 @@ onMounted(async () => {
               v-for="employee in filteredEmployees"
               :key="employee.employee_id"
               class="table-row"
+              @dblclick="openEmployeeCardNewWindow(employee.employee_id)"
             >
-              <td class="id-cell" @dblclick="openEmployeeCard(employee.employee_id)" :title="'ID: ' + employee.employee_id">{{ employee.employee_id }}</td>
+              <td class="id-cell" :title="'ID: ' + employee.employee_id">{{ employee.employee_id }}</td>
               <td
                 v-for="col in summaryColumns"
                 :key="col.key"
-                class="editable-cell"
-                @dblclick.stop="startEditCell(employee.employee_id, col.key, employee[col.key])"
               >
-                <!-- Edit mode -->
-                <div v-if="isEditingCell(employee.employee_id, col.key)" class="edit-cell" @click.stop>
-                  <select
-                    v-if="col.type === 'select'"
-                    v-model="editingCells[`${employee.employee_id}_${col.key}`]"
-                    @keydown.enter="saveCell(employee, col.key)"
-                    @keydown.esc="cancelEditCell(employee.employee_id, col.key)"
-                    class="cell-input"
-                  >
-                    <option value="">--</option>
-                    <option
-                      v-for="option in dictionaries[col.optionsKey] || []"
-                      :key="option.value"
-                      :value="option.value"
-                    >
-                      {{ option.label }}
-                    </option>
-                  </select>
-                  <input
-                    v-else
-                    v-model="editingCells[`${employee.employee_id}_${col.key}`]"
-                    @keydown.enter="saveCell(employee, col.key)"
-                    @keydown.esc="cancelEditCell(employee.employee_id, col.key)"
-                    class="cell-input"
-                    type="text"
-                  />
-                  <div class="cell-actions">
-                    <button
-                      class="cell-btn save-btn"
-                      type="button"
-                      @click="saveCell(employee, col.key)"
-                      title="Зберегти (Enter)"
-                    >
-                      ✓
-                    </button>
-                    <button
-                      class="cell-btn cancel-btn"
-                      type="button"
-                      @click="cancelEditCell(employee.employee_id, col.key)"
-                      title="Скасувати (Esc)"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                </div>
-                <!-- View mode -->
-                <div v-else class="view-cell" :title="'Клік для редагування'">
-                  {{ employee[col.key] || '—' }}
-                </div>
+                {{ employee[col.key] || '—' }}
               </td>
             </tr>
           </tbody>
