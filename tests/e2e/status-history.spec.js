@@ -100,13 +100,21 @@ test.describe('Status History Popup', () => {
       const empResp = await request.get(`${API_URL}/api/employees/${employee_id}`);
       const { employee } = await empResp.json();
 
+      // Use future dates to avoid auto-sync resetting the status
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const nextMonth = new Date();
+      nextMonth.setDate(nextMonth.getDate() + 30);
+      const startDateStr = tomorrow.toISOString().split('T')[0];
+      const endDateStr = nextMonth.toISOString().split('T')[0];
+
       // Make a status change via API
       await request.put(`${API_URL}/api/employees/${employee_id}`, {
         data: {
           ...employee,
           employment_status: 'Відпустка',
-          status_start_date: '2026-02-16',
-          status_end_date: '2026-02-20'
+          status_start_date: startDateStr,
+          status_end_date: endDateStr
         }
       });
 

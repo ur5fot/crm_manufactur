@@ -103,8 +103,11 @@ async function exportTableData() {
 
 // Open employee card in new tab
 function openEmployeeCardNewWindow(employeeId) {
-  const href = router.resolve({ name: 'cards', params: { id: employeeId } }).href;
-  window.open(href, '_blank');
+  const route = router.resolve({ name: 'cards', params: { id: employeeId } });
+  const newWindow = window.open(route.href, '_blank');
+  if (!newWindow) {
+    router.push(route);
+  }
 }
 
 // Lifecycle
