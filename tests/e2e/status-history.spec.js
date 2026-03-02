@@ -192,12 +192,22 @@ test.describe('Status History Popup', () => {
       const empResp = await request.get(`${API_URL}/api/employees/${employee_id}`);
       const { employee } = await empResp.json();
 
+      // Use future dates to avoid auto-sync resetting the status
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const nextMonth = new Date();
+      nextMonth.setDate(nextMonth.getDate() + 30);
+      const startDateStr = tomorrow.toISOString().split('T')[0];
+      const endDateStr = nextMonth.toISOString().split('T')[0];
+      const startDateFormatted = startDateStr.split('-').reverse().join('.');
+      const endDateFormatted = endDateStr.split('-').reverse().join('.');
+
       await request.put(`${API_URL}/api/employees/${employee_id}`, {
         data: {
           ...employee,
           employment_status: 'Лікарняний',
-          status_start_date: '2026-02-16',
-          status_end_date: '2026-03-01'
+          status_start_date: startDateStr,
+          status_end_date: endDateStr
         }
       });
 
@@ -218,8 +228,8 @@ test.describe('Status History Popup', () => {
 
       const firstRow = table.locator('tbody tr').first();
       // Check that period column contains formatted dates (DD.MM.YYYY format)
-      await expect(firstRow).toContainText('16.02.2026');
-      await expect(firstRow).toContainText('01.03.2026');
+      await expect(firstRow).toContainText(startDateFormatted);
+      await expect(firstRow).toContainText(endDateFormatted);
     } finally {
       await request.delete(`${API_URL}/api/employees/${employee_id}`);
     }
