@@ -217,10 +217,10 @@ async function testPresentAbsentQuantity() {
 
   const result = buildQuantityPlaceholders(schema, employees);
   assertEqual(result['present_quantity'], '3', 'present_quantity = 3 (Працює)');
-  assertEqual(result['absent_quantity'], '1', 'absent_quantity = 1 (Відпустка, not Звільнений)');
+  assertEqual(result['absent_quantity'], '2', 'absent_quantity = total - present = 5 - 3 = 2');
 }
 
-async function testAbsentExcludesEmptyStatus() {
+async function testAbsentIncludesAllNonWorking() {
   const schema = [
     {
       field_id: 'f_status',
@@ -238,7 +238,7 @@ async function testAbsentExcludesEmptyStatus() {
 
   const result = buildQuantityPlaceholders(schema, employees);
   assertEqual(result['present_quantity'], '1', 'present = 1');
-  assertEqual(result['absent_quantity'], '1', 'absent = 1 (empty not counted)');
+  assertEqual(result['absent_quantity'], '2', 'absent = total - present = 3 - 1 = 2 (includes empty)');
 }
 
 async function testNoStatusRoleNoPresentAbsent() {
@@ -329,7 +329,7 @@ async function runAllTests() {
   await runTest('Field without field_id is skipped', testFieldWithoutFieldId);
   await runTest('Zero employees produces zero counts', testZeroEmployees);
   await runTest('present_quantity and absent_quantity with STATUS role', testPresentAbsentQuantity);
-  await runTest('absent_quantity excludes empty status values', testAbsentExcludesEmptyStatus);
+  await runTest('absent_quantity = total - present (includes dismissed and empty)', testAbsentIncludesAllNonWorking);
   await runTest('No STATUS role means no present/absent keys', testNoStatusRoleNoPresentAbsent);
   await runTest('fit_status_present placeholders count among present employees', testFitStatusPresentQuantity);
   await runTest('No STATUS role means no fit_status_present keys', testFitStatusPresentWithoutStatusRole);

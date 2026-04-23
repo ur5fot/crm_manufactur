@@ -34,18 +34,12 @@ export function buildQuantityPlaceholders(schema, employees) {
   if (statusField && statusField.field_id) {
     const options = statusField.field_options ? statusField.field_options.split('|').filter(Boolean) : [];
     const workingStatus = options[0] || '';    // e.g. "Працює"
-    const dismissedStatus = options[1] || '';  // e.g. "Звільнений"
     const statusFieldName = statusField.field_name;
 
     if (workingStatus) {
       const presentEmployees = employees.filter(e => e[statusFieldName] === workingStatus);
       result['present_quantity'] = String(presentEmployees.length);
-      result['absent_quantity'] = String(
-        employees.filter(e => {
-          const v = e[statusFieldName];
-          return v && v !== workingStatus && v !== dismissedStatus;
-        }).length
-      );
+      result['absent_quantity'] = String(totalCount - presentEmployees.length);
 
       // fit_status among present employees
       const fitField = schema.find(f => f.field_id === 'f_fit_status' && f.field_type === 'select');

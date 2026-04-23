@@ -3193,9 +3193,7 @@ Implementation: `buildQuantityPlaceholders()` in `server/src/quantity-placeholde
 **Present/Absent Quantity Placeholders** (auto-generated from STATUS field):
 
 - `{present_quantity}` — count of employees with "Працює" status (first option of STATUS field)
-- `{absent_quantity}` — count of employees absent (all statuses except "Працює" and "Звільнений"; empty status not counted)
-
-Dismissed employees are counted in neither present nor absent.
+- `{absent_quantity}` — count of employees NOT working; equals `total - present_quantity`. Includes dismissed employees and employees with empty status values.
 
 **Fit Status Among Present Employees** (auto-generated):
 
