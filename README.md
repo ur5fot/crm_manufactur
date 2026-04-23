@@ -464,9 +464,7 @@ Option counts may not sum to total (employees with empty values are not counted 
 #### Present/Absent Quantity Placeholders
 
 - `{present_quantity}` - count of employees with working status ("Працює", first option of employment status field)
-- `{absent_quantity}` - count of absent employees (all statuses except "Працює" and "Звільнений"; empty status not counted)
-
-Dismissed employees are counted in neither present nor absent.
+- `{absent_quantity}` - count of non-working employees; equals `total − present_quantity` (includes dismissed employees and employees with empty status)
 
 #### Fit Status Among Present Employees
 
